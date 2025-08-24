@@ -3,13 +3,13 @@ import 'package:provider/provider.dart';
 
 import '../app_state.dart';
 
-class UpdateRosterScreen extends StatelessWidget {
+class ActiveRosterScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Update Active Roster'),
+        title: const Text('Assign Servers & Teams'),
       ),
       body: _RosterBody(app: app),
     );

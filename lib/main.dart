@@ -37,7 +37,7 @@ class FoodRunsApp extends StatelessWidget {
       ),
       routes: {
         '/': (_) => const HomeScreen(),
-        '/assign': (_) => const AssignServersScreen(),
+        '/assign': (_) => AssignServersScreen(),
         '/settings': (_) => const SettingsScreen(),
         '/profiles': (_) => const ProfilesScreen(),
         '/history': (_) => const HistoryScreen(),

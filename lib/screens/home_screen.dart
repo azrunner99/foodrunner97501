@@ -31,7 +31,7 @@ class HomeScreen extends StatelessWidget {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const UpdateRosterScreen()),
+                MaterialPageRoute(builder: (_) => UpdateRosterScreen()),
               );
             },
           ),
@@ -167,7 +167,7 @@ class _Body extends StatelessWidget {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const UpdateRosterScreen()),
+                    MaterialPageRoute(builder: (_) => UpdateRosterScreen()),
                   );
                 },
               ),

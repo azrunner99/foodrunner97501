@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../app_state.dart';
 import '../models.dart';
-import 'update_roster_screen.dart';
+import 'active_roster_screen.dart';
 import 'manage_servers_screen.dart';
 
 class AdminScreen extends StatefulWidget {
@@ -125,7 +125,7 @@ class _AdminScreenState extends State<AdminScreen> {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const UpdateRosterScreen()),
+                      MaterialPageRoute(builder: (_) => ActiveRosterScreen()),
                     );
                   },
                 ),
