@@ -1,10 +1,31 @@
 class Server {
-  String id;
+  final String id;
   String name;
-  Server({required this.id, required this.name});
+  String? teamColor;
 
-  Map<String, dynamic> toMap() => {'id': id, 'name': name};
-  static Server fromMap(Map<String, dynamic> m) => Server(id: m['id'], name: m['name']);
+  Server({
+    required this.id,
+    required this.name,
+    this.teamColor,
+  });
+
+  // Add this factory constructor
+  factory Server.fromMap(Map<String, dynamic> map) {
+    return Server(
+      id: map['id'] as String,
+      name: map['name'] as String,
+      teamColor: map['teamColor'] as String?,
+    );
+  }
+
+  // Add this method
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'teamColor': teamColor,
+    };
+  }
 }
 
 class ShiftRecord {

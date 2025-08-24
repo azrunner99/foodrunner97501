@@ -1,116 +1,153 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../app_state.dart';
-import '../models.dart';
 
-class AssignServersScreen extends StatefulWidget {
-  const AssignServersScreen({super.key});
-
+class AssignServersScreen extends StatelessWidget {
   @override
-  State<AssignServersScreen> createState() => _AssignServersScreenState();
+  Widget build(BuildContext context) {
+    final app = context.watch<AppState>();
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Assign Servers & Teams'),
+      ),
+      body: _RosterBody(app: app),
+    );
+  }
 }
 
-class _AssignServersScreenState extends State<AssignServersScreen> {
-  final Set<String> lunch = {};
-  final Set<String> dinner = {};
+class _RosterBody extends StatefulWidget {
+  final AppState app;
+  const _RosterBody({required this.app});
+
+  @override
+  State<_RosterBody> createState() => _RosterBodyState();
+}
+
+class _RosterBodyState extends State<_RosterBody> {
+  bool isLunch = true; // true = Lunch, false = Dinner
+  late List<String> lunchRoster;
+  late List<String> dinnerRoster;
+  late Map<String, String?> teamColors;
 
   @override
   void initState() {
     super.initState();
-    final app = context.read<AppState>();
-    final plan = app.todayPlan;
-    if (plan != null) {
-      lunch.addAll(plan.lunchRoster);
-      dinner.addAll(plan.dinnerRoster);
-    }
+    final todayPlan = widget.app.todayPlan;
+    lunchRoster = todayPlan?.lunchRoster.toList() ?? [];
+    dinnerRoster = todayPlan?.dinnerRoster.toList() ?? [];
+    teamColors = {
+      for (var s in widget.app.servers) s.id: s.teamColor,
+    };
   }
+
+  static const teamColorOptions = [
+    'Blue',
+    'Purple',
+    'Silver',
+    null,
+  ];
 
   @override
   Widget build(BuildContext context) {
-    final app = context.watch<AppState>();
-    final servers = app.servers;
+    final servers = widget.app.servers;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Assign Servers')),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          child: Row(
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          // Toggle Button Row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () {
-                    app.setTodayPlan(lunch.toList(), dinner.toList());
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Roster saved for today.')),
-                    );
-                  },
-                  child: const Text('Save Roster'),
+              ElevatedButton(
+                onPressed: () => setState(() => isLunch = true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isLunch ? Colors.blue : Colors.grey[300],
+                  foregroundColor: isLunch ? Colors.white : Colors.black,
                 ),
+                child: const Text('Lunch'),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: FilledButton.icon(
-                  icon: const Icon(Icons.play_arrow),
-                  label: const Text('Run Food!'),
-                  onPressed: () {
-                    app.setTodayPlan(lunch.toList(), dinner.toList());
-                    // force-start so we show the grid immediately
-                    final ok = app.forceStartCurrentShift();
-                    if (!ok) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Select at least one server for the current shift.')),
-                      );
-                      return;
-                    }
-                    Navigator.pop(context); // back to Home -> grid visible
-                  },
+              const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: () => setState(() => isLunch = false),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: !isLunch ? Colors.blue : Colors.grey[300],
+                  foregroundColor: !isLunch ? Colors.white : Colors.black,
                 ),
+                child: const Text('Dinner'),
               ),
             ],
           ),
-        ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            Expanded(child: _column(context, 'Lunch', servers, lunch)),
-            const SizedBox(width: 12),
-            Expanded(child: _column(context, 'Dinner', servers, dinner)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _column(BuildContext context, String title, List<Server> servers, Set<String> set) {
-    return Card(
-      child: Column(
-        children: [
-          ListTile(title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold))),
-          const Divider(height: 1),
+          const SizedBox(height: 16),
           Expanded(
             child: ListView.builder(
               itemCount: servers.length,
-              itemBuilder: (_, i) {
+              itemBuilder: (ctx, i) {
                 final s = servers[i];
-                final checked = set.contains(s.id);
-                return CheckboxListTile(
-                  title: Text(s.name),
-                  value: checked,
-                  onChanged: (v) {
-                    setState(() {
-                      if (v ?? false) {
-                        set.add(s.id);
-                      } else {
-                        set.remove(s.id);
-                      }
-                    });
-                  },
+                final roster = isLunch ? lunchRoster : dinnerRoster;
+                return Card(
+                  margin: const EdgeInsets.symmetric(vertical: 6),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            s.name,
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                        Checkbox(
+                          value: roster.contains(s.id),
+                          onChanged: (v) {
+                            setState(() {
+                              if (v == true) {
+                                roster.add(s.id);
+                              } else {
+                                roster.remove(s.id);
+                              }
+                            });
+                          },
+                        ),
+                        Text(isLunch ? 'Lunch' : 'Dinner'),
+                        const SizedBox(width: 12),
+                        DropdownButton<String?>(
+                          value: teamColors[s.id],
+                          hint: const Text('Team'),
+                          items: teamColorOptions
+                              .map(
+                                (color) => DropdownMenuItem<String?>(
+                                  value: color,
+                                  child: Text(color ?? 'None'),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (val) {
+                            setState(() {
+                              teamColors[s.id] = val;
+                              s.teamColor = val;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
                 );
               },
             ),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.save),
+            label: const Text('Save Roster'),
+            onPressed: () {
+              for (var s in widget.app.servers) {
+                s.teamColor = teamColors[s.id];
+              }
+              widget.app.setTodayPlan(lunchRoster, dinnerRoster);
+              Navigator.pop(context);
+            },
           ),
         ],
       ),
