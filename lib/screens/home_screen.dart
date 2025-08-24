@@ -133,7 +133,7 @@ class TeamPieChart extends StatelessWidget {
     final total = teamCounts.values.fold<int>(0, (a, b) => a + b);
     if (total == 0) {
       return const SizedBox(
-        height: 120,
+        height: 180,
         child: Center(child: Text('No runs yet')),
       );
     }
@@ -150,11 +150,20 @@ class TeamPieChart extends StatelessWidget {
 
     return SizedBox(
       height: 180,
-      child: PieChart(
-        PieChartData(
-          sections: sections,
-          centerSpaceRadius: 24,
-          sectionsSpace: 2,
+      child: GestureDetector(
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => TeamCompetitionDetailsScreen(teamColors: teamColors),
+            ),
+          );
+        },
+        child: PieChart(
+          PieChartData(
+            sections: sections,
+            centerSpaceRadius: 24,
+            sectionsSpace: 2,
+          ),
         ),
       ),
     );
@@ -380,6 +389,155 @@ class _ActiveGrid extends StatelessWidget {
               ),
             ),
           );
+        },
+      ),
+    );
+  }
+}
+
+// --- Team Competition Details Screen ---
+class TeamCompetitionDetailsScreen extends StatelessWidget {
+  final Map<String, Color> teamColors;
+  const TeamCompetitionDetailsScreen({required this.teamColors, super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final app = context.watch<AppState>();
+    // Group servers by team
+    final Map<String, List<Server>> teams = {};
+    final Map<String, int> teamTotals = {};
+    for (final s in app.servers) {
+      if (s.teamColor == null) continue;
+      teams.putIfAbsent(s.teamColor!, () => []).add(s);
+      teamTotals[s.teamColor!] = (teamTotals[s.teamColor!] ?? 0) + (app.currentCounts[s.id] ?? 0);
+    }
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Team Competition Details')),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final teamCount = teamColors.length;
+          if (teamCount <= 3) {
+            // Fit columns to screen width
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: teamColors.keys.map((team) {
+                final members = teams[team] ?? [];
+                // Sort members by shift count, descending
+                final sortedMembers = [...members]
+                  ..sort((a, b) => (app.currentCounts[b.id] ?? 0).compareTo(app.currentCounts[a.id] ?? 0));
+                final teamTotal = teamTotals[team] ?? 0;
+                return Expanded(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: teamColors[team]!, width: 3),
+                      borderRadius: BorderRadius.circular(12),
+                      color: teamColors[team]!.withOpacity(0.07),
+                    ),
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Column(
+                            children: [
+                              Text(
+                                team,
+                                style: TextStyle(
+                                  color: teamColors[team],
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Total: $teamTotal',
+                                style: TextStyle(
+                                  color: teamColors[team],
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Divider(),
+                        ...sortedMembers.map((s) {
+                          final count = app.currentCounts[s.id] ?? 0;
+                          return ListTile(
+                            dense: true,
+                            title: Text(s.name),
+                            trailing: Text('$count'),
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            );
+          } else {
+            // Scroll if more than 3 teams
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: teamColors.keys.map((team) {
+                  final members = teams[team] ?? [];
+                  // Sort members by shift count, descending
+                  final sortedMembers = [...members]
+                    ..sort((a, b) => (app.currentCounts[b.id] ?? 0).compareTo(app.currentCounts[a.id] ?? 0));
+                  final teamTotal = teamTotals[team] ?? 0;
+                  return Container(
+                    width: 160,
+                    margin: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: teamColors[team]!, width: 3),
+                      borderRadius: BorderRadius.circular(12),
+                      color: teamColors[team]!.withOpacity(0.07),
+                    ),
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Column(
+                            children: [
+                              Text(
+                                team,
+                                style: TextStyle(
+                                  color: teamColors[team],
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Total: $teamTotal',
+                                style: TextStyle(
+                                  color: teamColors[team],
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Divider(),
+                        ...sortedMembers.map((s) {
+                          final count = app.currentCounts[s.id] ?? 0;
+                          return ListTile(
+                            dense: true,
+                            title: Text(s.name),
+                            trailing: Text('$count'),
+                          );
+                        }),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            );
+          }
         },
       ),
     );
