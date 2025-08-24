@@ -1,3 +1,4 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -24,7 +25,6 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('BJ’s Food Runs'),
         actions: [
-          // Single entry point to manage roster (Lunch/Dinner columns, all servers)
           IconButton(
             tooltip: 'Active Roster',
             icon: const Icon(Icons.group),
@@ -35,7 +35,6 @@ class HomeScreen extends StatelessWidget {
               );
             },
           ),
-          // Admin tools (pause/resume/end day, integrity view, manage servers)
           IconButton(
             tooltip: 'Admin',
             icon: const Icon(Icons.admin_panel_settings),
@@ -46,7 +45,6 @@ class HomeScreen extends StatelessWidget {
               );
             },
           ),
-          // Everything else
           PopupMenuButton<_MoreAction>(
             tooltip: 'More',
             onSelected: (a) {
@@ -125,13 +123,65 @@ class HomeScreen extends StatelessWidget {
 
 enum _MoreAction { profiles, settings, mvp, history }
 
+class TeamPieChart extends StatelessWidget {
+  final Map<String, int> teamCounts;
+  final Map<String, Color> teamColors;
+  const TeamPieChart({required this.teamCounts, required this.teamColors, super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final total = teamCounts.values.fold<int>(0, (a, b) => a + b);
+    if (total == 0) {
+      return const SizedBox(
+        height: 120,
+        child: Center(child: Text('No runs yet')),
+      );
+    }
+    final sections = teamCounts.entries.map((entry) {
+      final percent = entry.value / total * 100;
+      return PieChartSectionData(
+        value: entry.value.toDouble(),
+        color: teamColors[entry.key],
+        title: '${entry.key}\n${percent.toStringAsFixed(0)}%',
+        titleStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+        radius: 48,
+      );
+    }).toList();
+
+    return SizedBox(
+      height: 180,
+      child: PieChart(
+        PieChartData(
+          sections: sections,
+          centerSpaceRadius: 24,
+          sectionsSpace: 2,
+        ),
+      ),
+    );
+  }
+}
+
 class _Body extends StatelessWidget {
   final AppState app;
   const _Body({required this.app});
 
   @override
   Widget build(BuildContext context) {
-    // Idle billboard before any shift is running
+    // Calculate team run counts
+    final ids = app.workingServerIds.toList();
+    final teamCounts = <String, int>{};
+    final teamColors = <String, Color>{
+      'Blue': Colors.blue,
+      'Purple': Colors.purple,
+      'Silver': Colors.grey,
+    };
+
+    for (final id in ids) {
+      final s = app.serverById(id);
+      if (s == null || s.teamColor == null) continue;
+      teamCounts[s.teamColor!] = (teamCounts[s.teamColor!] ?? 0) + (app.currentCounts[id] ?? 0);
+    }
+
     if (!app.shiftActive && !app.shiftPaused) {
       return Center(
         child: Padding(
@@ -139,6 +189,8 @@ class _Body extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              TeamPieChart(teamCounts: teamCounts, teamColors: teamColors),
+              const SizedBox(height: 20),
               Text(
                 "Who’s Working Today?",
                 textAlign: TextAlign.center,
@@ -178,7 +230,12 @@ class _Body extends StatelessWidget {
     }
 
     // Active-shift grid UI
-    return const _ActiveGrid();
+    return Column(
+      children: [
+        TeamPieChart(teamCounts: teamCounts, teamColors: teamColors),
+        const Expanded(child: _ActiveGrid()),
+      ],
+    );
   }
 }
 
@@ -188,12 +245,24 @@ class _ActiveGrid extends StatelessWidget {
   Color _tierColor(int my, int max) {
     if (max <= 0) return Colors.grey.shade400;
     final ratio = my / max;
-    // two greens (top), yellow (mid), two reds (low)
     if (ratio >= 1.0) return const Color(0xFF145A32); // deep green
     if (ratio >= 0.75) return const Color(0xFF2ECC71); // green
     if (ratio >= 0.50) return const Color(0xFFF1C40F); // yellow
     if (ratio >= 0.25) return const Color(0xFFE67E22); // orange-red
     return const Color(0xFFC0392B); // red
+  }
+
+  Color? _teamColor(String? team) {
+    switch (team) {
+      case 'Blue':
+        return Colors.blue;
+      case 'Purple':
+        return Colors.purple;
+      case 'Silver':
+        return Colors.grey;
+      default:
+        return null;
+    }
   }
 
   static const encouragements = [
@@ -213,7 +282,6 @@ class _ActiveGrid extends StatelessWidget {
     final maxCount = counts.isEmpty ? 0 : counts.reduce(max);
     final total = counts.fold<int>(0, (a, b) => a + b);
 
-    // Tablet friendly layout
     final columns = MediaQuery.of(context).size.width > 800 ? 4 : 2;
 
     return Padding(
@@ -236,27 +304,32 @@ class _ActiveGrid extends StatelessWidget {
           final pct = total == 0 ? 0 : ((my / total) * 100).round();
           final color = _tierColor(my, maxCount);
           final level = app.profiles[id]?.level ?? 1;
+          final borderColor = _teamColor(s.teamColor) ?? Colors.transparent;
 
           return GestureDetector(
             onLongPress: () => app.decrement(id),
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
+            child: OutlinedButton(
+              style: OutlinedButton.styleFrom(
                 backgroundColor: color,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                side: BorderSide(
+                  color: borderColor,
+                  width: borderColor == Colors.transparent ? 0 : 8,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 padding: const EdgeInsets.all(12),
               ),
               onPressed: () {
                 app.increment(id);
 
-                // encouragement bubble ~3s
                 final msg = encouragements[Random().nextInt(encouragements.length)];
                 ScaffoldMessenger.of(ctx).clearSnackBars();
                 ScaffoldMessenger.of(ctx).showSnackBar(
                   SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),
                 );
 
-                // badge bubble (if any)
                 final bubble = app.recentBadgeBubble;
                 if (bubble != null) {
                   ScaffoldMessenger.of(ctx).showSnackBar(
@@ -267,7 +340,7 @@ class _ActiveGrid extends StatelessWidget {
               },
               child: Stack(
                 children: [
-                  // Level chip (no internal IDs shown)
+                  // Level chip (top-right)
                   Positioned(
                     right: 8,
                     top: 8,
