@@ -146,6 +146,17 @@ class _RosterBodyState extends State<_RosterBody> {
                 s.teamColor = teamColors[s.id];
               }
               widget.app.setTodayPlan(lunchRoster, dinnerRoster);
+
+              // --- Ensure the active roster is updated immediately ---
+              final now = DateTime.now();
+              final intended = widget.app.currentIntendedShiftType(now);
+              if (intended == 'Lunch') {
+                widget.app.updateActiveRoster(lunchRoster);
+              } else {
+                widget.app.updateActiveRoster(dinnerRoster);
+              }
+              // -------------------------------------------------------
+
               Navigator.pop(context);
             },
           ),
