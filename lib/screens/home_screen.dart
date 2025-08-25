@@ -176,8 +176,36 @@ class _Body extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final m = now.hour * 60 + now.minute;
+
+    final lunchIds = app.todayPlan?.lunchRoster ?? [];
+    final dinnerIds = app.todayPlan?.dinnerRoster ?? [];
+
+    // Roster logic:
+    // - Before 3:30 PM: lunch only
+    // - 3:30 PM to 5:00 PM: toggle visible, user can switch
+    // - After 5:00 PM: dinner only
+    List<String> ids;
+    final showToggle = m >= 15 * 60 + 30 && m < 17 * 60;
+    if (m < 15 * 60 + 30) {
+      // Before 3:30 PM
+      ids = lunchIds;
+    } else if (m >= 17 * 60) {
+      // After 5:00 PM
+      ids = dinnerIds;
+    } else {
+      // 3:30 PM - 5:00 PM: toggle
+      if (app.activeRosterView == 'dinner') {
+        ids = dinnerIds;
+      } else {
+        ids = lunchIds;
+      }
+    }
+    // Remove duplicates so a server only appears once
+    ids = ids.toSet().toList();
+
     // Calculate team run counts
-    final ids = app.currentRoster;
     final teamCounts = <String, int>{};
     final teamColors = <String, Color>{
       'Blue': Colors.blue,
@@ -191,16 +219,11 @@ class _Body extends StatelessWidget {
       teamCounts[s.teamColor!] = (teamCounts[s.teamColor!] ?? 0) + (app.currentCounts[id] ?? 0);
     }
 
-    // --- Toggle button logic ---
-    final now = DateTime.now();
-    final m = now.hour * 60 + now.minute;
-    final showToggle = m >= 15 * 60 + 30; // Show after 3:30 PM
     String toggleLabel;
-    if (app.activeRosterView == 'lunch' ||
-        (app.activeRosterView == 'auto' && m < 16 * 60)) {
-      toggleLabel = "I work tonight.";
+    if (app.activeRosterView == 'lunch' || !showToggle) {
+      toggleLabel = "Switch to Dinner";
     } else {
-      toggleLabel = "I worked this morning.";
+      toggleLabel = "Switch to Lunch";
     }
 
     return Column(
@@ -215,7 +238,7 @@ class _Body extends StatelessWidget {
           ),
         TeamPieChart(teamCounts: teamCounts, teamColors: teamColors),
         if (app.shiftActive || app.shiftPaused)
-          const Expanded(child: _ActiveGrid()),
+          Expanded(child: _ActiveGrid(ids: ids)),
         if (!app.shiftActive && !app.shiftPaused)
           Padding(
             padding: const EdgeInsets.all(28),
@@ -264,7 +287,8 @@ class _Body extends StatelessWidget {
 }
 
 class _ActiveGrid extends StatelessWidget {
-  const _ActiveGrid();
+  final List<String> ids;
+  const _ActiveGrid({required this.ids});
 
   Color _tierColor(int my, int max) {
     if (max <= 0) return Colors.grey.shade400;
@@ -301,7 +325,6 @@ class _ActiveGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
-    final ids = app.currentRoster;
     final counts = ids.map((id) => app.currentCounts[id] ?? 0).toList();
     final maxCount = counts.isEmpty ? 0 : counts.reduce(max);
     final total = counts.fold<int>(0, (a, b) => a + b);
@@ -448,7 +471,7 @@ class TeamCompetitionDetailsScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       border: Border.all(color: teamColors[team]!, width: 3),
                       borderRadius: BorderRadius.circular(12),
-                      color: teamColors[team]!.withOpacity(0.07),
+                      color: teamColors[team]!.withAlpha((0.07 * 255).toInt()),
                     ),
                     child: Column(
                       children: [
@@ -509,7 +532,7 @@ class TeamCompetitionDetailsScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       border: Border.all(color: teamColors[team]!, width: 3),
                       borderRadius: BorderRadius.circular(12),
-                      color: teamColors[team]!.withOpacity(0.07),
+                      color: teamColors[team]!.withAlpha((0.07 * 255).toInt()),
                     ),
                     child: Column(
                       children: [

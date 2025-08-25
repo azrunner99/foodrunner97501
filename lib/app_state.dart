@@ -74,6 +74,7 @@ class ServerProfile {
 class AppState extends ChangeNotifier {
   static const adminPin = '5520';
   static const dinnerSwitchMinutes = 15 * 60 + 30; // 3:30 PM
+  static const dinnerFullSwitchMinutes = 16 * 60; // 4:00 PM
 
   final List<Server> _servers = [];
   final Map<String, int> _totals = {};
@@ -103,6 +104,9 @@ class AppState extends ChangeNotifier {
   String? _recentBadgeBubble;
   Timer? _ticker;
 
+  // Roster toggle state: 'auto', 'lunch', 'dinner'
+  String _activeRosterView = 'auto';
+
   // expose
   List<Server> get servers =>
       List.unmodifiable(_servers.sorted((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase())));
@@ -123,6 +127,45 @@ class AppState extends ChangeNotifier {
   String? get recentBadgeBubble => _recentBadgeBubble;
   void clearRecentBadgeBubble() {
     _recentBadgeBubble = null;
+  }
+
+  // Roster toggle logic
+  String get activeRosterView => _activeRosterView;
+  void toggleRosterView() {
+    if (_activeRosterView == 'lunch') {
+      _activeRosterView = 'dinner';
+    } else if (_activeRosterView == 'dinner') {
+      _activeRosterView = 'lunch';
+    } else {
+      final now = DateTime.now();
+      final m = now.hour * 60 + now.minute;
+      _activeRosterView = m >= dinnerFullSwitchMinutes ? 'lunch' : 'dinner';
+    }
+    notifyListeners();
+  }
+
+  void resetRosterView() {
+    _activeRosterView = 'auto';
+    notifyListeners();
+  }
+
+  List<String> get currentRoster {
+    final now = DateTime.now();
+    final m = now.hour * 60 + now.minute;
+    if (_activeRosterView == 'lunch') {
+      return _todayPlan?.lunchRoster ?? [];
+    }
+    if (_activeRosterView == 'dinner') {
+      return _todayPlan?.dinnerRoster ?? [];
+    }
+    // 'auto' mode
+    if (m < dinnerSwitchMinutes) {
+      return _todayPlan?.lunchRoster ?? [];
+    } else if (m < dinnerFullSwitchMinutes) {
+      return _todayPlan?.lunchRoster ?? [];
+    } else {
+      return _todayPlan?.dinnerRoster ?? [];
+    }
   }
 
   final List<ShiftRecord> _history = [];
@@ -269,6 +312,7 @@ class AppState extends ChangeNotifier {
       _workingServerIds.clear();
       _currentCounts.clear();
       _currentStreaks.clear();
+      resetRosterView();
       return;
     }
 
@@ -313,6 +357,7 @@ class AppState extends ChangeNotifier {
       // --- Clear the day plan and notify UI if closed ---
       if (m >= close) {
         _todayPlan = null;
+        resetRosterView();
         notifyListeners();
       }
     }
@@ -350,6 +395,7 @@ class AppState extends ChangeNotifier {
 
     _teamTotalThisShift = 0;
     _teamGoal = _computeGoalFromHistory();
+    resetRosterView();
     notifyListeners();
   }
 
