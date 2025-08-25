@@ -273,8 +273,6 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Force an immediate start of the “intended” shift (Lunch before 3:30, Dinner after).
-  /// Used by the “Run Food!” button so managers can bring up the grid right now.
   bool forceStartCurrentShift() {
     final now = DateTime.now();
     if (_todayPlan == null) return false;
@@ -324,11 +322,6 @@ class AppState extends ChangeNotifier {
     final close = _hours.closeMinutes[wd] ?? 23 * 60;
     final m = now.hour * 60 + now.minute;
 
-    // Debug print to help diagnose time logic
-    // Remove or comment out after confirming fix
-    print('DEBUG: now=$now, m=$m, open=$open, close=$close, shiftActive=$_shiftActive, shiftType=$_shiftType');
-
-    // Only active between open and close
     final shouldBeActive = m >= open && m < close && roster.isNotEmpty && !_shiftPaused;
 
     final switchingToDinner = intended == 'Dinner' && _shiftType == 'Lunch' && _shiftActive;
@@ -344,7 +337,6 @@ class AppState extends ChangeNotifier {
         _beginShift(intended, roster);
       }
     } else {
-      // Finalize and save shift if it was active
       if (_shiftActive) {
         _finalizeAndSaveShift(_shiftType);
       }
@@ -354,7 +346,6 @@ class AppState extends ChangeNotifier {
         ..clear()
         ..addAll(roster);
 
-      // --- Clear the day plan and notify UI if closed ---
       if (m >= close) {
         _todayPlan = null;
         resetRosterView();
@@ -580,7 +571,6 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // Power-ups are silly but fun
   void increment(String id) {
     if (!_shiftActive || !_workingServerIds.contains(id)) return;
 
@@ -702,7 +692,6 @@ class AppState extends ChangeNotifier {
     }).toList();
   }
 
-  /// Update both rosters mid-day and sync the active roster if needed.
   void updateBothRosters({required List<String> lunch, required List<String> dinner}) {
     setTodayPlan(lunch, dinner);
     final now = DateTime.now();
@@ -714,7 +703,6 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  /// Update the live active roster only (used by Active Roster screen).
   void updateActiveRoster(List<String> newRoster) {
     final newSet = Set<String>.from(newRoster);
     for (final id in _workingServerIds.toList()) {
@@ -745,4 +733,29 @@ class AppState extends ChangeNotifier {
   static String _ymd(DateTime d) =>
       '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
   static int _weekday(DateTime d) => d.weekday;
+
+  // --- Add these methods to fix your missing method errors ---
+  bool isLunchPeak(DateTime now) {
+    final m = now.hour * 60 + now.minute;
+    // Example: Lunch peak is 11:30am–1:30pm
+    return m >= 11 * 60 + 30 && m < 13 * 60 + 30;
+  }
+
+  bool isDinnerPeak(DateTime now) {
+    final m = now.hour * 60 + now.minute;
+    // Example: Dinner peak is 5:30pm–7:30pm
+    return m >= 17 * 60 + 30 && m < 19 * 60 + 30;
+  }
+
+  bool isLunchCloser(DateTime now) {
+    final m = now.hour * 60 + now.minute;
+    // Example: Lunch closer is 2:00pm–3:30pm
+    return m >= 14 * 60 && m < 15 * 60 + 30;
+  }
+
+  bool isDinnerCloser(DateTime now) {
+    final m = now.hour * 60 + now.minute;
+    // Example: Dinner closer is 9:00pm–11:00pm
+    return m >= 21 * 60 && m < 23 * 60;
+  }
 }
