@@ -75,8 +75,8 @@ class HomeScreen extends StatelessWidget {
                   break;
               }
             },
-            itemBuilder: (ctx) => const [
-              PopupMenuItem(
+            itemBuilder: (ctx) => [
+              const PopupMenuItem(
                 value: _MoreAction.profiles,
                 child: ListTile(
                   leading: Icon(Icons.person),
@@ -85,7 +85,7 @@ class HomeScreen extends StatelessWidget {
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
-              PopupMenuItem(
+              const PopupMenuItem(
                 value: _MoreAction.mvp,
                 child: ListTile(
                   leading: Icon(Icons.emoji_events),
@@ -94,7 +94,7 @@ class HomeScreen extends StatelessWidget {
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
-              PopupMenuItem(
+              const PopupMenuItem(
                 value: _MoreAction.history,
                 child: ListTile(
                   leading: Icon(Icons.history),
@@ -103,7 +103,7 @@ class HomeScreen extends StatelessWidget {
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
-              PopupMenuItem(
+              const PopupMenuItem(
                 value: _MoreAction.settings,
                 child: ListTile(
                   leading: Icon(Icons.settings),
@@ -182,20 +182,19 @@ class _Body extends StatelessWidget {
     final lunchIds = app.todayPlan?.lunchRoster ?? [];
     final dinnerIds = app.todayPlan?.dinnerRoster ?? [];
 
-    // Roster logic:
-    // - Before 3:30 PM: lunch only
-    // - 3:30 PM to 5:00 PM: toggle visible, user can switch
-    // - After 5:00 PM: dinner only
+    // Use settings for transition times
+    final start = app.settings.transitionStartMinutes;
+    final end = app.settings.transitionEndMinutes;
+
+    // Roster logic using settings:
     List<String> ids;
-    final showToggle = m >= 15 * 60 + 30 && m < 17 * 60;
-    if (m < 15 * 60 + 30) {
-      // Before 3:30 PM
+    final showToggle = m >= start && m < end;
+    if (m < start) {
       ids = lunchIds;
-    } else if (m >= 17 * 60) {
-      // After 5:00 PM
+    } else if (m >= end) {
       ids = dinnerIds;
     } else {
-      // 3:30 PM - 5:00 PM: toggle
+      // Between transition start and end: toggle
       if (app.activeRosterView == 'dinner') {
         ids = dinnerIds;
       } else {

@@ -12,11 +12,19 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   late WeeklyHours _hours;
+  late int _transitionStart;
+  late int _transitionEnd;
+
+  bool _hoursExpanded = false;
+  bool _transitionExpanded = false;
 
   @override
   void initState() {
     super.initState();
-    _hours = context.read<AppState>().hours;
+    final app = context.read<AppState>();
+    _hours = app.hours;
+    _transitionStart = app.settings.transitionStartMinutes;
+    _transitionEnd = app.settings.transitionEndMinutes;
   }
 
   @override
@@ -27,24 +35,87 @@ class _SettingsScreenState extends State<SettingsScreen> {
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
         children: [
-          const ListTile(title: Text('Hours'), subtitle: Text('Open/close times by day')),
-          for (final d in _days)
-            ListTile(
-              title: Text(d.label),
-              subtitle: Text('Open ${_fmtMin(_hours.openMinutes[d.weekday]!)} • Close ${_fmtMin(_hours.closeMinutes[d.weekday]!)}'),
-              trailing: const Icon(Icons.edit),
-              onTap: () async {
-                final open = await _pickTime(context, 'Set open time for ${d.label}', _hours.openMinutes[d.weekday]!);
-                if (open == null) return;
-                final close = await _pickTime(context, 'Set close time for ${d.label}', _hours.closeMinutes[d.weekday]!);
-                if (close == null) return;
-                setState(() {
-                  _hours.openMinutes[d.weekday] = open;
-                  _hours.closeMinutes[d.weekday] = close;
-                });
-                app.setWeeklyHours(_hours);
-              },
-            ),
+          ExpansionPanelList(
+            expansionCallback: (int index, bool isExpanded) {
+              setState(() {
+                if (index == 0) _hoursExpanded = !_hoursExpanded;
+                if (index == 1) _transitionExpanded = !_transitionExpanded;
+              });
+            },
+            children: [
+              ExpansionPanel(
+                headerBuilder: (context, isExpanded) => const ListTile(
+                  title: Text('Hours'),
+                  subtitle: Text('Open/close times by day'),
+                ),
+                isExpanded: _hoursExpanded,
+                body: Column(
+                  children: [
+                    for (final d in _days)
+                      ListTile(
+                        title: Text(d.label),
+                        subtitle: Text('Open ${_fmtMin(_hours.openMinutes[d.weekday]!)} • Close ${_fmtMin(_hours.closeMinutes[d.weekday]!)}'),
+                        trailing: const Icon(Icons.edit),
+                        onTap: () async {
+                          final open = await _pickTime(context, 'Set open time for ${d.label}', _hours.openMinutes[d.weekday]!);
+                          if (open == null) return;
+                          final close = await _pickTime(context, 'Set close time for ${d.label}', _hours.closeMinutes[d.weekday]!);
+                          if (close == null) return;
+                          setState(() {
+                            _hours.openMinutes[d.weekday] = open;
+                            _hours.closeMinutes[d.weekday] = close;
+                          });
+                          app.setWeeklyHours(_hours);
+                        },
+                      ),
+                  ],
+                ),
+              ),
+              ExpansionPanel(
+                headerBuilder: (context, isExpanded) => const ListTile(
+                  title: Text('Transition Period'),
+                  subtitle: Text('Defines the transition between Lunch and Dinner'),
+                ),
+                isExpanded: _transitionExpanded,
+                body: Column(
+                  children: [
+                    ListTile(
+                      title: const Text('Transition Start'),
+                      subtitle: Text(_fmtMin(_transitionStart)),
+                      trailing: const Icon(Icons.edit),
+                      onTap: () async {
+                        final picked = await _pickTime(context, 'Set transition start time', _transitionStart);
+                        if (picked == null) return;
+                        setState(() {
+                          _transitionStart = picked;
+                        });
+                        final newSettings = app.settings
+                          ..transitionStartMinutes = _transitionStart
+                          ..transitionEndMinutes = _transitionEnd;
+                        await app.saveSettings(newSettings);
+                      },
+                    ),
+                    ListTile(
+                      title: const Text('Transition End'),
+                      subtitle: Text(_fmtMin(_transitionEnd)),
+                      trailing: const Icon(Icons.edit),
+                      onTap: () async {
+                        final picked = await _pickTime(context, 'Set transition end time', _transitionEnd);
+                        if (picked == null) return;
+                        setState(() {
+                          _transitionEnd = picked;
+                        });
+                        final newSettings = app.settings
+                          ..transitionStartMinutes = _transitionStart
+                          ..transitionEndMinutes = _transitionEnd;
+                        await app.saveSettings(newSettings);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
           const Divider(height: 1),
           const ListTile(title: Text('Server Management')),
           ListTile(
@@ -90,5 +161,4 @@ const _days = <_DayRow>[
   _DayRow(4, 'Thursday'),
   _DayRow(5, 'Friday'),
   _DayRow(6, 'Saturday'),
-  _DayRow(7, 'Sunday'),
 ];
