@@ -277,8 +277,15 @@ class AppState extends ChangeNotifier {
 
     final wd = _weekday(now);
     final open = _hours.openMinutes[wd]!;
+    final close = _hours.closeMinutes[wd] ?? 23 * 60;
     final m = now.hour * 60 + now.minute;
-    final shouldBeActive = m >= open && roster.isNotEmpty && !_shiftPaused;
+
+    // Debug print to help diagnose time logic
+    // Remove or comment out after confirming fix
+    print('DEBUG: now=$now, m=$m, open=$open, close=$close, shiftActive=$_shiftActive, shiftType=$_shiftType');
+
+    // Only active between open and close
+    final shouldBeActive = m >= open && m < close && roster.isNotEmpty && !_shiftPaused;
 
     final switchingToDinner = intended == 'Dinner' && _shiftType == 'Lunch' && _shiftActive;
 
@@ -293,11 +300,21 @@ class AppState extends ChangeNotifier {
         _beginShift(intended, roster);
       }
     } else {
+      // Finalize and save shift if it was active
+      if (_shiftActive) {
+        _finalizeAndSaveShift(_shiftType);
+      }
       _shiftActive = false;
       _shiftType = intended;
       _workingServerIds
         ..clear()
         ..addAll(roster);
+
+      // --- Clear the day plan and notify UI if closed ---
+      if (m >= close) {
+        _todayPlan = null;
+        notifyListeners();
+      }
     }
   }
 
