@@ -191,53 +191,6 @@ class _Body extends StatelessWidget {
       teamCounts[s.teamColor!] = (teamCounts[s.teamColor!] ?? 0) + (app.currentCounts[id] ?? 0);
     }
 
-    if (!app.shiftActive && !app.shiftPaused) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(28),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              TeamPieChart(teamCounts: teamCounts, teamColors: teamColors),
-              const SizedBox(height: 20),
-              Text(
-                "Who’s Working Today?",
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.2,
-                    ) ??
-                    const TextStyle(fontSize: 36, fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                "Manager: assign servers to Lunch and Dinner to begin.",
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Colors.black54,
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
-              const SizedBox(height: 20),
-              FilledButton.icon(
-                icon: const Icon(Icons.group),
-                label: const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 10),
-                  child: Text('Open Active Roster'),
-                ),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => UpdateRosterScreen()),
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
     // --- Toggle button logic ---
     final now = DateTime.now();
     final m = now.hour * 60 + now.minute;
@@ -250,7 +203,6 @@ class _Body extends StatelessWidget {
       toggleLabel = "I worked this morning.";
     }
 
-    // Active-shift grid UI
     return Column(
       children: [
         if (showToggle)
@@ -262,7 +214,50 @@ class _Body extends StatelessWidget {
             ),
           ),
         TeamPieChart(teamCounts: teamCounts, teamColors: teamColors),
-        const Expanded(child: _ActiveGrid()),
+        if (app.shiftActive || app.shiftPaused)
+          const Expanded(child: _ActiveGrid()),
+        if (!app.shiftActive && !app.shiftPaused)
+          Padding(
+            padding: const EdgeInsets.all(28),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SizedBox(height: 20),
+                Text(
+                  "Who’s Working Today?",
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.2,
+                      ) ??
+                      const TextStyle(fontSize: 36, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  "Manager: assign servers to Lunch and Dinner to begin.",
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: Colors.black54,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+                const SizedBox(height: 20),
+                FilledButton.icon(
+                  icon: const Icon(Icons.group),
+                  label: const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 10),
+                    child: Text('Open Active Roster'),
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => UpdateRosterScreen()),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
       ],
     );
   }
