@@ -177,7 +177,7 @@ class _Body extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Calculate team run counts
-    final ids = app.workingServerIds.toList();
+    final ids = app.currentRoster;
     final teamCounts = <String, int>{};
     final teamColors = <String, Color>{
       'Blue': Colors.blue,
@@ -238,9 +238,29 @@ class _Body extends StatelessWidget {
       );
     }
 
+    // --- Toggle button logic ---
+    final now = DateTime.now();
+    final m = now.hour * 60 + now.minute;
+    final showToggle = m >= 15 * 60 + 30; // Show after 3:30 PM
+    String toggleLabel;
+    if (app.activeRosterView == 'lunch' ||
+        (app.activeRosterView == 'auto' && m < 16 * 60)) {
+      toggleLabel = "I work tonight.";
+    } else {
+      toggleLabel = "I worked this morning.";
+    }
+
     // Active-shift grid UI
     return Column(
       children: [
+        if (showToggle)
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: ElevatedButton(
+              onPressed: () => app.toggleRosterView(),
+              child: Text(toggleLabel),
+            ),
+          ),
         TeamPieChart(teamCounts: teamCounts, teamColors: teamColors),
         const Expanded(child: _ActiveGrid()),
       ],
@@ -286,7 +306,7 @@ class _ActiveGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
-    final ids = app.workingServerIds.toList();
+    final ids = app.currentRoster;
     final counts = ids.map((id) => app.currentCounts[id] ?? 0).toList();
     final maxCount = counts.isEmpty ? 0 : counts.reduce(max);
     final total = counts.fold<int>(0, (a, b) => a + b);
