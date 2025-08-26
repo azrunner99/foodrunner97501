@@ -64,10 +64,28 @@ class DayPlan {
   String ymd; // YYYY-MM-DD
   List<String> lunchRoster;  // server ids
   List<String> dinnerRoster; // server ids
-  DayPlan({required this.ymd, required this.lunchRoster, required this.dinnerRoster});
-  Map<String, dynamic> toMap() => {'ymd': ymd, 'lunchRoster': lunchRoster, 'dinnerRoster': dinnerRoster};
+  int transitionStartMinutes;
+  int transitionEndMinutes;
+  DayPlan({
+    required this.ymd,
+    required this.lunchRoster,
+    required this.dinnerRoster,
+    required this.transitionStartMinutes,
+    required this.transitionEndMinutes,
+  });
+  Map<String, dynamic> toMap() => {
+    'ymd': ymd,
+    'lunchRoster': lunchRoster,
+    'dinnerRoster': dinnerRoster,
+    'transitionStartMinutes': transitionStartMinutes,
+    'transitionEndMinutes': transitionEndMinutes,
+  };
   static DayPlan fromMap(Map<String, dynamic> m) => DayPlan(
-    ymd: m['ymd'], lunchRoster: (m['lunchRoster'] as List).cast<String>(), dinnerRoster: (m['dinnerRoster'] as List).cast<String>(),
+    ymd: m['ymd'],
+    lunchRoster: (m['lunchRoster'] as List).cast<String>(),
+    dinnerRoster: (m['dinnerRoster'] as List).cast<String>(),
+    transitionStartMinutes: m['transitionStartMinutes'] ?? (15 * 60 + 30),
+    transitionEndMinutes: m['transitionEndMinutes'] ?? (17 * 60),
   );
 }
 
