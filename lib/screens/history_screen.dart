@@ -19,42 +19,63 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final app = context.watch<AppState>();
     final shiftsToday = app.shiftsOnDate(_selectedDay);
 
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('History'),
-          bottom: const TabBar(tabs: [Tab(text: 'Calendar'), Tab(text: 'List')]),
-        ),
-        body: TabBarView(
-          children: [
-            _CalendarTab(
-              selectedDay: _selectedDay,
-              onDaySelected: (d) => setState(() => _selectedDay = d),
-            ),
-            _ListTab(),
-          ],
-        ),
-        bottomNavigationBar: Material(
-          elevation: 2,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Align(alignment: Alignment.centerLeft, child: Text('Shifts on ${_ymd(_selectedDay)}')),
-                const SizedBox(height: 8),
-                if (shiftsToday.isEmpty) const Text('No shifts this day.')
-                else Column(
-                  children: shiftsToday.map((s) => ListTile(
-                    leading: const Icon(Icons.event_available),
-                    title: Text('${s.shiftType} • ${_hm(s.start)}'),
-                    subtitle: Text('${s.counts.length} participants'),
-                    onTap: () => _showShiftDialog(context, s),
-                  )).toList(),
+    return Scaffold(
+      appBar: AppBar(title: const Text('History')),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TableCalendar(
+                firstDay: DateTime.utc(2022, 1, 1),
+                lastDay: DateTime.utc(2100, 12, 31),
+                focusedDay: _selectedDay,
+                selectedDayPredicate: (d) => d.year == _selectedDay.year && d.month == _selectedDay.month && d.day == _selectedDay.day,
+                onDaySelected: (sel, foc) => setState(() => _selectedDay = sel),
+                calendarBuilders: CalendarBuilders(
+                  markerBuilder: (context, day, events) {
+                    final d = DateTime(day.year, day.month, day.day);
+                    final hist = app.history;
+                    final daysWith = <DateTime, int>{};
+                    for (final h in hist) {
+                      final dd = DateTime(h.start.year, h.start.month, h.start.day);
+                      daysWith[dd] = (daysWith[dd] ?? 0) + 1;
+                    }
+                    final count = daysWith[d] ?? 0;
+                    if (count == 0) return const SizedBox.shrink();
+                    return Align(
+                      alignment: Alignment.bottomCenter,
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 2),
+                        child: Text('$count', style: const TextStyle(fontSize: 10, color: Colors.teal)),
+                      ),
+                    );
+                  },
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 16),
+              Align(alignment: Alignment.centerLeft, child: Text('Shifts on ${_ymd(_selectedDay)}')),
+              const SizedBox(height: 8),
+              if (shiftsToday.isEmpty)
+                const Text('No shifts this day.')
+              else
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: shiftsToday.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (_, i) {
+                    final s = shiftsToday[i];
+                    return ListTile(
+                      leading: const Icon(Icons.event_available),
+                      title: Text('${s.shiftType} • ${_hm(s.start)}'),
+                      subtitle: Text('${s.counts.length} participants'),
+                      onTap: () => _showShiftDialog(context, s),
+                    );
+                  },
+                ),
+            ],
           ),
         ),
       ),

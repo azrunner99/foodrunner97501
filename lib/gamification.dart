@@ -1,14 +1,5 @@
-import 'dart:math';
-import 'package:flutter/foundation.dart';
 
 enum PowerUp { none, doublePoint, bonusFive }
-
-PowerUp rollPowerUp(Random r) {
-  final n = r.nextInt(100);
-  if (n < 5) return PowerUp.bonusFive;
-  if (n < 20) return PowerUp.doublePoint;
-  return PowerUp.none;
-}
 
 class AchievementDef {
   final String id;
@@ -127,22 +118,41 @@ const achievementsCatalog = <AchievementDef>[
   ),
 ];
 
+// Progressive XP curve for levels 1-150, designed for years of play
+// Early levels are quick, but high levels require much more XP
+const int maxLevel = 150;
+final List<int> xpTable = List.generate(maxLevel + 2, (level) {
+  if (level <= 1) return 0;
+  if (level == 2) return 30; // Level 2: 30 runs
+  if (level == 3) return 80; // Level 3: 80 runs
+  if (level == 4) return 200; // Level 4: 200 runs
+  if (level == 5) return 350; // Level 5: 350 runs
+  if (level <= 10) {
+    // Levels 6-10: curve up
+    return (350 + 100 * (level - 5) + (level * level * 2)).toInt();
+  } else if (level <= 30) {
+    // Levels 11-30: moderate
+    return (1000 + 150 * (level - 10) + (level * level * 4)).toInt();
+  } else if (level <= 60) {
+    // Levels 31-60: hard
+    return (6000 + 400 * (level - 30) + (level * level * 8)).toInt();
+  } else {
+    // Levels 61-150: very steep, for years of play
+    return (25000 + 1000 * (level - 60) + (level * level * 20)).toInt();
+  }
+});
+
 int levelForPoints(int points) {
-  if (points < 100) return 1;
-  if (points < 250) return 2;
-  if (points < 500) return 3;
-  if (points < 1000) return 4;
-  if (points < 2000) return 5;
-  return 6;
+  for (int lvl = 1; lvl <= maxLevel; lvl++) {
+    if (points < xpTable[lvl]) return lvl;
+  }
+  return maxLevel;
 }
 
 int nextLevelTarget(int points) {
-  if (points < 100) return 100;
-  if (points < 250) return 250;
-  if (points < 500) return 500;
-  if (points < 1000) return 1000;
-  if (points < 2000) return 2000;
-  return 999999;
+  int lvl = levelForPoints(points);
+  if (lvl > maxLevel) return xpTable[maxLevel];
+  return xpTable[lvl];
 }
 
 class GamificationSettings {

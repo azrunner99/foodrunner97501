@@ -155,6 +155,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
 class _DayRow { final int weekday; final String label; const _DayRow(this.weekday, this.label); }
 const _days = <_DayRow>[
+  _DayRow(7, 'Sunday'),
   _DayRow(1, 'Monday'),
   _DayRow(2, 'Tuesday'),
   _DayRow(3, 'Wednesday'),

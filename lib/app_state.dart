@@ -134,8 +134,36 @@ class AppState extends ChangeNotifier {
   void toggleRosterView() {
     if (_activeRosterView == 'lunch') {
       _activeRosterView = 'dinner';
+      // During transition, update active roster to dinner
+      final plan = _todayPlan;
+      if (plan != null) {
+        final now = DateTime.now();
+        final m = now.hour * 60 + now.minute;
+        final start = plan.transitionStartMinutes;
+        final end = plan.transitionEndMinutes;
+        if (m >= start && m < end) {
+          // Only dinner-only servers during transition
+          final dinnerIds = plan.dinnerRoster.where((id) => !plan.lunchRoster.contains(id)).toList();
+          updateActiveRoster(dinnerIds);
+        } else {
+          updateActiveRoster(plan.dinnerRoster);
+        }
+      }
     } else if (_activeRosterView == 'dinner') {
       _activeRosterView = 'lunch';
+      // During transition, update active roster to lunch
+      final plan = _todayPlan;
+      if (plan != null) {
+        final now = DateTime.now();
+        final m = now.hour * 60 + now.minute;
+        final start = plan.transitionStartMinutes;
+        final end = plan.transitionEndMinutes;
+        if (m >= start && m < end) {
+          updateActiveRoster(plan.lunchRoster);
+        } else {
+          updateActiveRoster(plan.lunchRoster);
+        }
+      }
     } else {
       final now = DateTime.now();
       final m = now.hour * 60 + now.minute;
@@ -228,6 +256,25 @@ class AppState extends ChangeNotifier {
     _ticker = Timer.periodic(const Duration(seconds: 30), (_) {
       _maybeActivateShiftByClock();
       _pruneOldTapBuckets();
+
+      // --- Auto-switch from lunch to dinner at end of transition ---
+      final now = DateTime.now();
+      final m = now.hour * 60 + now.minute;
+      final plan = _todayPlan;
+      if (plan != null) {
+        final start = plan.transitionStartMinutes;
+        final end = plan.transitionEndMinutes;
+        // If just crossed into dinner (m >= end), and roster is still lunch
+        if (m >= end && _activeRosterView != 'dinner') {
+          // Always finalize and save lunch shift before starting dinner
+          _finalizeAndSaveShift('Lunch');
+          _beginShift('Dinner', plan.dinnerRoster);
+          // Switch to dinner roster
+          _activeRosterView = 'dinner';
+          updateActiveRoster(plan.dinnerRoster);
+          notifyListeners();
+        }
+      }
     });
   }
 
@@ -255,6 +302,17 @@ class AppState extends ChangeNotifier {
   Future<void> saveSettings(GamificationSettings s) async {
     settings = s;
     await Storage.settingsBox.put('gamification', s.toMap());
+    // If today's plan exists, update its transition times and persist
+    if (_todayPlan != null) {
+      _todayPlan = DayPlan(
+        ymd: _todayPlan!.ymd,
+        lunchRoster: List.of(_todayPlan!.lunchRoster),
+        dinnerRoster: List.of(_todayPlan!.dinnerRoster),
+        transitionStartMinutes: s.transitionStartMinutes,
+        transitionEndMinutes: s.transitionEndMinutes,
+      );
+      await _persistDayPlan();
+    }
     notifyListeners();
   }
 
@@ -267,7 +325,13 @@ class AppState extends ChangeNotifier {
 
   void setTodayPlan(List<String> lunch, List<String> dinner) {
     final ymd = _ymd(DateTime.now());
-    _todayPlan = DayPlan(ymd: ymd, lunchRoster: List.of(lunch), dinnerRoster: List.of(dinner));
+    _todayPlan = DayPlan(
+      ymd: ymd,
+      lunchRoster: List.of(lunch),
+      dinnerRoster: List.of(dinner),
+      transitionStartMinutes: settings.transitionStartMinutes,
+      transitionEndMinutes: settings.transitionEndMinutes,
+    );
     _persistDayPlan();
     _maybeActivateShiftByClock();
     notifyListeners();
@@ -285,7 +349,7 @@ class AppState extends ChangeNotifier {
 
   bool get isOpenNow {
     final now = DateTime.now();
-    final wd = _weekday(now);
+  final wd = AppState.weekday(now);
     final open = _hours.openMinutes[wd] ?? 11 * 60;
     final close = _hours.closeMinutes[wd] ?? 23 * 60;
     final m = now.hour * 60 + now.minute;
@@ -293,7 +357,7 @@ class AppState extends ChangeNotifier {
   }
 
   String currentIntendedShiftType(DateTime now) {
-    final wd = _weekday(now);
+  final wd = AppState.weekday(now);
     final m = now.hour * 60 + now.minute;
     final open = _hours.openMinutes[wd]!;
     if (m < open) return 'Lunch';
@@ -317,7 +381,7 @@ class AppState extends ChangeNotifier {
     final intended = currentIntendedShiftType(now);
     final roster = intended == 'Lunch' ? _todayPlan!.lunchRoster : _todayPlan!.dinnerRoster;
 
-    final wd = _weekday(now);
+  final wd = AppState.weekday(now);
     final open = _hours.openMinutes[wd]!;
     final close = _hours.closeMinutes[wd] ?? 23 * 60;
     final m = now.hour * 60 + now.minute;
@@ -406,14 +470,15 @@ class AppState extends ChangeNotifier {
     rec.counts.forEach((id, n) {
       _totals[id] = (_totals[id] ?? 0) + n;
       final prof = _profiles[id] ?? ServerProfile();
-      prof.allTimeRuns += n;
       if (n > prof.bestShiftRuns) prof.bestShiftRuns = n;
 
-      if (prof.allTimeRuns >= 50 && !prof.achievements.contains('fifty_all_time')) {
+      // Use _totals[id] for all-time achievements
+      final allTime = _totals[id] ?? 0;
+      if (allTime >= 50 && !prof.achievements.contains('fifty_all_time')) {
         prof.achievements.add('fifty_all_time');
         prof.points += _pointsFor('fifty_all_time');
       }
-      if (prof.allTimeRuns >= 100 && !prof.achievements.contains('hundred_all_time')) {
+      if (allTime >= 100 && !prof.achievements.contains('hundred_all_time')) {
         prof.achievements.add('hundred_all_time');
         prof.points += _pointsFor('hundred_all_time');
       }
@@ -575,11 +640,7 @@ class AppState extends ChangeNotifier {
     if (!_shiftActive || !_workingServerIds.contains(id)) return;
 
     final now = DateTime.now();
-    final r = Random();
-    var delta = 1;
-    final pu = rollPowerUp(r);
-    if (pu == PowerUp.doublePoint) delta = 2;
-    if (pu == PowerUp.bonusFive) delta = 6;
+    const delta = 1;
 
     _currentCounts[id] = (_currentCounts[id] ?? 0) + delta;
     _teamTotalThisShift += delta;
@@ -732,7 +793,7 @@ class AppState extends ChangeNotifier {
 
   static String _ymd(DateTime d) =>
       '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-  static int _weekday(DateTime d) => d.weekday;
+  static int weekday(DateTime d) => d.weekday;
 
   // --- Add these methods to fix your missing method errors ---
   bool isLunchPeak(DateTime now) {
