@@ -519,15 +519,15 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                   ),
                   onPressed: () {
                     final achievement = app.increment(id);
-                    // Always show XP/level flash
-                    _showFlash(
-                      '+1 XP',
-                      'Next level: $pointsToNext XP',
-                    );
-                    // If achievement, show separate overlay
+                    int xpEarned = 1;
                     if (achievement == 'full_hands') {
+                      xpEarned = 4;
                       _showAchievement('Full Hands!');
                     }
+                    _showFlash(
+                      '+$xpEarned XP',
+                      'Next level: $pointsToNext XP',
+                    );
                     final msg = encouragements[Random().nextInt(encouragements.length)];
                     ScaffoldMessenger.of(ctx).clearSnackBars();
                     ScaffoldMessenger.of(ctx).showSnackBar(

@@ -21,8 +21,9 @@ const achievementsCatalog = <AchievementDef>[
   AchievementDef(
     id: 'full_hands',
     title: 'Full Hands!',
-    description: 'Tap the button 3 times in quick succession (3 seconds).',
-    points: 25,
+    description: 'Tap the button 2 times in quick succession (3 seconds).',
+    points: 4,
+    repeatable: true,
   ),
   AchievementDef(
     id: 'first_run',

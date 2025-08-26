@@ -644,15 +644,15 @@ class AppState extends ChangeNotifier {
     final now = DateTime.now();
     const delta = 1;
 
-    // --- Full Hands! achievement logic ---
+    // --- Full Hands! achievement logic (now 2 rapid taps) ---
     String? justAwarded;
     final tapList = _recentTapTimes.putIfAbsent(id, () => <DateTime>[]);
     tapList.add(now);
-    if (tapList.length > 3) tapList.removeAt(0);
-    if (tapList.length == 3) {
+    if (tapList.length > 2) tapList.removeAt(0);
+    if (tapList.length == 2) {
       final t0 = tapList[0];
-      final t2 = tapList[2];
-      if (!(_profiles[id]?.achievements.contains('full_hands') ?? false) && t2.difference(t0).inMilliseconds <= 3000) {
+      final t1 = tapList[1];
+      if (t1.difference(t0).inMilliseconds <= 3000) {
         final prof = _profiles[id] ?? ServerProfile();
         final serverName = serverById(id)?.name ?? 'Server';
         _awardOnce(prof, 'full_hands', serverName);
