@@ -1,3 +1,4 @@
+  /// Register a Pizookie run: counts as a run, +2 points, +1 pizookieRuns
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
@@ -13,7 +14,12 @@ String _randId() {
 }
 
 class ServerProfile {
+  double get avgSecondsBetweenRuns =>
+      tapIntervalsCount == 0 ? 0 : tapIntervalsMsSum / tapIntervalsCount / 1000.0;
+  int get level => levelForPoints(points);
+  int get nextLevelAt => nextLevelTarget(points);
   int allTimeRuns;
+  int pizookieRuns;
   int bestShiftRuns;
   int streakBest;
   int shiftsAsMvp;
@@ -26,6 +32,7 @@ class ServerProfile {
 
   ServerProfile({
     this.allTimeRuns = 0,
+    this.pizookieRuns = 0,
     this.bestShiftRuns = 0,
     this.streakBest = 0,
     this.shiftsAsMvp = 0,
@@ -38,40 +45,114 @@ class ServerProfile {
   })  : achievements = achievements ?? [],
         repeatEarnedDates = repeatEarnedDates ?? [];
 
-  Map<String, dynamic> toMap() => {
-        'allTimeRuns': allTimeRuns,
-        'bestShiftRuns': bestShiftRuns,
-        'streakBest': streakBest,
-        'shiftsAsMvp': shiftsAsMvp,
-        'achievements': achievements,
-        'repeatEarnedDates': repeatEarnedDates,
-        'points': points,
-        'tapIntervalsMsSum': tapIntervalsMsSum,
-        'tapIntervalsCount': tapIntervalsCount,
-        'lastTapIso': lastTapIso,
-      };
-
   static ServerProfile fromMap(Map m) => ServerProfile(
-        allTimeRuns: (m['allTimeRuns'] ?? 0) as int,
-        bestShiftRuns: (m['bestShiftRuns'] ?? 0) as int,
-        streakBest: (m['streakBest'] ?? 0) as int,
-        shiftsAsMvp: (m['shiftsAsMvp'] ?? 0) as int,
-        achievements: (m['achievements'] as List?)?.cast<String>() ?? <String>[],
-        repeatEarnedDates: (m['repeatEarnedDates'] as List?)?.cast<String>() ?? <String>[],
-        points: (m['points'] ?? 0) as int,
-        tapIntervalsMsSum: (m['tapIntervalsMsSum'] ?? 0) as int,
-        tapIntervalsCount: (m['tapIntervalsCount'] ?? 0) as int,
-        lastTapIso: m['lastTapIso'] as String?,
-      );
+    allTimeRuns: (m['allTimeRuns'] ?? 0) as int,
+    pizookieRuns: (m['pizookieRuns'] ?? 0) as int,
+    bestShiftRuns: (m['bestShiftRuns'] ?? 0) as int,
+    streakBest: (m['streakBest'] ?? 0) as int,
+    shiftsAsMvp: (m['shiftsAsMvp'] ?? 0) as int,
+    achievements: (m['achievements'] as List?)?.cast<String>() ?? <String>[],
+    repeatEarnedDates: (m['repeatEarnedDates'] as List?)?.cast<String>() ?? <String>[],
+    points: (m['points'] ?? 0) as int,
+    tapIntervalsMsSum: (m['tapIntervalsMsSum'] ?? 0) as int,
+    tapIntervalsCount: (m['tapIntervalsCount'] ?? 0) as int,
+    lastTapIso: m['lastTapIso'] as String?,
+  );
 
-  double get avgSecondsBetweenRuns =>
-      tapIntervalsCount == 0 ? 0 : tapIntervalsMsSum / tapIntervalsCount / 1000.0;
-
-  int get level => levelForPoints(points);
-  int get nextLevelAt => nextLevelTarget(points);
+  Map<String, dynamic> toMap() => {
+    'allTimeRuns': allTimeRuns,
+    'pizookieRuns': pizookieRuns,
+    'bestShiftRuns': bestShiftRuns,
+    'streakBest': streakBest,
+    'shiftsAsMvp': shiftsAsMvp,
+    'achievements': achievements,
+    'repeatEarnedDates': repeatEarnedDates,
+    'points': points,
+    'tapIntervalsMsSum': tapIntervalsMsSum,
+    'tapIntervalsCount': tapIntervalsCount,
+    'lastTapIso': lastTapIso,
+  };
 }
-
 class AppState extends ChangeNotifier {
+  /// Register a Pizookie run: counts as a run, +2 points, +1 pizookieRuns
+  /// Register a Pizookie run: counts as a run, +2 points, +1 pizookieRuns
+  String? incrementPizookie(String id) {
+    if (!_shiftActive || !_workingServerIds.contains(id)) return null;
+
+    final now = DateTime.now();
+    const delta = 1;
+    const pizookiePoints = 2;
+
+    _currentCounts[id] = (_currentCounts[id] ?? 0) + delta;
+    _teamTotalThisShift += delta;
+
+    _currentStreaks[id] = (_currentStreaks[id] ?? 0) + 1;
+    final sCount = _currentCounts[id]!;
+    final prof = _profiles[id] ?? ServerProfile();
+    final serverName = serverById(id)?.name ?? 'Server';
+
+    prof.points += pizookiePoints;
+    prof.allTimeRuns += delta;
+    prof.pizookieRuns += delta;
+    print('[DEBUG] Server $id ran a Pizookie: ${prof.points} XP, level ${prof.level}, allTimeRuns: ${prof.allTimeRuns}, pizookieRuns: ${prof.pizookieRuns}');
+
+    final prevIso = prof.lastTapIso;
+    prof.lastTapIso = now.toIso8601String();
+    if (prevIso != null) {
+      final prev = DateTime.tryParse(prevIso);
+      if (prev != null) {
+        final ms = now.difference(prev).inMilliseconds;
+        if (ms > 0 && ms < 20 * 60 * 1000) {
+          prof.tapIntervalsMsSum += ms;
+          prof.tapIntervalsCount += 1;
+        }
+      }
+    }
+
+    if (_currentStreaks[id]! > prof.streakBest) {
+      prof.streakBest = _currentStreaks[id]!;
+    }
+    if (prof.streakBest >= 3) _awardOnce(prof, 'three_streak', serverName);
+    if (prof.streakBest >= 5) _awardOnce(prof, 'five_streak', serverName);
+
+    if (sCount >= 10) _awardOnce(prof, 'ten_in_shift', serverName);
+    if (sCount >= 20) _awardOnce(prof, 'twenty_in_shift', serverName);
+    if (now.hour >= 23) _awardOnce(prof, 'night_owl', serverName);
+
+    _awardOnce(prof, 'first_run_today', serverName);
+    if (prof.allTimeRuns == 0 && !_profiles.containsKey('first_run_${id}_awarded')) {
+      _awardOnce(prof, 'first_run', serverName);
+    }
+
+    if (isLunchPeak(now)) {
+      _lunchPeakCount[id] = (_lunchPeakCount[id] ?? 0) + delta;
+      if (_lunchPeakCount[id]! >= 10) _awardOnce(prof, 'lunch_peak_10', serverName);
+    }
+    if (isDinnerPeak(now)) {
+      _dinnerPeakCount[id] = (_dinnerPeakCount[id] ?? 0) + delta;
+      if (_dinnerPeakCount[id]! >= 10) _awardOnce(prof, 'dinner_peak_10', serverName);
+    }
+    if (isLunchCloser(now)) {
+      _lunchCloserCount[id] = (_lunchCloserCount[id] ?? 0) + delta;
+      if (_lunchCloserCount[id]! >= 8) _awardOnce(prof, 'lunch_closer_8', serverName);
+    }
+    if (isDinnerCloser(now)) {
+      _dinnerCloserCount[id] = (_dinnerCloserCount[id] ?? 0) + delta;
+      if (_dinnerCloserCount[id]! >= 8) _awardOnce(prof, 'dinner_closer_8', serverName);
+    }
+
+  _profiles[id] = prof;
+
+  final minuteEpoch = DateTime(now.year, now.month, now.day, now.hour, now.minute).millisecondsSinceEpoch;
+  _tapPerMinute.putIfAbsent(id, () => <int, int>{});
+  _tapPerMinute[id]![minuteEpoch] = (_tapPerMinute[id]![minuteEpoch] ?? 0) + 1;
+  _persistTapLog();
+  _persistProfiles();
+  _persistTotals();
+
+  notifyListeners();
+  return null;
+  }
   // For Full Hands! achievement: not persisted, just for session
   final Map<String, List<DateTime>> _recentTapTimes = {};
   static const adminPin = '5520';
@@ -209,25 +290,35 @@ class AppState extends ChangeNotifier {
 
   Future<void> load() async {
     final sl = (await Storage.serversBox.get('list') as List?)?.cast<Map>() ?? [];
+    final loadedServers = sl.map((m) => Server.fromMap(Map<String, dynamic>.from(m))).toList();
+    final loadedTotals = (await Storage.totalsBox.get('totals') as Map?)?.cast<String, int>() ?? {};
+    final histList = (await Storage.shiftsBox.get('list') as List?)?.cast<Map>() ?? [];
+    final loadedProfiles = <String, ServerProfile>{};
+    for (final s in loadedServers) {
+      final m = (await Storage.profilesBox.get(s.id) as Map?) ?? {};
+      loadedProfiles[s.id] = m.isEmpty ? ServerProfile() : ServerProfile.fromMap(m);
+    }
+
+    // Merge with any in-memory data (shouldn't be needed, but extra safe)
+    for (final entry in _totals.entries) {
+      loadedTotals.putIfAbsent(entry.key, () => entry.value);
+    }
+    for (final entry in _profiles.entries) {
+      loadedProfiles.putIfAbsent(entry.key, () => entry.value);
+    }
+
     _servers
       ..clear()
-      ..addAll(sl.map((m) => Server.fromMap(Map<String, dynamic>.from(m))));
-
-    final tm = (await Storage.totalsBox.get('totals') as Map?)?.cast<String, int>() ?? {};
+      ..addAll(loadedServers);
     _totals
       ..clear()
-      ..addAll(tm);
-
-    final histList = (await Storage.shiftsBox.get('list') as List?)?.cast<Map>() ?? [];
+      ..addAll(loadedTotals);
     _history
       ..clear()
       ..addAll(histList.map((m) => ShiftRecord.fromMap(Map<String, dynamic>.from(m))));
-
-    _profiles.clear();
-    for (final s in _servers) {
-      final m = (await Storage.profilesBox.get(s.id) as Map?) ?? {};
-      _profiles[s.id] = m.isEmpty ? ServerProfile() : ServerProfile.fromMap(m);
-    }
+    _profiles
+      ..clear()
+      ..addAll(loadedProfiles);
 
     final hm = (await Storage.settingsBox.get('weekly_hours') as Map?) ?? {};
     _hours = hm.isEmpty ? WeeklyHours.defaults() : WeeklyHours.fromMap(Map<String, dynamic>.from(hm));
@@ -579,9 +670,17 @@ class AppState extends ChangeNotifier {
   Future<void> addServer(String name) async {
     final s = Server(id: _randId(), name: name.trim());
     _servers.add(s);
-    _profiles[s.id] = ServerProfile();
+    // Only add a new profile if it doesn't exist
+    if (!_profiles.containsKey(s.id)) {
+      _profiles[s.id] = ServerProfile();
+    }
+    // Only add a new total if it doesn't exist
+    if (!_totals.containsKey(s.id)) {
+      _totals[s.id] = 0;
+    }
     await _persistServers();
     await _persistProfiles();
+    await _persistTotals();
     notifyListeners();
   }
 
@@ -669,7 +768,9 @@ class AppState extends ChangeNotifier {
     final prof = _profiles[id] ?? ServerProfile();
     final serverName = serverById(id)?.name ?? 'Server';
 
-    prof.points += delta;
+  prof.points += delta;
+  prof.allTimeRuns += delta;
+  print('[DEBUG] Server $id now has ${prof.points} XP, level ${prof.level}, allTimeRuns: ${prof.allTimeRuns}');
 
     final prevIso = prof.lastTapIso;
     prof.lastTapIso = now.toIso8601String();
@@ -716,15 +817,17 @@ class AppState extends ChangeNotifier {
       if (_dinnerCloserCount[id]! >= 8) _awardOnce(prof, 'dinner_closer_8', serverName);
     }
 
-    _profiles[id] = prof;
+  _profiles[id] = prof;
 
-    final minuteEpoch = DateTime(now.year, now.month, now.day, now.hour, now.minute).millisecondsSinceEpoch;
-    _tapPerMinute.putIfAbsent(id, () => <int, int>{});
-    _tapPerMinute[id]![minuteEpoch] = (_tapPerMinute[id]![minuteEpoch] ?? 0) + 1;
-    _persistTapLog();
+  final minuteEpoch = DateTime(now.year, now.month, now.day, now.hour, now.minute).millisecondsSinceEpoch;
+  _tapPerMinute.putIfAbsent(id, () => <int, int>{});
+  _tapPerMinute[id]![minuteEpoch] = (_tapPerMinute[id]![minuteEpoch] ?? 0) + 1;
+  _persistTapLog();
+  _persistProfiles();
+  _persistTotals();
 
-    notifyListeners();
-    return justAwarded;
+  notifyListeners();
+  return justAwarded;
   }
 
   void decrement(String id) {
@@ -829,9 +932,9 @@ class AppState extends ChangeNotifier {
   }
 
   bool isLunchCloser(DateTime now) {
-    final m = now.hour * 60 + now.minute;
-    // Example: Lunch closer is 2:00pm–3:30pm
-    return m >= 14 * 60 && m < 15 * 60 + 30;
+  final m = now.hour * 60 + now.minute;
+  // Example: Lunch closer is 2:00pm–3:30pm
+  return m >= 14 * 60 && m < 15 * 60 + 30;
   }
 
   bool isDinnerCloser(DateTime now) {

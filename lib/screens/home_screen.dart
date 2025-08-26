@@ -68,31 +68,26 @@ class HomeScreen extends StatelessWidget {
           PopupMenuButton<_MoreAction>(
             tooltip: 'More',
             onSelected: (a) {
-              switch (a) {
-                case _MoreAction.profiles:
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const ProfilesScreen()),
-                  );
-                  break;
-                case _MoreAction.settings:
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                  );
-                  break;
-                case _MoreAction.mvp:
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const MvpScreen()),
-                  );
-                  break;
-                case _MoreAction.history:
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const HistoryScreen()),
-                  );
-                  break;
+              if (a == _MoreAction.profiles) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ProfilesScreen()),
+                );
+              } else if (a == _MoreAction.settings) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                );
+              } else if (a == _MoreAction.mvp) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MvpScreen()),
+                );
+              } else if (a == _MoreAction.history) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const HistoryScreen()),
+                );
               }
             },
             itemBuilder: (ctx) => [
@@ -136,12 +131,13 @@ class HomeScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: _Body(app: app),
+  body: _Body(app: app),
     );
   }
 }
 
 enum _MoreAction { profiles, settings, mvp, history }
+
 
 class TeamPieChart extends StatelessWidget {
   final Map<String, int> teamCounts;
@@ -150,7 +146,6 @@ class TeamPieChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // If no servers are assigned to any teams, don't show the pie chart at all
     if (teamCounts.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -174,20 +169,11 @@ class TeamPieChart extends StatelessWidget {
 
     return SizedBox(
       height: 180,
-      child: GestureDetector(
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => TeamCompetitionDetailsScreen(teamColors: teamColors),
-            ),
-          );
-        },
-        child: PieChart(
-          PieChartData(
-            sections: sections,
-            centerSpaceRadius: 24,
-            sectionsSpace: 2,
-          ),
+      child: PieChart(
+        PieChartData(
+          sections: sections,
+          centerSpaceRadius: 24,
+          sectionsSpace: 2,
         ),
       ),
     );
@@ -207,9 +193,8 @@ class _Body extends StatelessWidget {
     final dinnerIds = app.todayPlan?.dinnerRoster ?? [];
 
     // Use settings for transition times
-  // Use transition times from today's plan if available, else from settings
-  final start = app.todayPlan?.transitionStartMinutes ?? app.settings.transitionStartMinutes;
-  final end = app.todayPlan?.transitionEndMinutes ?? app.settings.transitionEndMinutes;
+    final start = app.todayPlan?.transitionStartMinutes ?? app.settings.transitionStartMinutes;
+    final end = app.todayPlan?.transitionEndMinutes ?? app.settings.transitionEndMinutes;
 
     // Roster logic using settings:
     List<String> ids;
@@ -238,7 +223,7 @@ class _Body extends StatelessWidget {
     } else {
       rosterLabel = 'LUNCH ROSTER DISPLAYED';
     }
-    print('AppState: todayPlan = ${app.todayPlan}, activeRosterView = ${app.activeRosterView}, shiftActive = ${app.shiftActive}');
+    print('AppState: todayPlan = \\${app.todayPlan}, activeRosterView = \\${app.activeRosterView}, shiftActive = \\${app.shiftActive}');
 
     // Calculate team run counts
     final teamCounts = <String, int>{};
@@ -282,9 +267,11 @@ class _Body extends StatelessWidget {
                 border: Border.all(color: Colors.blueGrey.shade100),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              child: Text(
-                rosterLabel,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.blueGrey, decoration: TextDecoration.underline),
+              child: Center(
+                child: Text(
+                  rosterLabel,
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.blueGrey, decoration: TextDecoration.underline),
+                ),
               ),
             ),
           ),
@@ -503,8 +490,8 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
               final pointsToNext = (nextLevelAt - points).clamp(0, 999999);
 
               return GestureDetector(
-                onLongPress: () => app.decrement(id),
-                child: OutlinedButton(
+                // Remove decrement on long press; we'll use the Pizookie icon for special action
+                  child: OutlinedButton(
                   style: OutlinedButton.styleFrom(
                     backgroundColor: color,
                     foregroundColor: Colors.white,
@@ -544,6 +531,30 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                   },
                   child: Stack(
                     children: [
+                      // Pizookie icon (top-left)
+                      Positioned(
+                        left: 0,
+                        top: 0,
+                        child: GestureDetector(
+                          onLongPress: () {
+                            int xpEarned = 2;
+                            _showFlash(
+                              '+$xpEarned XP\nPizookie!',
+                              'Sweet!  Ran a Pizookie',
+                            );
+                            final msg = 'Pizookie run!';
+                            ScaffoldMessenger.of(ctx).clearSnackBars();
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),
+                            );
+                          },
+                          // Use a cookie icon. If you have FontAwesome, use FaIcon(FontAwesomeIcons.cookie), else use a cookie emoji as a fallback.
+                          child: Text(
+                            '🍪',
+                            style: TextStyle(fontSize: 38, shadows: [Shadow(blurRadius: 2, color: Colors.black26, offset: Offset(1,1))]),
+                          ),
+                        ),
+                      ),
                       // Level chip (top-right)
                       Positioned(
                         right: 8,
@@ -637,18 +648,20 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                             final opacity = 1.0 - fadeProgress;
                             return Opacity(
                               opacity: opacity,
-                              child: Text(
-                                _flashSubText!,
-                                style: const TextStyle(
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.white,
-                                  letterSpacing: 1.2,
-                                  shadows: [
-                                    Shadow(blurRadius: 10, color: Colors.black, offset: Offset(0, 0)),
-                                    Shadow(blurRadius: 16, color: Colors.black87, offset: Offset(2, 2)),
-                                    Shadow(blurRadius: 24, color: Colors.black54, offset: Offset(-2, -2)),
-                                  ],
+                              child: Center(
+                                child: Text(
+                                  _flashSubText!,
+                                  style: const TextStyle(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.white,
+                                    letterSpacing: 1.2,
+                                    shadows: [
+                                      Shadow(blurRadius: 10, color: Colors.black, offset: Offset(0, 0)),
+                                      Shadow(blurRadius: 16, color: Colors.black87, offset: Offset(2, 2)),
+                                      Shadow(blurRadius: 24, color: Colors.black54, offset: Offset(-2, -2)),
+                                    ],
+                                  ),
                                 ),
                               ),
                             );

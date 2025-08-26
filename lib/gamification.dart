@@ -125,32 +125,32 @@ const achievementsCatalog = <AchievementDef>[
   ),
 ];
 
-// Progressive XP curve for levels 1-150, designed for years of play
-// Early levels are quick, but high levels require much more XP
+// Steep XP curve for levels 1-150, so even a strong first day only gets a server to level 2 or just into level 3
 const int maxLevel = 150;
 final List<int> xpTable = List.generate(maxLevel + 2, (level) {
   if (level <= 1) return 0;
-  if (level == 2) return 30; // Level 2: 30 runs
-  if (level == 3) return 80; // Level 3: 80 runs
-  if (level == 4) return 200; // Level 4: 200 runs
-  if (level == 5) return 350; // Level 5: 350 runs
-  if (level <= 10) {
-    // Levels 6-10: curve up
-    return (350 + 100 * (level - 5) + (level * level * 2)).toInt();
-  } else if (level <= 30) {
-    // Levels 11-30: moderate
-    return (1000 + 150 * (level - 10) + (level * level * 4)).toInt();
+  if (level == 2) return 100;   // Level 2: 100 XP
+  if (level == 3) return 300;  // Level 3: 300 XP
+  if (level == 4) return 700;  // Level 4: 700 XP
+  if (level == 5) return 1400;  // Level 5: 1400 XP
+  if (level == 6) return 2400; // Level 6: 2400 XP
+  if (level == 7) return 3800; // Level 7: 3800 XP
+  if (level == 8) return 5600; // Level 8: 5600 XP
+  if (level == 9) return 7800; // Level 9: 7800 XP
+  if (level == 10) return 10400; // Level 10: 10400 XP
+  // After level 10, scale up even more steeply
+  if (level <= 30) {
+    return (10400 + 600 * (level - 10) + (level * level * 20)).toInt();
   } else if (level <= 60) {
-    // Levels 31-60: hard
-    return (6000 + 400 * (level - 30) + (level * level * 8)).toInt();
+    return (31000 + 1200 * (level - 30) + (level * level * 40)).toInt();
   } else {
-    // Levels 61-150: very steep, for years of play
-    return (25000 + 1000 * (level - 60) + (level * level * 20)).toInt();
+    return (82000 + 2400 * (level - 60) + (level * level * 80)).toInt();
   }
 });
 
 int levelForPoints(int points) {
-  for (int lvl = 1; lvl <= maxLevel; lvl++) {
+  if (points < xpTable[2]) return 1;
+  for (int lvl = 2; lvl <= maxLevel; lvl++) {
     if (points < xpTable[lvl]) return lvl;
   }
   return maxLevel;
