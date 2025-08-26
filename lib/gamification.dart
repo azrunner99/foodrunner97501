@@ -19,6 +19,12 @@ class AchievementDef {
 
 const achievementsCatalog = <AchievementDef>[
   AchievementDef(
+    id: 'full_hands',
+    title: 'Full Hands!',
+    description: 'Tap the button 3 times in quick succession (3 seconds).',
+    points: 25,
+  ),
+  AchievementDef(
     id: 'first_run',
     title: 'First Run!',
     description: 'Completed your first food run.',
