@@ -368,6 +368,8 @@ class _ActiveGrid extends StatefulWidget {
 }
 
 class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin {
+  String? _achievementText;
+  AnimationController? _achievementController;
   String? _flashText;
   String? _flashSubText;
   AnimationController? _xpController;
@@ -376,6 +378,7 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
   @override
   void initState() {
     super.initState();
+    _achievementController = AnimationController(vsync: this, duration: const Duration(milliseconds: 5500));
     _xpController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1100));
     _subController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1800));
     _xpController?.addStatusListener((status) {
@@ -393,10 +396,20 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
         });
       }
     });
+    _achievementController?.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        if (mounted) {
+          setState(() {
+            _achievementText = null;
+          });
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
+  _achievementController?.dispose();
     _xpController?.dispose();
     _subController?.dispose();
     super.dispose();
@@ -409,6 +422,16 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
     });
     _xpController?.forward(from: 0);
     _subController?.forward(from: 0);
+  }
+
+  void _showAchievement(String text) {
+    print('[_showAchievement] called with: ' + text);
+    if (!mounted) return;
+    setState(() {
+      _achievementText = text;
+    });
+    _achievementController?.reset();
+    _achievementController?.forward();
   }
 
   Color _tierColor(int my, int max) {
@@ -495,14 +518,16 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                     padding: const EdgeInsets.all(12),
                   ),
                   onPressed: () {
-                    app.increment(id);
-
-                    // Show XP flash overlay
+                    final achievement = app.increment(id);
+                    // Always show XP/level flash
                     _showFlash(
                       '+1 XP',
                       'Next level: $pointsToNext XP',
                     );
-
+                    // If achievement, show separate overlay
+                    if (achievement == 'full_hands') {
+                      _showAchievement('Full Hands!');
+                    }
                     final msg = encouragements[Random().nextInt(encouragements.length)];
                     ScaffoldMessenger.of(ctx).clearSnackBars();
                     ScaffoldMessenger.of(ctx).showSnackBar(
@@ -563,7 +588,11 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
           ),
         ),
         if (_flashText != null)
-          Positioned.fill(
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
             child: IgnorePointer(
               child: Center(
                 child: Column(
@@ -627,6 +656,60 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                         ),
                       ),
                   ],
+                ),
+              ),
+            ),
+          ),
+
+        // Achievement flash overlay (separate, longer lasting)
+        if (_achievementText != null && _achievementController != null)
+          Positioned(
+            bottom: 80,
+            left: 0,
+            right: 0,
+            child: IgnorePointer(
+              child: Center(
+                child: AnimatedBuilder(
+                  animation: _achievementController!,
+                  builder: (context, child) {
+                    print('[AchievementOverlay] builder: _achievementText=$_achievementText, controller.value=${_achievementController!.value}');
+                    final opacity = 1.0 - _achievementController!.value;
+                    final scale = 1.0 + 0.2 * (1.0 - _achievementController!.value);
+                    return Opacity(
+                      opacity: opacity,
+                      child: Transform.scale(
+                        scale: scale,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.emoji_events,
+                              size: 80,
+                              color: Colors.amber.shade700,
+                              shadows: [
+                                Shadow(blurRadius: 24, color: Colors.black54, offset: Offset(0, 6)),
+                                Shadow(blurRadius: 32, color: Colors.amberAccent, offset: Offset(0, 0)),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              _achievementText ?? '',
+                              style: TextStyle(
+                                fontSize: 54,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.amber.shade700,
+                                letterSpacing: 1.5,
+                                shadows: const [
+                                  Shadow(blurRadius: 12, color: Colors.black, offset: Offset(0, 0)),
+                                  Shadow(blurRadius: 24, color: Colors.black54, offset: Offset(2, 2)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ),

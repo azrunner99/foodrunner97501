@@ -72,6 +72,8 @@ class ServerProfile {
 }
 
 class AppState extends ChangeNotifier {
+  // For Full Hands! achievement: not persisted, just for session
+  final Map<String, List<DateTime>> _recentTapTimes = {};
   static const adminPin = '5520';
   static const dinnerSwitchMinutes = 15 * 60 + 30; // 3:30 PM
   static const dinnerFullSwitchMinutes = 16 * 60; // 4:00 PM
@@ -636,11 +638,28 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  void increment(String id) {
-    if (!_shiftActive || !_workingServerIds.contains(id)) return;
+  String? increment(String id) {
+  if (!_shiftActive || !_workingServerIds.contains(id)) return null;
 
     final now = DateTime.now();
     const delta = 1;
+
+    // --- Full Hands! achievement logic ---
+    String? justAwarded;
+    final tapList = _recentTapTimes.putIfAbsent(id, () => <DateTime>[]);
+    tapList.add(now);
+    if (tapList.length > 3) tapList.removeAt(0);
+    if (tapList.length == 3) {
+      final t0 = tapList[0];
+      final t2 = tapList[2];
+      if (!(_profiles[id]?.achievements.contains('full_hands') ?? false) && t2.difference(t0).inMilliseconds <= 3000) {
+        final prof = _profiles[id] ?? ServerProfile();
+        final serverName = serverById(id)?.name ?? 'Server';
+        _awardOnce(prof, 'full_hands', serverName);
+        _profiles[id] = prof;
+        justAwarded = 'full_hands';
+      }
+    }
 
     _currentCounts[id] = (_currentCounts[id] ?? 0) + delta;
     _teamTotalThisShift += delta;
@@ -705,6 +724,7 @@ class AppState extends ChangeNotifier {
     _persistTapLog();
 
     notifyListeners();
+    return justAwarded;
   }
 
   void decrement(String id) {
