@@ -1,3 +1,4 @@
+
 import 'package:fl_chart/fl_chart.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -14,6 +15,17 @@ import 'settings_screen.dart';
 import 'mvp_screen.dart';
 import 'history_screen.dart';
 import '_shift_start_notice.dart';
+
+// Helper for roster popup: display a server row
+Widget _rosterServerRow(AppState app, String id) {
+  final server = app.servers.firstWhere((s) => s.id == id, orElse: () => Server(id: id, name: 'Unknown'));
+  final count = app.currentCounts[id] ?? 0;
+  return ListTile(
+    title: Text(server.name),
+    trailing: Text('$count'),
+    dense: true,
+  );
+}
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -189,14 +201,12 @@ class _Body extends StatelessWidget {
     final now = DateTime.now();
     final m = now.hour * 60 + now.minute;
 
-    final lunchIds = app.todayPlan?.lunchRoster ?? [];
-    final dinnerIds = app.todayPlan?.dinnerRoster ?? [];
 
     // Use settings for transition times
     final start = app.todayPlan?.transitionStartMinutes ?? app.settings.transitionStartMinutes;
     final end = app.todayPlan?.transitionEndMinutes ?? app.settings.transitionEndMinutes;
-
-    // Roster logic using settings:
+    final lunchIds = app.todayPlan?.lunchRoster ?? [];
+    final dinnerIds = app.todayPlan?.dinnerRoster ?? [];
     List<String> ids;
     final showToggle = m >= start && m < end;
     if (m < start) {
@@ -204,26 +214,16 @@ class _Body extends StatelessWidget {
     } else if (m >= end) {
       ids = dinnerIds;
     } else {
-      // During transition: only show double-shift servers on lunch, not dinner
       if (app.activeRosterView == 'dinner') {
         ids = dinnerIds.where((id) => !lunchIds.contains(id)).toList();
       } else {
         ids = lunchIds;
       }
     }
-    // Remove duplicates so a server only appears once
     ids = ids.toSet().toList();
-
-    // After transition, always show dinner label
-    String rosterLabel;
-    if (m >= end) {
-      rosterLabel = 'DINNER ROSTER DISPLAYED';
-    } else if (app.activeRosterView == 'dinner' && showToggle) {
-      rosterLabel = 'DINNER ROSTER DISPLAYED';
-    } else {
-      rosterLabel = 'LUNCH ROSTER DISPLAYED';
-    }
-    print('AppState: todayPlan = \\${app.todayPlan}, activeRosterView = \\${app.activeRosterView}, shiftActive = \\${app.shiftActive}');
+    String rosterLabel = (m >= end || (app.activeRosterView == 'dinner' && showToggle))
+        ? 'DINNER ROSTER DISPLAYED'
+        : 'LUNCH ROSTER DISPLAYED';
 
     // Calculate team run counts
     final teamCounts = <String, int>{};
@@ -232,19 +232,14 @@ class _Body extends StatelessWidget {
       'Purple': Colors.purple,
       'Silver': Colors.grey,
     };
-
     for (final id in ids) {
       final s = app.serverById(id);
       if (s == null || s.teamColor == null) continue;
       teamCounts[s.teamColor!] = (teamCounts[s.teamColor!] ?? 0) + (app.currentCounts[id] ?? 0);
     }
-
-    String toggleLabel;
-    if (app.activeRosterView == 'lunch' || !showToggle) {
-      toggleLabel = "Switch to Dinner";
-    } else {
-      toggleLabel = "Switch to Lunch";
-    }
+    String toggleLabel = (app.activeRosterView == 'lunch' || !showToggle)
+        ? "Switch to Dinner"
+        : "Switch to Lunch";
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -815,20 +810,202 @@ class TeamCompetitionDetailsScreen extends StatelessWidget {
   }
 }
 
-class _RosterPopup extends StatelessWidget {
+
+class _RosterPopup extends StatefulWidget {
   final AppState app;
   final String rosterLabel;
   const _RosterPopup({required this.app, required this.rosterLabel});
 
   @override
+  State<_RosterPopup> createState() => _RosterPopupState();
+}
+
+class _RosterPopupState extends State<_RosterPopup> {
+  bool showLunch = true;
+
+  @override
+  void initState() {
+    super.initState();
+    showLunch = widget.rosterLabel.toLowerCase().contains('lunch');
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final m = now.hour * 60 + now.minute;
+    final plan = widget.app.todayPlan;
+    final lunchIds = plan?.lunchRoster ?? [];
+    final dinnerIds = plan?.dinnerRoster ?? [];
+    final isAfterTransition = m >= (plan?.transitionEndMinutes ?? widget.app.settings.transitionEndMinutes);
+    final header = showLunch ? 'Lunch' : 'Dinner';
+
+    // --- Get the correct roster and sort by runs descending ---
+    final ids = showLunch ? lunchIds : dinnerIds;
+    final sortedIds = [...ids];
+    sortedIds.sort((a, b) => (widget.app.currentCounts[b] ?? 0).compareTo(widget.app.currentCounts[a] ?? 0));
+
+    // --- Calculate team totals and percentages ---
+    final teamColors = <String, Color>{
+      'Blue': Colors.blue,
+      'Purple': Colors.purple,
+      'Silver': Colors.grey,
+    };
+    final teamCounts = <String, int>{};
+    int totalRuns = 0;
+    for (final id in sortedIds) {
+      final s = widget.app.servers.firstWhere(
+        (srv) => srv.id == id,
+        orElse: () => Server(id: id, name: 'Unknown'),
+      );
+      if (s.teamColor == null) continue;
+      final team = s.teamColor!;
+      final count = widget.app.currentCounts[id] ?? 0;
+      teamCounts[team] = (teamCounts[team] ?? 0) + count;
+      totalRuns += count;
+    }
+    // Build team percentage widgets
+    List<Widget> teamPercentWidgets = [];
+    if (totalRuns > 0) {
+      teamPercentWidgets = teamColors.keys.map((team) {
+        final runs = teamCounts[team] ?? 0;
+        final pct = (runs / totalRuns * 100).toStringAsFixed(1);
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(width: 12, height: 12, margin: const EdgeInsets.only(right: 6), decoration: BoxDecoration(color: teamColors[team], shape: BoxShape.circle)),
+            Text('$team: $pct%', style: const TextStyle(fontSize: 13)),
+            const SizedBox(width: 12),
+          ],
+        );
+      }).toList();
+    }
+
     return AlertDialog(
-      title: Text(rosterLabel),
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Center(
+            child: Text(
+              header,
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          if (showLunch && isAfterTransition)
+            const Padding(
+              padding: EdgeInsets.only(top: 2.0),
+              child: Text('finalized', style: TextStyle(fontStyle: FontStyle.italic, fontSize: 13, color: Colors.grey)),
+            ),
+          if (teamPercentWidgets.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0, bottom: 2.0),
+              child: Wrap(children: teamPercentWidgets),
+            ),
+        ],
+      ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Active Roster'),
-          // You can expand this with more details if needed
+          Center(
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: ToggleButtons(
+                isSelected: [showLunch, !showLunch],
+                onPressed: (idx) => setState(() => showLunch = idx == 0),
+                borderRadius: BorderRadius.circular(20),
+                constraints: const BoxConstraints(minWidth: 80, minHeight: 36),
+                selectedColor: Colors.white,
+                fillColor: Theme.of(context).primaryColor,
+                children: const [Text('Lunch'), Text('Dinner')],
+              ),
+            ),
+          ),
+          // Column headers
+          Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 2),
+            child: Row(
+              children: const [
+                Expanded(
+                  flex: 4,
+                  child: Text(
+                    'Servers',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 0.5),
+                    textAlign: TextAlign.left,
+                  ),
+                ),
+                Expanded(
+                  flex: 3,
+                  child: Text(
+                    'Number\nof Runs',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 0.5),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                Expanded(
+                  flex: 4,
+                  child: Text(
+                    'Percentage\nof Food Ran',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 0.5),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 8),
+          ...List.generate(sortedIds.length, (i) {
+            final id = sortedIds[i];
+            final server = widget.app.servers.firstWhere((s) => s.id == id, orElse: () => Server(id: id, name: 'Unknown'));
+            final count = widget.app.currentCounts[id] ?? 0;
+            final pct = totalRuns > 0 ? (count / totalRuns * 100).toStringAsFixed(1) : '0.0';
+            Color? nameColor;
+            FontWeight nameWeight = FontWeight.bold;
+            if (i == 0) nameColor = Color(0xFFFFD700); // Gold
+            else if (i == 1) nameColor = Color(0xFFC0C0C0); // Silver
+            else if (i == 2) nameColor = Color(0xFFCD7F32); // Bronze
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2.5),
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 4,
+                    child: Text(
+                      server.name,
+                      style: TextStyle(
+                        fontWeight: nameWeight,
+                        color: nameColor,
+                        fontSize: 15,
+                        letterSpacing: 0.2,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Expanded(
+                    flex: 3,
+                    child: Text(
+                      '$count',
+                      style: const TextStyle(fontSize: 14),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  Expanded(
+                    flex: 4,
+                    child: Text(
+                      '$pct%',
+                      style: const TextStyle(fontSize: 14),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
         ],
       ),
       actions: [
