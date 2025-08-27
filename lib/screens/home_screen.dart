@@ -457,271 +457,287 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
     final total = counts.fold<int>(0, (a, b) => a + b);
     final columns = MediaQuery.of(context).size.width > 800 ? 4 : 2;
 
-    return Stack(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.all(12),
-          child: GridView.builder(
-            itemCount: ids.length,
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: columns,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 1.4,
-            ),
-            itemBuilder: (ctx, i) {
-              final id = ids[i];
-              final s = app.serverById(id);
-              if (s == null) return const SizedBox.shrink();
-
-              final my = app.currentCounts[id] ?? 0;
-              final all = app.allTimeFor(id);
-              final pct = total == 0 ? 0 : ((my / total) * 100).round();
-              final color = _tierColor(my, maxCount);
-              final level = app.profiles[id]?.level ?? 1;
-              final borderColor = _teamColor(s.teamColor) ?? Colors.transparent;
-              final points = app.profiles[id]?.points ?? 0;
-              final nextLevelAt = app.profiles[id]?.nextLevelAt ?? 0;
-              final pointsToNext = (nextLevelAt - points).clamp(0, 999999);
-
-              return GestureDetector(
-                // Remove decrement on long press; we'll use the Pizookie icon for special action
-                  child: OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    backgroundColor: color,
-                    foregroundColor: Colors.white,
-                    side: BorderSide(
-                      color: borderColor,
-                      width: borderColor == Colors.transparent ? 0 : 8,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.only(top: 12, bottom: 8, left: 16, right: 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const Text('🍪', style: TextStyle(fontSize: 28, shadows: [Shadow(blurRadius: 2, color: Colors.black26, offset: Offset(1,1))])),
+              Expanded(
+                child: Text(
+                  'Long press when running a Pizookie!',
+                  style: TextStyle(
+                    color: Colors.brown.shade700,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 20,
+                    letterSpacing: 1.1,
+                    shadows: const [Shadow(blurRadius: 4, color: Colors.black12, offset: Offset(1,1))],
                   ),
-                  onPressed: () {
-                    final achievement = app.increment(id);
-                    int xpEarned = 1;
-                    if (achievement == 'full_hands') {
-                      xpEarned = 4;
-                      _showAchievement('Full Hands!');
-                    }
-                    _showFlash(
-                      '+$xpEarned XP',
-                      'Next level: $pointsToNext XP',
-                    );
-                    final msg = encouragements[Random().nextInt(encouragements.length)];
-                    ScaffoldMessenger.of(ctx).clearSnackBars();
-                    ScaffoldMessenger.of(ctx).showSnackBar(
-                      SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),
-                    );
-
-                    final bubble = app.recentBadgeBubble;
-                    if (bubble != null) {
-                      ScaffoldMessenger.of(ctx).showSnackBar(
-                        SnackBar(content: Text(bubble), duration: const Duration(seconds: 3)),
-                      );
-                      app.clearRecentBadgeBubble();
-                    }
-                  },
-                  child: Stack(
-                    children: [
-                      // Pizookie icon (top-left)
-                      Positioned(
-                        left: 0,
-                        top: 0,
-                        child: GestureDetector(
-                          onLongPress: () {
-                            int xpEarned = 2;
-                            _showFlash(
-                              '+$xpEarned XP\nPizookie!',
-                              'Sweet!  Ran a Pizookie',
-                            );
-                            final msg = 'Pizookie run!';
-                            ScaffoldMessenger.of(ctx).clearSnackBars();
-                            ScaffoldMessenger.of(ctx).showSnackBar(
-                              SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),
-                            );
-                          },
-                          // Use a cookie icon. If you have FontAwesome, use FaIcon(FontAwesomeIcons.cookie), else use a cookie emoji as a fallback.
-                          child: Text(
-                            '🍪',
-                            style: TextStyle(fontSize: 38, shadows: [Shadow(blurRadius: 2, color: Colors.black26, offset: Offset(1,1))]),
-                          ),
-                        ),
-                      ),
-                      // Level chip (top-right)
-                      Positioned(
-                        right: 8,
-                        top: 8,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.black26,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text('lvl$level'),
-                        ),
-                      ),
-                      Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              s.name,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              'Shift: $my  •  $pct%',
-                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                            ),
-                            Text(
-                              'All-time: $all',
-                              style: const TextStyle(fontSize: 13),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                  textAlign: TextAlign.center,
                 ),
-              );
-            },
+              ),
+              const Text('🍪', style: TextStyle(fontSize: 28, shadows: [Shadow(blurRadius: 2, color: Colors.black26, offset: Offset(1,1))])),
+            ],
           ),
         ),
-        if (_flashText != null)
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: IgnorePointer(
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (_xpController != null)
-                      AnimatedBuilder(
-                        animation: _xpController!,
+        Expanded(
+          child: Stack(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: GridView.builder(
+                  itemCount: ids.length,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: columns,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 1.4,
+                  ),
+                  itemBuilder: (ctx, i) {
+                    final id = ids[i];
+                    final s = app.serverById(id);
+                    if (s == null) return const SizedBox.shrink();
+
+                    final my = app.currentCounts[id] ?? 0;
+                    final all = app.allTimeFor(id);
+                    final pct = total == 0 ? 0 : ((my / total) * 100).round();
+                    final color = _tierColor(my, maxCount);
+                    final level = app.profiles[id]?.level ?? 1;
+                    final borderColor = _teamColor(s.teamColor) ?? Colors.transparent;
+                    final points = app.profiles[id]?.points ?? 0;
+                    final nextLevelAt = app.profiles[id]?.nextLevelAt ?? 0;
+                    final pointsToNext = (nextLevelAt - points).clamp(0, 999999);
+
+                    return OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: color,
+                        foregroundColor: Colors.white,
+                        side: BorderSide(
+                          color: borderColor,
+                          width: borderColor == Colors.transparent ? 0 : 8,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        padding: const EdgeInsets.all(12),
+                      ),
+                      onPressed: () {
+                        final achievement = app.increment(id);
+                        int xpEarned = 1;
+                        if (achievement == 'full_hands') {
+                          xpEarned = 4;
+                          _showAchievement('Full Hands!');
+                        }
+                        _showFlash(
+                          '+$xpEarned XP',
+                          'Next level: $pointsToNext XP',
+                        );
+                        final msg = encouragements[Random().nextInt(encouragements.length)];
+                        ScaffoldMessenger.of(ctx).clearSnackBars();
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),
+                        );
+
+                        final bubble = app.recentBadgeBubble;
+                        if (bubble != null) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            SnackBar(content: Text(bubble), duration: const Duration(seconds: 3)),
+                          );
+                          app.clearRecentBadgeBubble();
+                        }
+                      },
+                      onLongPress: () {
+                        int xpEarned = 2;
+                        _showFlash(
+                          '+$xpEarned XP\nPizookie!',
+                          'Sweet!  Ran a Pizookie',
+                        );
+                        final msg = 'Pizookie run!';
+                        ScaffoldMessenger.of(ctx).clearSnackBars();
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),
+                        );
+                      },
+                      child: Stack(
+                        children: [
+                          // Level chip (top-right)
+                          Positioned(
+                            right: 8,
+                            top: 8,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.black26,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text('lvl$level'),
+                            ),
+                          ),
+                          Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  s.name,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Shift: $my  •  $pct%',
+                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                                ),
+                                Text(
+                                  'All-time: $all',
+                                  style: const TextStyle(fontSize: 13),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+              if (_flashText != null)
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: IgnorePointer(
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (_xpController != null)
+                            AnimatedBuilder(
+                              animation: _xpController!,
+                              builder: (context, child) {
+                                final opacity = 1.0 - _xpController!.value;
+                                final scale = 1.0 + 0.5 * (1.0 - _xpController!.value);
+                                return Opacity(
+                                  opacity: opacity,
+                                  child: Transform.scale(
+                                    scale: scale,
+                                    child: Text(
+                                      _flashText ?? '',
+                                      style: const TextStyle(
+                                        fontSize: 48,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.amber,
+                                        shadows: [
+                                          Shadow(blurRadius: 8, color: Colors.black45, offset: Offset(2, 2)),
+                                          Shadow(blurRadius: 12, color: Colors.black, offset: Offset(0, 0)),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          if (_flashSubText != null && _subController != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 16.0),
+                              child: AnimatedBuilder(
+                                animation: _subController!,
+                                builder: (context, child) {
+                                  // Subtext fades out only after XP flash is gone
+                                  final fadeStart = 0.3;
+                                  final subValue = _subController!.value;
+                                  final fadeProgress = ((subValue - fadeStart) / (1.0 - fadeStart)).clamp(0.0, 1.0);
+                                  final opacity = 1.0 - fadeProgress;
+                                  return Opacity(
+                                    opacity: opacity,
+                                    child: Center(
+                                      child: Text(
+                                        _flashSubText!,
+                                        style: const TextStyle(
+                                          fontSize: 32,
+                                          fontWeight: FontWeight.w900,
+                                          color: Colors.white,
+                                          letterSpacing: 1.2,
+                                          shadows: [
+                                            Shadow(blurRadius: 10, color: Colors.black, offset: Offset(0, 0)),
+                                            Shadow(blurRadius: 16, color: Colors.black87, offset: Offset(2, 2)),
+                                            Shadow(blurRadius: 24, color: Colors.black54, offset: Offset(-2, -2)),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+              // Achievement flash overlay (separate, longer lasting)
+              if (_achievementText != null && _achievementController != null)
+                Positioned(
+                  bottom: 80,
+                  left: 0,
+                  right: 0,
+                  child: IgnorePointer(
+                    child: Center(
+                      child: AnimatedBuilder(
+                        animation: _achievementController!,
                         builder: (context, child) {
-                          final opacity = 1.0 - _xpController!.value;
-                          final scale = 1.0 + 0.5 * (1.0 - _xpController!.value);
+                          print('[AchievementOverlay] builder: _achievementText=$_achievementText, controller.value=${_achievementController!.value}');
+                          final opacity = 1.0 - _achievementController!.value;
+                          final scale = 1.0 + 0.2 * (1.0 - _achievementController!.value);
                           return Opacity(
                             opacity: opacity,
                             child: Transform.scale(
                               scale: scale,
-                              child: Text(
-                                _flashText ?? '',
-                                style: const TextStyle(
-                                  fontSize: 48,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.amber,
-                                  shadows: [
-                                    Shadow(blurRadius: 8, color: Colors.black45, offset: Offset(2, 2)),
-                                    Shadow(blurRadius: 12, color: Colors.black, offset: Offset(0, 0)),
-                                  ],
-                                ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.emoji_events,
+                                    size: 80,
+                                    color: Colors.amber.shade700,
+                                    shadows: [
+                                      Shadow(blurRadius: 24, color: Colors.black54, offset: Offset(0, 6)),
+                                      Shadow(blurRadius: 32, color: Colors.amberAccent, offset: Offset(0, 0)),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    _achievementText ?? '',
+                                    style: TextStyle(
+                                      fontSize: 54,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.amber.shade700,
+                                      letterSpacing: 1.5,
+                                      shadows: const [
+                                        Shadow(blurRadius: 12, color: Colors.black, offset: Offset(0, 0)),
+                                        Shadow(blurRadius: 24, color: Colors.black54, offset: Offset(2, 2)),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           );
                         },
                       ),
-                    if (_flashSubText != null && _subController != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 16.0),
-                        child: AnimatedBuilder(
-                          animation: _subController!,
-                          builder: (context, child) {
-                            // Subtext fades out only after XP flash is gone
-                            final fadeStart = 0.3;
-                            final subValue = _subController!.value;
-                            final fadeProgress = ((subValue - fadeStart) / (1.0 - fadeStart)).clamp(0.0, 1.0);
-                            final opacity = 1.0 - fadeProgress;
-                            return Opacity(
-                              opacity: opacity,
-                              child: Center(
-                                child: Text(
-                                  _flashSubText!,
-                                  style: const TextStyle(
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.w900,
-                                    color: Colors.white,
-                                    letterSpacing: 1.2,
-                                    shadows: [
-                                      Shadow(blurRadius: 10, color: Colors.black, offset: Offset(0, 0)),
-                                      Shadow(blurRadius: 16, color: Colors.black87, offset: Offset(2, 2)),
-                                      Shadow(blurRadius: 24, color: Colors.black54, offset: Offset(-2, -2)),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                  ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
+            ],
           ),
-
-        // Achievement flash overlay (separate, longer lasting)
-        if (_achievementText != null && _achievementController != null)
-          Positioned(
-            bottom: 80,
-            left: 0,
-            right: 0,
-            child: IgnorePointer(
-              child: Center(
-                child: AnimatedBuilder(
-                  animation: _achievementController!,
-                  builder: (context, child) {
-                    print('[AchievementOverlay] builder: _achievementText=$_achievementText, controller.value=${_achievementController!.value}');
-                    final opacity = 1.0 - _achievementController!.value;
-                    final scale = 1.0 + 0.2 * (1.0 - _achievementController!.value);
-                    return Opacity(
-                      opacity: opacity,
-                      child: Transform.scale(
-                        scale: scale,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.emoji_events,
-                              size: 80,
-                              color: Colors.amber.shade700,
-                              shadows: [
-                                Shadow(blurRadius: 24, color: Colors.black54, offset: Offset(0, 6)),
-                                Shadow(blurRadius: 32, color: Colors.amberAccent, offset: Offset(0, 0)),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              _achievementText ?? '',
-                              style: TextStyle(
-                                fontSize: 54,
-                                fontWeight: FontWeight.w900,
-                                color: Colors.amber.shade700,
-                                letterSpacing: 1.5,
-                                shadows: const [
-                                  Shadow(blurRadius: 12, color: Colors.black, offset: Offset(0, 0)),
-                                  Shadow(blurRadius: 24, color: Colors.black54, offset: Offset(2, 2)),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-          ),
+        ),
       ],
     );
   }
