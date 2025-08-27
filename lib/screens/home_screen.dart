@@ -860,41 +860,11 @@ class _RosterPopupState extends State<_RosterPopup> {
     final sortedIds = [...ids];
     sortedIds.sort((a, b) => (widget.app.currentCounts[b] ?? 0).compareTo(widget.app.currentCounts[a] ?? 0));
 
-    // --- Calculate team totals and percentages ---
-    final teamColors = <String, Color>{
-      'Blue': Colors.blue,
-      'Purple': Colors.purple,
-      'Silver': Colors.grey,
-    };
-    final teamCounts = <String, int>{};
-    int totalRuns = 0;
-    for (final id in sortedIds) {
-      final s = widget.app.servers.firstWhere(
-        (srv) => srv.id == id,
-        orElse: () => Server(id: id, name: 'Unknown'),
-      );
-      if (s.teamColor == null) continue;
-      final team = s.teamColor!;
-      final count = widget.app.currentCounts[id] ?? 0;
-      teamCounts[team] = (teamCounts[team] ?? 0) + count;
-      totalRuns += count;
-    }
-    // Build team percentage widgets
-    List<Widget> teamPercentWidgets = [];
-    if (totalRuns > 0) {
-      teamPercentWidgets = teamColors.keys.map((team) {
-        final runs = teamCounts[team] ?? 0;
-        final pct = (runs / totalRuns * 100).toStringAsFixed(1);
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(width: 12, height: 12, margin: const EdgeInsets.only(right: 6), decoration: BoxDecoration(color: teamColors[team], shape: BoxShape.circle)),
-            Text('$team: $pct%', style: const TextStyle(fontSize: 13)),
-            const SizedBox(width: 12),
-          ],
-        );
-      }).toList();
-    }
+  // Calculate total runs for this roster (matching grid logic)
+  final counts = sortedIds.map((id) => widget.app.currentCounts[id] ?? 0).toList();
+  final totalRuns = counts.fold<int>(0, (a, b) => a + b);
+  // No team percent widgets needed
+  List<Widget> teamPercentWidgets = [];
 
     return AlertDialog(
       title: Column(
@@ -942,86 +912,66 @@ class _RosterPopupState extends State<_RosterPopup> {
             ),
           ),
           // Column headers
-          Padding(
-            padding: const EdgeInsets.only(top: 8, bottom: 2),
-            child: Row(
-              children: const [
-                Expanded(
-                  flex: 4,
-                  child: Text(
-                    'Servers',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 0.5),
-                    textAlign: TextAlign.left,
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 4),
+            child: Scrollbar(
+              thumbVisibility: true,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  child: Scrollbar(
+                    thumbVisibility: true,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.vertical,
+                      child: DataTable(
+                        headingRowHeight: 38,
+                        dataRowHeight: 32,
+                        columnSpacing: 18,
+                        horizontalMargin: 8,
+                        columns: const [
+                          DataColumn(label: Text('Servers', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15))),
+                          DataColumn(label: Text('Runs', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15))),
+                          DataColumn(label: Text('Pizookie', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15))),
+                          DataColumn(label: Text('% Food', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15))),
+                        ],
+                        rows: List.generate(sortedIds.length, (i) {
+                          final id = sortedIds[i];
+                          final server = widget.app.servers.firstWhere((s) => s.id == id, orElse: () => Server(id: id, name: 'Unknown'));
+                          final count = widget.app.currentCounts[id] ?? 0;
+                          final pct = totalRuns > 0 ? ((count / totalRuns) * 100).round() : 0;
+                          final pizookieRuns = widget.app.profiles[id]?.pizookieRuns ?? 0;
+                          Color? nameColor;
+                          FontWeight nameWeight = FontWeight.bold;
+                          if (i == 0) nameColor = Color(0xFFFFD700); // Gold
+                          else if (i == 1) nameColor = Color(0xFFC0C0C0); // Silver
+                          else if (i == 2) nameColor = Color(0xFFCD7F32); // Bronze
+                          return DataRow(
+                            cells: [
+                              DataCell(Text(
+                                server.name,
+                                style: TextStyle(
+                                  fontWeight: nameWeight,
+                                  color: nameColor,
+                                  fontSize: 15,
+                                  letterSpacing: 0.2,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              )),
+                              DataCell(Text('$count', style: const TextStyle(fontSize: 14))),
+                              DataCell(Text('$pizookieRuns', style: const TextStyle(fontSize: 14))),
+                              DataCell(Text('$pct%', style: const TextStyle(fontSize: 14))),
+                            ],
+                          );
+                        }),
+                      ),
+                    ),
                   ),
                 ),
-                Expanded(
-                  flex: 3,
-                  child: Text(
-                    'Number\nof Runs',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 0.5),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                Expanded(
-                  flex: 4,
-                  child: Text(
-                    'Percentage\nof Food Ran',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 0.5),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
-          const Divider(height: 8),
-          ...List.generate(sortedIds.length, (i) {
-            final id = sortedIds[i];
-            final server = widget.app.servers.firstWhere((s) => s.id == id, orElse: () => Server(id: id, name: 'Unknown'));
-            final count = widget.app.currentCounts[id] ?? 0;
-            final pct = totalRuns > 0 ? (count / totalRuns * 100).toStringAsFixed(1) : '0.0';
-            Color? nameColor;
-            FontWeight nameWeight = FontWeight.bold;
-            if (i == 0) nameColor = Color(0xFFFFD700); // Gold
-            else if (i == 1) nameColor = Color(0xFFC0C0C0); // Silver
-            else if (i == 2) nameColor = Color(0xFFCD7F32); // Bronze
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2.5),
-              child: Row(
-                children: [
-                  Expanded(
-                    flex: 4,
-                    child: Text(
-                      server.name,
-                      style: TextStyle(
-                        fontWeight: nameWeight,
-                        color: nameColor,
-                        fontSize: 15,
-                        letterSpacing: 0.2,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  Expanded(
-                    flex: 3,
-                    child: Text(
-                      '$count',
-                      style: const TextStyle(fontSize: 14),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  Expanded(
-                    flex: 4,
-                    child: Text(
-                      '$pct%',
-                      style: const TextStyle(fontSize: 14),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
         ],
       ),
       actions: [
