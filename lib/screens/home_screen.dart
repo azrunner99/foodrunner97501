@@ -568,15 +568,18 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                         children: [
                           // Level chip (top-right)
                           Positioned(
-                            right: 8,
-                            top: 8,
+                            right: 4,
+                            top: 4,
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                               decoration: BoxDecoration(
                                 color: Colors.black26,
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(10),
                               ),
-                              child: Text('lvl$level'),
+                              child: Text(
+                                'lvl$level',
+                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                              ),
                             ),
                           ),
                           Center(
@@ -596,7 +599,11 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                                 ),
                                 Text(
-                                  'All-time: $all',
+                                  'Pizookies: ${app.profiles[id]?.pizookieRuns ?? 0}',
+                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                                ),
+                                Text(
+                                  'All Time Runs: $all',
                                   style: const TextStyle(fontSize: 13),
                                 ),
                               ],
@@ -948,19 +955,40 @@ class _RosterPopupState extends State<_RosterPopup> {
                           if (i == 0) nameColor = Color(0xFFFFD700); // Gold
                           else if (i == 1) nameColor = Color(0xFFC0C0C0); // Silver
                           else if (i == 2) nameColor = Color(0xFFCD7F32); // Bronze
+                          String? trophy;
+                          if (i == 0) trophy = '🥇';
+                          else if (i == 1) trophy = '🥈';
+                          else if (i == 2) trophy = '🥉';
                           return DataRow(
                             cells: [
-                              DataCell(Text(
-                                server.name,
-                                style: TextStyle(
-                                  fontWeight: nameWeight,
-                                  color: nameColor,
-                                  fontSize: 15,
-                                  letterSpacing: 0.2,
+                              DataCell(
+                                Text.rich(
+                                  TextSpan(
+                                    children: [
+                                      if (trophy != null)
+                                        WidgetSpan(
+                                          alignment: PlaceholderAlignment.middle,
+                                          child: Padding(
+                                            padding: const EdgeInsets.only(right: 4),
+                                            child: Text(trophy, style: const TextStyle(fontSize: 18)),
+                                          ),
+                                        ),
+                                      TextSpan(
+                                        text: server.name,
+                                        style: TextStyle(
+                                          fontWeight: nameWeight,
+                                          color: nameColor,
+                                          fontSize: 15,
+                                          letterSpacing: 0.2,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.left,
                                 ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              )),
+                              ),
                               DataCell(Text('$count', style: const TextStyle(fontSize: 14))),
                               DataCell(Text('$pizookieRuns', style: const TextStyle(fontSize: 14))),
                               DataCell(Text('$pct%', style: const TextStyle(fontSize: 14))),
