@@ -551,6 +551,8 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                         }
                       },
                       onLongPress: () {
+                        // Only increment pizookie run (which also counts as a shift run)
+                        app.incrementPizookie(id);
                         int xpEarned = 2;
                         _showFlash(
                           '+$xpEarned XP\nPizookie!',
