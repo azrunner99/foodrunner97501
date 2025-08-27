@@ -27,33 +27,107 @@ Widget _rosterServerRow(AppState app, String id) {
   );
 }
 
-class HomeScreen extends StatelessWidget {
+
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-  print('HomeScreen.build called');
-  final app = Provider.of<AppState>(context);
-  // Get AppState from Provider if needed, or pass as parameter
-  // final app = AppState();
+  State<HomeScreen> createState() => _HomeScreenState();
+}
 
+class _HomeScreenState extends State<HomeScreen> {
+  int _runnerTapCount = 0;
+  DateTime? _lastTapTime;
+
+  void _handleRunnerTap(BuildContext context) {
+    final now = DateTime.now();
+    if (_lastTapTime == null || now.difference(_lastTapTime!) > const Duration(seconds: 2)) {
+      _runnerTapCount = 1;
+    } else {
+      _runnerTapCount++;
+    }
+    _lastTapTime = now;
+    if (_runnerTapCount >= 5) {
+      _runnerTapCount = 0;
+      _showFeatureBubble(context);
+    }
+  }
+
+  void _showFeatureBubble(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('App Features', style: TextStyle(fontWeight: FontWeight.bold)),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text('• Shift Tracking: Track server runs for each shift (Lunch/Dinner) with real-time updates.'),
+                SizedBox(height: 4),
+                Text('• Roster Management: Assign servers to lunch and dinner rosters, with a toggle to switch between them.'),
+                SizedBox(height: 4),
+                Text('• Visual Leaderboards: Popup and main grid show sorted server stats, including runs, percentages, and Pizookie runs.'),
+                SizedBox(height: 4),
+                Text('• Pizookie Runs: Special long-press action to log Pizookie runs, which count as shift runs and are tracked separately.'),
+                SizedBox(height: 4),
+                Text('• Leveling System: Each server has a visible level badge, XP, and progress to next level.'),
+                SizedBox(height: 4),
+                Text('• Team Competition: Pie chart and details for team-based run competition (Blue, Purple, Silver).'),
+                SizedBox(height: 4),
+                Text('• Leaderboards: Dedicated screen for top performers.'),
+                SizedBox(height: 4),
+                Text('• History & Profiles: Access to shift history and individual server profiles.'),
+                SizedBox(height: 4),
+                Text('• Admin & Settings: Admin screen for management and settings for app configuration.'),
+                SizedBox(height: 4),
+                Text('• Visual Feedback: Snackbars, achievement flashes, and encouragements for actions.'),
+                SizedBox(height: 4),
+                Text('• Responsive UI: Grid adapts to screen size, with clear, modern design and color-coded elements.'),
+                SizedBox(height: 4),
+                Text('• Persistent Data: All stats and settings are saved and restored across sessions.'),
+              ],
+            ),
+          ),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8, top: 8),
+              child: Text('Version: 1.3.0+130', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    print('HomeScreen.build called');
+    final app = Provider.of<AppState>(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'RUNNER!',
-          style: TextStyle(
-            fontStyle: FontStyle.italic,
-            fontWeight: FontWeight.bold,
-            fontSize: 28,
-            letterSpacing: 2,
-            color: Color(0xFF1565C0), // A strong blue
-            shadows: [
-              Shadow(
-                blurRadius: 6,
-                color: Colors.black26,
-                offset: Offset(2, 2),
-              ),
-            ],
+        title: GestureDetector(
+          onTap: () => _handleRunnerTap(context),
+          child: const Text(
+            'RUNNER!',
+            style: TextStyle(
+              fontStyle: FontStyle.italic,
+              fontWeight: FontWeight.bold,
+              fontSize: 28,
+              letterSpacing: 2,
+              color: Color(0xFF1565C0), // A strong blue
+              shadows: [
+                Shadow(
+                  blurRadius: 6,
+                  color: Colors.black26,
+                  offset: Offset(2, 2),
+                ),
+              ],
+            ),
           ),
         ),
         actions: [
@@ -116,7 +190,7 @@ class HomeScreen extends StatelessWidget {
                 value: _MoreAction.mvp,
                 child: ListTile(
                   leading: Icon(Icons.emoji_events),
-                  title: Text('MVP Board'),
+                  title: Text('Leaderboards'),
                   dense: true,
                   contentPadding: EdgeInsets.zero,
                 ),
@@ -221,9 +295,7 @@ class _Body extends StatelessWidget {
       }
     }
     ids = ids.toSet().toList();
-    String rosterLabel = (m >= end || (app.activeRosterView == 'dinner' && showToggle))
-        ? 'DINNER ROSTER DISPLAYED'
-        : 'LUNCH ROSTER DISPLAYED';
+  bool isDinner = (m >= end || (app.activeRosterView == 'dinner' && showToggle));
 
     // Calculate team run counts
     final teamCounts = <String, int>{};
@@ -244,39 +316,32 @@ class _Body extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
-          padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
-          child: GestureDetector(
-            onTap: () {
-              showDialog(
-                context: context,
-                builder: (ctx) {
-                  return _RosterPopup(app: app, rosterLabel: rosterLabel);
-                },
-              );
-            },
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.blueGrey.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.blueGrey.shade100),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              child: Center(
-                child: Text(
-                  rosterLabel,
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.blueGrey, decoration: TextDecoration.underline),
-                ),
-              ),
-            ),
-          ),
-        ),
         if (showToggle)
           Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: ElevatedButton(
-              onPressed: () => app.toggleRosterView(),
-              child: Text(toggleLabel),
+            padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text('Lunch', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                Switch(
+                  value: app.activeRosterView == 'dinner',
+                  onChanged: (val) => app.toggleRosterView(),
+                  activeColor: Colors.deepOrange,
+                  inactiveThumbColor: Colors.blue,
+                  inactiveTrackColor: Colors.blueGrey.shade200,
+                ),
+                const Text('Dinner', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+              ],
+            ),
+          )
+        else
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
+            child: Center(
+              child: Text(
+                isDinner ? 'DINNER ROSTER DISPLAYED' : 'LUNCH ROSTER DISPLAYED',
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.blueGrey, decoration: TextDecoration.underline),
+              ),
             ),
           ),
         TeamPieChart(teamCounts: teamCounts, teamColors: teamColors),
