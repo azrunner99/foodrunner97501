@@ -445,23 +445,167 @@ class _RosterBodyState extends State<_RosterBody> {
                             },
                           ),
                           if (showTeams)
-                            DropdownButton<String?>(
-                              value: teamColors[s.id],
-                              hint: const Text('Team'),
-                              items: teamColorOptions
-                                  .map(
-                                    (color) => DropdownMenuItem<String?>(
-                                      value: color,
-                                      child: Text(color ?? 'None'),
+                            Padding(
+                              padding: const EdgeInsets.only(left: 8.0),
+                              child: GestureDetector(
+                                onTap: () async {
+                                  final selectedColor = await showDialog<String?>(
+                                    context: context,
+                                    barrierDismissible: true,
+                                    builder: (colorContext) {
+                                      return Dialog(
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                                        backgroundColor: Theme.of(context).colorScheme.surface,
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 24),
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment: CrossAxisAlignment.center,
+                                            children: [
+                                              Text(
+                                                s.name,
+                                                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                                                textAlign: TextAlign.center,
+                                              ),
+                                              const SizedBox(height: 24),
+                                              Wrap(
+                                                spacing: 16,
+                                                runSpacing: 16,
+                                                alignment: WrapAlignment.center,
+                                                children: teamColorOptions.where((c) => c != null).map((color) {
+                                                  Color bubbleColor;
+                                                  switch (color) {
+                                                    case 'Blue':
+                                                      bubbleColor = Colors.blue;
+                                                      break;
+                                                    case 'Purple':
+                                                      bubbleColor = Colors.purple;
+                                                      break;
+                                                    case 'Silver':
+                                                      bubbleColor = Colors.grey;
+                                                      break;
+                                                    default:
+                                                      bubbleColor = Colors.grey;
+                                                  }
+                                                  return GestureDetector(
+                                                    onTap: () => Navigator.pop(colorContext, color),
+                                                    child: Container(
+                                                      width: 60,
+                                                      height: 36,
+                                                      decoration: BoxDecoration(
+                                                        color: bubbleColor.withOpacity(0.2),
+                                                        borderRadius: BorderRadius.circular(18),
+                                                        border: Border.all(
+                                                          color: bubbleColor,
+                                                          width: 2,
+                                                        ),
+                                                      ),
+                                                      alignment: Alignment.center,
+                                                      child: Text(
+                                                        color!,
+                                                        style: TextStyle(
+                                                          color: color == 'Blue'
+                                                              ? Colors.blue[800]
+                                                              : color == 'Purple'
+                                                                  ? Colors.purple[800]
+                                                                  : color == 'Silver'
+                                                                      ? Colors.grey[800]
+                                                                      : Colors.black87,
+                                                          fontWeight: FontWeight.w600,
+                                                          fontSize: 16,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  );
+                                                }).toList(),
+                                              ),
+                                              const SizedBox(height: 20),
+                                              GestureDetector(
+                                                onTap: () => Navigator.pop(colorContext, null),
+                                                child: Container(
+                                                  width: 80,
+                                                  height: 36,
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.grey.shade300,
+                                                    borderRadius: BorderRadius.circular(18),
+                                                    border: Border.all(
+                                                      color: Colors.grey.shade500,
+                                                      width: 2,
+                                                    ),
+                                                  ),
+                                                  alignment: Alignment.center,
+                                                  child: const Text(
+                                                    'None',
+                                                    style: TextStyle(
+                                                      color: Colors.black54,
+                                                      fontWeight: FontWeight.w600,
+                                                      fontSize: 16,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(colorContext),
+                                                child: const Text('Cancel'),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  );
+                                  if (selectedColor != null || selectedColor == null) {
+                                    setState(() {
+                                      teamColors[s.id] = selectedColor;
+                                      s.teamColor = selectedColor;
+                                    });
+                                  }
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: teamColors[s.id] == null
+                                        ? Colors.grey.shade200
+                                        : (
+                                            teamColors[s.id] == 'Blue'
+                                                ? Colors.blue.withOpacity(0.2)
+                                                : teamColors[s.id] == 'Purple'
+                                                    ? Colors.purple.withOpacity(0.2)
+                                                    : Colors.grey.withOpacity(0.2)
+                                          ),
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(
+                                      color: teamColors[s.id] == null
+                                          ? Colors.grey.shade400
+                                          : (
+                                              teamColors[s.id] == 'Blue'
+                                                  ? Colors.blue
+                                                  : teamColors[s.id] == 'Purple'
+                                                      ? Colors.purple
+                                                      : Colors.grey
+                                            ),
+                                      width: 2,
                                     ),
-                                  )
-                                  .toList(),
-                              onChanged: (val) {
-                                setState(() {
-                                  teamColors[s.id] = val;
-                                  s.teamColor = val;
-                                });
-                              },
+                                  ),
+                                  child: Text(
+                                    teamColors[s.id] ?? 'None',
+                                    style: TextStyle(
+                                      color: teamColors[s.id] == null
+                                          ? Colors.black54
+                                          : (
+                                              teamColors[s.id] == 'Blue'
+                                                  ? Colors.blue[800]
+                                                  : teamColors[s.id] == 'Purple'
+                                                      ? Colors.purple[800]
+                                                      : Colors.grey[800]
+                                            ),
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
                         ],
                       ),
