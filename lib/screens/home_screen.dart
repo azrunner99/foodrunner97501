@@ -579,7 +579,7 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                     if (s == null) return const SizedBox.shrink();
 
                     final my = app.currentCounts[id] ?? 0;
-                    final all = app.allTimeFor(id);
+                    // final all = app.allTimeFor(id); // No longer needed for display
                     final pct = total == 0 ? 0 : ((my / total) * 100).round();
                     final color = _tierColor(my, maxCount);
                     final level = app.profiles[id]?.level ?? 1;
@@ -764,7 +764,15 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                                   Text(
                                     s.name,
                                     textAlign: TextAlign.center,
-                                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 1.1,
+                                      color: Colors.white,
+                                      shadows: [
+                                        Shadow(blurRadius: 6, color: Colors.black45, offset: Offset(0, 2)),
+                                      ],
+                                    ),
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -777,10 +785,7 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                                     'Pizookies: ${app.profiles[id]?.pizookieRuns ?? 0}',
                                     style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
                                   ),
-                                  Text(
-                                    'All Time Runs: $all',
-                                    style: const TextStyle(fontSize: 11),
-                                  ),
+                                  // ...removed 'All Time Runs' display...
                                 ],
                               ),
                             ),
