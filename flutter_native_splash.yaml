@@ -1,0 +1,8 @@
+# flutter_native_splash configuration file
+flutter_native_splash:
+  color: "#F47C2B"
+  image: assets/foodrunner.png
+  android: true
+  ios: true
+  web: true
+  fullscreen: true
