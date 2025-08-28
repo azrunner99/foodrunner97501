@@ -337,10 +337,20 @@ class _Body extends StatelessWidget {
         else
           Padding(
             padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
-            child: Center(
-              child: Text(
-                isDinner ? 'DINNER ROSTER DISPLAYED' : 'LUNCH ROSTER DISPLAYED',
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.blueGrey, decoration: TextDecoration.underline),
+            child: GestureDetector(
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (ctx) {
+                    return _RosterPopup(app: app, rosterLabel: isDinner ? 'DINNER ROSTER DISPLAYED' : 'LUNCH ROSTER DISPLAYED');
+                  },
+                );
+              },
+              child: Center(
+                child: Text(
+                  isDinner ? 'DINNER ROSTER DISPLAYED' : 'LUNCH ROSTER DISPLAYED',
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.blueGrey, decoration: TextDecoration.underline),
+                ),
               ),
             ),
           ),
@@ -592,10 +602,16 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                       ),
                       onPressed: () {
                         final achievement = app.increment(id);
-                        int xpEarned = 1;
+                        int xpEarned = 10;
                         if (achievement == 'full_hands') {
-                          xpEarned = 4;
+                          xpEarned = 35;
                           _showAchievement('Full Hands!');
+                        } else if (achievement == 'five_streak') {
+                          xpEarned = 30;
+                        } else if (achievement == 'ten_in_shift') {
+                          xpEarned = 20;
+                        } else if (achievement == 'twenty_in_shift') {
+                          xpEarned = 30;
                         }
                         _showFlash(
                           '+$xpEarned XP',
@@ -618,7 +634,7 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                       onLongPress: () {
                         // Only increment pizookie run (which also counts as a shift run)
                         app.incrementPizookie(id);
-                        int xpEarned = 2;
+                        int xpEarned = 25;
                         _showFlash(
                           '+$xpEarned XP\nPizookie!',
                           'Sweet!  Ran a Pizookie',
