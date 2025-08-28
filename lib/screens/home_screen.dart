@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../app_state.dart';
 import '../models.dart';
+import '../gamification.dart';
 
 // Screens
 import 'update_roster_screen.dart';
@@ -570,7 +571,7 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                     crossAxisCount: columns,
                     crossAxisSpacing: 12,
                     mainAxisSpacing: 12,
-                    childAspectRatio: 1.4,
+                    childAspectRatio: 1.25, // slightly taller
                   ),
                   itemBuilder: (ctx, i) {
                     final id = ids[i];
@@ -587,6 +588,20 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                     final nextLevelAt = app.profiles[id]?.nextLevelAt ?? 0;
                     final pointsToNext = (nextLevelAt - points).clamp(0, 999999);
 
+                    // Calculate progress for XP bar
+                    // Calculate progress for XP bar using xpTable and levelForPoints
+                    final profile = app.profiles[id];
+                    int prevLevelXp = 0;
+                    int nextLevelXp = nextLevelAt;
+                    if (profile != null) {
+                      final lvl = levelForPoints(profile.points) - 1;
+                      prevLevelXp = xpTable[lvl];
+                      nextLevelXp = xpTable[lvl + 1];
+                    }
+                    final progress = (nextLevelXp > prevLevelXp)
+                        ? ((points - prevLevelXp) / (nextLevelXp - prevLevelXp)).clamp(0.0, 1.0)
+                        : 1.0;
+
                     return OutlinedButton(
                       style: OutlinedButton.styleFrom(
                         backgroundColor: color,
@@ -598,7 +613,7 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(8),
                       ),
                       onPressed: () {
                         final achievement = app.increment(id);
@@ -632,7 +647,6 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                         }
                       },
                       onLongPress: () {
-                        // Only increment pizookie run (which also counts as a shift run)
                         app.incrementPizookie(id);
                         int xpEarned = 25;
                         _showFlash(
@@ -645,49 +659,112 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                           SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),
                         );
                       },
-                      child: Stack(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // Level chip (top-right)
-                          Positioned(
-                            right: 4,
-                            top: 4,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.black26,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                'lvl$level',
-                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          ),
-                          Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
+                          // Progress bar row
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 10.0, top: 10, left: 4, right: 2),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                Text(
-                                  s.name,
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
+                                // Current level (left) - big, bold, with background, wider for double digits
+                                Container(
+                                  width: 44,
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withOpacity(0.18),
+                                    borderRadius: BorderRadius.circular(16),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.18),
+                                        blurRadius: 4,
+                                        offset: Offset(1, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    'lvl$level',
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                      letterSpacing: 0.5,
+                                      shadows: [
+                                        Shadow(blurRadius: 2, color: Colors.black54, offset: Offset(1,1)),
+                                      ],
+                                    ),
+                                  ),
                                 ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  'Shift: $my  •  $pct%',
-                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                                const SizedBox(width: 10),
+                                // Progress bar
+                                Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: LinearProgressIndicator(
+                                        value: progress,
+                                        minHeight: 10,
+                                        backgroundColor: Colors.white24,
+                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                      ),
+                                    ),
+                                  ),
                                 ),
-                                Text(
-                                  'Pizookies: ${app.profiles[id]?.pizookieRuns ?? 0}',
-                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-                                ),
-                                Text(
-                                  'All Time Runs: $all',
-                                  style: const TextStyle(fontSize: 13),
+                                const SizedBox(width: 10),
+                                // Next level (right) - smaller, bold, with subtle background
+                                Container(
+                                  width: 28,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.18),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    '${level + 1}',
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                      shadows: [
+                                        Shadow(blurRadius: 1, color: Colors.black38, offset: Offset(1,1)),
+                                      ],
+                                    ),
+                                  ),
                                 ),
                               ],
+                            ),
+                          ),
+                          Expanded(
+                            child: Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    s.name,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Shift: $my  •  $pct%',
+                                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                                  ),
+                                  Text(
+                                    'Pizookies: ${app.profiles[id]?.pizookieRuns ?? 0}',
+                                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+                                  ),
+                                  Text(
+                                    'All Time Runs: $all',
+                                    style: const TextStyle(fontSize: 11),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ],

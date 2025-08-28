@@ -127,29 +127,30 @@ const achievementsCatalog = <AchievementDef>[
 
 // Steep XP curve for levels 1-150, so even a strong first day only gets a server to level 2 or just into level 3
 const int maxLevel = 150;
-final List<int> xpTable = List.generate(maxLevel + 2, (level) {
-  if (level <= 1) return 0;
-  if (level == 2) return 100;    // Level 2: 100 XP (10 runs)
-  if (level == 3) return 250;    // Level 3: 250 XP (15 more runs)
-  if (level == 4) return 450;    // Level 4: 450 XP (20 more runs)
-  if (level == 5) return 700;    // Level 5: 700 XP (25 more runs)
-  if (level == 6) return 1000;   // Level 6: 1000 XP (30 more runs)
-  if (level == 7) return 1400;   // Level 7: 1400 XP (40 more runs)
-  if (level == 8) return 1900;   // Level 8: 1900 XP (50 more runs)
-  if (level == 9) return 2500;   // Level 9: 2500 XP (60 more runs)
-  if (level == 10) return 3200;  // Level 10: 3200 XP (70 more runs)
-  // After level 10, ramp up more steeply
-  if (level <= 20) {
-    // Each level requires 100 more XP than the previous
-    return xpTable[10] + 100 * (level - 10) + ((level - 10) * (level - 9) * 10);
-  } else if (level <= 50) {
-    // Each level requires 200 more XP than the previous
-    return xpTable[20] + 200 * (level - 20) + ((level - 20) * (level - 19) * 20);
-  } else {
-    // Steep ramp for high levels
-    return xpTable[50] + 500 * (level - 50) + ((level - 50) * (level - 49) * 50);
+final List<int> xpTable = (() {
+  List<int> table = List.filled(maxLevel + 2, 0);
+  table[0] = 0;
+  table[1] = 0;
+  table[2] = 100;
+  table[3] = 250;
+  table[4] = 450;
+  table[5] = 700;
+  table[6] = 1000;
+  table[7] = 1400;
+  table[8] = 1900;
+  table[9] = 2500;
+  table[10] = 3200;
+  for (int level = 11; level <= 20; level++) {
+    table[level] = table[10] + 100 * (level - 10) + ((level - 10) * (level - 9) * 10);
   }
-});
+  for (int level = 21; level <= 50; level++) {
+    table[level] = table[20] + 200 * (level - 20) + ((level - 20) * (level - 19) * 20);
+  }
+  for (int level = 51; level <= maxLevel + 1; level++) {
+    table[level] = table[50] + 500 * (level - 50) + ((level - 50) * (level - 49) * 50);
+  }
+  return table;
+})();
 
 int levelForPoints(int points) {
   if (points < xpTable[2]) return 1;
