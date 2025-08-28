@@ -183,7 +183,7 @@ class _RosterBodyState extends State<_RosterBody> {
 
   @override
   Widget build(BuildContext context) {
-    final servers = widget.app.servers;
+  // final servers = widget.app.servers; // No longer needed
     final teamToggle = Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -231,6 +231,15 @@ class _RosterBodyState extends State<_RosterBody> {
     }
   }
 
+    // --- Assigned servers pane ---
+    final roster = isLunch ? lunchRoster : dinnerRoster;
+    final teamColors = isLunch ? lunchTeamColors : dinnerTeamColors;
+    final serverStationType = isLunch ? lunchStationType : dinnerStationType;
+    final serverStationSection = isLunch ? lunchStationSection : dinnerStationSection;
+
+  final assignedServers = widget.app.servers.where((s) => roster.contains(s.id)).toList();
+  final unassignedServers = widget.app.servers.where((s) => !roster.contains(s.id)).toList();
+
     return WillPopScope(
       onWillPop: () async {
         saveRoster();
@@ -275,6 +284,68 @@ class _RosterBodyState extends State<_RosterBody> {
               ],
             ),
             const SizedBox(height: 16),
+            // --- Assigned Servers Pane ---
+            if (assignedServers.isNotEmpty)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Assigned Servers:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                    const SizedBox(height: 6),
+                    ...assignedServers.map((s) => Card(
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      child: ListTile(
+                        title: Row(
+                          children: [
+                            Text(
+                              s.name,
+                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                            ),
+                            if (serverStationSection[s.id] != null)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 8.0),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade200,
+                                    borderRadius: BorderRadius.circular(9),
+                                    border: Border.all(color: Colors.grey.shade400),
+                                  ),
+                                  child: Text(
+                                    serverStationSection[s.id] ?? '',
+                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.black87),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.close, color: Colors.red),
+                          onPressed: () {
+                            setState(() {
+                              roster.remove(s.id);
+                              serverStationType.remove(s.id);
+                              serverStationSection.remove(s.id);
+                              teamColors[s.id] = null;
+                            });
+                          },
+                        ),
+                        subtitle: showTeams && teamColors[s.id] != null
+                            ? Text('Team: ${teamColors[s.id]}', style: TextStyle(color: Colors.blueGrey[700]))
+                            : null,
+                      ),
+                    )),
+                  ],
+                ),
+              ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -285,7 +356,6 @@ class _RosterBodyState extends State<_RosterBody> {
                     onPressed: () {
                       setState(() {
                         lunchRoster.clear();
-                        // Clear all team colors and station assignments for all servers
                         for (var s in widget.app.servers) {
                           lunchTeamColors[s.id] = null;
                           lunchStationType.remove(s.id);
@@ -312,15 +382,20 @@ class _RosterBodyState extends State<_RosterBody> {
               ],
             ),
             const SizedBox(height: 8),
+            // --- Main List: Only unassigned servers ---
             Expanded(
               child: ListView.builder(
-                itemCount: servers.length,
+                itemCount: unassignedServers.length,
                 itemBuilder: (ctx, i) {
-                  final s = servers[i];
-                  final roster = isLunch ? lunchRoster : dinnerRoster;
+                  final s = unassignedServers[i];
+                  // ...existing code for each server card...
                   final teamColors = isLunch ? lunchTeamColors : dinnerTeamColors;
                   final serverStationType = isLunch ? lunchStationType : dinnerStationType;
                   final serverStationSection = isLunch ? lunchStationSection : dinnerStationSection;
+                  // ...existing code for the Card, Checkbox, and assignment logic...
+                  // The rest of the code for the server card remains unchanged
+                  // ...existing code...
+                  // (Copy the card widget code from before, but now only for unassigned servers)
                   return Card(
                     margin: const EdgeInsets.symmetric(vertical: 6),
                     child: Padding(
@@ -330,12 +405,11 @@ class _RosterBodyState extends State<_RosterBody> {
                         children: [
                           // Checkbox on the left
                           Checkbox(
-                            value: roster.contains(s.id),
+                            value: false,
                             onChanged: (v) async {
                               if (v == true) {
                                 final selectedTypeName = await _showStationTypeDialog(
                                   context,
-                                  // Pass the server name as a route argument
                                 );
                                 if (selectedTypeName != null) {
                                   final selectedType = stationTypes.firstWhere((t) => t.name == selectedTypeName);
@@ -403,7 +477,6 @@ class _RosterBodyState extends State<_RosterBody> {
                                         currentRoster.add(s.id);
                                       }
                                     });
-                                    // Show team color popup if Assign Teams is on
                                     if (showTeams) {
                                       WidgetsBinding.instance.addPostFrameCallback((_) async {
                                         final selectedColor = await showDialog<String?>(
@@ -521,13 +594,6 @@ class _RosterBodyState extends State<_RosterBody> {
                                     }
                                   }
                                 }
-                              } else {
-                                setState(() {
-                                  roster.remove(s.id);
-                                  serverStationType.remove(s.id);
-                                  serverStationSection.remove(s.id);
-                                  teamColors[s.id] = null;
-                                });
                               }
                             },
                           ),
@@ -539,7 +605,6 @@ class _RosterBodyState extends State<_RosterBody> {
                                 Expanded(
                                   child: GestureDetector(
                                     onTap: () async {
-                                      // Only allow reassignment if already assigned
                                       final selectedTypeName = await _showStationTypeDialog(context);
                                       if (selectedTypeName != null) {
                                         final selectedType = stationTypes.firstWhere((t) => t.name == selectedTypeName);
