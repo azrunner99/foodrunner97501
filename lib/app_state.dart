@@ -80,8 +80,8 @@ class AppState extends ChangeNotifier {
     if (!_shiftActive || !_workingServerIds.contains(id)) return null;
 
     final now = DateTime.now();
-    const delta = 1;
-  const pizookiePoints = 10;
+  const delta = 1;
+  const pizookiePoints = 25;
 
     _currentCounts[id] = (_currentCounts[id] ?? 0) + delta;
     _teamTotalThisShift += delta;
@@ -743,11 +743,13 @@ class AppState extends ChangeNotifier {
     final now = DateTime.now();
     const delta = 1;
 
+
     // --- Full Hands! achievement logic (now 2 rapid taps) ---
     String? justAwarded;
     final tapList = _recentTapTimes.putIfAbsent(id, () => <DateTime>[]);
     tapList.add(now);
     if (tapList.length > 2) tapList.removeAt(0);
+    bool awardedFullHands = false;
     if (tapList.length == 2) {
       final t0 = tapList[0];
       final t1 = tapList[1];
@@ -757,6 +759,7 @@ class AppState extends ChangeNotifier {
         _awardOnce(prof, 'full_hands', serverName);
         _profiles[id] = prof;
         justAwarded = 'full_hands';
+        awardedFullHands = true;
       }
     }
 
@@ -768,9 +771,11 @@ class AppState extends ChangeNotifier {
     final prof = _profiles[id] ?? ServerProfile();
     final serverName = serverById(id)?.name ?? 'Server';
 
-  prof.points += 10;
-  prof.allTimeRuns += delta;
-  print('[DEBUG] Server $id now has ${prof.points} XP, level ${prof.level}, allTimeRuns: ${prof.allTimeRuns}');
+    if (!awardedFullHands) {
+      prof.points += 10;
+    }
+    prof.allTimeRuns += delta;
+    print('[DEBUG] Server $id now has ${prof.points} XP, level ${prof.level}, allTimeRuns: ${prof.allTimeRuns}');
 
     final prevIso = prof.lastTapIso;
     prof.lastTapIso = now.toIso8601String();
