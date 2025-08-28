@@ -735,6 +735,8 @@ class _RosterBodyState extends State<_RosterBody> {
                                   roster.remove(s.id);
                                   serverStationType.remove(s.id);
                                   serverStationSection.remove(s.id);
+                                  teamColors[s.id] = null;
+                                  s.teamColor = null;
                                 });
                               }
                             },
