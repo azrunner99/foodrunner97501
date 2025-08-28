@@ -669,31 +669,49 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
                                 // Current level (left) - big, bold, with background, wider for double digits
-                                Container(
-                                  width: 44,
-                                  height: 32,
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.18),
-                                    borderRadius: BorderRadius.circular(16),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.18),
-                                        blurRadius: 4,
-                                        offset: Offset(1, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Text(
-                                    'lvl$level',
-                                    style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w900,
-                                      color: Colors.white,
-                                      letterSpacing: 0.5,
-                                      shadows: [
-                                        Shadow(blurRadius: 2, color: Colors.black54, offset: Offset(1,1)),
+                                GestureDetector(
+                                  onLongPress: () {
+                                    Future.delayed(const Duration(seconds: 2), () {
+                                      showDialog(
+                                        context: context,
+                                        builder: (context) => Dialog(
+                                          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 60),
+                                          backgroundColor: Colors.transparent,
+                                          child: SizedBox(
+                                            width: 340,
+                                            height: 520,
+                                            child: ProfileDetailScreen(serverId: id),
+                                          ),
+                                        ),
+                                      );
+                                    });
+                                  },
+                                  child: Container(
+                                    width: 44,
+                                    height: 32,
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.18),
+                                      borderRadius: BorderRadius.circular(16),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.18),
+                                          blurRadius: 4,
+                                          offset: Offset(1, 2),
+                                        ),
                                       ],
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      'lvl$level',
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w900,
+                                        color: Colors.white,
+                                        letterSpacing: 0.5,
+                                        shadows: [
+                                          Shadow(blurRadius: 2, color: Colors.black54, offset: Offset(1,1)),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
