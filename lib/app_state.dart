@@ -81,7 +81,7 @@ class AppState extends ChangeNotifier {
 
     final now = DateTime.now();
     const delta = 1;
-    const pizookiePoints = 2;
+  const pizookiePoints = 10;
 
     _currentCounts[id] = (_currentCounts[id] ?? 0) + delta;
     _teamTotalThisShift += delta;
@@ -768,7 +768,7 @@ class AppState extends ChangeNotifier {
     final prof = _profiles[id] ?? ServerProfile();
     final serverName = serverById(id)?.name ?? 'Server';
 
-  prof.points += delta;
+  prof.points += 10;
   prof.allTimeRuns += delta;
   print('[DEBUG] Server $id now has ${prof.points} XP, level ${prof.level}, allTimeRuns: ${prof.allTimeRuns}');
 

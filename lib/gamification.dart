@@ -22,7 +22,7 @@ const achievementsCatalog = <AchievementDef>[
     id: 'full_hands',
     title: 'Full Hands!',
     description: 'Tap the button 2 times in quick succession (3 seconds).',
-    points: 4,
+    points: 35,
     repeatable: true,
   ),
   AchievementDef(
@@ -42,19 +42,19 @@ const achievementsCatalog = <AchievementDef>[
     id: 'three_streak',
     title: '3 Streak',
     description: '3 runs in a row without missing.',
-    points: 10,
+    points: 20,
   ),
   AchievementDef(
     id: 'five_streak',
     title: '5 Streak',
     description: '5 runs in a row without missing.',
-    points: 20,
+    points: 30,
   ),
   AchievementDef(
     id: 'ten_in_shift',
     title: '10 in a Shift',
     description: '10 runs in a single shift.',
-    points: 15,
+    points: 20,
   ),
   AchievementDef(
     id: 'twenty_in_shift',
@@ -129,22 +129,25 @@ const achievementsCatalog = <AchievementDef>[
 const int maxLevel = 150;
 final List<int> xpTable = List.generate(maxLevel + 2, (level) {
   if (level <= 1) return 0;
-  if (level == 2) return 100;   // Level 2: 100 XP
-  if (level == 3) return 300;  // Level 3: 300 XP
-  if (level == 4) return 700;  // Level 4: 700 XP
-  if (level == 5) return 1400;  // Level 5: 1400 XP
-  if (level == 6) return 2400; // Level 6: 2400 XP
-  if (level == 7) return 3800; // Level 7: 3800 XP
-  if (level == 8) return 5600; // Level 8: 5600 XP
-  if (level == 9) return 7800; // Level 9: 7800 XP
-  if (level == 10) return 10400; // Level 10: 10400 XP
-  // After level 10, scale up even more steeply
-  if (level <= 30) {
-    return (10400 + 600 * (level - 10) + (level * level * 20)).toInt();
-  } else if (level <= 60) {
-    return (31000 + 1200 * (level - 30) + (level * level * 40)).toInt();
+  if (level == 2) return 100;    // Level 2: 100 XP (10 runs)
+  if (level == 3) return 250;    // Level 3: 250 XP (15 more runs)
+  if (level == 4) return 450;    // Level 4: 450 XP (20 more runs)
+  if (level == 5) return 700;    // Level 5: 700 XP (25 more runs)
+  if (level == 6) return 1000;   // Level 6: 1000 XP (30 more runs)
+  if (level == 7) return 1400;   // Level 7: 1400 XP (40 more runs)
+  if (level == 8) return 1900;   // Level 8: 1900 XP (50 more runs)
+  if (level == 9) return 2500;   // Level 9: 2500 XP (60 more runs)
+  if (level == 10) return 3200;  // Level 10: 3200 XP (70 more runs)
+  // After level 10, ramp up more steeply
+  if (level <= 20) {
+    // Each level requires 100 more XP than the previous
+    return xpTable[10] + 100 * (level - 10) + ((level - 10) * (level - 9) * 10);
+  } else if (level <= 50) {
+    // Each level requires 200 more XP than the previous
+    return xpTable[20] + 200 * (level - 20) + ((level - 20) * (level - 19) * 20);
   } else {
-    return (82000 + 2400 * (level - 60) + (level * level * 80)).toInt();
+    // Steep ramp for high levels
+    return xpTable[50] + 500 * (level - 50) + ((level - 50) * (level - 49) * 50);
   }
 });
 
@@ -158,8 +161,8 @@ int levelForPoints(int points) {
 
 int nextLevelTarget(int points) {
   int lvl = levelForPoints(points);
-  if (lvl > maxLevel) return xpTable[maxLevel];
-  return xpTable[lvl];
+  if (lvl >= maxLevel) return xpTable[maxLevel];
+  return xpTable[lvl + 1];
 }
 
 class GamificationSettings {
