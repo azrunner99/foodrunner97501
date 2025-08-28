@@ -10,6 +10,7 @@ import 'screens/history_screen.dart';
 import 'screens/mvp_screen.dart';
 import 'screens/admin_screen.dart';
 import 'screens/manage_servers_screen.dart';
+import 'screens/station_types_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -44,6 +45,7 @@ class FoodRunsApp extends StatelessWidget {
         '/mvp': (_) => const MvpScreen(),
         '/admin': (_) => const AdminScreen(),
         '/manage': (_) => const ManageServersScreen(),
+        '/stations': (_) => const StationTypesScreen(),
       },
     );
   }

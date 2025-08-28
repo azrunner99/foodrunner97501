@@ -124,6 +124,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: const Text('Add, rename, or remove servers (PIN required for rename/remove)'),
             onTap: () => Navigator.pushNamed(context, '/manage'),
           ),
+          const Divider(height: 1),
+          const ListTile(title: Text('Manage Stations')),
+          ListTile(
+            leading: const Icon(Icons.table_restaurant),
+            title: const Text('Manage Stations'),
+            subtitle: const Text('Create, edit, or remove station types'),
+            onTap: () => Navigator.pushNamed(context, '/stations'),
+          ),
+          const SizedBox(height: 24),
           ListTile(
             leading: const Icon(Icons.admin_panel_settings),
             title: const Text('Admin Dashboard'),

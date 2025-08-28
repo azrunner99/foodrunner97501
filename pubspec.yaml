@@ -19,4 +19,5 @@ dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/splash.png
+  - assets/splash.png
+  - assets/foodrunner.png
