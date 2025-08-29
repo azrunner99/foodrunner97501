@@ -307,6 +307,10 @@ class _RosterBodyState extends State<_RosterBody> {
             if (assignedServers.isNotEmpty)
               Container(
                 width: double.infinity,
+                constraints: BoxConstraints(
+                  minHeight: 180,
+                  maxHeight: 320,
+                ),
                 padding: const EdgeInsets.all(10),
                 margin: const EdgeInsets.only(bottom: 12),
                 decoration: BoxDecoration(
@@ -378,60 +382,67 @@ class _RosterBodyState extends State<_RosterBody> {
                       ],
                     ),
                     const SizedBox(height: 6),
-                    ...assignedServers.map((s) => Card(
-                      margin: const EdgeInsets.symmetric(vertical: 4),
-                      child: ListTile(
-                        title: Row(
-                          children: [
-                            Text(
-                              s.name,
-                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                            ),
-                            if (serverStationSection[s.id] != null)
-                              Padding(
-                                padding: const EdgeInsets.only(left: 8.0),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: teamColors[s.id] == null
-                                        ? Colors.grey.shade200
-                                        : (
-                                            teamColors[s.id] == 'Blue'
-                                                ? Colors.blue.withOpacity(0.7)
-                                                : teamColors[s.id] == 'Purple'
-                                                    ? Colors.purple.withOpacity(0.7)
-                                                    : Colors.grey.withOpacity(0.7)
+                    Expanded(
+                      child: Scrollbar(
+                        thumbVisibility: true,
+                        child: ListView(
+                          children: assignedServers.map((s) => Card(
+                            margin: const EdgeInsets.symmetric(vertical: 4),
+                            child: ListTile(
+                              title: Row(
+                                children: [
+                                  Text(
+                                    s.name,
+                                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                  ),
+                                  if (serverStationSection[s.id] != null)
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: 8.0),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: teamColors[s.id] == null
+                                              ? Colors.grey.shade200
+                                              : (
+                                                  teamColors[s.id] == 'Blue'
+                                                      ? Colors.blue.withOpacity(0.7)
+                                                      : teamColors[s.id] == 'Purple'
+                                                          ? Colors.purple.withOpacity(0.7)
+                                                          : Colors.grey.withOpacity(0.7)
+                                                ),
+                                          borderRadius: BorderRadius.circular(9),
+                                          border: Border.all(color: Colors.grey.shade400),
+                                        ),
+                                        child: Text(
+                                          serverStationSection[s.id] ?? '',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                            color: teamColors[s.id] == null
+                                                ? Colors.black87
+                                                : Colors.white,
                                           ),
-                                    borderRadius: BorderRadius.circular(9),
-                                    border: Border.all(color: Colors.grey.shade400),
-                                  ),
-                                  child: Text(
-                                    serverStationSection[s.id] ?? '',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                      color: teamColors[s.id] == null
-                                          ? Colors.black87
-                                          : Colors.white,
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                ),
+                                ],
                               ),
-                          ],
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.close, color: Colors.red),
-                          onPressed: () {
-                            setState(() {
-                              roster.remove(s.id);
-                              serverStationType.remove(s.id);
-                              serverStationSection.remove(s.id);
-                              teamColors[s.id] = null;
-                            });
-                          },
+                              trailing: IconButton(
+                                icon: const Icon(Icons.close, color: Colors.red),
+                                onPressed: () {
+                                  setState(() {
+                                    roster.remove(s.id);
+                                    serverStationType.remove(s.id);
+                                    serverStationSection.remove(s.id);
+                                    teamColors[s.id] = null;
+                                  });
+                                },
+                              ),
+                            ),
+                          )).toList(),
                         ),
                       ),
-                    )),
+                    ),
                   ],
                 ),
               ),
