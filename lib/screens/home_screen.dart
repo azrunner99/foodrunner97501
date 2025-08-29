@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../app_state.dart';
 import '../models.dart';
 import '../gamification.dart';
+import '../section_assignments.dart';
 
 // Screens
 import 'update_roster_screen.dart';
@@ -579,7 +580,6 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                     if (s == null) return const SizedBox.shrink();
 
                     final my = app.currentCounts[id] ?? 0;
-                    // final all = app.allTimeFor(id); // No longer needed for display
                     final pct = total == 0 ? 0 : ((my / total) * 100).round();
                     final color = _tierColor(my, maxCount);
                     final level = app.profiles[id]?.level ?? 1;
@@ -588,7 +588,6 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                     final nextLevelAt = app.profiles[id]?.nextLevelAt ?? 0;
                     final pointsToNext = (nextLevelAt - points).clamp(0, 999999);
 
-                    // Calculate progress for XP bar
                     // Calculate progress for XP bar using xpTable and levelForPoints
                     final profile = app.profiles[id];
                     int prevLevelXp = 0;
@@ -598,6 +597,233 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                       prevLevelXp = xpTable[lvl];
                       nextLevelXp = xpTable[lvl + 1];
                     }
+
+                    // Section assignment display
+                    // Determine if lunch or dinner based on time (same logic as roster)
+                    final now = DateTime.now();
+                    final m = now.hour * 60 + now.minute;
+                    final plan = app.todayPlan;
+                    final isLunch = m < (plan?.transitionEndMinutes ?? app.settings.transitionEndMinutes);
+                    // Load section assignments (async)
+                    return FutureBuilder<Map<String, String?>> (
+                      future: loadSectionAssignments(isLunch),
+                      builder: (context, snapshot) {
+                        String? section;
+                        if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
+                          section = snapshot.data![id];
+                        }
+                        // Calculate progress for XP bar
+                        double progress = 1.0;
+                        if (nextLevelXp > prevLevelXp) {
+                          progress = ((points - prevLevelXp) / (nextLevelXp - prevLevelXp)).clamp(0.0, 1.0);
+                        }
+                        return OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: color,
+                            foregroundColor: Colors.white,
+                            side: BorderSide(
+                              color: borderColor,
+                              width: borderColor == Colors.transparent ? 0 : 8,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            padding: const EdgeInsets.all(8),
+                          ),
+                          onPressed: () {
+                            final achievement = app.increment(id);
+                            int xpEarned = 10;
+                            if (achievement == 'full_hands') {
+                              xpEarned = 35;
+                              _showAchievement('Full Hands!');
+                            } else if (achievement == 'five_streak') {
+                              xpEarned = 30;
+                            } else if (achievement == 'ten_in_shift') {
+                              xpEarned = 20;
+                            } else if (achievement == 'twenty_in_shift') {
+                              xpEarned = 30;
+                            }
+                            _showFlash(
+                              '+$xpEarned XP',
+                              'Next level: $pointsToNext XP',
+                            );
+                            final msg = encouragements[Random().nextInt(encouragements.length)];
+                            ScaffoldMessenger.of(ctx).clearSnackBars();
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),
+                            );
+
+                            final bubble = app.recentBadgeBubble;
+                            if (bubble != null) {
+                              ScaffoldMessenger.of(ctx).showSnackBar(
+                                SnackBar(content: Text(bubble), duration: const Duration(seconds: 3)),
+                              );
+                              app.clearRecentBadgeBubble();
+                            }
+                          },
+                          onLongPress: () {
+                            app.incrementPizookie(id);
+                            int xpEarned = 25;
+                            _showFlash(
+                              '+$xpEarned XP\nPizookie!',
+                              'Sweet!  Ran a Pizookie',
+                            );
+                            final msg = 'Pizookie run!';
+                            ScaffoldMessenger.of(ctx).clearSnackBars();
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),
+                            );
+                          },
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              // Progress bar row
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 10.0, top: 10, left: 4, right: 2),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    // Current level (left) - big, bold, with background, wider for double digits
+                                    GestureDetector(
+                                      onLongPress: () {
+                                        Future.delayed(const Duration(seconds: 2), () {
+                                          showDialog(
+                                            context: context,
+                                            builder: (context) => Dialog(
+                                              insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 60),
+                                              backgroundColor: Colors.transparent,
+                                              child: SizedBox(
+                                                width: 340,
+                                                height: 520,
+                                                child: ProfileDetailScreen(serverId: id),
+                                              ),
+                                            ),
+                                          );
+                                        });
+                                      },
+                                      child: Container(
+                                        width: 44,
+                                        height: 32,
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withOpacity(0.18),
+                                          borderRadius: BorderRadius.circular(16),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withOpacity(0.18),
+                                              blurRadius: 4,
+                                              offset: Offset(1, 2),
+                                            ),
+                                          ],
+                                        ),
+                                        alignment: Alignment.center,
+                                        child: Text(
+                                          'lvl$level',
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w900,
+                                            color: Colors.white,
+                                            letterSpacing: 0.5,
+                                            shadows: [
+                                              Shadow(blurRadius: 2, color: Colors.black54, offset: Offset(1,1)),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    // Progress bar
+                                    Expanded(
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(8),
+                                          child: LinearProgressIndicator(
+                                            value: progress,
+                                            minHeight: 10,
+                                            backgroundColor: Colors.white24,
+                                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    // Next level (right) - smaller, bold, with subtle background
+                                    Container(
+                                      width: 28,
+                                      height: 24,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.18),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        '${level + 1}',
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                          shadows: [
+                                            Shadow(blurRadius: 1, color: Colors.black38, offset: Offset(1,1)),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Expanded(
+                                child: Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        s.name,
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: 1.1,
+                                          color: Colors.white,
+                                          shadows: [
+                                            Shadow(blurRadius: 6, color: Colors.black45, offset: Offset(0, 2)),
+                                          ],
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      if (section != null && section.isNotEmpty) ...[
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          section,
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.white,
+                                            shadows: [
+                                              Shadow(blurRadius: 4, color: Colors.black45, offset: Offset(0, 1)),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Shift: $my  •  $pct%',
+                                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                                      ),
+                                      Text(
+                                        'Pizookies: ${app.profiles[id]?.pizookieRuns ?? 0}',
+                                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    );
                     final progress = (nextLevelXp > prevLevelXp)
                         ? ((points - prevLevelXp) / (nextLevelXp - prevLevelXp)).clamp(0.0, 1.0)
                         : 1.0;
