@@ -123,47 +123,112 @@ class _HistoryScreenState extends State<HistoryScreen> {
               const SizedBox(height: 6),
               Text('${_weekday(s.start)} - ${_hm(s.start)}', style: const TextStyle(fontSize: 18, color: Color(0xFF6D5A7C))),
               const SizedBox(height: 18),
+              // Column headers
+              Padding(
+                padding: const EdgeInsets.only(left: 8, right: 8, bottom: 4),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: SizedBox(),
+                    ),
+                    Expanded(
+                      flex: 3,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  children: [
+                                    Text('Shift Runs', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF6D5A7C))),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '(Includes Pizookies)',
+                                      style: TextStyle(
+                                        fontStyle: FontStyle.italic,
+                                        fontSize: 11,
+                                        color: Color(0xFF6D5A7C),
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Expanded(
+                                child: Column(
+                                  children: [
+                                    Text('Pizookie Runs', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFFB85C5C))),
+                                    const SizedBox(height: 17),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               ...items.map((e) {
                 // For each server, show total runs (regular + pizookie) and pizookie runs for the shift in separate columns
                 final pizookieRuns = s.pizookieCounts[e.key] ?? 0;
                 final totalRuns = e.value + pizookieRuns;
                 return Container(
                   margin: const EdgeInsets.symmetric(vertical: 6),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Expanded(child: Text(app.serverById(e.key)?.name ?? 'Unknown', style: const TextStyle(fontSize: 16, color: Color(0xFF3A2D4B)))),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Color(0xFFF3EAF7),
-                              borderRadius: BorderRadius.circular(8),
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          app.serverById(e.key)?.name ?? 'Unknown',
+                          style: const TextStyle(fontSize: 16, color: Color(0xFF3A2D4B)),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Expanded(
+                        flex: 3,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: Center(
+                                child: Container(
+                                  constraints: const BoxConstraints(minHeight: 36),
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Color(0xFFF3EAF7),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text('$totalRuns runs', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF6D5A7C))),
+                                ),
+                              ),
                             ),
-                            child: Text('$totalRuns runs', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF6D5A7C))),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Color(0xFFFFF3E6),
-                              borderRadius: BorderRadius.circular(8),
+                            Expanded(
+                              child: Center(
+                                child: Container(
+                                  constraints: const BoxConstraints(minHeight: 36),
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Color(0xFFFFF3E6),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text('$pizookieRuns', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFFB85C5C))),
+                                ),
+                              ),
                             ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.cookie, size: 16, color: Color(0xFFB85C5C)),
-                                const SizedBox(width: 4),
-                                Text('$pizookieRuns', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFFB85C5C))),
-                              ],
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ],
                   ),
