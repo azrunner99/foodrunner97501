@@ -284,44 +284,7 @@ class _RosterBodyState extends State<_RosterBody> {
               ],
             ),
             const SizedBox(height: 16),
-            // --- Clear All Button above assigned servers ---
-            Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                if (isLunch)
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.clear),
-                    label: const Text('Clear All Lunch'),
-                    onPressed: () {
-                      setState(() {
-                        lunchRoster.clear();
-                        for (var s in widget.app.servers) {
-                          lunchTeamColors[s.id] = null;
-                          lunchStationType.remove(s.id);
-                          lunchStationSection.remove(s.id);
-                        }
-                      });
-                    },
-                  ),
-                if (!isLunch)
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.clear),
-                    label: const Text('Clear All Dinner'),
-                    onPressed: () {
-                      setState(() {
-                        dinnerRoster.clear();
-                        for (var s in widget.app.servers) {
-                          dinnerTeamColors[s.id] = null;
-                          dinnerStationType.remove(s.id);
-                          dinnerStationSection.remove(s.id);
-                        }
-                      });
-                    },
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            // --- Assigned Servers Pane ---
+            // --- Assigned Servers Pane with Clear All Button inside top right ---
             if (assignedServers.isNotEmpty)
               Container(
                 width: double.infinity,
@@ -335,7 +298,66 @@ class _RosterBodyState extends State<_RosterBody> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Assigned Servers:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Assigned Servers:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                        if (isLunch)
+                          TextButton(
+                            style: TextButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              foregroundColor: Colors.blue,
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                lunchRoster.clear();
+                                for (var s in widget.app.servers) {
+                                  lunchTeamColors[s.id] = null;
+                                  lunchStationType.remove(s.id);
+                                  lunchStationSection.remove(s.id);
+                                }
+                              });
+                            },
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.close, color: Colors.blue, size: 18),
+                                const SizedBox(width: 4),
+                                Text('Clear All', style: TextStyle(fontWeight: FontWeight.w500, color: Colors.blue, fontSize: 14)),
+                              ],
+                            ),
+                          ),
+                        if (!isLunch)
+                          TextButton(
+                            style: TextButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              foregroundColor: Colors.blue,
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                dinnerRoster.clear();
+                                for (var s in widget.app.servers) {
+                                  dinnerTeamColors[s.id] = null;
+                                  dinnerStationType.remove(s.id);
+                                  dinnerStationSection.remove(s.id);
+                                }
+                              });
+                            },
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.close, color: Colors.blue, size: 18),
+                                const SizedBox(width: 4),
+                                Text('Clear All', style: TextStyle(fontWeight: FontWeight.w500, color: Colors.blue, fontSize: 14)),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
                     const SizedBox(height: 6),
                     ...assignedServers.map((s) => Card(
                       margin: const EdgeInsets.symmetric(vertical: 4),
