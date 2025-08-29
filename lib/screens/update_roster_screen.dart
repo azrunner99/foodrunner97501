@@ -711,39 +711,7 @@ class _RosterBodyState extends State<_RosterBody> {
                                       ),
                                     ),
                                   ),
-                                // Color bubble for team color (no text)
-                                if (showTeams)
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: 8.0),
-                                    child: Container(
-                                      width: 22,
-                                      height: 22,
-                                      decoration: BoxDecoration(
-                                        color: teamColors[s.id] == null
-                                            ? Colors.grey.shade200
-                                            : (
-                                                teamColors[s.id] == 'Blue'
-                                                    ? Colors.blue.withOpacity(0.7)
-                                                    : teamColors[s.id] == 'Purple'
-                                                        ? Colors.purple.withOpacity(0.7)
-                                                        : Colors.grey.withOpacity(0.7)
-                                              ),
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color: teamColors[s.id] == null
-                                              ? Colors.grey.shade400
-                                              : (
-                                                  teamColors[s.id] == 'Blue'
-                                                      ? Colors.blue
-                                                      : teamColors[s.id] == 'Purple'
-                                                          ? Colors.purple
-                                                          : Colors.grey
-                                                ),
-                                          width: 2,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
+                                // Removed team color bubble
                               ],
                             ),
                           ),
