@@ -548,12 +548,22 @@ class AppState extends ChangeNotifier {
   }
 
   void _finalizeAndSaveShift(String type) {
+    // Build pizookieCounts for this shift from _currentCounts and _profiles
+    final pizookieCounts = <String, int>{};
+    for (final id in _currentCounts.keys) {
+      final prof = _profiles[id] ?? ServerProfile();
+      // If you track pizookie runs for the shift, you need to store them per shift. For now, assume all pizookie runs this shift are in _currentCounts if you have a way to distinguish them.
+      // If not, you may need to track them separately during the shift.
+      // Here, we just set to 0 as a placeholder.
+      pizookieCounts[id] = 0;
+    }
     final rec = ShiftRecord(
       id: _randId(),
       label: type,
       shiftType: type,
       start: _shiftStart ?? DateTime.now(),
       counts: Map<String, int>.from(_currentCounts),
+      pizookieCounts: pizookieCounts,
     );
     _history.add(rec);
 
