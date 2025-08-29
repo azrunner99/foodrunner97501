@@ -12,6 +12,12 @@ class HistoryScreen extends StatefulWidget {
 }
 
 class _HistoryScreenState extends State<HistoryScreen> {
+  static String _weekday(DateTime d) {
+    const weekdays = [
+      'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
+    ];
+    return weekdays[d.weekday - 1];
+  }
   DateTime _selectedDay = DateTime.now();
 
   @override
@@ -67,10 +73,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   separatorBuilder: (_, __) => const Divider(height: 1),
                   itemBuilder: (_, i) {
                     final s = shiftsToday[i];
+                    final app = context.read<AppState>();
+                    int pizookieTotal = 0;
+                    s.counts.forEach((key, value) {
+                      pizookieTotal += app.profiles[key]?.pizookieRuns ?? 0;
+                    });
+                    final totalRuns = s.counts.values.fold(0, (a, b) => a + b) + pizookieTotal;
                     return ListTile(
                       leading: const Icon(Icons.event_available),
                       title: Text('${s.shiftType} • ${_hm(s.start)}'),
-                      subtitle: Text('${s.counts.length} participants'),
+                      subtitle: Text('$totalRuns runs (${pizookieTotal} pizookie)'),
                       onTap: () => _showShiftDialog(context, s),
                     );
                   },
@@ -87,28 +99,89 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final items = s.counts.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text('${s.shiftType} • ${_ymd(s.start)} ${_hm(s.start)}'),
-        content: SizedBox(
-          width: 360,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          width: 340,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8EDEE),
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.10),
+                blurRadius: 32,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            children: items.map((e) => Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(child: Text(app.serverById(e.key)?.name ?? 'Unknown')),
-                Text(e.value.toString()),
-              ],
-            )).toList(),
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(s.shiftType, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 24, color: Color(0xFF3A2D4B))),
+              const SizedBox(height: 6),
+              Text('${_weekday(s.start)} - ${_hm(s.start)}', style: const TextStyle(fontSize: 18, color: Color(0xFF6D5A7C))),
+              const SizedBox(height: 18),
+              ...items.map((e) {
+                final pizookieRuns = app.profiles[e.key]?.pizookieRuns ?? 0;
+                final totalRuns = e.value + pizookieRuns;
+                return Container(
+                  margin: const EdgeInsets.symmetric(vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(child: Text(app.serverById(e.key)?.name ?? 'Unknown', style: const TextStyle(fontSize: 16, color: Color(0xFF3A2D4B)))),
+                          Text(totalRuns.toString(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF6D5A7C))),
+                        ],
+                      ),
+                      if (pizookieRuns > 0)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.cookie, size: 16, color: Color(0xFFB85C5C)),
+                              const SizedBox(width: 4),
+                              Text('$pizookieRuns pizookie', style: const TextStyle(fontSize: 13, color: Color(0xFFB85C5C))),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              }),
+              const SizedBox(height: 18),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Close', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFFB85C5C))),
+                ),
+              ),
+            ],
           ),
         ),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
       ),
     );
   }
 
   static String _ymd(DateTime d) => '${d.year}-${d.month.toString().padLeft(2,'0')}-${d.day.toString().padLeft(2,'0')}';
-  static String _hm(DateTime d) => '${d.hour.toString().padLeft(2,'0')}:${d.minute.toString().padLeft(2,'0')}';
+  static String _hm(DateTime d) {
+    int hour = d.hour;
+    final minute = d.minute.toString().padLeft(2, '0');
+    final ampm = hour >= 12 ? 'pm' : 'am';
+    hour = hour % 12;
+    if (hour == 0) hour = 12;
+    return '$hour:$minute$ampm';
+  }
 }
 
 class _CalendarTab extends StatelessWidget {
