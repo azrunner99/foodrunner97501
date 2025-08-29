@@ -249,41 +249,60 @@ class _RosterBodyState extends State<_RosterBody> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            teamToggle,
-            // Toggle Button Row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      isLunch = true;
-                      _syncServerTeamColors();
-                    });
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isLunch ? Colors.blue : Colors.grey[300],
-                    foregroundColor: isLunch ? Colors.white : Colors.black,
+            // Combined Lunch/Dinner switch and Assign Teams toggle in one row
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            isLunch = true;
+                            _syncServerTeamColors();
+                          });
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isLunch ? Colors.blue : Colors.grey[300],
+                          foregroundColor: isLunch ? Colors.white : Colors.black,
+                          minimumSize: const Size(80, 36),
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                        ),
+                        child: const Text('Lunch'),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            isLunch = false;
+                            _syncServerTeamColors();
+                          });
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: !isLunch ? Colors.blue : Colors.grey[300],
+                          foregroundColor: !isLunch ? Colors.white : Colors.black,
+                          minimumSize: const Size(80, 36),
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                        ),
+                        child: const Text('Dinner'),
+                      ),
+                    ],
                   ),
-                  child: const Text('Lunch'),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      isLunch = false;
-                      _syncServerTeamColors();
-                    });
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: !isLunch ? Colors.blue : Colors.grey[300],
-                    foregroundColor: !isLunch ? Colors.white : Colors.black,
+                  Row(
+                    children: [
+                      Switch(
+                        value: showTeams,
+                        onChanged: (v) => setState(() => showTeams = v),
+                      ),
+                      const SizedBox(width: 4),
+                      const Text('Assign Teams', style: TextStyle(fontWeight: FontWeight.w600)),
+                    ],
                   ),
-                  child: const Text('Dinner'),
-                ),
-              ],
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
             // --- Assigned Servers Pane with Clear All Button inside top right ---
             if (assignedServers.isNotEmpty)
               Container(
@@ -374,24 +393,6 @@ class _RosterBodyState extends State<_RosterBody> {
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: Colors.grey.shade200,
-                                    borderRadius: BorderRadius.circular(9),
-                                    border: Border.all(color: Colors.grey.shade400),
-                                  ),
-                                  child: Text(
-                                    serverStationSection[s.id] ?? '',
-                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.black87),
-                                  ),
-                                ),
-                              ),
-                            // Color bubble for team color (no text)
-                            if (showTeams)
-                              Padding(
-                                padding: const EdgeInsets.only(left: 8.0),
-                                child: Container(
-                                  width: 22,
-                                  height: 22,
-                                  decoration: BoxDecoration(
                                     color: teamColors[s.id] == null
                                         ? Colors.grey.shade200
                                         : (
@@ -401,18 +402,17 @@ class _RosterBodyState extends State<_RosterBody> {
                                                     ? Colors.purple.withOpacity(0.7)
                                                     : Colors.grey.withOpacity(0.7)
                                           ),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
+                                    borderRadius: BorderRadius.circular(9),
+                                    border: Border.all(color: Colors.grey.shade400),
+                                  ),
+                                  child: Text(
+                                    serverStationSection[s.id] ?? '',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
                                       color: teamColors[s.id] == null
-                                          ? Colors.grey.shade400
-                                          : (
-                                              teamColors[s.id] == 'Blue'
-                                                  ? Colors.blue
-                                                  : teamColors[s.id] == 'Purple'
-                                                      ? Colors.purple
-                                                      : Colors.grey
-                                            ),
-                                      width: 2,
+                                          ? Colors.black87
+                                          : Colors.white,
                                     ),
                                   ),
                                 ),
