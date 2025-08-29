@@ -311,7 +311,7 @@ class _RosterBodyState extends State<_RosterBody> {
                   minHeight: 180,
                   maxHeight: 320,
                 ),
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.fromLTRB(10, 0, 10, 1),
                 margin: const EdgeInsets.only(bottom: 0),
                 decoration: BoxDecoration(
                   color: Colors.blue.shade50,
@@ -388,28 +388,30 @@ class _RosterBodyState extends State<_RosterBody> {
                           ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 2),
                     Expanded(
                       child: Scrollbar(
                         thumbVisibility: true,
                         child: ListView(
                           children: assignedServers.map((s) => Card(
-                            margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-                            elevation: 2,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 0),
+                            elevation: 1,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                             color: Colors.white,
-                            child: ListTile(
-                              title: Row(
+                            child: Container(
+                              height: 24,
+                              padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 0),
+                              child: Row(
                                 children: [
                                   Text(
                                     s.name,
-                                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                                   ),
                                   if (serverStationSection[s.id] != null)
                                     Padding(
-                                      padding: const EdgeInsets.only(left: 8.0),
+                                      padding: const EdgeInsets.only(left: 3.0),
                                       child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                        padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0),
                                         decoration: BoxDecoration(
                                           color: teamColors[s.id] == null
                                               ? Colors.grey.shade200
@@ -420,13 +422,13 @@ class _RosterBodyState extends State<_RosterBody> {
                                                           ? Colors.purple.withOpacity(0.7)
                                                           : Colors.grey.withOpacity(0.7)
                                                 ),
-                                          borderRadius: BorderRadius.circular(9),
+                                          borderRadius: BorderRadius.circular(5),
                                           border: Border.all(color: Colors.grey.shade400),
                                         ),
                                         child: Text(
                                           serverStationSection[s.id] ?? '',
                                           style: TextStyle(
-                                            fontSize: 12,
+                                            fontSize: 8,
                                             fontWeight: FontWeight.w500,
                                             color: teamColors[s.id] == null
                                                 ? Colors.black87
@@ -435,18 +437,21 @@ class _RosterBodyState extends State<_RosterBody> {
                                         ),
                                       ),
                                     ),
+                                  const Spacer(),
+                                  IconButton(
+                                    icon: const Icon(Icons.close, color: Colors.red, size: 16),
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    onPressed: () {
+                                      setState(() {
+                                        roster.remove(s.id);
+                                        serverStationType.remove(s.id);
+                                        serverStationSection.remove(s.id);
+                                        teamColors[s.id] = null;
+                                      });
+                                    },
+                                  ),
                                 ],
-                              ),
-                              trailing: IconButton(
-                                icon: const Icon(Icons.close, color: Colors.red),
-                                onPressed: () {
-                                  setState(() {
-                                    roster.remove(s.id);
-                                    serverStationType.remove(s.id);
-                                    serverStationSection.remove(s.id);
-                                    teamColors[s.id] = null;
-                                  });
-                                },
                               ),
                             ),
                           )).toList(),
