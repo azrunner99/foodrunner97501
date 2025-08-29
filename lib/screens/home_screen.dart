@@ -793,16 +793,20 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                                       ),
                                       if (section != null && section.isNotEmpty) ...[
                                         const SizedBox(height: 2),
-                                        Text(
-                                          section,
-                                          textAlign: TextAlign.center,
-                                          style: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.white,
-                                            shadows: [
-                                              Shadow(blurRadius: 4, color: Colors.black45, offset: Offset(0, 1)),
-                                            ],
+                                        Flexible(
+                                          child: Text(
+                                            section,
+                                            textAlign: TextAlign.center,
+                                            style: const TextStyle(
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.w400,
+                                              color: Colors.white,
+                                              shadows: [
+                                                Shadow(blurRadius: 2, color: Colors.black45, offset: Offset(0, 1)),
+                                              ],
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
                                       ],
