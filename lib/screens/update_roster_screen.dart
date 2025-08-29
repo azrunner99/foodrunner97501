@@ -312,11 +312,18 @@ class _RosterBodyState extends State<_RosterBody> {
                   maxHeight: 320,
                 ),
                 padding: const EdgeInsets.all(10),
-                margin: const EdgeInsets.only(bottom: 12),
+                margin: const EdgeInsets.only(bottom: 0),
                 decoration: BoxDecoration(
                   color: Colors.blue.shade50,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.blue.shade200),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.blue.shade100.withOpacity(0.2),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -387,7 +394,10 @@ class _RosterBodyState extends State<_RosterBody> {
                         thumbVisibility: true,
                         child: ListView(
                           children: assignedServers.map((s) => Card(
-                            margin: const EdgeInsets.symmetric(vertical: 4),
+                            margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            color: Colors.white,
                             child: ListTile(
                               title: Row(
                                 children: [
@@ -446,6 +456,17 @@ class _RosterBodyState extends State<_RosterBody> {
                   ],
                 ),
               ),
+            // --- Divider for separation ---
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 0),
+              child: Divider(
+                thickness: 3.5,
+                color: Colors.blue.shade700,
+                height: 36,
+                indent: 0,
+                endIndent: 0,
+              ),
+            ),
             // --- Main List: Only unassigned servers ---
             Expanded(
               child: ListView.builder(
