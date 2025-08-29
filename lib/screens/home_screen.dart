@@ -679,7 +679,7 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                             children: [
                               // Progress bar row
                               Padding(
-                                padding: const EdgeInsets.only(bottom: 10.0, top: 10, left: 4, right: 2),
+                                padding: const EdgeInsets.only(bottom: 2.0, top: 10, left: 4, right: 2),
                                 child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
