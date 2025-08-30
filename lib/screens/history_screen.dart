@@ -75,12 +75,71 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     final s = shiftsToday[i];
                     final app = context.read<AppState>();
                     final pizookieTotal = s.pizookieCounts.values.fold(0, (a, b) => a + b);
-                    final totalRuns = s.counts.values.fold(0, (a, b) => a + b) + pizookieTotal;
+                    final totalRuns = s.counts.values.fold(0, (a, b) => a + b);
                     return ListTile(
                       leading: const Icon(Icons.event_available),
                       title: Text('${s.shiftType} • ${_hm(s.start)}'),
                       subtitle: Text('$totalRuns runs ($pizookieTotal pizookie)'),
                       onTap: () => _showShiftDialog(context, s),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        tooltip: 'Delete shift',
+                        onPressed: () async {
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('Delete Shift'),
+                              content: const Text('Are you sure you want to delete this shift? This cannot be undone.'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, false),
+                                  child: const Text('Cancel'),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, true),
+                                  child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                                ),
+                              ],
+                            ),
+                          );
+                          if (confirm == true) {
+                            final pinController = TextEditingController();
+                            final pin = await showDialog<String>(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: const Text('Admin Pin Required'),
+                                content: TextField(
+                                  controller: pinController,
+                                  autofocus: true,
+                                  obscureText: true,
+                                  keyboardType: TextInputType.number,
+                                  decoration: const InputDecoration(labelText: 'Enter admin pin'),
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx, null),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx, pinController.text),
+                                    child: const Text('OK'),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (pin != null && pin.isNotEmpty) {
+                              final success = await app.deleteShiftWithPin(s, pin);
+                              if (success) {
+                                setState(() {});
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Incorrect admin pin. Shift not deleted.'), backgroundColor: Colors.red),
+                                );
+                              }
+                            }
+                          }
+                        },
+                      ),
                     );
                   },
                 ),
@@ -172,9 +231,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 ),
               ),
               ...items.map((e) {
-                // For each server, show total runs (regular + pizookie) and pizookie runs for the shift in separate columns
+                final totalRuns = s.counts[e.key] ?? 0;
                 final pizookieRuns = s.pizookieCounts[e.key] ?? 0;
-                final totalRuns = e.value + pizookieRuns;
                 return Container(
                   margin: const EdgeInsets.symmetric(vertical: 6),
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
