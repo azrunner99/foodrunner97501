@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../app_state.dart';
+import 'server_avatar_gallery_screen.dart';
 
 class ServerAvatarSettingsScreen extends StatelessWidget {
   const ServerAvatarSettingsScreen({super.key});
@@ -17,42 +18,33 @@ class ServerAvatarSettingsScreen extends StatelessWidget {
     });
     return Scaffold(
       appBar: AppBar(title: const Text('Server Avatar Settings')),
-      body: Column(
-        children: [
-          Expanded(
-            child: profilesWithAvatar.isEmpty
-                ? const Center(child: Text('No server avatars found.'))
-                : ListView.separated(
-                    itemCount: profilesWithAvatar.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
-                    itemBuilder: (_, i) {
-                      final entry = profilesWithAvatar[i];
-                      final server = app.serverById(entry.key);
-                      final displayName = server?.name ?? entry.key;
-                      return ListTile(
-                        leading: CircleAvatar(backgroundImage: FileImage(File(entry.value.avatarPath!))),
-                        title: Text(displayName),
-                        subtitle: Text('Avatar path: ${entry.value.avatarPath}'),
-                        onTap: () {},
-                      );
-                    },
-                  ),
-          ),
-          const Divider(height: 1),
-          Padding(
-            padding: EdgeInsets.all(8),
-            child: Text('All profiles (for debug):'),
-          ),
-          Expanded(
-            child: ListView(
-              children: app.profiles.entries.map((e) => ListTile(
-                title: Text('ID: ${e.key}'),
-                subtitle: Text('AvatarPath: ${e.value.avatarPath ?? ""}"'),
-              )).toList(),
+      body: profilesWithAvatar.isEmpty
+          ? const Center(child: Text('No server avatars found.'))
+          : ListView.separated(
+              itemCount: profilesWithAvatar.length,
+              separatorBuilder: (_, __) => const Divider(height: 1),
+              itemBuilder: (_, i) {
+                final entry = profilesWithAvatar[i];
+                final server = app.serverById(entry.key);
+                final displayName = server?.name ?? entry.key;
+                return ListTile(
+                  leading: CircleAvatar(backgroundImage: FileImage(File(entry.value.avatarPath!))),
+                  title: Text(displayName),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ServerAvatarGalleryScreen(
+                          serverId: entry.key,
+                          serverName: displayName,
+                          avatarHistory: entry.value.avatarHistory,
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
             ),
-          ),
-        ],
-      ),
     );
   }
 }
