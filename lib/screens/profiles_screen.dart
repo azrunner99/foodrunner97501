@@ -144,6 +144,7 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
                     Text('Level ${p.level}', style: Theme.of(context).textTheme.titleLarge),
                     Text('Points: ${p.points}  •  Next at: ${p.nextLevelAt}'),
                     Text('All-time runs: ${p.allTimeRuns}  •  Best shift: ${p.bestShiftRuns}'),
+                    Text('Pizookie Runs (Included in All-Time-Runs): ${p.pizookieRuns}'),
                     Text('Avg frequency: $avgStr'),
                     Text('MVP awards: ${p.shiftsAsMvp}'),
                   ],
