@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:io';
 import 'dart:convert';
 import '../app_state.dart';
 import 'station_types_screen.dart';
@@ -711,7 +712,30 @@ class _RosterBodyState extends State<_RosterBody> {
                                       ),
                                     ),
                                   ),
-                                // Removed team color bubble
+                                const Spacer(),
+                                Builder(
+                                  builder: (context) {
+                                    final profile = widget.app.profiles[s.id];
+                                    final avatarPath = profile?.avatarPath;
+                                    if (avatarPath != null && avatarPath.isNotEmpty) {
+                                      return CircleAvatar(
+                                        radius: 18,
+                                        backgroundImage: Image.file(
+                                          // ignore: prefer_interpolation_to_compose_strings
+                                          File(avatarPath),
+                                          fit: BoxFit.cover,
+                                        ).image,
+                                        backgroundColor: Colors.grey.shade200,
+                                      );
+                                    } else {
+                                      return CircleAvatar(
+                                        radius: 18,
+                                        backgroundColor: Colors.grey.shade200,
+                                        child: Icon(Icons.person, color: Colors.grey.shade500, size: 22),
+                                      );
+                                    }
+                                  },
+                                ),
                               ],
                             ),
                           ),
