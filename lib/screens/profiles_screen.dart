@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import '../app_state.dart';
 // import removed: achievementsCatalog no longer used
 
@@ -86,6 +88,18 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
     );
   }
 
+  XFile? _avatarImage;
+
+  Future<void> _pickAvatarPhoto() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.camera);
+    if (pickedFile != null) {
+      setState(() {
+        _avatarImage = pickedFile;
+      });
+      // TODO: Save avatar to profile if persistent storage is needed
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -112,33 +126,70 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
   // Badge logic removed
 
     return Scaffold(
-      appBar: AppBar(title: Text(s.name)),
+      appBar: AppBar(),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
           Center(
-            child: CircleAvatar(
-              radius: 36,
-              backgroundColor: Colors.deepPurple.shade100,
-              child: Text(
-                p.level.toString(),
-                style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.deepPurple),
-              ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                GestureDetector(
+                  onTap: _pickAvatarPhoto,
+                  child: CircleAvatar(
+                    radius: 80,
+                    backgroundColor: Colors.deepPurple.shade100,
+                    backgroundImage: _avatarImage != null ? FileImage(File(_avatarImage!.path)) : null,
+                  ),
+                ),
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.75),
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.18),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      'Lvl${p.level}',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Center(
+            child: Text(
+              s.name,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Center(
+            child: Text(
+              '${p.points} points • Next level at: ${p.nextLevelAt}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[700]),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Center(
+            child: Text(
+              'MVP: ${p.shiftsAsMvp}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[700]),
             ),
           ),
           const SizedBox(height: 24),
-          metricCard(
-            icon: Icons.star,
-            label: 'Level',
-            value: 'Level ${p.level}',
-            color: Colors.deepPurple,
-          ),
-          metricCard(
-            icon: Icons.emoji_events,
-            label: 'Points',
-            value: '${p.points}  •  Next at: ${p.nextLevelAt}',
-            color: Colors.amber.shade700,
-          ),
+          // Remove the metricCard for 'Points'
           metricCard(
             icon: Icons.directions_run,
             label: 'All-time Runs',
@@ -157,12 +208,13 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
             value: avgStr,
             color: Colors.green,
           ),
-          metricCard(
-            icon: Icons.military_tech,
-            label: 'MVP Awards',
-            value: '${p.shiftsAsMvp}',
-            color: Colors.orange,
-          ),
+          // Remove the metricCard for 'MVP Awards'
+          // metricCard(
+          //   icon: Icons.military_tech,
+          //   label: 'MVP Awards',
+          //   value: '${p.shiftsAsMvp}',
+          //   color: Colors.orange,
+          // ),
         ],
       ),
     );
