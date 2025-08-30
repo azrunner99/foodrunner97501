@@ -74,15 +74,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   itemBuilder: (_, i) {
                     final s = shiftsToday[i];
                     final app = context.read<AppState>();
-                    int pizookieTotal = 0;
-                    s.counts.forEach((key, value) {
-                      pizookieTotal += app.profiles[key]?.pizookieRuns ?? 0;
-                    });
+                    final pizookieTotal = s.pizookieCounts.values.fold(0, (a, b) => a + b);
                     final totalRuns = s.counts.values.fold(0, (a, b) => a + b) + pizookieTotal;
                     return ListTile(
                       leading: const Icon(Icons.event_available),
                       title: Text('${s.shiftType} • ${_hm(s.start)}'),
-                      subtitle: Text('$totalRuns runs (${pizookieTotal} pizookie)'),
+                      subtitle: Text('$totalRuns runs ($pizookieTotal pizookie)'),
                       onTap: () => _showShiftDialog(context, s),
                     );
                   },
