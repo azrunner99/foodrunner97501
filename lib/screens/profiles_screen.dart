@@ -152,7 +152,16 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
     final allTimePct = teamAllTimeRuns > 0 ? ((p.allTimeRuns / teamAllTimeRuns) * 100).toStringAsFixed(1) : '0';
     final pizookiePct = teamPizookieRuns > 0 ? ((p.pizookieRuns / teamPizookieRuns) * 100).toStringAsFixed(1) : '0';
 
+    // Calculate ranks for all-time runs and pizookie runs
+    List<ServerProfile> sortedAllTime = app.profiles.values.toList()
+      ..sort((a, b) => b.allTimeRuns.compareTo(a.allTimeRuns));
+    List<ServerProfile> sortedPizookie = app.profiles.values.toList()
+      ..sort((a, b) => b.pizookieRuns.compareTo(a.pizookieRuns));
+    int allTimeRank = sortedAllTime.indexWhere((prof) => prof == p) + 1;
+    int pizookieRank = sortedPizookie.indexWhere((prof) => prof == p) + 1;
+
   // Badge logic removed
+    final totalServers = app.profiles.length;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Profile')),
@@ -223,13 +232,25 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
             label: 'All-time Runs',
             value: '${p.allTimeRuns} • Best shift: ${p.bestShiftRuns}',
             color: Colors.blue,
-            extra: Text('$allTimePct% of team', style: const TextStyle(fontSize: 16)),
+            extra: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('$allTimePct% of team', style: const TextStyle(fontSize: 16)),
+                Text('Rank: $allTimeRank/$totalServers', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ],
+            ),
           ),
           metricCard(
             label: 'Pizookie Runs',
             value: '${p.pizookieRuns}',
             color: Colors.pink,
-            extra: Text('$pizookiePct% of team', style: const TextStyle(fontSize: 16)),
+            extra: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('$pizookiePct% of team', style: const TextStyle(fontSize: 16)),
+                Text('Rank: $pizookieRank/$totalServers', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ],
+            ),
           ),
           metricCard(
             label: 'Average Time Between Runs',
