@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../app_state.dart';
 // import removed: achievementsCatalog no longer used
 
@@ -52,9 +53,24 @@ class ProfileDetailScreen extends StatefulWidget {
 }
 
 class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
+  String? _avatarPath;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAvatar();
+  }
+
+  Future<void> _loadAvatar() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _avatarPath = prefs.getString('avatar_${widget.serverId}');
+    });
+  }
+
   // Badge mode removed
   // Metric card widget for visual separation
-  Widget metricCard({required IconData icon, required String label, required String value, required Color color}) {
+  Widget metricCard({required String label, required String value, required Color color, Widget? extra}) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 10),
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
@@ -71,15 +87,17 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
       ),
       child: Row(
         children: [
-          Icon(icon, color: color, size: 32),
-          const SizedBox(width: 18),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: color)),
+                Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: Colors.black)),
                 const SizedBox(height: 6),
-                Text(value, style: const TextStyle(fontSize: 18, color: Colors.black)),
+                Text(value, style: const TextStyle(fontSize: 14, color: Colors.black)),
+                if (extra != null) ...[
+                  const SizedBox(height: 2),
+                  extra,
+                ],
               ],
             ),
           ),
@@ -88,16 +106,15 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
     );
   }
 
-  XFile? _avatarImage;
-
   Future<void> _pickAvatarPhoto() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.camera);
     if (pickedFile != null) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('avatar_${widget.serverId}', pickedFile.path);
       setState(() {
-        _avatarImage = pickedFile;
+        _avatarPath = pickedFile.path;
       });
-      // TODO: Save avatar to profile if persistent storage is needed
     }
   }
 
@@ -114,8 +131,14 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
       );
     }
 
+    String _formatMinSec(double seconds) {
+      final mins = seconds ~/ 60;
+      final secs = seconds % 60;
+      return '${mins}:${secs.toStringAsFixed(0).padLeft(2, '0')} min:sec';
+    }
+
     final avg = p.avgSecondsBetweenRuns;
-    final avgStr = avg <= 0 ? '—' : '${avg.toStringAsFixed(1)} sec/run';
+    final avgStr = avg <= 0 ? '—' : _formatMinSec(avg);
 
     final repeatCounts = <String, int>{};
     for (final key in p.repeatEarnedDates) {
@@ -123,10 +146,16 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
       repeatCounts[id] = (repeatCounts[id] ?? 0) + 1;
     }
 
+    // Calculate team totals for all-time and pizookie runs
+    final teamAllTimeRuns = app.profiles.values.fold<int>(0, (sum, prof) => sum + prof.allTimeRuns);
+    final teamPizookieRuns = app.profiles.values.fold<int>(0, (sum, prof) => sum + prof.pizookieRuns);
+    final allTimePct = teamAllTimeRuns > 0 ? ((p.allTimeRuns / teamAllTimeRuns) * 100).toStringAsFixed(1) : '0';
+    final pizookiePct = teamPizookieRuns > 0 ? ((p.pizookieRuns / teamPizookieRuns) * 100).toStringAsFixed(1) : '0';
+
   // Badge logic removed
 
     return Scaffold(
-      appBar: AppBar(),
+      appBar: AppBar(title: const Text('Profile')),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
@@ -139,7 +168,7 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
                   child: CircleAvatar(
                     radius: 80,
                     backgroundColor: Colors.deepPurple.shade100,
-                    backgroundImage: _avatarImage != null ? FileImage(File(_avatarImage!.path)) : null,
+                    backgroundImage: _avatarPath != null ? FileImage(File(_avatarPath!)) : null,
                   ),
                 ),
                 Positioned(
@@ -191,20 +220,19 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
           const SizedBox(height: 24),
           // Remove the metricCard for 'Points'
           metricCard(
-            icon: Icons.directions_run,
             label: 'All-time Runs',
-            value: '${p.allTimeRuns}  •  Best shift: ${p.bestShiftRuns}',
+            value: '${p.allTimeRuns} • Best shift: ${p.bestShiftRuns}',
             color: Colors.blue,
+            extra: Text('$allTimePct% of team', style: const TextStyle(fontSize: 16)),
           ),
           metricCard(
-            icon: Icons.cake,
             label: 'Pizookie Runs',
-            value: '${p.pizookieRuns} (Included in All-Time-Runs)',
+            value: '${p.pizookieRuns}',
             color: Colors.pink,
+            extra: Text('$pizookiePct% of team', style: const TextStyle(fontSize: 16)),
           ),
           metricCard(
-            icon: Icons.timer,
-            label: 'Avg Frequency',
+            label: 'Average Time Between Runs',
             value: avgStr,
             color: Colors.green,
           ),
