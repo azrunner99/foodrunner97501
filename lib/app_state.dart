@@ -74,6 +74,7 @@ class ServerProfile {
   };
 }
 class AppState extends ChangeNotifier {
+  Map<String, int> get currentPizookieCounts => Map.unmodifiable(_currentPizookieCounts);
   /// Register a Pizookie run: counts as a run, +2 points, +1 pizookieRuns
   /// Register a Pizookie run: counts as a run, +2 points, +1 pizookieRuns
   // Tracks per-shift pizookie runs for each server
@@ -642,8 +643,8 @@ class AppState extends ChangeNotifier {
       _finalizeAndSaveShift(_shiftType);
       _shiftActive = false;
       _shiftPaused = false;
-      notifyListeners();
     }
+    notifyListeners();
     return true;
   }
 
