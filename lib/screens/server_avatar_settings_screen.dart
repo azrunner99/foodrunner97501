@@ -12,7 +12,7 @@ class ServerAvatarSettingsScreen extends StatelessWidget {
     final app = context.watch<AppState>();
     final profilesWithAvatar = <MapEntry<String, ServerProfile>>[];
     app.profiles.forEach((id, profile) {
-      if (profile.avatarPath != null && profile.avatarPath!.isNotEmpty) {
+      if (profile.avatarHistory.isNotEmpty) {
         profilesWithAvatar.add(MapEntry(id, profile));
       }
     });
