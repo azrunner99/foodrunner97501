@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:uuid/uuid.dart';
 import '../app_state.dart';
 // import removed: achievementsCatalog no longer used
 
@@ -110,11 +112,68 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.camera);
     if (pickedFile != null) {
+      // Save photo to a unique file path
+      final appDir = await getApplicationDocumentsDirectory();
+      final uuid = Uuid().v4();
+      final ext = pickedFile.path.split('.').last;
+      final newPath = '${appDir.path}/avatar_${widget.serverId}_$uuid.$ext';
+      await File(pickedFile.path).copy(newPath);
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('avatar_${widget.serverId}', pickedFile.path);
+      await prefs.setString('avatar_${widget.serverId}', newPath);
       setState(() {
-        _avatarPath = pickedFile.path;
+        _avatarPath = newPath;
       });
+      // Save avatar path to ServerProfile for global access
+      final app = Provider.of<AppState>(context, listen: false);
+      app.updateAvatar(widget.serverId, newPath);
+      final showOnButton = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Show on Server Button?'),
+          content: const Text('Do you want this photo to be shown on your server button?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Yes'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('No'),
+            ),
+          ],
+        ),
+      );
+      if (showOnButton == true) {
+        // TODO: Implement logic to show avatar on server button
+      }
+    }
+  }
+
+  Future<void> _onAvatarTap() async {
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Avatar Options'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'replace'),
+            child: const Text('Replace'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'show'),
+            child: const Text('Show on Server Button'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+    if (result == 'replace') {
+      await _pickAvatarPhoto();
+    } else if (result == 'show') {
+      // TODO: Implement logic to show avatar on server button
     }
   }
 
@@ -173,7 +232,7 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
               alignment: Alignment.center,
               children: [
                 GestureDetector(
-                  onTap: _pickAvatarPhoto,
+                  onTap: _onAvatarTap,
                   child: CircleAvatar(
                     radius: 80,
                     backgroundColor: Colors.deepPurple.shade100,
@@ -209,7 +268,7 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
           Center(
             child: Text(
               s.name,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold, fontSize: 32),
             ),
           ),
           const SizedBox(height: 8),

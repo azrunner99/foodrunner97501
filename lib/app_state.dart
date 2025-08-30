@@ -1,4 +1,4 @@
-  /// Register a Pizookie run: counts as a run, +2 points, +1 pizookieRuns
+/// Register a Pizookie run: counts as a run, +2 points, +1 pizookieRuns
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
@@ -29,6 +29,8 @@ class ServerProfile {
   int tapIntervalsMsSum;
   int tapIntervalsCount;
   String? lastTapIso;
+  String? avatarPath;
+  List<Map<String, dynamic>> avatarHistory;
 
   ServerProfile({
     this.allTimeRuns = 0,
@@ -42,6 +44,8 @@ class ServerProfile {
     this.tapIntervalsMsSum = 0,
     this.tapIntervalsCount = 0,
     this.lastTapIso,
+    this.avatarPath,
+    this.avatarHistory = const [],
   })  : achievements = achievements ?? [],
         repeatEarnedDates = repeatEarnedDates ?? [];
 
@@ -57,6 +61,16 @@ class ServerProfile {
     tapIntervalsMsSum: (m['tapIntervalsMsSum'] ?? 0) as int,
     tapIntervalsCount: (m['tapIntervalsCount'] ?? 0) as int,
     lastTapIso: m['lastTapIso'] as String?,
+    avatarPath: m['avatarPath'] as String?,
+    avatarHistory: (m['avatarHistory'] as List?)?.map((e) {
+      if (e is String) {
+        return {'path': e, 'timestamp': null};
+      } else if (e is Map) {
+        return Map<String, dynamic>.from(e.map((key, value) => MapEntry(key.toString(), value)));
+      } else {
+        return <String, dynamic>{};
+      }
+    }).toList() ?? <Map<String, dynamic>>[],
   );
 
   Map<String, dynamic> toMap() => {
@@ -71,6 +85,8 @@ class ServerProfile {
     'tapIntervalsMsSum': tapIntervalsMsSum,
     'tapIntervalsCount': tapIntervalsCount,
     'lastTapIso': lastTapIso,
+    'avatarPath': avatarPath,
+    'avatarHistory': avatarHistory,
   };
 }
 class AppState extends ChangeNotifier {
@@ -940,6 +956,20 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void deleteShift(ShiftRecord shift) {
+  _history.removeWhere((s) => s.id == shift.id);
+  _persistHistory();
+  notifyListeners();
+}
+
+  Future<bool> deleteShiftWithPin(ShiftRecord shift, String pin) async {
+  if (pin != adminPin) return false;
+  _history.removeWhere((s) => s.id == shift.id);
+  await _persistHistory();
+  notifyListeners();
+  return true;
+}
+
   static String _ymd(DateTime d) =>
       '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
   static int weekday(DateTime d) => d.weekday;
@@ -967,5 +997,20 @@ class AppState extends ChangeNotifier {
     final m = now.hour * 60 + now.minute;
     // Example: Dinner closer is 9:00pm–11:00pm
     return m >= 21 * 60 && m < 23 * 60;
+  }
+
+  void updateAvatar(String serverId, String avatarPath) {
+    final profile = _profiles[serverId];
+    if (profile != null) {
+      profile.avatarPath = avatarPath;
+      final now = DateTime.now();
+      final entry = {
+        'path': avatarPath,
+        'timestamp': now.toIso8601String(),
+      };
+      profile.avatarHistory = [...profile.avatarHistory, entry];
+      notifyListeners();
+      _persistProfiles();
+    }
   }
 }
