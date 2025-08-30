@@ -14,7 +14,19 @@ class MvpScreen extends StatelessWidget {
     final entries = servers.map((s) {
       final runs = app.totals[s.id] ?? 0;
       final pct = totalAllTime > 0 ? (runs * 100.0 / totalAllTime) : 0.0;
-      return _Entry(name: s.name, runs: runs, pct: pct, id: s.id);
+      final pizookieRuns = app.profiles[s.id]?.pizookieRuns ?? 0;
+      final totalPizookie = app.profiles.values.fold<int>(0, (a, b) => a + b.pizookieRuns);
+      final pizookieShare = totalPizookie > 0 ? (pizookieRuns * 100.0 / totalPizookie) : 0.0;
+      final shiftsAsMvp = app.profiles[s.id]?.shiftsAsMvp ?? 0;
+      return _Entry(
+        name: s.name,
+        runs: runs,
+        pct: pct,
+        id: s.id,
+        pizookieRuns: pizookieRuns,
+        pizookieShare: pizookieShare,
+        shiftsAsMvp: shiftsAsMvp,
+      );
     }).toList()
       ..sort((a, b) {
         final c = b.pct.compareTo(a.pct);
@@ -25,7 +37,7 @@ class MvpScreen extends StatelessWidget {
       });
 
     return Scaffold(
-      appBar: AppBar(title: const Text('MVP Rankings (All-time %)')),
+      appBar: AppBar(title: const Text('Leaderboard')),
       body: entries.isEmpty
           ? const Center(child: Text('No data yet.'))
           : ListView.separated(
@@ -45,8 +57,22 @@ class MvpScreen extends StatelessWidget {
 
                 return ListTile(
                   leading: leading,
-                  title: Text(e.name),
-                  subtitle: Text('All-time: ${e.runs} • Share: ${e.pct.toStringAsFixed(1)}%'),
+                  title: Text(
+                    e.name,
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('All-time Runs: ${e.runs}', style: const TextStyle(fontSize: 12)),
+                      Text('Share: ${e.pct.toStringAsFixed(0)}%', style: const TextStyle(fontSize: 12)),
+                      const SizedBox(height: 8),
+                      Text('Pizookie Runs: ${e.pizookieRuns}', style: const TextStyle(fontSize: 12)),
+                      Text('Pizookie Share: ${e.pizookieShare.toStringAsFixed(0)}%', style: const TextStyle(fontSize: 12)),
+                      const SizedBox(height: 8),
+                      Text('MVP Awards: ${e.shiftsAsMvp}', style: const TextStyle(fontSize: 12)),
+                    ],
+                  ),
                 );
               },
             ),
@@ -59,5 +85,16 @@ class _Entry {
   final String name;
   final int runs;
   final double pct;
-  _Entry({required this.id, required this.name, required this.runs, required this.pct});
+  final int pizookieRuns;
+  final double pizookieShare;
+  final int shiftsAsMvp;
+  _Entry({
+    required this.id,
+    required this.name,
+    required this.runs,
+    required this.pct,
+    this.pizookieRuns = 0,
+    this.pizookieShare = 0.0,
+    this.shiftsAsMvp = 0,
+  });
 }
