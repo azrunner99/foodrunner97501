@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../app_state.dart';
-import '../models.dart';
 import '../gamification.dart'; // achievementsCatalog
 
 class ProfilesScreen extends StatelessWidget {
@@ -23,10 +22,11 @@ class ProfilesScreen extends StatelessWidget {
                 final s = servers[i];
                 final prof = app.profiles[s.id];
                 final level = prof?.level ?? 1;
-                final runs = app.totals[s.id] ?? 0;
+                final runs = prof?.allTimeRuns ?? 0;
+                final pizookies = prof?.pizookieRuns ?? 0;
                 return ListTile(
                   title: Text(s.name),
-                  subtitle: Text('Level $level • All-time runs: $runs'),
+                  subtitle: Text('Level $level • All-time runs: $runs (includes $pizookies Pizookies)'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     Navigator.push(

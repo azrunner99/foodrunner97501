@@ -76,15 +76,20 @@ class ServerProfile {
 class AppState extends ChangeNotifier {
   /// Register a Pizookie run: counts as a run, +2 points, +1 pizookieRuns
   /// Register a Pizookie run: counts as a run, +2 points, +1 pizookieRuns
+  // Tracks per-shift pizookie runs for each server
+  final Map<String, int> _currentPizookieCounts = {};
   String? incrementPizookie(String id) {
     if (!_shiftActive || !_workingServerIds.contains(id)) return null;
 
     final now = DateTime.now();
-  const delta = 1;
-  const pizookiePoints = 25;
+    const delta = 1;
+    const pizookiePoints = 25;
 
     _currentCounts[id] = (_currentCounts[id] ?? 0) + delta;
     _teamTotalThisShift += delta;
+
+    // Increment per-shift pizookie count
+    _currentPizookieCounts[id] = (_currentPizookieCounts[id] ?? 0) + delta;
 
     _currentStreaks[id] = (_currentStreaks[id] ?? 0) + 1;
     final sCount = _currentCounts[id]!;
@@ -94,7 +99,7 @@ class AppState extends ChangeNotifier {
     prof.points += pizookiePoints;
     prof.allTimeRuns += delta;
     prof.pizookieRuns += delta;
-    print('[DEBUG] Server $id ran a Pizookie: ${prof.points} XP, level ${prof.level}, allTimeRuns: ${prof.allTimeRuns}, pizookieRuns: ${prof.pizookieRuns}');
+    print('[DEBUG] Server $id ran a Pizookie: \\${prof.points} XP, level \\${prof.level}, allTimeRuns: \\${prof.allTimeRuns}, pizookieRuns: \\${prof.pizookieRuns}');
 
     final prevIso = prof.lastTapIso;
     prof.lastTapIso = now.toIso8601String();
@@ -120,7 +125,7 @@ class AppState extends ChangeNotifier {
     if (now.hour >= 23) _awardOnce(prof, 'night_owl', serverName);
 
     _awardOnce(prof, 'first_run_today', serverName);
-    if (prof.allTimeRuns == 0 && !_profiles.containsKey('first_run_${id}_awarded')) {
+    if (prof.allTimeRuns == 0 && !_profiles.containsKey('first_run_\\${id}_awarded')) {
       _awardOnce(prof, 'first_run', serverName);
     }
 
@@ -141,17 +146,17 @@ class AppState extends ChangeNotifier {
       if (_dinnerCloserCount[id]! >= 8) _awardOnce(prof, 'dinner_closer_8', serverName);
     }
 
-  _profiles[id] = prof;
+    _profiles[id] = prof;
 
-  final minuteEpoch = DateTime(now.year, now.month, now.day, now.hour, now.minute).millisecondsSinceEpoch;
-  _tapPerMinute.putIfAbsent(id, () => <int, int>{});
-  _tapPerMinute[id]![minuteEpoch] = (_tapPerMinute[id]![minuteEpoch] ?? 0) + 1;
-  _persistTapLog();
-  _persistProfiles();
-  _persistTotals();
+    final minuteEpoch = DateTime(now.year, now.month, now.day, now.hour, now.minute).millisecondsSinceEpoch;
+    _tapPerMinute.putIfAbsent(id, () => <int, int>{});
+    _tapPerMinute[id]![minuteEpoch] = (_tapPerMinute[id]![minuteEpoch] ?? 0) + 1;
+    _persistTapLog();
+    _persistProfiles();
+    _persistTotals();
 
-  notifyListeners();
-  return null;
+    notifyListeners();
+    return null;
   }
   // For Full Hands! achievement: not persisted, just for session
   final Map<String, List<DateTime>> _recentTapTimes = {};
@@ -541,6 +546,11 @@ class AppState extends ChangeNotifier {
       ..clear()
       ..addEntries(_workingServerIds.map((id) => MapEntry(id, 0)));
 
+    // Reset per-shift pizookie counts
+    _currentPizookieCounts
+      ..clear()
+      ..addEntries(_workingServerIds.map((id) => MapEntry(id, 0)));
+
     _teamTotalThisShift = 0;
     _teamGoal = _computeGoalFromHistory();
     resetRosterView();
@@ -548,15 +558,14 @@ class AppState extends ChangeNotifier {
   }
 
   void _finalizeAndSaveShift(String type) {
-    // Build pizookieCounts for this shift from _currentCounts and _profiles
+    // Build pizookieCounts for this shift from _currentPizookieCounts
     final pizookieCounts = <String, int>{};
     for (final id in _currentCounts.keys) {
-      final prof = _profiles[id] ?? ServerProfile();
-      // If you track pizookie runs for the shift, you need to store them per shift. For now, assume all pizookie runs this shift are in _currentCounts if you have a way to distinguish them.
-      // If not, you may need to track them separately during the shift.
-      // Here, we just set to 0 as a placeholder.
-      pizookieCounts[id] = 0;
+      pizookieCounts[id] = _currentPizookieCounts[id] ?? 0;
     }
+    print('[DEBUG] Finalizing shift: type=$type');
+    print('[DEBUG] Saving counts: ${_currentCounts}');
+    print('[DEBUG] Saving pizookieCounts: $pizookieCounts');
     final rec = ShiftRecord(
       id: _randId(),
       label: type,
@@ -617,13 +626,14 @@ class AppState extends ChangeNotifier {
     _persistTotals();
     _persistProfiles();
 
-    _currentCounts.clear();
-    _currentStreaks.clear();
-    _lunchPeakCount.clear();
-    _dinnerPeakCount.clear();
-    _lunchCloserCount.clear();
-    _dinnerCloserCount.clear();
-    _teamTotalThisShift = 0;
+  _currentCounts.clear();
+  _currentStreaks.clear();
+  _lunchPeakCount.clear();
+  _dinnerPeakCount.clear();
+  _lunchCloserCount.clear();
+  _dinnerCloserCount.clear();
+  _currentPizookieCounts.clear();
+  _teamTotalThisShift = 0;
   }
 
   Future<bool> endCurrentShiftWithPin(String pin) async {
