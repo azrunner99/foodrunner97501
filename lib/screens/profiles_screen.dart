@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../app_state.dart';
-import '../gamification.dart'; // achievementsCatalog
+// import removed: achievementsCatalog no longer used
 
 class ProfilesScreen extends StatelessWidget {
   const ProfilesScreen({super.key});
@@ -50,51 +50,42 @@ class ProfileDetailScreen extends StatefulWidget {
 }
 
 class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
-  String _mode = 'earned'; // 'earned' or 'available'
-
-  AchievementDef? _findDef(String id) {
-    for (final d in achievementsCatalog) {
-      if (d.id == id) return d;
-    }
-    return null;
+  // Badge mode removed
+  // Metric card widget for visual separation
+  Widget metricCard({required IconData icon, required String label, required String value, required Color color}) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.07),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 32),
+          const SizedBox(width: 18),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: color)),
+                const SizedBox(height: 6),
+                Text(value, style: const TextStyle(fontSize: 18, color: Colors.black)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
-  String _descFor(String id) {
-    switch (id) {
-      case 'first_run':
-        return 'Your first food run ever.';
-      case 'first_run_today':
-        return 'First food run of the day.';
-      case 'three_streak':
-        return '3 runs in a row without a decrement.';
-      case 'five_streak':
-        return '5 runs in a row without a decrement.';
-      case 'ten_in_shift':
-        return '10 runs in a single shift.';
-      case 'twenty_in_shift':
-        return '20 runs in a single shift.';
-      case 'night_owl':
-        return 'Run food after 11:00 PM.';
-      case 'fifty_all_time':
-        return '50 total runs across all time.';
-      case 'hundred_all_time':
-        return '100 total runs across all time.';
-      case 'mvp':
-        return 'Most runs on a completed shift.';
-      case 'team_goal':
-        return 'Team hit the shift goal.';
-      case 'lunch_peak_10':
-        return '10 runs during lunch peak (12:30–2:00).';
-      case 'dinner_peak_10':
-        return '10 runs during dinner peak (6:30–8:00).';
-      case 'lunch_closer_8':
-        return '8 runs in lunch close (2:30–3:30).';
-      case 'dinner_closer_8':
-        return '8 runs in dinner close (9:00–close).';
-      default:
-        return 'Earn this badge by hitting its target during service.';
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -118,102 +109,64 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
       repeatCounts[id] = (repeatCounts[id] ?? 0) + 1;
     }
 
-    // Build "available" with POSitional records: (AchievementDef, bool earned, int times)
-    final earnedSet = p.achievements.toSet();
-    final List<(AchievementDef, bool, int)> available = achievementsCatalog
-        .map<(AchievementDef, bool, int)>((def) {
-          final times = repeatCounts[def.id] ?? 0;
-          final earnedOnce = earnedSet.contains(def.id) || times > 0;
-          return (def, earnedOnce, times);
-        })
-        .toList();
+  // Badge logic removed
 
     return Scaffold(
       appBar: AppBar(title: Text(s.name)),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         children: [
-          Row(
-            children: [
-              CircleAvatar(child: Text(p.level.toString())),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Level ${p.level}', style: Theme.of(context).textTheme.titleLarge),
-                    Text('Points: ${p.points}  •  Next at: ${p.nextLevelAt}'),
-                    Text('All-time runs: ${p.allTimeRuns}  •  Best shift: ${p.bestShiftRuns}'),
-                    Text('Pizookie Runs (Included in All-Time-Runs): ${p.pizookieRuns}'),
-                    Text('Avg frequency: $avgStr'),
-                    Text('MVP awards: ${p.shiftsAsMvp}'),
-                  ],
-                ),
+          Center(
+            child: CircleAvatar(
+              radius: 36,
+              backgroundColor: Colors.deepPurple.shade100,
+              child: Text(
+                p.level.toString(),
+                style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.deepPurple),
               ),
-            ],
+            ),
           ),
-          const SizedBox(height: 16),
-          SegmentedButton<String>(
-            segments: const [
-              ButtonSegment(value: 'earned', label: Text('Earned')),
-              ButtonSegment(value: 'available', label: Text('Available')),
-            ],
-            selected: <String>{_mode},
-            onSelectionChanged: (s) => setState(() => _mode = s.first),
+          const SizedBox(height: 24),
+          metricCard(
+            icon: Icons.star,
+            label: 'Level',
+            value: 'Level ${p.level}',
+            color: Colors.deepPurple,
           ),
-          const SizedBox(height: 12),
-          if (_mode == 'earned')
-            ..._earnedBadgesList(p, repeatCounts)
-          else
-            ..._availableList(available),
+          metricCard(
+            icon: Icons.emoji_events,
+            label: 'Points',
+            value: '${p.points}  •  Next at: ${p.nextLevelAt}',
+            color: Colors.amber.shade700,
+          ),
+          metricCard(
+            icon: Icons.directions_run,
+            label: 'All-time Runs',
+            value: '${p.allTimeRuns}  •  Best shift: ${p.bestShiftRuns}',
+            color: Colors.blue,
+          ),
+          metricCard(
+            icon: Icons.cake,
+            label: 'Pizookie Runs',
+            value: '${p.pizookieRuns} (Included in All-Time-Runs)',
+            color: Colors.pink,
+          ),
+          metricCard(
+            icon: Icons.timer,
+            label: 'Avg Frequency',
+            value: avgStr,
+            color: Colors.green,
+          ),
+          metricCard(
+            icon: Icons.military_tech,
+            label: 'MVP Awards',
+            value: '${p.shiftsAsMvp}',
+            color: Colors.orange,
+          ),
         ],
       ),
     );
   }
 
-  List<Widget> _earnedBadgesList(ServerProfile p, Map<String, int> repeatCounts) {
-    final tiles = <Widget>[];
-
-    for (final id in p.achievements) {
-      final def = _findDef(id);
-      tiles.add(ListTile(
-        leading: const Icon(Icons.verified, color: Colors.amber),
-        title: Text(def?.title ?? 'Unknown'),
-        subtitle: Text('${def?.points ?? 0} pts • ${_descFor(id)}'),
-      ));
-    }
-
-    repeatCounts.forEach((id, times) {
-      final def = _findDef(id);
-      tiles.add(ListTile(
-        leading: const Icon(Icons.auto_awesome, color: Colors.lightBlue),
-        title: Text(def?.title ?? 'Unknown'),
-        subtitle: Text('${def?.points ?? 0} pts • x$times • ${_descFor(id)}'),
-      ));
-    });
-
-    if (tiles.isEmpty) {
-      tiles.add(const ListTile(title: Text('No badges yet.')));
-    }
-    return tiles;
-  }
-
-  // Accept positional-record list
-  List<Widget> _availableList(List<(AchievementDef, bool, int)> items) {
-    return items.map((t) {
-      final def = t.$1;
-      final earned = t.$2;
-      final times = t.$3;
-      final trailing = earned
-          ? Text(times > 0 ? 'x$times' : 'Earned', style: const TextStyle(color: Colors.green))
-          : Text('${def.points} pts', style: const TextStyle(color: Colors.blueGrey));
-      return ListTile(
-        leading: Icon(earned ? Icons.emoji_events : Icons.emoji_events_outlined,
-            color: earned ? Colors.green : null),
-        title: Text(def.title),
-        subtitle: Text(_descFor(def.id)),
-        trailing: trailing,
-      );
-    }).toList();
-  }
+  // Badge list methods removed
 }
