@@ -816,7 +816,10 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                                         style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                                       ),
                                       Text(
-                                        'Pizookies: ${app.profiles[id]?.pizookieRuns ?? 0}',
+                                        'Pizookies: '
+                                        + (app.shiftActive
+                                            ? (app.currentPizookieCounts[id]?.toString() ?? '0')
+                                            : '0'),
                                         style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
                                       ),
                                     ],
