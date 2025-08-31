@@ -28,24 +28,60 @@ class ServerAvatarGalleryScreen extends StatelessWidget {
                 final path = entry['path'] as String;
                 final timestamp = entry['timestamp'] as String?;
                 String formatted = 'Unknown date';
+                DateTime? dt;
                 if (timestamp != null) {
-                  final dt = DateTime.tryParse(timestamp);
-                  if (dt != null) {
-                    final daySuffix = (dt.day == 1 || dt.day == 21 || dt.day == 31)
-                        ? 'st'
-                        : (dt.day == 2 || dt.day == 22) ? 'nd'
-                        : (dt.day == 3 || dt.day == 23) ? 'rd' : 'th';
-                    final month = DateFormat('MMMM').format(dt);
-                    final year = dt.year;
-                    final hour = dt.hour > 12 ? dt.hour - 12 : dt.hour;
-                    final minute = dt.minute.toString().padLeft(2, '0');
-                    final ampm = dt.hour >= 12 ? 'pm' : 'am';
-                    formatted = '$month ${dt.day}$daySuffix, $year - $hour:$minute$ampm';
-                  }
+                  dt = DateTime.tryParse(timestamp);
+                }
+                if (dt == null) {
+                  try {
+                    dt = File(path).statSync().changed;
+                  } catch (_) {}
+                }
+                if (dt != null) {
+                  final daySuffix = (dt.day == 1 || dt.day == 21 || dt.day == 31)
+                      ? 'st'
+                      : (dt.day == 2 || dt.day == 22) ? 'nd'
+                      : (dt.day == 3 || dt.day == 23) ? 'rd' : 'th';
+                  final month = DateFormat('MMMM').format(dt);
+                  final year = dt.year;
+                  final hour = dt.hour > 12 ? dt.hour - 12 : dt.hour;
+                  final minute = dt.minute.toString().padLeft(2, '0');
+                  final ampm = dt.hour >= 12 ? 'pm' : 'am';
+                  formatted = '$month ${dt.day}$daySuffix, $year - $hour:$minute$ampm';
                 }
                 return ListTile(
                   leading: CircleAvatar(backgroundImage: FileImage(File(path))),
                   title: Text(formatted),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    onPressed: () async {
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (_) => AlertDialog(
+                          title: const Text('Delete Photo'),
+                          content: const Text('Are you sure you want to delete this photo?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text('Cancel'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              child: const Text('Delete'),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirm == true) {
+                        try {
+                          await File(path).delete();
+                        } catch (_) {}
+                        // Remove from avatarHistory and refresh
+                        avatarHistory.removeAt(i);
+                        (context as Element).markNeedsBuild();
+                      }
+                    },
+                  ),
                   onTap: () {
                     showDialog(
                       context: context,

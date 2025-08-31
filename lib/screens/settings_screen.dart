@@ -35,6 +35,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
         children: [
+          const Divider(height: 1),
+          const ListTile(title: Text('Gamification')),
+          ListTile(
+            leading: const Icon(Icons.emoji_events),
+            title: const Text('Gamification Options'),
+            subtitle: const Text('Enable or disable achievements and streaks'),
+            onTap: () => Navigator.pushNamed(context, '/gamification_options'),
+          ),
           ExpansionPanelList(
             expansionCallback: (int index, bool isExpanded) {
               setState(() {

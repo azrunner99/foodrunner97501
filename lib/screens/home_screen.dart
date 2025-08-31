@@ -474,7 +474,10 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
     super.dispose();
   }
 
-  void _showFlash(String text, String subText) {
+  void _showFlash(String text, String subText, {bool forAchievement = false}) {
+    final app = widget.app;
+    // If this is for an achievement, only show if gamification is enabled
+    if (forAchievement && !app.settings.gamificationEnabled) return;
     setState(() {
       _flashText = text;
       _flashSubText = subText;
@@ -484,6 +487,8 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
   }
 
   void _showAchievement(String text) {
+    final app = widget.app;
+    if (!app.settings.gamificationEnabled) return;
     print('[_showAchievement] called with: ' + text);
     if (!mounted) return;
     setState(() {
@@ -851,20 +856,29 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                       onPressed: () {
                         final achievement = app.increment(id);
                         int xpEarned = 10;
+                        bool isAchievement = false;
                         if (achievement == 'full_hands') {
                           xpEarned = 35;
+                          isAchievement = true;
                           _showAchievement('Full Hands!');
                         } else if (achievement == 'five_streak') {
                           xpEarned = 30;
+                          isAchievement = true;
                         } else if (achievement == 'ten_in_shift') {
                           xpEarned = 20;
+                          isAchievement = true;
                         } else if (achievement == 'twenty_in_shift') {
                           xpEarned = 30;
+                          isAchievement = true;
                         }
-                        _showFlash(
-                          '+$xpEarned XP',
-                          'Next level: $pointsToNext XP',
-                        );
+                        // Only show XP flash for achievements if gamification is enabled
+                        if (!isAchievement || app.settings.gamificationEnabled) {
+                          _showFlash(
+                            '+$xpEarned XP',
+                            'Next level: $pointsToNext XP',
+                            forAchievement: isAchievement,
+                          );
+                        }
                         final msg = encouragements[Random().nextInt(encouragements.length)];
                         ScaffoldMessenger.of(ctx).clearSnackBars();
                         ScaffoldMessenger.of(ctx).showSnackBar(

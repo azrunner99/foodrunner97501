@@ -90,6 +90,12 @@ class ServerProfile {
   };
 }
 class AppState extends ChangeNotifier {
+  String? _lastRunServerId;
+  String? get lastRunServerId => _lastRunServerId;
+  set lastRunServerId(String? id) {
+    _lastRunServerId = id;
+    notifyListeners();
+  }
   Map<String, int> get currentPizookieCounts => Map.unmodifiable(_currentPizookieCounts);
   /// Register a Pizookie run: counts as a run, +2 points, +1 pizookieRuns
   /// Register a Pizookie run: counts as a run, +2 points, +1 pizookieRuns
@@ -102,7 +108,8 @@ class AppState extends ChangeNotifier {
     const delta = 1;
     const pizookiePoints = 25;
 
-    _currentCounts[id] = (_currentCounts[id] ?? 0) + delta;
+  _currentCounts[id] = (_currentCounts[id] ?? 0) + delta;
+  lastRunServerId = id;
     _teamTotalThisShift += delta;
 
     // Increment per-shift pizookie count
@@ -112,6 +119,7 @@ class AppState extends ChangeNotifier {
     final sCount = _currentCounts[id]!;
     final prof = _profiles[id] ?? ServerProfile();
     final serverName = serverById(id)?.name ?? 'Server';
+
 
     prof.points += pizookiePoints;
     prof.allTimeRuns += delta;
@@ -131,36 +139,38 @@ class AppState extends ChangeNotifier {
       }
     }
 
-    if (_currentStreaks[id]! > prof.streakBest) {
-      prof.streakBest = _currentStreaks[id]!;
-    }
-    if (prof.streakBest >= 3) _awardOnce(prof, 'three_streak', serverName);
-    if (prof.streakBest >= 5) _awardOnce(prof, 'five_streak', serverName);
+    if (settings.gamificationEnabled) {
+      if (_currentStreaks[id]! > prof.streakBest) {
+        prof.streakBest = _currentStreaks[id]!;
+      }
+      if (prof.streakBest >= 3) _awardOnce(prof, 'three_streak', serverName);
+      if (prof.streakBest >= 5) _awardOnce(prof, 'five_streak', serverName);
 
-    if (sCount >= 10) _awardOnce(prof, 'ten_in_shift', serverName);
-    if (sCount >= 20) _awardOnce(prof, 'twenty_in_shift', serverName);
-    if (now.hour >= 23) _awardOnce(prof, 'night_owl', serverName);
+      if (sCount >= 10) _awardOnce(prof, 'ten_in_shift', serverName);
+      if (sCount >= 20) _awardOnce(prof, 'twenty_in_shift', serverName);
+      if (now.hour >= 23) _awardOnce(prof, 'night_owl', serverName);
 
-    _awardOnce(prof, 'first_run_today', serverName);
-    if (prof.allTimeRuns == 0 && !_profiles.containsKey('first_run_\\${id}_awarded')) {
-      _awardOnce(prof, 'first_run', serverName);
-    }
+      _awardOnce(prof, 'first_run_today', serverName);
+      if (prof.allTimeRuns == 0 && !_profiles.containsKey('first_run_\\${id}_awarded')) {
+        _awardOnce(prof, 'first_run', serverName);
+      }
 
-    if (isLunchPeak(now)) {
-      _lunchPeakCount[id] = (_lunchPeakCount[id] ?? 0) + delta;
-      if (_lunchPeakCount[id]! >= 10) _awardOnce(prof, 'lunch_peak_10', serverName);
-    }
-    if (isDinnerPeak(now)) {
-      _dinnerPeakCount[id] = (_dinnerPeakCount[id] ?? 0) + delta;
-      if (_dinnerPeakCount[id]! >= 10) _awardOnce(prof, 'dinner_peak_10', serverName);
-    }
-    if (isLunchCloser(now)) {
-      _lunchCloserCount[id] = (_lunchCloserCount[id] ?? 0) + delta;
-      if (_lunchCloserCount[id]! >= 8) _awardOnce(prof, 'lunch_closer_8', serverName);
-    }
-    if (isDinnerCloser(now)) {
-      _dinnerCloserCount[id] = (_dinnerCloserCount[id] ?? 0) + delta;
-      if (_dinnerCloserCount[id]! >= 8) _awardOnce(prof, 'dinner_closer_8', serverName);
+      if (isLunchPeak(now)) {
+        _lunchPeakCount[id] = (_lunchPeakCount[id] ?? 0) + delta;
+        if (_lunchPeakCount[id]! >= 10) _awardOnce(prof, 'lunch_peak_10', serverName);
+      }
+      if (isDinnerPeak(now)) {
+        _dinnerPeakCount[id] = (_dinnerPeakCount[id] ?? 0) + delta;
+        if (_dinnerPeakCount[id]! >= 10) _awardOnce(prof, 'dinner_peak_10', serverName);
+      }
+      if (isLunchCloser(now)) {
+        _lunchCloserCount[id] = (_lunchCloserCount[id] ?? 0) + delta;
+        if (_lunchCloserCount[id]! >= 8) _awardOnce(prof, 'lunch_closer_8', serverName);
+      }
+      if (isDinnerCloser(now)) {
+        _dinnerCloserCount[id] = (_dinnerCloserCount[id] ?? 0) + delta;
+        if (_dinnerCloserCount[id]! >= 8) _awardOnce(prof, 'dinner_closer_8', serverName);
+      }
     }
 
     _profiles[id] = prof;
@@ -377,7 +387,6 @@ class AppState extends ChangeNotifier {
       final m = now.hour * 60 + now.minute;
       final plan = _todayPlan;
       if (plan != null) {
-        final start = plan.transitionStartMinutes;
         final end = plan.transitionEndMinutes;
         // If just crossed into dinner (m >= end), and roster is still lunch
         if (m >= end && _activeRosterView != 'dinner') {
@@ -781,34 +790,38 @@ class AppState extends ChangeNotifier {
     const delta = 1;
 
 
+
     // --- Full Hands! achievement logic (now 2 rapid taps) ---
     String? justAwarded;
     final tapList = _recentTapTimes.putIfAbsent(id, () => <DateTime>[]);
     tapList.add(now);
     if (tapList.length > 2) tapList.removeAt(0);
     bool awardedFullHands = false;
-    if (tapList.length == 2) {
-      final t0 = tapList[0];
-      final t1 = tapList[1];
-      if (t1.difference(t0).inMilliseconds <= 3000) {
-        final prof = _profiles[id] ?? ServerProfile();
-        final serverName = serverById(id)?.name ?? 'Server';
-        _awardOnce(prof, 'full_hands', serverName);
-        _profiles[id] = prof;
-        justAwarded = 'full_hands';
-        awardedFullHands = true;
+    final prof = _profiles[id] ?? ServerProfile();
+    final serverName = serverById(id)?.name ?? 'Server';
+
+    if (settings.gamificationEnabled) {
+      if (tapList.length == 2) {
+        final t0 = tapList[0];
+        final t1 = tapList[1];
+        if (t1.difference(t0).inMilliseconds <= 3000) {
+          _awardOnce(prof, 'full_hands', serverName);
+          _profiles[id] = prof;
+          justAwarded = 'full_hands';
+          awardedFullHands = true;
+        }
       }
     }
 
     _currentCounts[id] = (_currentCounts[id] ?? 0) + delta;
+    lastRunServerId = id;
     _teamTotalThisShift += delta;
 
     _currentStreaks[id] = (_currentStreaks[id] ?? 0) + 1;
     final sCount = _currentCounts[id]!;
-    final prof = _profiles[id] ?? ServerProfile();
-    final serverName = serverById(id)?.name ?? 'Server';
 
-    if (!awardedFullHands) {
+    // Only award 35 XP for Full Hands if gamification is enabled, otherwise always 10 XP
+    if (!awardedFullHands || !settings.gamificationEnabled) {
       prof.points += 10;
     }
     prof.allTimeRuns += delta;
