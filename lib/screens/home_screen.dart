@@ -600,7 +600,7 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                     int prevLevelXp = 0;
                     int nextLevelXp = nextLevelAt;
                     if (profile != null) {
-                      final lvl = levelForPoints(profile.points) - 1;
+                      final lvl = levelForPoints(profile.points);
                       prevLevelXp = xpTable[lvl];
                       nextLevelXp = xpTable[lvl + 1];
                     }
