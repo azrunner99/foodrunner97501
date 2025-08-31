@@ -40,6 +40,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _runnerTapCount = 0;
   DateTime? _lastTapTime;
+  bool _isLongPress = false;
 
   void _handleRunnerTap(BuildContext context) {
     final now = DateTime.now();
@@ -427,6 +428,7 @@ class _ActiveGrid extends StatefulWidget {
 }
 
 class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin {
+  bool _isLongPress = false;
   String? _achievementText;
   AnimationController? _achievementController;
   String? _flashText;
@@ -636,37 +638,41 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                             padding: const EdgeInsets.all(8),
                           ),
                           onPressed: () {
-                            final achievement = app.increment(id);
-                            int xpEarned = 10;
-                            if (achievement == 'full_hands') {
-                              xpEarned = 35;
-                              _showAchievement('Full Hands!');
-                            } else if (achievement == 'five_streak') {
-                              xpEarned = 30;
-                            } else if (achievement == 'ten_in_shift') {
-                              xpEarned = 20;
-                            } else if (achievement == 'twenty_in_shift') {
-                              xpEarned = 30;
-                            }
-                            _showFlash(
-                              '+$xpEarned XP',
-                              'Next level: $pointsToNext XP',
-                            );
-                            final msg = encouragements[Random().nextInt(encouragements.length)];
-                            ScaffoldMessenger.of(ctx).clearSnackBars();
-                            ScaffoldMessenger.of(ctx).showSnackBar(
-                              SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),
-                            );
-
-                            final bubble = app.recentBadgeBubble;
-                            if (bubble != null) {
-                              ScaffoldMessenger.of(ctx).showSnackBar(
-                                SnackBar(content: Text(bubble), duration: const Duration(seconds: 3)),
+                            // Only increment normal run on tap, not on long press
+                            if (!this._isLongPress) {
+                              final achievement = app.increment(id);
+                              int xpEarned = 10;
+                              if (achievement == 'full_hands') {
+                                xpEarned = 35;
+                                _showAchievement('Full Hands!');
+                              } else if (achievement == 'five_streak') {
+                                xpEarned = 30;
+                              } else if (achievement == 'ten_in_shift') {
+                                xpEarned = 20;
+                              } else if (achievement == 'twenty_in_shift') {
+                                xpEarned = 30;
+                              }
+                              _showFlash(
+                                '+$xpEarned XP',
+                                'Next level: $pointsToNext XP',
                               );
-                              app.clearRecentBadgeBubble();
+                              final msg = encouragements[Random().nextInt(encouragements.length)];
+                              ScaffoldMessenger.of(ctx).clearSnackBars();
+                              ScaffoldMessenger.of(ctx).showSnackBar(
+                                SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),
+                              );
+
+                              final bubble = app.recentBadgeBubble;
+                              if (bubble != null) {
+                                ScaffoldMessenger.of(ctx).showSnackBar(
+                                  SnackBar(content: Text(bubble), duration: const Duration(seconds: 3)),
+                                );
+                                app.clearRecentBadgeBubble();
+                              }
                             }
                           },
                           onLongPress: () {
+                            this._isLongPress = true;
                             app.incrementPizookie(id);
                             int xpEarned = 25;
                             _showFlash(
@@ -678,6 +684,9 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                             ScaffoldMessenger.of(ctx).showSnackBar(
                               SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),
                             );
+                            Future.delayed(const Duration(milliseconds: 100), () {
+                              this._isLongPress = false;
+                            });
                           },
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
