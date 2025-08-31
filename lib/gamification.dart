@@ -141,9 +141,8 @@ final List<int> xpTable = (() {
 })();
 
 int levelForPoints(int points) {
-  if (points < xpTable[2]) return 1;
-  for (int lvl = 2; lvl <= maxLevel; lvl++) {
-    if (points < xpTable[lvl]) return lvl;
+  for (int lvl = 1; lvl <= maxLevel; lvl++) {
+    if (points < xpTable[lvl + 1]) return lvl;
   }
   return maxLevel;
 }
