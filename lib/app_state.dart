@@ -388,8 +388,8 @@ class AppState extends ChangeNotifier {
       final plan = _todayPlan;
       if (plan != null) {
         final end = plan.transitionEndMinutes;
-        // If just crossed into dinner (m >= end), and roster is still lunch
-        if (m >= end && _activeRosterView != 'dinner') {
+        // Only finalize lunch shift if current shift type is lunch
+        if (m >= end && _activeRosterView != 'dinner' && _shiftType == 'Lunch') {
           // Always finalize and save lunch shift before starting dinner
           _finalizeAndSaveShift('Lunch');
           _beginShift('Dinner', plan.dinnerRoster);
@@ -493,13 +493,19 @@ class AppState extends ChangeNotifier {
     final now = DateTime.now();
     final ymd = _ymd(now);
     if (_todayPlan == null || _todayPlan!.ymd != ymd) {
-      _shiftActive = false;
-      _shiftPaused = false;
-      _workingServerIds.clear();
-      _currentCounts.clear();
-      _currentStreaks.clear();
-      resetRosterView();
-      return;
+      if (_shiftActive) {
+        // Don't clear state if a shift is active; just log a warning
+        print('[WARNING] _maybeActivateShiftByClock: _todayPlan missing or date mismatch, but shift is active. State NOT cleared.');
+        return;
+      } else {
+        _shiftActive = false;
+        _shiftPaused = false;
+        _workingServerIds.clear();
+        _currentCounts.clear();
+        _currentStreaks.clear();
+        resetRosterView();
+        return;
+      }
     }
 
     final intended = currentIntendedShiftType(now);
@@ -612,13 +618,15 @@ class AppState extends ChangeNotifier {
 
       // Use _totals[id] for all-time achievements
       final allTime = _totals[id] ?? 0;
-      if (allTime >= 50 && !prof.achievements.contains('fifty_all_time')) {
-        prof.achievements.add('fifty_all_time');
-        prof.points += _pointsFor('fifty_all_time');
-      }
-      if (allTime >= 100 && !prof.achievements.contains('hundred_all_time')) {
-        prof.achievements.add('hundred_all_time');
-        prof.points += _pointsFor('hundred_all_time');
+      if (settings.gamificationEnabled) {
+        if (allTime >= 50 && !prof.achievements.contains('fifty_all_time')) {
+          prof.achievements.add('fifty_all_time');
+          prof.points += _pointsFor('fifty_all_time');
+        }
+        if (allTime >= 100 && !prof.achievements.contains('hundred_all_time')) {
+          prof.achievements.add('hundred_all_time');
+          prof.points += _pointsFor('hundred_all_time');
+        }
       }
 
       if (n > mvpScore) {
@@ -628,7 +636,7 @@ class AppState extends ChangeNotifier {
       _profiles[id] = prof;
     });
 
-    if (mvpId != null) {
+    if (settings.gamificationEnabled && mvpId != null) {
       final p = _profiles[mvpId]!;
       p.shiftsAsMvp += 1;
       if (!p.achievements.contains('mvp')) {
@@ -638,7 +646,7 @@ class AppState extends ChangeNotifier {
     }
 
     final teamTotal = rec.counts.values.fold<int>(0, (a, b) => a + b);
-    if (teamTotal >= _teamGoal) {
+    if (settings.gamificationEnabled && teamTotal >= _teamGoal) {
       for (final id in rec.counts.keys) {
         final p = _profiles[id]!;
         if (!p.achievements.contains('team_goal')) {
@@ -785,6 +793,7 @@ class AppState extends ChangeNotifier {
 
   String? increment(String id) {
   if (!_shiftActive || !_workingServerIds.contains(id)) return null;
+  print('[DEBUG] increment called for server: $id');
 
     final now = DateTime.now();
     const delta = 1;
@@ -822,7 +831,9 @@ class AppState extends ChangeNotifier {
 
     // Only award 35 XP for Full Hands if gamification is enabled, otherwise always 10 XP
     if (!awardedFullHands || !settings.gamificationEnabled) {
-      prof.points += 10;
+  prof.points += 10;
+  print('[DEBUG] +10 points awarded to $id, total now: ${prof.points}');
+  print('[DEBUG] +25 Pizookie points awarded to $id, total now: ${prof.points}');
     }
     prof.allTimeRuns += delta;
     print('[DEBUG] Server $id now has ${prof.points} XP, level ${prof.level}, allTimeRuns: ${prof.allTimeRuns}');
@@ -840,19 +851,21 @@ class AppState extends ChangeNotifier {
       }
     }
 
-    if (_currentStreaks[id]! > prof.streakBest) {
-      prof.streakBest = _currentStreaks[id]!;
-    }
-    if (prof.streakBest >= 3) _awardOnce(prof, 'three_streak', serverName);
-    if (prof.streakBest >= 5) _awardOnce(prof, 'five_streak', serverName);
+    if (settings.gamificationEnabled) {
+      if (_currentStreaks[id]! > prof.streakBest) {
+        prof.streakBest = _currentStreaks[id]!;
+      }
+      if (prof.streakBest >= 3) _awardOnce(prof, 'three_streak', serverName);
+      if (prof.streakBest >= 5) _awardOnce(prof, 'five_streak', serverName);
 
-    if (sCount >= 10) _awardOnce(prof, 'ten_in_shift', serverName);
-    if (sCount >= 20) _awardOnce(prof, 'twenty_in_shift', serverName);
-    if (now.hour >= 23) _awardOnce(prof, 'night_owl', serverName);
+      if (sCount >= 10) _awardOnce(prof, 'ten_in_shift', serverName);
+      if (sCount >= 20) _awardOnce(prof, 'twenty_in_shift', serverName);
+      if (now.hour >= 23) _awardOnce(prof, 'night_owl', serverName);
 
-    _awardOnce(prof, 'first_run_today', serverName);
-    if (prof.allTimeRuns == 0 && !_profiles.containsKey('first_run_${id}_awarded')) {
-      _awardOnce(prof, 'first_run', serverName);
+      _awardOnce(prof, 'first_run_today', serverName);
+      if (prof.allTimeRuns == 0 && !_profiles.containsKey('first_run_${id}_awarded')) {
+        _awardOnce(prof, 'first_run', serverName);
+      }
     }
 
     if (isLunchPeak(now)) {
