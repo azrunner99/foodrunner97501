@@ -11,6 +11,7 @@ import 'screens/mvp_screen.dart';
 import 'screens/admin_screen.dart';
 import 'screens/manage_servers_screen.dart';
 import 'screens/station_types_screen.dart';
+import 'screens/gamification_options_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -46,6 +47,7 @@ class FoodRunsApp extends StatelessWidget {
         '/admin': (_) => const AdminScreen(),
         '/manage': (_) => const ManageServersScreen(),
         '/stations': (_) => const StationTypesScreen(),
+        '/gamification_options': (_) => const GamificationOptionsScreen(),
       },
     );
   }

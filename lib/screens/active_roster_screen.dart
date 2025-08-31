@@ -9,7 +9,7 @@ class ActiveRosterScreen extends StatelessWidget {
     final app = context.watch<AppState>();
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Assign Servers & Teams'),
+        title: const Text('Leadership Board'),
       ),
       body: _RosterBody(app: app),
     );

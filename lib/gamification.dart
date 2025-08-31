@@ -169,19 +169,23 @@ int nextLevelTarget(int points) {
 class GamificationSettings {
   int transitionStartMinutes;
   int transitionEndMinutes;
+  bool gamificationEnabled;
 
   GamificationSettings({
     this.transitionStartMinutes = 15 * 60 + 30, // Default 3:30 PM
     this.transitionEndMinutes = 17 * 60,        // Default 5:00 PM
+    this.gamificationEnabled = true,
   });
 
   Map<String, dynamic> toMap() => {
     'transitionStartMinutes': transitionStartMinutes,
     'transitionEndMinutes': transitionEndMinutes,
+    'gamificationEnabled': gamificationEnabled,
   };
 
   static GamificationSettings fromMap(Map<String, dynamic> m) => GamificationSettings(
     transitionStartMinutes: m['transitionStartMinutes'] ?? 15 * 60 + 30,
     transitionEndMinutes: m['transitionEndMinutes'] ?? 17 * 60,
+    gamificationEnabled: m['gamificationEnabled'] ?? true,
   );
 }

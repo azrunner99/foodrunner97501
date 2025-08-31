@@ -4,6 +4,7 @@ import '../app_state.dart';
 import '../models.dart';
 import 'active_roster_screen.dart';
 import 'manage_servers_screen.dart';
+import 'server_avatar_settings_screen.dart';
 
 class AdminScreen extends StatefulWidget {
   const AdminScreen({super.key});
@@ -137,6 +138,17 @@ class _AdminScreenState extends State<AdminScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const ManageServersScreen()),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.image),
+                  label: const Text('Server Avatar Settings'),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ServerAvatarSettingsScreen()),
                     );
                   },
                 ),
