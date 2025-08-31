@@ -131,23 +131,11 @@ final List<int> xpTable = (() {
   List<int> table = List.filled(maxLevel + 2, 0);
   table[0] = 0;
   table[1] = 0;
-  table[2] = 100;
-  table[3] = 250;
-  table[4] = 450;
-  table[5] = 700;
-  table[6] = 1000;
-  table[7] = 1400;
-  table[8] = 1900;
-  table[9] = 2500;
-  table[10] = 3200;
-  for (int level = 11; level <= 20; level++) {
-    table[level] = table[10] + 100 * (level - 10) + ((level - 10) * (level - 9) * 10);
-  }
-  for (int level = 21; level <= 50; level++) {
-    table[level] = table[20] + 200 * (level - 20) + ((level - 20) * (level - 19) * 20);
-  }
-  for (int level = 51; level <= maxLevel + 1; level++) {
-    table[level] = table[50] + 500 * (level - 50) + ((level - 50) * (level - 49) * 50);
+  table[2] = 1000; // Level 2 at 1000 points
+  int increment = 1000;
+  for (int level = 3; level <= maxLevel + 1; level++) {
+    increment += 500; // Each level requires 500 more points than the previous
+    table[level] = table[level - 1] + increment;
   }
   return table;
 })();
