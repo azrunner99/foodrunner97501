@@ -376,6 +376,65 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Save a partial shift record for only a subset of servers (e.g., lunch at transition)
+  void _savePartialShift(String type, Map<String, int> counts, Map<String, int> pizookieCounts) {
+    final rec = ShiftRecord(
+      id: _randId(),
+      label: type,
+      shiftType: type,
+      start: _shiftStart ?? DateTime.now(),
+      counts: counts,
+      pizookieCounts: pizookieCounts,
+    );
+    _history.add(rec);
+    // Update totals and profiles for just these servers
+    String? mvpId;
+    int mvpScore = -1;
+    counts.forEach((id, n) {
+      _totals[id] = (_totals[id] ?? 0) + n;
+      final prof = _profiles[id] ?? ServerProfile();
+      if (n > prof.bestShiftRuns) prof.bestShiftRuns = n;
+      // Use _totals[id] for all-time achievements
+      final allTime = _totals[id] ?? 0;
+      if (settings.gamificationEnabled) {
+        if (allTime >= 50 && !prof.achievements.contains('fifty_all_time')) {
+          prof.achievements.add('fifty_all_time');
+          prof.points += _pointsFor('fifty_all_time');
+        }
+        if (allTime >= 100 && !prof.achievements.contains('hundred_all_time')) {
+          prof.achievements.add('hundred_all_time');
+          prof.points += _pointsFor('hundred_all_time');
+        }
+      }
+      if (n > mvpScore) {
+        mvpScore = n;
+        mvpId = id;
+      }
+      _profiles[id] = prof;
+    });
+    if (settings.gamificationEnabled && mvpId != null) {
+      final p = _profiles[mvpId]!;
+      p.shiftsAsMvp += 1;
+      if (!p.achievements.contains('mvp')) {
+        p.achievements.add('mvp');
+        p.points += _pointsFor('mvp');
+      }
+    }
+    final teamTotal = counts.values.fold<int>(0, (a, b) => a + b);
+    if (settings.gamificationEnabled && teamTotal >= _teamGoal) {
+      for (final id in counts.keys) {
+        final prof = _profiles[id]!;
+        if (!prof.achievements.contains('team_goal')) {
+          prof.achievements.add('team_goal');
+          prof.points += _pointsFor('team_goal');
+        }
+      }
+    }
+    _persistTotals();
+    _persistProfiles();
+    _persistHistory();
+  }
+
   void _startTicker() {
     _ticker?.cancel();
     _ticker = Timer.periodic(const Duration(seconds: 30), (_) {
@@ -388,12 +447,28 @@ class AppState extends ChangeNotifier {
       final plan = _todayPlan;
       if (plan != null) {
         final end = plan.transitionEndMinutes;
-        // Only finalize lunch shift if current shift type is lunch
+        // Only at the END of transition, finalize and clear lunch server counts
         if (m >= end && _activeRosterView != 'dinner' && _shiftType == 'Lunch') {
-          // Always finalize and save lunch shift before starting dinner
-          _finalizeAndSaveShift('Lunch');
-          _beginShift('Dinner', plan.dinnerRoster);
-          // Switch to dinner roster
+          final lunchIds = plan.lunchRoster;
+          final dinnerIds = plan.dinnerRoster;
+          final lunchCounts = Map<String, int>.fromEntries(
+            _currentCounts.entries.where((e) => lunchIds.contains(e.key)));
+          final lunchPizookieCounts = Map<String, int>.fromEntries(
+            _currentPizookieCounts.entries.where((e) => lunchIds.contains(e.key)));
+          _savePartialShift('Lunch', lunchCounts, lunchPizookieCounts);
+          // Remove lunch servers from per-shift maps, preserve dinner
+          _currentCounts.removeWhere((id, _) => lunchIds.contains(id) && !dinnerIds.contains(id));
+          _currentStreaks.removeWhere((id, _) => lunchIds.contains(id) && !dinnerIds.contains(id));
+          _lunchPeakCount.removeWhere((id, _) => lunchIds.contains(id) && !dinnerIds.contains(id));
+          _dinnerPeakCount.removeWhere((id, _) => lunchIds.contains(id) && !dinnerIds.contains(id));
+          _lunchCloserCount.removeWhere((id, _) => lunchIds.contains(id) && !dinnerIds.contains(id));
+          _dinnerCloserCount.removeWhere((id, _) => lunchIds.contains(id) && !dinnerIds.contains(id));
+          _currentPizookieCounts.removeWhere((id, _) => lunchIds.contains(id) && !dinnerIds.contains(id));
+          _beginShift('Dinner', plan.dinnerRoster, preserveCounts: true);
+          _shiftActive = true;
+          _workingServerIds
+            ..clear()
+            ..addAll(plan.dinnerRoster);
           _activeRosterView = 'dinner';
           updateActiveRoster(plan.dinnerRoster);
           notifyListeners();
@@ -516,39 +591,53 @@ class AppState extends ChangeNotifier {
     final close = _hours.closeMinutes[wd] ?? 23 * 60;
     final m = now.hour * 60 + now.minute;
 
-    final shouldBeActive = m >= open && m < close && roster.isNotEmpty && !_shiftPaused;
+  final transitionEnd = _todayPlan?.transitionEndMinutes ?? close;
+  // Always activate lunch shift at or after open, before transition end
+  final shouldBeActiveLunch = m >= open && m < transitionEnd && (_shiftType == 'Lunch' || intended == 'Lunch') && roster.isNotEmpty && !_shiftPaused;
+  final shouldBeActiveDinner = m >= transitionEnd && m < close && (_shiftType == 'Dinner' || intended == 'Dinner') && roster.isNotEmpty && !_shiftPaused;
 
     final switchingToDinner = intended == 'Dinner' && _shiftType == 'Lunch' && _shiftActive;
 
     if (switchingToDinner) {
-      _finalizeAndSaveShift('Lunch');
-      _beginShift('Dinner', roster);
+      // Only finalize lunch and start dinner at the END of transition
       return;
     }
 
-    if (shouldBeActive) {
-      if (!_shiftActive || _shiftType != intended) {
-        _beginShift(intended, roster);
-      }
-    } else {
-      if (_shiftActive) {
-        _finalizeAndSaveShift(_shiftType);
-      }
-      _shiftActive = false;
-      _shiftType = intended;
-      _workingServerIds
-        ..clear()
-        ..addAll(roster);
-
-      if (m >= close) {
-        _todayPlan = null;
-        resetRosterView();
+    // During transition, keep lunch shift active and do not reset
+    if (shouldBeActiveLunch) {
+      if (!_shiftActive || _shiftType != 'Lunch') {
+        _beginShift('Lunch', roster);
+        _shiftActive = true;
         notifyListeners();
       }
+      return;
+    }
+    if (shouldBeActiveDinner) {
+      if (!_shiftActive || _shiftType != 'Dinner') {
+        _beginShift('Dinner', roster, preserveCounts: true);
+        _shiftActive = true;
+        notifyListeners();
+      }
+      return;
+    }
+    // Outside of open hours
+    if (_shiftActive) {
+      _finalizeAndSaveShift(_shiftType);
+    }
+    _shiftActive = false;
+    _shiftType = intended;
+    _workingServerIds
+      ..clear()
+      ..addAll(roster);
+
+    if (m >= close) {
+      _todayPlan = null;
+      resetRosterView();
+      notifyListeners();
     }
   }
 
-  void _beginShift(String type, List<String> roster) {
+  void _beginShift(String type, List<String> roster, {bool preserveCounts = false}) {
     _shiftActive = true;
     _shiftPaused = false;
     _shiftType = type;
@@ -558,30 +647,107 @@ class AppState extends ChangeNotifier {
       ..clear()
       ..addAll(roster);
 
-    _currentCounts
-      ..clear()
-      ..addEntries(_workingServerIds.map((id) => MapEntry(id, 0)));
-    _currentStreaks
-      ..clear()
-      ..addEntries(_workingServerIds.map((id) => MapEntry(id, 0)));
-
-    _lunchPeakCount
-      ..clear()
-      ..addEntries(_workingServerIds.map((id) => MapEntry(id, 0)));
-    _dinnerPeakCount
-      ..clear()
-      ..addEntries(_workingServerIds.map((id) => MapEntry(id, 0)));
-    _lunchCloserCount
-      ..clear()
-      ..addEntries(_workingServerIds.map((id) => MapEntry(id, 0)));
-    _dinnerCloserCount
-      ..clear()
-      ..addEntries(_workingServerIds.map((id) => MapEntry(id, 0)));
-
-    // Reset per-shift pizookie counts
-    _currentPizookieCounts
-      ..clear()
-      ..addEntries(_workingServerIds.map((id) => MapEntry(id, 0)));
+    if (preserveCounts) {
+      // Only add new dinner servers with 0, never clear or reset existing dinner server data
+      for (final id in roster) {
+        if (!_currentCounts.containsKey(id)) _currentCounts[id] = 0;
+        if (!_currentStreaks.containsKey(id)) _currentStreaks[id] = 0;
+        if (!_lunchPeakCount.containsKey(id)) _lunchPeakCount[id] = 0;
+        if (!_dinnerPeakCount.containsKey(id)) _dinnerPeakCount[id] = 0;
+        if (!_lunchCloserCount.containsKey(id)) _lunchCloserCount[id] = 0;
+        if (!_dinnerCloserCount.containsKey(id)) _dinnerCloserCount[id] = 0;
+        if (!_currentPizookieCounts.containsKey(id)) _currentPizookieCounts[id] = 0;
+      }
+      // Remove any counts for servers not in dinner roster
+      _currentCounts.removeWhere((id, _) => !roster.contains(id));
+      _currentStreaks.removeWhere((id, _) => !roster.contains(id));
+      _lunchPeakCount.removeWhere((id, _) => !roster.contains(id));
+      _dinnerPeakCount.removeWhere((id, _) => !roster.contains(id));
+      _lunchCloserCount.removeWhere((id, _) => !roster.contains(id));
+      _dinnerCloserCount.removeWhere((id, _) => !roster.contains(id));
+      _currentPizookieCounts.removeWhere((id, _) => !roster.contains(id));
+    } else {
+      // Normal shift start: clear and reset all per-shift data
+      _currentCounts
+        ..clear()
+        ..addEntries(_workingServerIds.map((id) => MapEntry(id, 0)));
+      _currentStreaks
+        ..clear()
+        ..addEntries(_workingServerIds.map((id) => MapEntry(id, 0)));
+      _lunchPeakCount
+        ..clear()
+        ..addEntries(_workingServerIds.map((id) => MapEntry(id, 0)));
+      _dinnerPeakCount
+        ..clear()
+        ..addEntries(_workingServerIds.map((id) => MapEntry(id, 0)));
+      _lunchCloserCount
+        ..clear()
+        ..addEntries(_workingServerIds.map((id) => MapEntry(id, 0)));
+      _dinnerCloserCount
+        ..clear()
+        ..addEntries(_workingServerIds.map((id) => MapEntry(id, 0)));
+      _currentPizookieCounts
+        ..clear()
+        ..addEntries(_workingServerIds.map((id) => MapEntry(id, 0)));
+    }
+  // Save a partial shift record for only a subset of servers (e.g., lunch at transition)
+  void _savePartialShift(String type, Map<String, int> counts, Map<String, int> pizookieCounts) {
+    final rec = ShiftRecord(
+      id: _randId(),
+      label: type,
+      shiftType: type,
+      start: _shiftStart ?? DateTime.now(),
+      counts: counts,
+      pizookieCounts: pizookieCounts,
+    );
+    _history.add(rec);
+    // Update totals and profiles for just these servers
+    String? mvpId;
+    int mvpScore = -1;
+    counts.forEach((id, n) {
+      _totals[id] = (_totals[id] ?? 0) + n;
+      final prof = _profiles[id] ?? ServerProfile();
+      if (n > prof.bestShiftRuns) prof.bestShiftRuns = n;
+      // Use _totals[id] for all-time achievements
+      final allTime = _totals[id] ?? 0;
+      if (settings.gamificationEnabled) {
+        if (allTime >= 50 && !prof.achievements.contains('fifty_all_time')) {
+          prof.achievements.add('fifty_all_time');
+          prof.points += _pointsFor('fifty_all_time');
+        }
+        if (allTime >= 100 && !prof.achievements.contains('hundred_all_time')) {
+          prof.achievements.add('hundred_all_time');
+          prof.points += _pointsFor('hundred_all_time');
+        }
+      }
+      if (n > mvpScore) {
+        mvpScore = n;
+        mvpId = id;
+      }
+      _profiles[id] = prof;
+    });
+    if (settings.gamificationEnabled && mvpId != null) {
+      final p = _profiles[mvpId]!;
+      p.shiftsAsMvp += 1;
+      if (!p.achievements.contains('mvp')) {
+        p.achievements.add('mvp');
+        p.points += _pointsFor('mvp');
+      }
+    }
+    final teamTotal = counts.values.fold<int>(0, (a, b) => a + b);
+    if (settings.gamificationEnabled && teamTotal >= _teamGoal) {
+      for (final id in counts.keys) {
+        final prof = _profiles[id]!;
+        if (!prof.achievements.contains('team_goal')) {
+          prof.achievements.add('team_goal');
+          prof.points += _pointsFor('team_goal');
+        }
+      }
+    }
+    _persistTotals();
+    _persistProfiles();
+    _persistHistory();
+  }
 
     _teamTotalThisShift = 0;
     _teamGoal = _computeGoalFromHistory();
