@@ -247,34 +247,30 @@ class AppState extends ChangeNotifier {
   // Roster toggle logic
   String get activeRosterView => _activeRosterView;
   void toggleRosterView() {
+    final plan = _todayPlan;
     if (_activeRosterView == 'lunch') {
       _activeRosterView = 'dinner';
-      // During transition, update active roster to dinner
-      final plan = _todayPlan;
       if (plan != null) {
         final now = DateTime.now();
         final m = now.hour * 60 + now.minute;
         final start = plan.transitionStartMinutes;
         final end = plan.transitionEndMinutes;
         if (m >= start && m < end) {
-          // Only dinner-only servers during transition
-          final dinnerIds = plan.dinnerRoster.where((id) => !plan.lunchRoster.contains(id)).toList();
-          updateActiveRoster(dinnerIds);
+          // During transition, show all dinner servers (including those who worked lunch), but DO NOT clear any dinner server counts
+          updateActiveRoster(plan.dinnerRoster, preserveExistingCounts: true);
         } else {
           updateActiveRoster(plan.dinnerRoster);
         }
       }
     } else if (_activeRosterView == 'dinner') {
       _activeRosterView = 'lunch';
-      // During transition, update active roster to lunch
-      final plan = _todayPlan;
       if (plan != null) {
         final now = DateTime.now();
         final m = now.hour * 60 + now.minute;
         final start = plan.transitionStartMinutes;
         final end = plan.transitionEndMinutes;
         if (m >= start && m < end) {
-          updateActiveRoster(plan.lunchRoster);
+          updateActiveRoster(plan.lunchRoster, preserveExistingCounts: true);
         } else {
           updateActiveRoster(plan.lunchRoster);
         }
@@ -1121,10 +1117,15 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  void updateActiveRoster(List<String> newRoster) {
+  void updateActiveRoster(List<String> newRoster, {bool preserveExistingCounts = false}) {
     final newSet = Set<String>.from(newRoster);
     for (final id in _workingServerIds.toList()) {
       if (!newSet.contains(id)) {
+        if (preserveExistingCounts) {
+          // Do not clear counts for servers not in the new roster
+          _workingServerIds.remove(id);
+          continue;
+        }
         _currentCounts.remove(id);
         _currentStreaks.remove(id);
         _lunchPeakCount.remove(id);
@@ -1137,12 +1138,14 @@ class AppState extends ChangeNotifier {
     for (final id in newSet) {
       if (!_workingServerIds.contains(id)) {
         _workingServerIds.add(id);
-        _currentCounts[id] = 0;
-        _currentStreaks[id] = 0;
-        _lunchPeakCount[id] = 0;
-        _dinnerPeakCount[id] = 0;
-        _lunchCloserCount[id] = 0;
-        _dinnerCloserCount[id] = 0;
+        if (!preserveExistingCounts) {
+          _currentCounts[id] = 0;
+          _currentStreaks[id] = 0;
+          _lunchPeakCount[id] = 0;
+          _dinnerPeakCount[id] = 0;
+          _lunchCloserCount[id] = 0;
+          _dinnerCloserCount[id] = 0;
+        }
       }
     }
     notifyListeners();

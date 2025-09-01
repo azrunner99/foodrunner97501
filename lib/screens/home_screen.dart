@@ -292,8 +292,8 @@ class _Body extends StatelessWidget {
     } else {
       // During transition: show toggle, and show correct ids for each view
       if (app.activeRosterView == 'dinner') {
-        // Show all dinner servers (including those who worked lunch)
-        ids = dinnerIds;
+        // Show only dinner-only servers (not on lunch) during transition
+        ids = dinnerIds.where((id) => !lunchIds.contains(id)).toList();
       } else {
         // Show all lunch servers (including those who work both)
         ids = lunchIds;
