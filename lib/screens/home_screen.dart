@@ -278,27 +278,29 @@ class _Body extends StatelessWidget {
     final now = DateTime.now();
     final m = now.hour * 60 + now.minute;
 
-
     // Use settings for transition times
     final start = app.todayPlan?.transitionStartMinutes ?? app.settings.transitionStartMinutes;
     final end = app.todayPlan?.transitionEndMinutes ?? app.settings.transitionEndMinutes;
     final lunchIds = app.todayPlan?.lunchRoster ?? [];
     final dinnerIds = app.todayPlan?.dinnerRoster ?? [];
-    List<String> ids;
+    List<String> ids = [];
     final showToggle = m >= start && m < end;
     if (m < start) {
       ids = lunchIds;
     } else if (m >= end) {
       ids = dinnerIds;
     } else {
+      // During transition: show toggle, and show correct ids for each view
       if (app.activeRosterView == 'dinner') {
-        ids = dinnerIds.where((id) => !lunchIds.contains(id)).toList();
+        // Show all dinner servers (including those who worked lunch)
+        ids = dinnerIds;
       } else {
+        // Show all lunch servers (including those who work both)
         ids = lunchIds;
       }
     }
     ids = ids.toSet().toList();
-  bool isDinner = (m >= end || (app.activeRosterView == 'dinner' && showToggle));
+    bool isDinner = (m >= end || (app.activeRosterView == 'dinner' && showToggle));
 
     // Calculate team run counts
     final teamCounts = <String, int>{};
