@@ -157,31 +157,29 @@ class _HistoryScreenState extends State<HistoryScreen> {
       context: context,
       builder: (_) => Dialog(
         backgroundColor: Colors.transparent,
-        child: SizedBox(
-          height: 400,
-          child: Container(
-            width: 340,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8EDEE),
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.10),
-                  blurRadius: 32,
-                  offset: const Offset(0, 12),
-                ),
-              ],
-            ),
+        child: Container(
+          width: 340,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8EDEE),
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.10),
+                blurRadius: 32,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          child: SizedBox(
+            height: 400,
             child: Column(
-              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text(s.shiftType, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 24, color: Color(0xFF3A2D4B))),
                 const SizedBox(height: 6),
                 Text('${_weekday(s.start)} - ${_hm(s.start)}', style: const TextStyle(fontSize: 18, color: Color(0xFF6D5A7C))),
                 const SizedBox(height: 18),
-                // Column headers
                 Padding(
                   padding: const EdgeInsets.only(left: 8, right: 8, bottom: 4),
                   child: Row(
@@ -232,69 +230,72 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     ],
                   ),
                 ),
-                SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      ...items.map((e) {
-                        final totalRuns = s.counts[e.key] ?? 0;
-                        final pizookieRuns = s.pizookieCounts[e.key] ?? 0;
-                        return Container(
-                          margin: const EdgeInsets.symmetric(vertical: 6),
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                flex: 2,
-                                child: Text(
-                                  app.serverById(e.key)?.name ?? 'Unknown',
-                                  style: const TextStyle(fontSize: 16, color: Color(0xFF3A2D4B)),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
+                // Server list scrolls vertically
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        ...items.map((e) {
+                          final totalRuns = s.counts[e.key] ?? 0;
+                          final pizookieRuns = s.pizookieCounts[e.key] ?? 0;
+                          return Container(
+                            margin: const EdgeInsets.symmetric(vertical: 6),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  flex: 2,
+                                  child: Text(
+                                    app.serverById(e.key)?.name ?? 'Unknown',
+                                    style: const TextStyle(fontSize: 16, color: Color(0xFF3A2D4B)),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
-                              ),
-                              Expanded(
-                                flex: 3,
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Expanded(
-                                      child: Center(
-                                        child: Container(
-                                          constraints: const BoxConstraints(minHeight: 36),
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: Color(0xFFF3EAF7),
-                                            borderRadius: BorderRadius.circular(8),
+                                Expanded(
+                                  flex: 3,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Expanded(
+                                        child: Center(
+                                          child: Container(
+                                            constraints: const BoxConstraints(minHeight: 36),
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: Color(0xFFF3EAF7),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: Text('$totalRuns runs', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF6D5A7C))),
                                           ),
-                                          child: Text('$totalRuns runs', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF6D5A7C))),
                                         ),
                                       ),
-                                    ),
-                                    Expanded(
-                                      child: Center(
-                                        child: Container(
-                                          constraints: const BoxConstraints(minHeight: 36),
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: Color(0xFFFFF3E6),
-                                            borderRadius: BorderRadius.circular(8),
+                                      Expanded(
+                                        child: Center(
+                                          child: Container(
+                                            constraints: const BoxConstraints(minHeight: 36),
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: Color(0xFFFFF3E6),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: Text('$pizookieRuns', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFFB85C5C))),
                                           ),
-                                          child: Text('$pizookieRuns', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFFB85C5C))),
                                         ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }),
-                    ],
+                              ],
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 18),
