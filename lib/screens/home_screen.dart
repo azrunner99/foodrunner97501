@@ -1,4 +1,3 @@
-
 import 'package:fl_chart/fl_chart.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -438,6 +437,9 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
   AnimationController? _xpController;
   AnimationController? _subController;
 
+  Map<String, String?>? _sectionAssignments;
+  bool _loadingSections = true;
+
   @override
   void initState() {
     super.initState();
@@ -448,7 +450,6 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
       if (status == AnimationStatus.completed) {
         setState(() {
           _flashText = null;
-          // Do not clear _flashSubText here; let subController finish
         });
       }
     });
@@ -468,14 +469,21 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
         }
       }
     });
+    _loadSectionAssignments();
   }
 
-  @override
-  void dispose() {
-  _achievementController?.dispose();
-    _xpController?.dispose();
-    _subController?.dispose();
-    super.dispose();
+  Future<void> _loadSectionAssignments() async {
+    final now = DateTime.now();
+    final m = now.hour * 60 + now.minute;
+    final plan = widget.app.todayPlan;
+    final isLunch = m < (plan?.transitionEndMinutes ?? widget.app.settings.transitionEndMinutes);
+    final assignments = await loadSectionAssignments(isLunch);
+    if (mounted) {
+      setState(() {
+        _sectionAssignments = assignments;
+        _loadingSections = false;
+      });
+    }
   }
 
   void _showFlash(String text, String subText, {bool forAchievement = false}) {
@@ -543,6 +551,9 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
     final total = counts.fold<int>(0, (a, b) => a + b);
     final columns = MediaQuery.of(context).size.width > 800 ? 4 : 2;
 
+    if (_loadingSections) {
+      return const Center(child: CircularProgressIndicator());
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -581,7 +592,7 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                     crossAxisCount: columns,
                     crossAxisSpacing: 12,
                     mainAxisSpacing: 12,
-                    childAspectRatio: 1.25, // slightly taller
+                    childAspectRatio: 1.25,
                   ),
                   itemBuilder: (ctx, i) {
                     final id = ids[i];
@@ -597,7 +608,6 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                     final nextLevelAt = app.profiles[id]?.nextLevelAt ?? 0;
                     final pointsToNext = (nextLevelAt - points).clamp(0, 999999);
 
-                    // Calculate progress for XP bar using xpTable and levelForPoints
                     final profile = app.profiles[id];
                     int prevLevelXp = 0;
                     int nextLevelXp = nextLevelAt;
@@ -607,249 +617,12 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                       nextLevelXp = xpTable[lvl + 1];
                     }
 
-                    // Section assignment display
-                    // Determine if lunch or dinner based on time (same logic as roster)
-                    final now = DateTime.now();
-                    final m = now.hour * 60 + now.minute;
-                    final plan = app.todayPlan;
-                    final isLunch = m < (plan?.transitionEndMinutes ?? app.settings.transitionEndMinutes);
-                    // Load section assignments (async)
-                    return FutureBuilder<Map<String, String?>> (
-                      future: loadSectionAssignments(isLunch),
-                      builder: (context, snapshot) {
-                        String? section;
-                        if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
-                          section = snapshot.data![id];
-                        }
-                        // Calculate progress for XP bar
-                        double progress = 1.0;
-                        if (nextLevelXp > prevLevelXp) {
-                          progress = ((points - prevLevelXp) / (nextLevelXp - prevLevelXp)).clamp(0.0, 1.0);
-                        }
-                        return OutlinedButton(
-                          style: OutlinedButton.styleFrom(
-                            backgroundColor: color,
-                            foregroundColor: Colors.white,
-                            side: BorderSide(
-                              color: borderColor,
-                              width: borderColor == Colors.transparent ? 0 : 8,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            padding: const EdgeInsets.all(8),
-                          ),
-                          onPressed: () {
-                            // Only increment normal run on tap, not on long press
-                            if (!this._isLongPress) {
-                              final achievement = app.increment(id);
-                              int xpEarned = 10;
-                              if (achievement == 'full_hands') {
-                                xpEarned = 35;
-                                _showAchievement('Full Hands!');
-                              } else if (achievement == 'five_streak') {
-                                xpEarned = 30;
-                              } else if (achievement == 'ten_in_shift') {
-                                xpEarned = 20;
-                              } else if (achievement == 'twenty_in_shift') {
-                                xpEarned = 30;
-                              }
-                              _showFlash(
-                                '+$xpEarned XP',
-                                'Next level: $pointsToNext XP',
-                              );
-                              final msg = encouragements[Random().nextInt(encouragements.length)];
-                              ScaffoldMessenger.of(ctx).clearSnackBars();
-                              ScaffoldMessenger.of(ctx).showSnackBar(
-                                SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),
-                              );
+                    double progress = 1.0;
+                    if (nextLevelXp > prevLevelXp) {
+                      progress = ((points - prevLevelXp) / (nextLevelXp - prevLevelXp)).clamp(0.0, 1.0);
+                    }
 
-                              final bubble = app.recentBadgeBubble;
-                              if (bubble != null) {
-                                ScaffoldMessenger.of(ctx).showSnackBar(
-                                  SnackBar(content: Text(bubble), duration: const Duration(seconds: 3)),
-                                );
-                                app.clearRecentBadgeBubble();
-                              }
-                            }
-                          },
-                          onLongPress: () {
-                            this._isLongPress = true;
-                            app.incrementPizookie(id);
-                            int xpEarned = 25;
-                            _showFlash(
-                              '+$xpEarned XP\nPizookie!',
-                              'Sweet!  Ran a Pizookie',
-                            );
-                            final msg = 'Pizookie run!';
-                            ScaffoldMessenger.of(ctx).clearSnackBars();
-                            ScaffoldMessenger.of(ctx).showSnackBar(
-                              SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),
-                            );
-                            Future.delayed(const Duration(milliseconds: 100), () {
-                              this._isLongPress = false;
-                            });
-                          },
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              // Progress bar row
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 2.0, top: 10, left: 4, right: 2),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    // Current level (left) - big, bold, with background, wider for double digits
-                                    GestureDetector(
-                                      onLongPress: () {
-                                        Future.delayed(const Duration(seconds: 2), () {
-                                          showDialog(
-                                            context: context,
-                                            builder: (context) => Dialog(
-                                              insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 60),
-                                              backgroundColor: Colors.transparent,
-                                              child: SizedBox(
-                                                width: 340,
-                                                height: 520,
-                                                child: ProfileDetailScreen(serverId: id),
-                                              ),
-                                            ),
-                                          );
-                                        });
-                                      },
-                                      child: Container(
-                                        width: 44,
-                                        height: 32,
-                                        decoration: BoxDecoration(
-                                          color: Colors.black.withOpacity(0.18),
-                                          borderRadius: BorderRadius.circular(16),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withOpacity(0.18),
-                                              blurRadius: 4,
-                                              offset: Offset(1, 2),
-                                            ),
-                                          ],
-                                        ),
-                                        alignment: Alignment.center,
-                                        child: Text(
-                                          'lvl$level',
-                                          style: const TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.w900,
-                                            color: Colors.white,
-                                            letterSpacing: 0.5,
-                                            shadows: [
-                                              Shadow(blurRadius: 2, color: Colors.black54, offset: Offset(1,1)),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    // Progress bar
-                                    Expanded(
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 2.0),
-                                        child: ClipRRect(
-                                          borderRadius: BorderRadius.circular(8),
-                                          child: LinearProgressIndicator(
-                                            value: progress,
-                                            minHeight: 10,
-                                            backgroundColor: Colors.white24,
-                                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    // Next level (right) - smaller, bold, with subtle background
-                                    Container(
-                                      width: 28,
-                                      height: 24,
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.18),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      alignment: Alignment.center,
-                                      child: Text(
-                                        '${level + 1}',
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                          shadows: [
-                                            Shadow(blurRadius: 1, color: Colors.black38, offset: Offset(1,1)),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Expanded(
-                                child: Center(
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        s.name,
-                                        textAlign: TextAlign.center,
-                                        style: const TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.w800,
-                                          letterSpacing: 1.1,
-                                          color: Colors.white,
-                                          shadows: [
-                                            Shadow(blurRadius: 6, color: Colors.black45, offset: Offset(0, 2)),
-                                          ],
-                                        ),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      if (section != null && section.isNotEmpty) ...[
-                                        const SizedBox(height: 2),
-                                        Flexible(
-                                          child: Text(
-                                            section,
-                                            textAlign: TextAlign.center,
-                                            style: const TextStyle(
-                                              fontSize: 9,
-                                              fontWeight: FontWeight.w400,
-                                              color: Colors.white,
-                                              shadows: [
-                                                Shadow(blurRadius: 2, color: Colors.black45, offset: Offset(0, 1)),
-                                              ],
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                      ],
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        'Shift: $my  •  $pct%',
-                                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                                      ),
-                                      Text(
-                                        'Pizookies: '
-                                        + (app.shiftActive
-                                            ? (app.currentPizookieCounts[id]?.toString() ?? '0')
-                                            : '0'),
-                                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    );
-                    final progress = (nextLevelXp > prevLevelXp)
-                        ? ((points - prevLevelXp) / (nextLevelXp - prevLevelXp)).clamp(0.0, 1.0)
-                        : 1.0;
+                    final section = _sectionAssignments?[id];
 
                     return OutlinedButton(
                       style: OutlinedButton.styleFrom(
@@ -865,46 +638,40 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                         padding: const EdgeInsets.all(8),
                       ),
                       onPressed: () {
-                        final achievement = app.increment(id);
-                        int xpEarned = 10;
-                        bool isAchievement = false;
-                        if (achievement == 'full_hands') {
-                          xpEarned = 35;
-                          isAchievement = true;
-                          _showAchievement('Full Hands!');
-                        } else if (achievement == 'five_streak') {
-                          xpEarned = 30;
-                          isAchievement = true;
-                        } else if (achievement == 'ten_in_shift') {
-                          xpEarned = 20;
-                          isAchievement = true;
-                        } else if (achievement == 'twenty_in_shift') {
-                          xpEarned = 30;
-                          isAchievement = true;
-                        }
-                        // Only show XP flash for achievements if gamification is enabled
-                        if (!isAchievement || app.settings.gamificationEnabled) {
+                        if (!this._isLongPress) {
+                          final achievement = app.increment(id);
+                          int xpEarned = 10;
+                          if (achievement == 'full_hands') {
+                            xpEarned = 35;
+                            _showAchievement('Full Hands!');
+                          } else if (achievement == 'five_streak') {
+                            xpEarned = 30;
+                          } else if (achievement == 'ten_in_shift') {
+                            xpEarned = 20;
+                          } else if (achievement == 'twenty_in_shift') {
+                            xpEarned = 30;
+                          }
                           _showFlash(
                             '+$xpEarned XP',
                             'Next level: $pointsToNext XP',
-                            forAchievement: isAchievement,
                           );
-                        }
-                        final msg = encouragements[Random().nextInt(encouragements.length)];
-                        ScaffoldMessenger.of(ctx).clearSnackBars();
-                        ScaffoldMessenger.of(ctx).showSnackBar(
-                          SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),
-                        );
-
-                        final bubble = app.recentBadgeBubble;
-                        if (bubble != null) {
+                          final msg = encouragements[Random().nextInt(encouragements.length)];
+                          ScaffoldMessenger.of(ctx).clearSnackBars();
                           ScaffoldMessenger.of(ctx).showSnackBar(
-                            SnackBar(content: Text(bubble), duration: const Duration(seconds: 3)),
+                            SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),
                           );
-                          app.clearRecentBadgeBubble();
+
+                          final bubble = app.recentBadgeBubble;
+                          if (bubble != null) {
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              SnackBar(content: Text(bubble), duration: const Duration(seconds: 3)),
+                            );
+                            app.clearRecentBadgeBubble();
+                          }
                         }
                       },
                       onLongPress: () {
+                        this._isLongPress = true;
                         app.incrementPizookie(id);
                         int xpEarned = 25;
                         _showFlash(
@@ -916,17 +683,18 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                         ScaffoldMessenger.of(ctx).showSnackBar(
                           SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),
                         );
+                        Future.delayed(const Duration(milliseconds: 100), () {
+                          this._isLongPress = false;
+                        });
                       },
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // Progress bar row
                           Padding(
-                            padding: const EdgeInsets.only(bottom: 10.0, top: 10, left: 4, right: 2),
+                            padding: const EdgeInsets.only(bottom: 2.0, top: 10, left: 4, right: 2),
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                // Current level (left) - big, bold, with background, wider for double digits
                                 GestureDetector(
                                   onLongPress: () {
                                     Future.delayed(const Duration(seconds: 2), () {
@@ -974,7 +742,6 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                                   ),
                                 ),
                                 const SizedBox(width: 10),
-                                // Progress bar
                                 Expanded(
                                   child: Padding(
                                     padding: const EdgeInsets.symmetric(horizontal: 2.0),
@@ -990,7 +757,6 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                                   ),
                                 ),
                                 const SizedBox(width: 10),
-                                // Next level (right) - smaller, bold, with subtle background
                                 Container(
                                   width: 28,
                                   height: 24,
@@ -1034,16 +800,37 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
+                                  if (section != null && section.isNotEmpty) ...[
+                                    const SizedBox(height: 2),
+                                    Flexible(
+                                      child: Text(
+                                        section,
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w400,
+                                          color: Colors.white,
+                                          shadows: [
+                                            Shadow(blurRadius: 2, color: Colors.black45, offset: Offset(0, 1)),
+                                          ],
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
                                   const SizedBox(height: 2),
                                   Text(
                                     'Shift: $my  •  $pct%',
                                     style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                                   ),
                                   Text(
-                                    'Pizookies: ${app.profiles[id]?.pizookieRuns ?? 0}',
+                                    'Pizookies: '
+                                    + (app.shiftActive
+                                        ? (app.currentPizookieCounts[id]?.toString() ?? '0')
+                                        : '0'),
                                     style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
                                   ),
-                                  // ...removed 'All Time Runs' display...
                                 ],
                               ),
                             ),
@@ -1302,17 +1089,12 @@ class _RosterPopupState extends State<_RosterPopup> {
     final dinnerIds = plan?.dinnerRoster ?? [];
     final isAfterTransition = m >= (plan?.transitionEndMinutes ?? widget.app.settings.transitionEndMinutes);
     final header = showLunch ? 'Lunch' : 'Dinner';
-
-    // --- Get the correct roster and sort by runs descending ---
     final ids = showLunch ? lunchIds : dinnerIds;
     final sortedIds = [...ids];
     sortedIds.sort((a, b) => (widget.app.currentCounts[b] ?? 0).compareTo(widget.app.currentCounts[a] ?? 0));
-
-  // Calculate total runs for this roster (matching grid logic)
-  final counts = sortedIds.map((id) => widget.app.currentCounts[id] ?? 0).toList();
-  final totalRuns = counts.fold<int>(0, (a, b) => a + b);
-  // No team percent widgets needed
-  List<Widget> teamPercentWidgets = [];
+    final counts = sortedIds.map((id) => widget.app.currentCounts[id] ?? 0).toList();
+    final totalRuns = counts.fold<int>(0, (a, b) => a + b);
+    List<Widget> teamPercentWidgets = [];
 
     return AlertDialog(
       title: Column(
@@ -1337,111 +1119,112 @@ class _RosterPopupState extends State<_RosterPopup> {
             ),
         ],
       ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Center(
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: ToggleButtons(
-                isSelected: [showLunch, !showLunch],
-                onPressed: (idx) => setState(() => showLunch = idx == 0),
-                borderRadius: BorderRadius.circular(20),
-                constraints: const BoxConstraints(minWidth: 80, minHeight: 36),
-                selectedColor: Colors.white,
-                fillColor: Theme.of(context).primaryColor,
-                children: const [Text('Lunch'), Text('Dinner')],
+      content: SizedBox(
+        height: 400,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade200,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: ToggleButtons(
+                  isSelected: [showLunch, !showLunch],
+                  onPressed: (idx) => setState(() => showLunch = idx == 0),
+                  borderRadius: BorderRadius.circular(20),
+                  constraints: const BoxConstraints(minWidth: 80, minHeight: 36),
+                  selectedColor: Colors.white,
+                  fillColor: Theme.of(context).primaryColor,
+                  children: const [Text('Lunch'), Text('Dinner')],
+                ),
               ),
             ),
-          ),
-          // Column headers
-          Container(
-            margin: const EdgeInsets.symmetric(vertical: 4),
-            child: Scrollbar(
-              thumbVisibility: true,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 600),
-                  child: Scrollbar(
-                    thumbVisibility: true,
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.vertical,
-                      child: DataTable(
-                        headingRowHeight: 38,
-                        dataRowHeight: 32,
-                        columnSpacing: 18,
-                        horizontalMargin: 8,
-                        columns: const [
-                          DataColumn(label: Text('Servers', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15))),
-                          DataColumn(label: Text('Runs', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15))),
-                          DataColumn(label: Text('Pizookie', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15))),
-                          DataColumn(label: Text('% Food', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15))),
-                        ],
-                        rows: List.generate(sortedIds.length, (i) {
-                          final id = sortedIds[i];
-                          final server = widget.app.servers.firstWhere((s) => s.id == id, orElse: () => Server(id: id, name: 'Unknown'));
-                          final count = widget.app.currentCounts[id] ?? 0;
-                          final pct = totalRuns > 0 ? ((count / totalRuns) * 100).round() : 0;
-                          final pizookieRuns = widget.app.profiles[id]?.pizookieRuns ?? 0;
-                          Color? nameColor;
-                          FontWeight nameWeight = FontWeight.bold;
-                          if (i == 0) nameColor = Color(0xFFFFD700); // Gold
-                          else if (i == 1) nameColor = Color(0xFFC0C0C0); // Silver
-                          else if (i == 2) nameColor = Color(0xFFCD7F32); // Bronze
-                          String? trophy;
-                          if (i == 0) trophy = '🥇';
-                          else if (i == 1) trophy = '🥈';
-                          else if (i == 2) trophy = '🥉';
-                          return DataRow(
-                            cells: [
-                              DataCell(
-                                Text.rich(
-                                  TextSpan(
-                                    children: [
-                                      if (trophy != null)
-                                        WidgetSpan(
-                                          alignment: PlaceholderAlignment.middle,
-                                          child: Padding(
-                                            padding: const EdgeInsets.only(right: 4),
-                                            child: Text(trophy, style: const TextStyle(fontSize: 18)),
+            Expanded(
+              child: Scrollbar(
+                thumbVisibility: true,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 600),
+                    child: Scrollbar(
+                      thumbVisibility: true,
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.vertical,
+                        child: DataTable(
+                          headingRowHeight: 38,
+                          dataRowHeight: 32,
+                          columnSpacing: 18,
+                          horizontalMargin: 8,
+                          columns: const [
+                            DataColumn(label: Text('Servers', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15))),
+                            DataColumn(label: Text('Runs', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15))),
+                            DataColumn(label: Text('Pizookie', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15))),
+                            DataColumn(label: Text('% Food', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15))),
+                          ],
+                          rows: List.generate(sortedIds.length, (i) {
+                            final id = sortedIds[i];
+                            final server = widget.app.servers.firstWhere((s) => s.id == id, orElse: () => Server(id: id, name: 'Unknown'));
+                            final count = widget.app.currentCounts[id] ?? 0;
+                            final pct = totalRuns > 0 ? ((count / totalRuns) * 100).round() : 0;
+                            final pizookieRuns = widget.app.profiles[id]?.pizookieRuns ?? 0;
+                            Color? nameColor;
+                            FontWeight nameWeight = FontWeight.bold;
+                            if (i == 0) nameColor = Color(0xFFFFD700); // Gold
+                            else if (i == 1) nameColor = Color(0xFFC0C0C0); // Silver
+                            else if (i == 2) nameColor = Color(0xFFCD7F32); // Bronze
+                            String? trophy;
+                            if (i == 0) trophy = '🥇';
+                            else if (i == 1) trophy = '🥈';
+                            else if (i == 2) trophy = '🥉';
+                            return DataRow(
+                              cells: [
+                                DataCell(
+                                  Text.rich(
+                                    TextSpan(
+                                      children: [
+                                        if (trophy != null)
+                                          WidgetSpan(
+                                            alignment: PlaceholderAlignment.middle,
+                                            child: Padding(
+                                              padding: const EdgeInsets.only(right: 4),
+                                              child: Text(trophy, style: const TextStyle(fontSize: 18)),
+                                            ),
+                                          ),
+                                        TextSpan(
+                                          text: server.name,
+                                          style: TextStyle(
+                                            fontWeight: nameWeight,
+                                            color: nameColor,
+                                            fontSize: 15,
+                                            letterSpacing: 0.2,
                                           ),
                                         ),
-                                      TextSpan(
-                                        text: server.name,
-                                        style: TextStyle(
-                                          fontWeight: nameWeight,
-                                          color: nameColor,
-                                          fontSize: 15,
-                                          letterSpacing: 0.2,
-                                        ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    textAlign: TextAlign.left,
                                   ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  textAlign: TextAlign.left,
                                 ),
-                              ),
-                              DataCell(Text('$count', style: const TextStyle(fontSize: 14))),
-                              DataCell(Text('$pizookieRuns', style: const TextStyle(fontSize: 14))),
-                              DataCell(Text('$pct%', style: const TextStyle(fontSize: 14))),
-                            ],
-                          );
-                        }),
+                                DataCell(Text('$count', style: const TextStyle(fontSize: 14))),
+                                DataCell(Text('$pizookieRuns', style: const TextStyle(fontSize: 14))),
+                                DataCell(Text('$pct%', style: const TextStyle(fontSize: 14))),
+                              ],
+                            );
+                          }),
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
       actions: [
         TextButton(
