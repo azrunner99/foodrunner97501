@@ -489,14 +489,11 @@ class _RosterBodyState extends State<_RosterBody> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          // Checkbox on the left
                           Checkbox(
                             value: false,
                             onChanged: (v) async {
                               if (v == true) {
-                                final selectedTypeName = await _showStationTypeDialog(
-                                  context,
-                                );
+                                final selectedTypeName = await _showStationTypeDialog(context);
                                 if (selectedTypeName != null) {
                                   final selectedType = stationTypes.firstWhere((t) => t.name == selectedTypeName);
                                   final selectedSection = await showDialog<String>(
@@ -578,89 +575,42 @@ class _RosterBodyState extends State<_RosterBody> {
                                                   mainAxisSize: MainAxisSize.min,
                                                   crossAxisAlignment: CrossAxisAlignment.center,
                                                   children: [
-                                                    Text(
-                                                      s.name,
-                                                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                                                      textAlign: TextAlign.center,
-                                                    ),
+                                                    const Text('Select Team Color', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
                                                     const SizedBox(height: 24),
                                                     Wrap(
                                                       spacing: 16,
                                                       runSpacing: 16,
                                                       alignment: WrapAlignment.center,
-                                                      children: teamColorOptions.where((c) => c != null).map((color) {
-                                                        Color bubbleColor;
-                                                        switch (color) {
-                                                          case 'Blue':
-                                                            bubbleColor = Colors.blue;
-                                                            break;
-                                                          case 'Purple':
-                                                            bubbleColor = Colors.purple;
-                                                            break;
-                                                          case 'Silver':
-                                                            bubbleColor = Colors.grey;
-                                                            break;
-                                                          default:
-                                                            bubbleColor = Colors.grey;
-                                                        }
+                                                      children: teamColorOptions.map((color) {
+                                                        final isSelected = color == teamColors[s.id];
                                                         return GestureDetector(
                                                           onTap: () => Navigator.pop(colorContext, color),
                                                           child: Container(
-                                                            width: 60,
-                                                            height: 36,
+                                                            width: 80,
+                                                            height: 80,
                                                             decoration: BoxDecoration(
-                                                              color: bubbleColor.withOpacity(0.2),
-                                                              borderRadius: BorderRadius.circular(18),
+                                                              color: color == null ? Colors.grey.shade200 : null,
+                                                              borderRadius: BorderRadius.circular(12),
                                                               border: Border.all(
-                                                                color: bubbleColor,
+                                                                color: isSelected ? Colors.blue : Colors.transparent,
                                                                 width: 2,
                                                               ),
                                                             ),
-                                                            alignment: Alignment.center,
-                                                            child: Text(
-                                                              color!,
-                                                              style: TextStyle(
-                                                                color: color == 'Blue'
-                                                                    ? Colors.blue[800]
-                                                                    : color == 'Purple'
-                                                                        ? Colors.purple[800]
-                                                                        : color == 'Silver'
-                                                                            ? Colors.grey[800]
-                                                                            : Colors.black87,
-                                                                fontWeight: FontWeight.w600,
-                                                                fontSize: 16,
+                                                            child: Center(
+                                                              child: Text(
+                                                                color == null ? 'None' : color,
+                                                                style: TextStyle(
+                                                                  fontSize: 16,
+                                                                  fontWeight: FontWeight.w500,
+                                                                  color: isSelected ? Colors.blue : Colors.black87,
+                                                                ),
                                                               ),
                                                             ),
                                                           ),
                                                         );
                                                       }).toList(),
                                                     ),
-                                                    const SizedBox(height: 20),
-                                                    GestureDetector(
-                                                      onTap: () => Navigator.pop(colorContext, null),
-                                                      child: Container(
-                                                        width: 80,
-                                                        height: 36,
-                                                        decoration: BoxDecoration(
-                                                          color: Colors.grey.shade300,
-                                                          borderRadius: BorderRadius.circular(18),
-                                                          border: Border.all(
-                                                            color: Colors.grey.shade500,
-                                                            width: 2,
-                                                          ),
-                                                        ),
-                                                        alignment: Alignment.center,
-                                                        child: const Text(
-                                                          'None',
-                                                          style: TextStyle(
-                                                            color: Colors.black54,
-                                                            fontWeight: FontWeight.w600,
-                                                            fontSize: 16,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    const SizedBox(height: 8),
+                                                    const SizedBox(height: 12),
                                                     TextButton(
                                                       onPressed: () => Navigator.pop(colorContext),
                                                       child: const Text('Cancel'),
@@ -671,7 +621,7 @@ class _RosterBodyState extends State<_RosterBody> {
                                             );
                                           },
                                         );
-                                        if (selectedColor != null || selectedColor == null) {
+                                        if (selectedColor != null) {
                                           setState(() {
                                             teamColors[s.id] = selectedColor;
                                           });
@@ -681,74 +631,38 @@ class _RosterBodyState extends State<_RosterBody> {
                                   }
                                 }
                               }
-                            },
+                            }, // closes onChanged for Checkbox
                           ),
-                          // Name/section and team color bubble in a Row
-                          Expanded(
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Text(
-                                  s.name,
-                                  style: TextStyle(
-                                    fontSize: serverStationSection[s.id] != null ? 28 : 18,
-                                    fontWeight: serverStationSection[s.id] != null ? FontWeight.bold : FontWeight.w600,
-                                    color: Colors.black,
-                                  ),
+                          Text(
+                            s.name,
+                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.normal),
+                          ),
+                          if (serverStationSection[s.id] != null)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 6.0),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade200,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.grey.shade400),
                                 ),
-                                if (serverStationSection[s.id] != null)
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: 6.0),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: Colors.grey.shade200,
-                                        borderRadius: BorderRadius.circular(9),
-                                        border: Border.all(color: Colors.grey.shade400),
-                                      ),
-                                      child: Text(
-                                        serverStationSection[s.id]!,
-                                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.black87),
-                                      ),
-                                    ),
-                                  ),
-                                const Spacer(),
-                                Builder(
-                                  builder: (context) {
-                                    final profile = widget.app.profiles[s.id];
-                                    final avatarPath = profile?.avatarPath;
-                                    if (avatarPath != null && avatarPath.isNotEmpty) {
-                                      return CircleAvatar(
-                                        radius: 18,
-                                        backgroundImage: Image.file(
-                                          // ignore: prefer_interpolation_to_compose_strings
-                                          File(avatarPath),
-                                          fit: BoxFit.cover,
-                                        ).image,
-                                        backgroundColor: Colors.grey.shade200,
-                                      );
-                                    } else {
-                                      return CircleAvatar(
-                                        radius: 18,
-                                        backgroundColor: Colors.grey.shade200,
-                                        child: Icon(Icons.person, color: Colors.grey.shade500, size: 22),
-                                      );
-                                    }
-                                  },
+                                child: Text(
+                                  serverStationSection[s.id] ?? '',
+                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.black87),
                                 ),
-                              ],
+                              ),
                             ),
-                          ),
                         ],
                       ),
                     ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+                  ); // closes Card
+                  }, // closes itemBuilder
+                ), // closes ListView.builder
+              ), // closes Expanded
+      ], // closes children of Column
+    ), // closes Column
+      ), // closes Padding
+    ); // closes WillPopScope
+  } // closes class method
+} // closes class
