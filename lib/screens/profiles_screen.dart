@@ -286,11 +286,18 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
               children: [
                 GestureDetector(
                   onTap: _onAvatarTap,
-                  child: CircleAvatar(
-                    radius: 80,
-                    backgroundColor: Colors.deepPurple.shade100,
-                    backgroundImage: _avatarPath != null ? FileImage(File(_avatarPath!)) : null,
-                  ),
+          child: CircleAvatar(
+          radius: 80,
+          backgroundColor: Colors.deepPurple.shade100,
+          child: (p.avatarPath == null || p.avatarPath!.isEmpty)
+            ? null
+            : (p.avatarPath!.startsWith('assets/')
+              ? ClipOval(child: Image.asset(p.avatarPath!, width: 160, height: 160, fit: BoxFit.cover))
+              : null),
+          backgroundImage: (p.avatarPath != null && p.avatarPath!.isNotEmpty && !p.avatarPath!.startsWith('assets/'))
+            ? FileImage(File(p.avatarPath!))
+            : null,
+          ),
                 ),
                 Positioned(
                   bottom: 0,
