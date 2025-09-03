@@ -40,6 +40,176 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  void _showCurrentShiftTotalsDialog(BuildContext context, AppState app, bool isDinner) {
+    final ids = isDinner
+        ? (app.todayPlan?.dinnerRoster ?? [])
+        : (app.todayPlan?.lunchRoster ?? []);
+    final label = isDinner ? 'Dinner' : 'Lunch';
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        final screenWidth = MediaQuery.of(ctx).size.width;
+        const double maxDialogWidth = 400;
+        final dialogWidth = screenWidth < maxDialogWidth ? screenWidth - 16 : maxDialogWidth;
+        return StatefulBuilder(
+          builder: (ctx, setState) {
+            String sortBy = _shiftSortBy;
+            List<String> sorted = ids.toList();
+            sorted.sort((a, b) {
+              final runsA = app.currentCounts[a] ?? 0;
+              final runsB = app.currentCounts[b] ?? 0;
+              final pizA = app.currentPizookieCounts[a] ?? 0;
+              final pizB = app.currentPizookieCounts[b] ?? 0;
+              if (sortBy == 'pizookie') {
+                if (pizA != pizB) return pizB.compareTo(pizA);
+              } else {
+                if (runsA != runsB) return runsB.compareTo(runsA);
+              }
+              final nameA = app.serverById(a)?.name ?? '';
+              final nameB = app.serverById(b)?.name ?? '';
+              return nameA.compareTo(nameB);
+            });
+            return Dialog(
+              insetPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 24),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: Container(
+                width: dialogWidth,
+                padding: const EdgeInsets.only(top: 16, left: 12, right: 12, bottom: 8),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Center(
+                      child: Text(
+                        label,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 22, letterSpacing: 0.5),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        ChoiceChip(
+                          label: const Text('Sort by Runs'),
+                          selected: sortBy == 'runs',
+                          onSelected: (selected) {
+                            if (selected) setState(() => sortBy = _shiftSortBy = 'runs');
+                          },
+                        ),
+                        const SizedBox(width: 12),
+                        ChoiceChip(
+                          label: const Text('Sort by Pizookies'),
+                          selected: sortBy == 'pizookie',
+                          onSelected: (selected) {
+                            if (selected) setState(() => sortBy = _shiftSortBy = 'pizookie');
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 260,
+                      child: Scrollbar(
+                        thumbVisibility: true,
+                        child: ListView.separated(
+                          shrinkWrap: true,
+                          itemCount: sorted.length,
+                          separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey[200]),
+                          itemBuilder: (context, i) {
+                            final id = sorted[i];
+                            final server = app.serverById(id);
+                            final runs = app.currentCounts[id] ?? 0;
+                            final pizookies = app.currentPizookieCounts[id] ?? 0;
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 0),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 28,
+                                    alignment: Alignment.centerRight,
+                                    child: Text(
+                                      '${i + 1}',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                        color: Colors.grey[700],
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    flex: 2,
+                                    child: Row(
+                                      children: [
+                                        if (i == 0)
+                                          Icon(Icons.emoji_events, color: Color(0xFFFFD700), size: 20), // Gold
+                                        if (i == 1)
+                                          Icon(Icons.emoji_events, color: Color(0xFFC0C0C0), size: 20), // Silver
+                                        if (i == 2)
+                                          Icon(Icons.emoji_events, color: Color(0xFFCD7F32), size: 20), // Bronze
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: Text(
+                                            server?.name ?? id,
+                                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Expanded(
+                                    flex: 1,
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
+                                        Text(
+                                          '$runs',
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                        ),
+                                        const SizedBox(width: 2),
+                                        const Text('runs', style: TextStyle(fontSize: 13, color: Colors.black54)),
+                                      ],
+                                    ),
+                                  ),
+                                  Expanded(
+                                    flex: 1,
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
+                                        Icon(Icons.cookie, size: 16, color: Colors.brown[400]),
+                                        const SizedBox(width: 2),
+                                        Text('$pizookies', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.brown)),
+                                        const SizedBox(width: 2),
+                                        const Text('Pizookies', style: TextStyle(fontSize: 12, color: Colors.brown)),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        child: const Text('Close'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+  // Used to persist sort selection in dialog
+  String _shiftSortBy = 'runs';
   int _runnerTapCount = 0;
   DateTime? _lastTapTime;
   bool _isLongPress = false;
@@ -306,9 +476,43 @@ class _HomeScreenState extends State<HomeScreen> {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Hide "Who's working today" if roster is loaded (ids not empty)
-                    // TeamPieChart and rest of UI remain
                     TeamPieChart(teamCounts: teamCounts, teamColors: teamColors),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0, bottom: 4.0, left: 24.0, right: 24.0),
+                      child: Card(
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: Colors.grey.shade300, width: 1),
+                        ),
+                        color: Colors.white,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () {
+                            _showCurrentShiftTotalsDialog(context, app, isDinner);
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 16.0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(isDinner ? Icons.nights_stay : Icons.wb_sunny, color: Colors.grey[700]),
+                                const SizedBox(width: 8),
+                                Text(
+                                  isDinner ? 'Dinner shift displayed' : 'Lunch shift displayed',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                     if (showToggle)
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
