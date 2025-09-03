@@ -322,39 +322,112 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             Align(
               alignment: Alignment.bottomCenter,
-              child: Container(
-                width: double.infinity,
-                color: Colors.grey[200],
-                padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 0),
-                child: Consumer<AppState>(
-                  builder: (context, app, _) {
-                    final lastId = app.lastRunServerId;
-                    final profile = lastId != null ? app.profiles[lastId] : null;
-                    final avatarPath = profile?.avatarPath;
-                    ImageProvider? avatarImage;
-                    if (avatarPath != null && avatarPath.isNotEmpty) {
-                      if (avatarPath.startsWith('/') || avatarPath.contains(':')) {
-                        avatarImage = FileImage(File(avatarPath));
-                      } else {
-                        avatarImage = AssetImage(avatarPath);
-                      }
-                    }
-                    return Row(
-                      children: [
-                        if (avatarImage != null)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 16.0, right: 12.0),
-                            child: CircleAvatar(
-                              radius: 24,
-                              backgroundImage: avatarImage,
-                              backgroundColor: Colors.grey[400],
+              child: Stack(
+                children: [
+                  // Server name absolutely positioned at the bottom of the white area
+                  Consumer<AppState>(
+                    builder: (context, app, _) {
+                      final lastId = app.lastRunServerId;
+                      final server = lastId != null ? app.serverById(lastId) : null;
+                      if (server == null) return SizedBox.shrink();
+                      return Positioned(
+                        top: MediaQuery.of(context).size.height - 160, // adjust as needed for your layout
+                        left: 0,
+                        right: 0,
+                        child: Center(
+                          child: Text(
+                            server.name,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 22,
+                              color: Colors.black,
+                              letterSpacing: 1.1,
+                              shadows: [
+                                Shadow(
+                                  color: Colors.white,
+                                  blurRadius: 8,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
                             ),
                           ),
-                        // ...other info can go here...
-                      ],
-                    );
-                  },
-                ),
+                        ),
+                      );
+                    },
+                  ),
+                  // Grey area and avatar row
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      width: double.infinity,
+                      color: Colors.grey[200],
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
+                      child: Consumer<AppState>(
+                        builder: (context, app, _) {
+                          final lastId = app.lastRunServerId;
+                          final profile = lastId != null ? app.profiles[lastId] : null;
+                          final avatarPath = profile?.avatarPath;
+                          ImageProvider? avatarImage;
+                          if (avatarPath != null && avatarPath.isNotEmpty) {
+                            if (avatarPath.startsWith('/') || avatarPath.contains(':')) {
+                              avatarImage = FileImage(File(avatarPath));
+                            } else {
+                              avatarImage = AssetImage(avatarPath);
+                            }
+                          }
+                          return Row(
+                            children: [
+                              if (avatarImage != null && profile != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 0, right: 12.0),
+                                  child: SizedBox(
+                                    width: 96,
+                                    height: 96,
+                                    child: Stack(
+                                      alignment: Alignment.center,
+                                      children: [
+                                        AspectRatio(
+                                          aspectRatio: 1,
+                                          child: ClipOval(
+                                            child: Image(
+                                              image: avatarImage,
+                                              fit: BoxFit.cover,
+                                            ),
+                                          ),
+                                        ),
+                                        Positioned(
+                                          bottom: 8,
+                                          right: 0,
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: Colors.black.withOpacity(0.8),
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            child: Text(
+                                              'Lvl${profile.level}',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              // ...other info can go here...
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
