@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../app_state.dart';
 import '../models.dart';
+import 'encouragement_options_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -42,6 +43,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: const Text('Gamification Options'),
             subtitle: const Text('Enable or disable achievements and streaks'),
             onTap: () => Navigator.pushNamed(context, '/gamification_options'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.celebration),
+            title: const Text('Encouragement Options'),
+            subtitle: const Text('Customize encouragement text and behavior'),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const EncouragementOptionsScreen()),
+              );
+            },
           ),
           ExpansionPanelList(
             expansionCallback: (int index, bool isExpanded) {
