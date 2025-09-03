@@ -126,26 +126,7 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
       // Save avatar path to ServerProfile for global access
       final app = Provider.of<AppState>(context, listen: false);
       app.updateAvatar(widget.serverId, newPath);
-      final showOnButton = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Show on Server Button?'),
-          content: const Text('Do you want this photo to be shown on your server button?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Yes'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('No'),
-            ),
-          ],
-        ),
-      );
-      if (showOnButton == true) {
-        // TODO: Implement logic to show avatar on server button
-      }
+  // Removed 'Show on Server Button?' dialog
     }
   }
 
@@ -153,27 +134,79 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
     final result = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Avatar Options'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, 'replace'),
-            child: const Text('Replace'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, 'show'),
-            child: const Text('Show on Server Button'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-        ],
+        // No title
+        backgroundColor: Colors.grey[100],
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey[300],
+                  foregroundColor: Colors.black,
+                  textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  minimumSize: const Size(120, 40),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: () => Navigator.pop(context, 'replace'),
+                child: const Text('Take Photo'),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey[300],
+                  foregroundColor: Colors.black,
+                  textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  minimumSize: const Size(180, 40),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: () => Navigator.pop(context, 'presets'),
+                child: const Text('Select From Presets'),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey[300],
+                  foregroundColor: Colors.black,
+                  textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  minimumSize: const Size(120, 40),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: () => Navigator.pop(context, 'remove'),
+                child: const Text('Remove'),
+              ),
+            ),
+            const Divider(height: 1, thickness: 1, color: Colors.grey),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Center(
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
     if (result == 'replace') {
       await _pickAvatarPhoto();
-    } else if (result == 'show') {
-      // TODO: Implement logic to show avatar on server button
+    } else if (result == 'remove') {
+      final app = Provider.of<AppState>(context, listen: false);
+  app.updateAvatar(widget.serverId, '');
+      setState(() {
+        _avatarPath = null;
+      });
     }
   }
 
