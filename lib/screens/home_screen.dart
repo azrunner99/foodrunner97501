@@ -111,117 +111,259 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     print('HomeScreen.build called');
     final app = Provider.of<AppState>(context);
-    return Scaffold(
-      appBar: AppBar(
-        title: GestureDetector(
-          onTap: () => _handleRunnerTap(context),
-          child: const Text(
-            'RUNNER!',
-            style: TextStyle(
-              fontStyle: FontStyle.italic,
-              fontWeight: FontWeight.bold,
-              fontSize: 28,
-              letterSpacing: 2,
-              color: Color(0xFF1565C0), // A strong blue
-              shadows: [
-                Shadow(
-                  blurRadius: 6,
-                  color: Colors.black26,
-                  offset: Offset(2, 2),
+      return Scaffold(
+        appBar: AppBar(
+          title: GestureDetector(
+            onTap: () => _handleRunnerTap(context),
+            child: const Text(
+              'RUNNER!',
+              style: TextStyle(
+                fontStyle: FontStyle.italic,
+                fontWeight: FontWeight.bold,
+                fontSize: 28,
+                letterSpacing: 2,
+                color: Color(0xFF1565C0), // A strong blue
+                shadows: [
+                  Shadow(
+                    blurRadius: 6,
+                    color: Colors.black26,
+                    offset: Offset(2, 2),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            IconButton(
+              tooltip: 'Active Roster',
+              icon: const Icon(Icons.group),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => UpdateRosterScreen()),
+                );
+              },
+            ),
+            IconButton(
+              tooltip: 'Admin',
+              icon: const Icon(Icons.admin_panel_settings),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AdminScreen()),
+                );
+              },
+            ),
+            PopupMenuButton<_MoreAction>(
+              tooltip: 'More',
+              onSelected: (a) {
+                if (a == _MoreAction.profiles) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ProfilesScreen()),
+                  );
+                } else if (a == _MoreAction.settings) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                  );
+                } else if (a == _MoreAction.mvp) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const MvpScreen()),
+                  );
+                } else if (a == _MoreAction.history) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const HistoryScreen()),
+                  );
+                }
+              },
+              itemBuilder: (ctx) => [
+                const PopupMenuItem(
+                  value: _MoreAction.profiles,
+                  child: ListTile(
+                    leading: Icon(Icons.person),
+                    title: Text('Profiles'),
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: _MoreAction.mvp,
+                  child: ListTile(
+                    leading: Icon(Icons.emoji_events),
+                    title: Text('Leaderboards'),
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: _MoreAction.history,
+                  child: ListTile(
+                    leading: Icon(Icons.history),
+                    title: Text('Shift History'),
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: _MoreAction.settings,
+                  child: ListTile(
+                    leading: Icon(Icons.settings),
+                    title: Text('Settings'),
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
                 ),
               ],
             ),
-          ),
+          ],
         ),
-        actions: [
-          IconButton(
-            tooltip: 'Active Roster',
-            icon: const Icon(Icons.group),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => UpdateRosterScreen()),
-              );
-            },
-          ),
-          IconButton(
-            tooltip: 'Admin',
-            icon: const Icon(Icons.admin_panel_settings),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AdminScreen()),
-              );
-            },
-          ),
-          PopupMenuButton<_MoreAction>(
-            tooltip: 'More',
-            onSelected: (a) {
-              if (a == _MoreAction.profiles) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ProfilesScreen()),
+        body: Stack(
+          children: [
+            Builder(
+              builder: (context) {
+                // Recreate ids logic from _Body
+                final now = DateTime.now();
+                final m = now.hour * 60 + now.minute;
+                final start = app.todayPlan?.transitionStartMinutes ?? app.settings.transitionStartMinutes;
+                final end = app.todayPlan?.transitionEndMinutes ?? app.settings.transitionEndMinutes;
+                final lunchIds = app.todayPlan?.lunchRoster ?? [];
+                final dinnerIds = app.todayPlan?.dinnerRoster ?? [];
+                List<String> ids = [];
+                final showToggle = m >= start && m < end;
+                if (m < start) {
+                  ids = lunchIds;
+                } else if (m >= end) {
+                  ids = dinnerIds;
+                } else {
+                  if (app.activeRosterView == 'dinner') {
+                    ids = dinnerIds.where((id) => !lunchIds.contains(id)).toList();
+                  } else {
+                    ids = lunchIds;
+                  }
+                }
+                ids = ids.toSet().toList();
+                bool isDinner = (m >= end || (app.activeRosterView == 'dinner' && showToggle));
+                if (ids.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.all(28),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const SizedBox(height: 20),
+                        Text(
+                          "Who’s Working Today?",
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.2,
+                              ) ??
+                              const TextStyle(fontSize: 36, fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          "Manager: assign servers to Lunch and Dinner to begin.",
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                color: Colors.black54,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                        const SizedBox(height: 20),
+                        FilledButton.icon(
+                          icon: const Icon(Icons.group),
+                          label: const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 10),
+                            child: Text('Open Active Roster'),
+                          ),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => UpdateRosterScreen()),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                // Show main UI when there are assigned servers
+                final teamCounts = <String, int>{};
+                final teamColors = <String, Color>{
+                  'Blue': Colors.blue,
+                  'Purple': Colors.purple,
+                  'Silver': Colors.grey,
+                };
+                for (final id in ids) {
+                  final s = app.serverById(id);
+                  if (s == null || s.teamColor == null) continue;
+                  teamCounts[s.teamColor!] = (teamCounts[s.teamColor!] ?? 0) + (app.currentCounts[id] ?? 0);
+                }
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(top: 16, left: 24, right: 24, bottom: 8),
+                      child: Text(
+                        "Who's working today",
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                    TeamPieChart(teamCounts: teamCounts, teamColors: teamColors),
+                    if (!app.shiftActive)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0),
+                        child: ShiftStartNotice(app: app),
+                      ),
+                    Expanded(
+                      child: _ActiveGrid(ids: ids, shiftActive: app.shiftActive, app: app),
+                    ),
+                  ],
                 );
-              } else if (a == _MoreAction.settings) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                );
-              } else if (a == _MoreAction.mvp) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const MvpScreen()),
-                );
-              } else if (a == _MoreAction.history) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const HistoryScreen()),
-                );
-              }
-            },
-            itemBuilder: (ctx) => [
-              const PopupMenuItem(
-                value: _MoreAction.profiles,
-                child: ListTile(
-                  leading: Icon(Icons.person),
-                  title: Text('Profiles'),
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
+              },
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 16,
+              child: Center(
+                child: Card(
+                  color: Colors.black.withOpacity(0.7),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 8,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Last Run By:',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Server Name Here', // TODO: Replace with actual server info
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        // You can add more info here
+                      ],
+                    ),
+                  ),
                 ),
               ),
-              const PopupMenuItem(
-                value: _MoreAction.mvp,
-                child: ListTile(
-                  leading: Icon(Icons.emoji_events),
-                  title: Text('Leaderboards'),
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-              const PopupMenuItem(
-                value: _MoreAction.history,
-                child: ListTile(
-                  leading: Icon(Icons.history),
-                  title: Text('Shift History'),
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-              const PopupMenuItem(
-                value: _MoreAction.settings,
-                child: ListTile(
-                  leading: Icon(Icons.settings),
-                  title: Text('Settings'),
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-  body: _Body(app: app),
-    );
+            ),
+          ],
+        ),
+        // ...existing code...
+      );
   }
 }
 
