@@ -371,24 +371,28 @@ class _HomeScreenState extends State<HomeScreen> {
                               // Avatar row
                               Row(
                                 children: [
-                                  if (avatarImage != null && profile != null)
-                                    Padding(
-                                      padding: const EdgeInsets.only(left: 0, right: 12.0),
-                                      child: SizedBox(
-                                        width: 96,
-                                        height: 96,
-                                        child: Stack(
-                                          alignment: Alignment.center,
-                                          children: [
-                                            AspectRatio(
-                                              aspectRatio: 1,
-                                              child: ClipOval(
-                                                child: Image(
-                                                  image: avatarImage,
-                                                  fit: BoxFit.cover,
-                                                ),
-                                              ),
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 0, right: 12.0),
+                                    child: SizedBox(
+                                      width: 96,
+                                      height: 96,
+                                      child: Stack(
+                                        alignment: Alignment.center,
+                                        children: [
+                                          AspectRatio(
+                                            aspectRatio: 1,
+                                            child: ClipOval(
+                                              child: avatarImage != null
+                                                  ? Image(
+                                                      image: avatarImage,
+                                                      fit: BoxFit.cover,
+                                                    )
+                                                  : Container(
+                                                      color: Colors.grey[300],
+                                                    ),
                                             ),
+                                          ),
+                                          if (profile != null)
                                             Positioned(
                                               bottom: 8,
                                               right: 0,
@@ -408,10 +412,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                                 ),
                                               ),
                                             ),
-                                          ],
-                                        ),
+                                        ],
                                       ),
                                     ),
+                                  ),
                                   // Stats column next to avatar
                                   Padding(
                                     padding: const EdgeInsets.only(left: 0, right: 0, top: 8, bottom: 8),
@@ -436,8 +440,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                             Text(
                                               'Runs: $runCount',
                                               style: const TextStyle(
-                                                fontSize: 15,
-                                                fontWeight: FontWeight.w500,
+                                                fontSize: 17,
+                                                fontWeight: FontWeight.w900,
                                                 color: Colors.black87,
                                               ),
                                             ),
@@ -447,7 +451,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                 Text(
                                                   'Rank: $runRank/$totalServers',
                                                   style: const TextStyle(
-                                                    fontSize: 15,
+                                                    fontSize: 13,
                                                     fontWeight: FontWeight.w500,
                                                     color: Colors.black87,
                                                   ),
@@ -473,8 +477,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                             Text(
                                               'Pizookies: $pizookieCount',
                                               style: const TextStyle(
-                                                fontSize: 15,
-                                                fontWeight: FontWeight.w500,
+                                                fontSize: 17,
+                                                fontWeight: FontWeight.w900,
                                                 color: Colors.black87,
                                               ),
                                             ),
@@ -484,7 +488,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                 Text(
                                                   'Rank: $pizookieRank/$totalServers',
                                                   style: const TextStyle(
-                                                    fontSize: 15,
+                                                    fontSize: 13,
                                                     fontWeight: FontWeight.w500,
                                                     color: Colors.black87,
                                                   ),
