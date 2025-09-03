@@ -25,3 +25,4 @@ flutter:
   assets:
   - assets/splash.png
   - assets/foodrunner.png
+  - assets/avatars/
