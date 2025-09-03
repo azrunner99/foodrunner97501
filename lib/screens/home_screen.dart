@@ -304,17 +304,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 16, left: 24, right: 24, bottom: 8),
-                      child: Text(
-                        "Who's working today",
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                    ),
+                    // Hide "Who's working today" if roster is loaded (ids not empty)
+                    // TeamPieChart and rest of UI remain
                     TeamPieChart(teamCounts: teamCounts, teamColors: teamColors),
                     if (!app.shiftActive)
                       Padding(

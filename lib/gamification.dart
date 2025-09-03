@@ -158,12 +158,14 @@ class GamificationSettings {
   int transitionEndMinutes;
   bool gamificationEnabled;
   bool encouragementFlashEnabled;
+  List<String>? customEncouragements;
 
   GamificationSettings({
     this.transitionStartMinutes = 15 * 60 + 30, // Default 3:30 PM
     this.transitionEndMinutes = 17 * 60,        // Default 5:00 PM
     this.gamificationEnabled = true,
     this.encouragementFlashEnabled = true,
+    this.customEncouragements,
   });
 
   Map<String, dynamic> toMap() => {
@@ -171,6 +173,7 @@ class GamificationSettings {
     'transitionEndMinutes': transitionEndMinutes,
     'gamificationEnabled': gamificationEnabled,
     'encouragementFlashEnabled': encouragementFlashEnabled,
+    'customEncouragements': customEncouragements,
   };
 
   static GamificationSettings fromMap(Map<String, dynamic> m) => GamificationSettings(
@@ -178,5 +181,6 @@ class GamificationSettings {
     transitionEndMinutes: m['transitionEndMinutes'] ?? 17 * 60,
     gamificationEnabled: m['gamificationEnabled'] ?? true,
     encouragementFlashEnabled: m['encouragementFlashEnabled'] ?? true,
+    customEncouragements: (m['customEncouragements'] as List?)?.cast<String>(),
   );
 }
