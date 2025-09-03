@@ -256,10 +256,27 @@ class AppState extends ChangeNotifier {
         final start = plan.transitionStartMinutes;
         final end = plan.transitionEndMinutes;
         if (m >= start && m < end) {
-          // During transition, show all dinner servers (including those who worked lunch), but DO NOT clear any dinner server counts
+          // During transition, ensure all dinner servers (including dinner-only) are added and tracked
           updateActiveRoster(plan.dinnerRoster, preserveExistingCounts: true);
         } else {
-          updateActiveRoster(plan.dinnerRoster);
+          // At the end of transition, only reset counts for servers who are in both lunch and dinner rosters
+          final lunchSet = plan.lunchRoster.toSet();
+          final dinnerSet = plan.dinnerRoster.toSet();
+          final both = lunchSet.intersection(dinnerSet);
+          final dinnerOnly = dinnerSet.difference(lunchSet);
+          // First, preserve counts for dinner-only servers and keep them in workingServerIds
+          updateActiveRoster(plan.dinnerRoster, preserveExistingCounts: true);
+          // Then, reset counts for servers in both lunch and dinner
+          for (final id in both) {
+            _currentCounts[id] = 0;
+            _currentStreaks[id] = 0;
+            _lunchPeakCount[id] = 0;
+            _dinnerPeakCount[id] = 0;
+            _lunchCloserCount[id] = 0;
+            _dinnerCloserCount[id] = 0;
+          }
+          // Dinner-only servers keep their counts
+          notifyListeners();
         }
       }
     } else if (_activeRosterView == 'dinner') {
@@ -384,19 +401,27 @@ class AppState extends ChangeNotifier {
 
   // Save a partial shift record for only a subset of servers (e.g., lunch at transition)
   void _savePartialShift(String type, Map<String, int> counts, Map<String, int> pizookieCounts) {
+    // If saving a Lunch shift, filter out dinner-only servers from counts
+    Map<String, int> filteredCounts = counts;
+    Map<String, int> filteredPizookieCounts = pizookieCounts;
+    if (type == 'Lunch' && _todayPlan != null) {
+      final lunchSet = _todayPlan!.lunchRoster.toSet();
+      filteredCounts = Map.fromEntries(counts.entries.where((e) => lunchSet.contains(e.key)));
+      filteredPizookieCounts = Map.fromEntries(pizookieCounts.entries.where((e) => lunchSet.contains(e.key)));
+    }
     final rec = ShiftRecord(
       id: _randId(),
       label: type,
       shiftType: type,
       start: _shiftStart ?? DateTime.now(),
-      counts: counts,
-      pizookieCounts: pizookieCounts,
+      counts: filteredCounts,
+      pizookieCounts: filteredPizookieCounts,
     );
     _history.add(rec);
     // Update totals and profiles for just these servers
     String? mvpId;
     int mvpScore = -1;
-    counts.forEach((id, n) {
+    filteredCounts.forEach((id, n) {
       _totals[id] = (_totals[id] ?? 0) + n;
       final prof = _profiles[id] ?? ServerProfile();
       if (n > prof.bestShiftRuns) prof.bestShiftRuns = n;
@@ -472,11 +497,22 @@ class AppState extends ChangeNotifier {
           _currentPizookieCounts.removeWhere((id, _) => lunchIds.contains(id) && !dinnerIds.contains(id));
           _beginShift('Dinner', plan.dinnerRoster, preserveCounts: true);
           _shiftActive = true;
-          _workingServerIds
-            ..clear()
-            ..addAll(plan.dinnerRoster);
+          // Always preserve existing counts first, then reset for both-shift servers
+          updateActiveRoster(plan.dinnerRoster, preserveExistingCounts: true);
+          final lunchSet = plan.lunchRoster.toSet();
+          final dinnerSet = plan.dinnerRoster.toSet();
+          final both = lunchSet.intersection(dinnerSet);
+          // Reset counts ONLY for servers in both lunch and dinner
+          for (final id in both) {
+            _currentCounts[id] = 0;
+            _currentStreaks[id] = 0;
+            _lunchPeakCount[id] = 0;
+            _dinnerPeakCount[id] = 0;
+            _lunchCloserCount[id] = 0;
+            _dinnerCloserCount[id] = 0;
+          }
+          // DO NOT reset or clear counts for dinner-only servers (preserve their transition clicks)
           _activeRosterView = 'dinner';
-          updateActiveRoster(plan.dinnerRoster);
           notifyListeners();
         }
       }
@@ -1155,6 +1191,14 @@ class AppState extends ChangeNotifier {
           _dinnerPeakCount[id] = 0;
           _lunchCloserCount[id] = 0;
           _dinnerCloserCount[id] = 0;
+        } else {
+          // If preserving, only initialize to 0 if not present
+          _currentCounts.putIfAbsent(id, () => 0);
+          _currentStreaks.putIfAbsent(id, () => 0);
+          _lunchPeakCount.putIfAbsent(id, () => 0);
+          _dinnerPeakCount.putIfAbsent(id, () => 0);
+          _lunchCloserCount.putIfAbsent(id, () => 0);
+          _dinnerCloserCount.putIfAbsent(id, () => 0);
         }
       }
     }
