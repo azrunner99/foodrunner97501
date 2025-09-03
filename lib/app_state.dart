@@ -361,9 +361,19 @@ class AppState extends ChangeNotifier {
       ..addAll(tapRaw.map((sid, m) => MapEntry(sid as String, Map<int, int>.from((m as Map).map((k, v) => MapEntry(int.parse(k as String), v as int))))));
 
     final sm = (await Storage.settingsBox.get('gamification') as Map?) ?? {};
+    // MIGRATION: Ensure encouragementFlashEnabled is always set in the map
+    if (!sm.containsKey('encouragementFlashEnabled')) {
+      sm['encouragementFlashEnabled'] = true;
+      await Storage.settingsBox.put('gamification', sm);
+    }
     settings = sm.isEmpty
         ? GamificationSettings()
         : GamificationSettings.fromMap(Map<String, dynamic>.from(sm));
+    // MIGRATION: Ensure encouragementFlashEnabled is always set
+    if (settings.encouragementFlashEnabled == null) {
+      settings.encouragementFlashEnabled = true;
+      await Storage.settingsBox.put('gamification', settings.toMap());
+    }
 
     _teamGoal = _computeGoalFromHistory();
 
