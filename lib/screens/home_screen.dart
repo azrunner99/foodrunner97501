@@ -309,6 +309,38 @@ class _HomeScreenState extends State<HomeScreen> {
                     // Hide "Who's working today" if roster is loaded (ids not empty)
                     // TeamPieChart and rest of UI remain
                     TeamPieChart(teamCounts: teamCounts, teamColors: teamColors),
+                    if (showToggle)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            ChoiceChip(
+                              label: const Text('Lunch'),
+                              selected: app.activeRosterView != 'dinner',
+                              onSelected: (selected) {
+                                if (selected && app.activeRosterView == 'dinner') {
+                                  setState(() {
+                                    app.toggleRosterView();
+                                  });
+                                }
+                              },
+                            ),
+                            const SizedBox(width: 12),
+                            ChoiceChip(
+                              label: const Text('Dinner'),
+                              selected: app.activeRosterView == 'dinner',
+                              onSelected: (selected) {
+                                if (selected && app.activeRosterView != 'dinner') {
+                                  setState(() {
+                                    app.toggleRosterView();
+                                  });
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
                     if (!app.shiftActive)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 8.0),
