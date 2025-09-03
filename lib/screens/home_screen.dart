@@ -324,37 +324,7 @@ class _HomeScreenState extends State<HomeScreen> {
               alignment: Alignment.bottomCenter,
               child: Stack(
                 children: [
-                  // Server name absolutely positioned at the bottom of the white area
-                  Consumer<AppState>(
-                    builder: (context, app, _) {
-                      final lastId = app.lastRunServerId;
-                      final server = lastId != null ? app.serverById(lastId) : null;
-                      if (server == null) return SizedBox.shrink();
-                      return Positioned(
-                        top: MediaQuery.of(context).size.height - 160, // adjust as needed for your layout
-                        left: 0,
-                        right: 0,
-                        child: Center(
-                          child: Text(
-                            server.name,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 22,
-                              color: Colors.black,
-                              letterSpacing: 1.1,
-                              shadows: [
-                                Shadow(
-                                  color: Colors.white,
-                                  blurRadius: 8,
-                                  offset: Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                  // Server name now inside the grey area, top right
                   // Grey area and avatar row
                   Positioned(
                     bottom: 0,
@@ -377,50 +347,74 @@ class _HomeScreenState extends State<HomeScreen> {
                               avatarImage = AssetImage(avatarPath);
                             }
                           }
-                          return Row(
+                          final serverName = lastId != null ? app.serverById(lastId)?.name ?? '' : '';
+                          return Stack(
                             children: [
-                              if (avatarImage != null && profile != null)
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 0, right: 12.0),
-                                  child: SizedBox(
-                                    width: 96,
-                                    height: 96,
-                                    child: Stack(
-                                      alignment: Alignment.center,
-                                      children: [
-                                        AspectRatio(
-                                          aspectRatio: 1,
-                                          child: ClipOval(
-                                            child: Image(
-                                              image: avatarImage,
-                                              fit: BoxFit.cover,
-                                            ),
-                                          ),
-                                        ),
-                                        Positioned(
-                                          bottom: 8,
-                                          right: 0,
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: Colors.black.withOpacity(0.8),
-                                              borderRadius: BorderRadius.circular(12),
-                                            ),
-                                            child: Text(
-                                              'Lvl${profile.level}',
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 12,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
+                              // Server name at top right inside grey area
+                              if (serverName.isNotEmpty)
+                                Positioned(
+                                  top: 0,
+                                  right: 0,
+                                  child: Container(
+                                    padding: const EdgeInsets.only(top: 4, right: 10),
+                                    child: Text(
+                                      serverName,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                        color: Colors.black87,
+                                      ),
+                                      textAlign: TextAlign.right,
                                     ),
                                   ),
                                 ),
-                              // ...other info can go here...
+                              // Avatar row
+                              Row(
+                                children: [
+                                  if (avatarImage != null && profile != null)
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: 0, right: 12.0),
+                                      child: SizedBox(
+                                        width: 96,
+                                        height: 96,
+                                        child: Stack(
+                                          alignment: Alignment.center,
+                                          children: [
+                                            AspectRatio(
+                                              aspectRatio: 1,
+                                              child: ClipOval(
+                                                child: Image(
+                                                  image: avatarImage,
+                                                  fit: BoxFit.cover,
+                                                ),
+                                              ),
+                                            ),
+                                            Positioned(
+                                              bottom: 8,
+                                              right: 0,
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.black.withOpacity(0.8),
+                                                  borderRadius: BorderRadius.circular(12),
+                                                ),
+                                                child: Text(
+                                                  'Lvl${profile.level}',
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  // ...other info can go here...
+                                ],
+                              ),
                             ],
                           );
                         },
