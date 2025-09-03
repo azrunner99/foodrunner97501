@@ -193,7 +193,7 @@ class AppState extends ChangeNotifier {
 
   final List<Server> _servers = [];
   final Map<String, int> _totals = {};
-  final Map<String, ServerProfile> _profiles = {};
+  Map<String, ServerProfile> _profiles = {};
   WeeklyHours _hours = WeeklyHours.defaults();
 
   GamificationSettings settings = GamificationSettings();
@@ -1205,6 +1205,7 @@ class AppState extends ChangeNotifier {
   }
 
   void updateAvatar(String serverId, String avatarPath) {
+  print('AppState.updateAvatar called for $serverId with $avatarPath');
     final profile = _profiles[serverId];
     if (profile != null) {
       profile.avatarPath = avatarPath;
@@ -1214,6 +1215,8 @@ class AppState extends ChangeNotifier {
         'timestamp': now.toIso8601String(),
       };
       profile.avatarHistory = [...profile.avatarHistory, entry];
+      // Force Provider to notify listeners by assigning a new map
+      _profiles = Map<String, ServerProfile>.from(_profiles);
       notifyListeners();
       _persistProfiles();
     }
