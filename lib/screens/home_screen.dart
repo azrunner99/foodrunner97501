@@ -694,8 +694,6 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
     final app = widget.app;
     // If this is for an achievement, only show if gamification is enabled
     if (forAchievement && !app.settings.gamificationEnabled) return;
-    // Only show encouragement flash if enabled in settings
-    if (!app.settings.encouragementFlashEnabled) return;
     setState(() {
       _flashText = text;
       _flashSubText = subText;
@@ -1275,7 +1273,7 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                   },
                 ),
               ),
-              if (_flashText != null && widget.app.settings.encouragementFlashEnabled)
+              if (_flashText != null)
                 Positioned(
                   top: 0,
                   left: 0,
