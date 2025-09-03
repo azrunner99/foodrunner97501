@@ -3,6 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:io';
 
 import '../app_state.dart';
 import '../models.dart';
@@ -324,10 +325,35 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Container(
                 width: double.infinity,
                 color: Colors.grey[200],
-                // Keep the height tall even when blank
                 padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 0),
-                child: SizedBox(
-                  height: 48,
+                child: Consumer<AppState>(
+                  builder: (context, app, _) {
+                    final lastId = app.lastRunServerId;
+                    final profile = lastId != null ? app.profiles[lastId] : null;
+                    final avatarPath = profile?.avatarPath;
+                    ImageProvider? avatarImage;
+                    if (avatarPath != null && avatarPath.isNotEmpty) {
+                      if (avatarPath.startsWith('/') || avatarPath.contains(':')) {
+                        avatarImage = FileImage(File(avatarPath));
+                      } else {
+                        avatarImage = AssetImage(avatarPath);
+                      }
+                    }
+                    return Row(
+                      children: [
+                        if (avatarImage != null)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 16.0, right: 12.0),
+                            child: CircleAvatar(
+                              radius: 24,
+                              backgroundImage: avatarImage,
+                              backgroundColor: Colors.grey[400],
+                            ),
+                          ),
+                        // ...other info can go here...
+                      ],
+                    );
+                  },
                 ),
               ),
             ),
@@ -662,7 +688,7 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.only(top: 12, bottom: 8, left: 16, right: 16),
+          padding: const EdgeInsets.only(top: 4, bottom: 4, left: 8, right: 8),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -670,15 +696,17 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
               const Text('🍪', style: TextStyle(fontSize: 28, shadows: [Shadow(blurRadius: 2, color: Colors.black26, offset: Offset(1,1))])),
               Expanded(
                 child: Text(
-                  'Long press when running a Pizookie!',
+                  'Long Press When Running a Pizookie!',
                   style: TextStyle(
                     color: Colors.brown.shade700,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 20,
-                    letterSpacing: 1.1,
-                    shadows: const [Shadow(blurRadius: 4, color: Colors.black12, offset: Offset(1,1))],
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                    letterSpacing: 1.0,
+                    shadows: const [Shadow(blurRadius: 2, color: Colors.black12, offset: Offset(1,1))],
                   ),
                   textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               const Text('🍪', style: TextStyle(fontSize: 28, shadows: [Shadow(blurRadius: 2, color: Colors.black26, offset: Offset(1,1))])),
@@ -788,6 +816,9 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                                 );
                                 app.clearRecentBadgeBubble();
                               }
+
+                              // Set lastRunServerId so avatar appears in bottom grey area
+                              app.lastRunServerId = id;
                             }
                           },
                           onLongPress: () {
