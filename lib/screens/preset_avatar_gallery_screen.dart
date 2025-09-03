@@ -23,64 +23,77 @@ class PresetAvatarGalleryScreen extends StatelessWidget {
           final path = presetAvatars[i];
           return GestureDetector(
             onTap: () async {
-              final result = await showDialog<bool>(
+              final result = await showDialog<String>(
                 context: context,
-                builder: (context) => Dialog(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.asset(path, width: 180, height: 180, fit: BoxFit.contain),
-                        ),
-                        const SizedBox(height: 24),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            ElevatedButton(
-                              onPressed: () => Navigator.pop(context, true),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green,
-                                foregroundColor: Colors.white,
-                                textStyle: const TextStyle(fontWeight: FontWeight.bold),
-                                minimumSize: const Size(80, 40),
-                              ),
-                              child: const Text('Use'),
+                builder: (context) {
+                  return Dialog(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: LayoutBuilder(
+                              builder: (context, constraints) {
+                                final double maxWidth = MediaQuery.of(context).size.width * 0.8;
+                                return Image.asset(
+                                  path,
+                                  width: maxWidth,
+                                  height: maxWidth,
+                                  fit: BoxFit.contain,
+                                );
+                              },
                             ),
-                            ElevatedButton(
-                              onPressed: () => Navigator.pop(context, false),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.grey[300],
-                                foregroundColor: Colors.black,
-                                textStyle: const TextStyle(fontWeight: FontWeight.bold),
-                                minimumSize: const Size(80, 40),
+                          ),
+                          const SizedBox(height: 24),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              ElevatedButton(
+                                onPressed: () => Navigator.pop(context, path),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  foregroundColor: Colors.white,
+                                  textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                                  minimumSize: const Size(80, 40),
+                                ),
+                                child: const Text('Use'),
                               ),
-                              child: const Text('Cancel'),
-                            ),
-                          ],
-                        ),
-                      ],
+                              ElevatedButton(
+                                onPressed: () => Navigator.pop(context, null),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.grey[300],
+                                  foregroundColor: Colors.black,
+                                  textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                                  minimumSize: const Size(80, 40),
+                                ),
+                                child: const Text('Cancel'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ),
+                  );
+                },
               );
-              if (result == true) {
-                onAvatarSelected(path);
+              if (result != null) {
+                onAvatarSelected(result);
               }
             },
             child: Card(
               elevation: 2,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               child: Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Image.asset(path, fit: BoxFit.contain),
               ),
             ),
           );
-        },
-      ),
-    );
+        }
+      ), // end GridView.builder
+    ); // end Scaffold
   }
-}
+} // end class

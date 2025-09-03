@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 import '../app_state.dart';
+import 'preset_avatar_gallery_screen.dart';
 // import removed: achievementsCatalog no longer used
 
 class ProfilesScreen extends StatelessWidget {
@@ -201,9 +202,28 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
     );
     if (result == 'replace') {
       await _pickAvatarPhoto();
+    } else if (result == 'presets') {
+      // Navigate to preset avatar gallery screen
+      final selected = await Navigator.push<String>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PresetAvatarGalleryScreen(
+            onAvatarSelected: (path) async {
+              final app = Provider.of<AppState>(context, listen: false);
+              app.updateAvatar(widget.serverId, path);
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setString('avatar_${widget.serverId}', path);
+              Navigator.pop(context, path);
+            },
+          ),
+        ),
+      );
+      if (selected != null && selected.isNotEmpty) {
+        setState(() {}); // Force rebuild to refresh avatar
+      }
     } else if (result == 'remove') {
       final app = Provider.of<AppState>(context, listen: false);
-  app.updateAvatar(widget.serverId, '');
+      app.updateAvatar(widget.serverId, '');
       setState(() {
         _avatarPath = null;
       });
