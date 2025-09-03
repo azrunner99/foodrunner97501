@@ -3,6 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:outlined_text/outlined_text.dart';
 import 'dart:io';
 
 import '../app_state.dart';
@@ -357,14 +358,55 @@ class _HomeScreenState extends State<HomeScreen> {
                                   right: 0,
                                   child: Container(
                                     padding: const EdgeInsets.only(top: 4, right: 10),
-                                    child: Text(
-                                      serverName,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                        color: Colors.black87,
-                                      ),
-                                      textAlign: TextAlign.right,
+                                    constraints: const BoxConstraints(
+                                      maxWidth: 200,
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        OutlinedText(
+                                          text: Text(
+                                            serverName,
+                                            style: const TextStyle(
+                                              fontFamily: 'Montserrat',
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 28,
+                                              color: Colors.black,
+                                              shadows: [
+                                                Shadow(
+                                                  blurRadius: 1,
+                                                  color: Colors.black12,
+                                                  offset: Offset(1, 1),
+                                                ),
+                                              ],
+                                            ),
+                                            textAlign: TextAlign.right,
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 1,
+                                          ),
+                                          strokes: [
+                                            OutlinedTextStroke(color: Colors.white, width: 1),
+                                          ],
+                                        ),
+                                        // Full-width line under the name
+                                        Container(
+                                          margin: const EdgeInsets.only(top: 4),
+                                          height: 3,
+                                          width: double.infinity,
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey,
+                                            borderRadius: BorderRadius.circular(2),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black26,
+                                                blurRadius: 2,
+                                                offset: Offset(0, 1),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ),
