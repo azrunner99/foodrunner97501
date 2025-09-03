@@ -412,7 +412,105 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ),
                                       ),
                                     ),
-                                  // ...other info can go here...
+                                  // Stats column next to avatar
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 0, right: 0, top: 8, bottom: 8),
+                                    child: Builder(
+                                      builder: (context) {
+                                        final runCount = lastId != null ? app.currentCounts[lastId] ?? 0 : 0;
+                                        final pizookieCount = lastId != null ? app.currentPizookieCounts[lastId] ?? 0 : 0;
+                                        final workingIds = app.workingServerIds.toList();
+                                        // Rank for runs
+                                        final runRanks = List<String>.from(workingIds);
+                                        runRanks.sort((a, b) => (app.currentCounts[b] ?? 0).compareTo(app.currentCounts[a] ?? 0));
+                                        final runRank = lastId != null ? (runRanks.indexOf(lastId) + 1) : 0;
+                                        // Rank for pizookie runs
+                                        final pizookieRanks = List<String>.from(workingIds);
+                                        pizookieRanks.sort((a, b) => (app.currentPizookieCounts[b] ?? 0).compareTo(app.currentPizookieCounts[a] ?? 0));
+                                        final pizookieRank = lastId != null ? (pizookieRanks.indexOf(lastId) + 1) : 0;
+                                        final totalServers = workingIds.length;
+                                        return Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Text(
+                                              'Runs: $runCount',
+                                              style: const TextStyle(
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.w500,
+                                                color: Colors.black87,
+                                              ),
+                                            ),
+                                            Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(
+                                                  'Rank: $runRank/$totalServers',
+                                                  style: const TextStyle(
+                                                    fontSize: 15,
+                                                    fontWeight: FontWeight.w500,
+                                                    color: Colors.black87,
+                                                  ),
+                                                ),
+                                                if (runRank == 1)
+                                                  Padding(
+                                                    padding: const EdgeInsets.only(left: 4),
+                                                    child: Icon(Icons.emoji_events, color: Color(0xFFFFD700), size: 20), // Gold
+                                                  )
+                                                else if (runRank == 2)
+                                                  Padding(
+                                                    padding: const EdgeInsets.only(left: 4),
+                                                    child: Icon(Icons.emoji_events, color: Color(0xFFC0C0C0), size: 20), // Silver
+                                                  )
+                                                else if (runRank == 3)
+                                                  Padding(
+                                                    padding: const EdgeInsets.only(left: 4),
+                                                    child: Icon(Icons.emoji_events, color: Color(0xFFCD7F32), size: 20), // Bronze
+                                                  ),
+                                              ],
+                                            ),
+                                            SizedBox(height: 8),
+                                            Text(
+                                              'Pizookies: $pizookieCount',
+                                              style: const TextStyle(
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.w500,
+                                                color: Colors.black87,
+                                              ),
+                                            ),
+                                            Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(
+                                                  'Rank: $pizookieRank/$totalServers',
+                                                  style: const TextStyle(
+                                                    fontSize: 15,
+                                                    fontWeight: FontWeight.w500,
+                                                    color: Colors.black87,
+                                                  ),
+                                                ),
+                                                if (pizookieRank == 1)
+                                                  Padding(
+                                                    padding: const EdgeInsets.only(left: 4),
+                                                    child: Icon(Icons.emoji_events, color: Color(0xFFFFD700), size: 20), // Gold
+                                                  )
+                                                else if (pizookieRank == 2)
+                                                  Padding(
+                                                    padding: const EdgeInsets.only(left: 4),
+                                                    child: Icon(Icons.emoji_events, color: Color(0xFFC0C0C0), size: 20), // Silver
+                                                  )
+                                                else if (pizookieRank == 3)
+                                                  Padding(
+                                                    padding: const EdgeInsets.only(left: 4),
+                                                    child: Icon(Icons.emoji_events, color: Color(0xFFCD7F32), size: 20), // Bronze
+                                                  ),
+                                              ],
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                    ),
+                                  ),
                                 ],
                               ),
                             ],
