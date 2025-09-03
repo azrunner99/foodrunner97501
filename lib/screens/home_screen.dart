@@ -391,7 +391,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ),
                                         // Full-width line under the name
                                         Container(
-                                          margin: const EdgeInsets.only(top: 4),
+                                          margin: const EdgeInsets.only(top: 4, bottom: 2),
                                           height: 3,
                                           width: double.infinity,
                                           decoration: BoxDecoration(
@@ -405,6 +405,44 @@ class _HomeScreenState extends State<HomeScreen> {
                                               ),
                                             ],
                                           ),
+                                        ),
+                                        // Shift XP Earned
+                                        Builder(
+                                          builder: (context) {
+                                            if (lastId == null) return SizedBox.shrink();
+                                            final appState = Provider.of<AppState>(context, listen: false);
+                                            final runCount = appState.currentCounts[lastId] ?? 0;
+                                            final pizookieCount = appState.currentPizookieCounts[lastId] ?? 0;
+                                            final shiftXp = (runCount * 10) + (pizookieCount * 15);
+                                            return Text(
+                                              'Shift XP Earned: $shiftXp',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.grey[800],
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                              textAlign: TextAlign.right,
+                                              overflow: TextOverflow.ellipsis,
+                                            );
+                                          },
+                                        ),
+                                        // Current XP / Next at XP
+                                        Builder(
+                                          builder: (context) {
+                                            if (profile == null) return SizedBox.shrink();
+                                            final int xp = profile.points;
+                                            final int next = profile.nextLevelAt;
+                                            return Text(
+                                              '$xp / Next at $next',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.grey[700],
+                                                fontWeight: FontWeight.w400,
+                                              ),
+                                              textAlign: TextAlign.right,
+                                              overflow: TextOverflow.ellipsis,
+                                            );
+                                          },
                                         ),
                                       ],
                                     ),
