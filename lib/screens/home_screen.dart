@@ -996,11 +996,7 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                               '+$xpEarned XP\nPizookie!',
                               'Sweet!  Ran a Pizookie',
                             );
-                            final msg = 'Pizookie run!';
-                            ScaffoldMessenger.of(ctx).clearSnackBars();
-                            ScaffoldMessenger.of(ctx).showSnackBar(
-                              SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),
-                            );
+                            // Removed Pizookie run SnackBar
                             Future.delayed(const Duration(milliseconds: 100), () {
                               this._isLongPress = false;
                             });
@@ -1226,11 +1222,7 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                           '+$xpEarned XP\nPizookie!',
                           'Sweet!  Ran a Pizookie',
                         );
-                        final msg = 'Pizookie run!';
-                        ScaffoldMessenger.of(ctx).clearSnackBars();
-                        ScaffoldMessenger.of(ctx).showSnackBar(
-                          SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),
-                        );
+                        // Removed Pizookie run SnackBar
                       },
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
