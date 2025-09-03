@@ -319,35 +319,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               },
             ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 16,
-              child: Center(
-                child: Card(
-                  color: Colors.black.withOpacity(0.7),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  elevation: 8,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Last Run By:',
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          'Server Name Here', // TODO: Replace with actual server info
-                          style: TextStyle(color: Colors.white),
-                        ),
-                        // You can add more info here
-                      ],
-                    ),
-                  ),
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Container(
+                width: double.infinity,
+                color: Colors.grey[200],
+                // Keep the height tall even when blank
+                padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 0),
+                child: SizedBox(
+                  height: 48,
                 ),
               ),
             ),
