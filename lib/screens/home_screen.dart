@@ -802,11 +802,13 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                                 '+$xpEarned XP',
                                 'Next level: $pointsToNext XP',
                               );
-                              final msg = encouragements[Random().nextInt(encouragements.length)];
-                              ScaffoldMessenger.of(ctx).clearSnackBars();
-                              ScaffoldMessenger.of(ctx).showSnackBar(
-                                SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),
-                              );
+                              if (app.settings.encouragementFlashEnabled) {
+                                final msg = encouragements[Random().nextInt(encouragements.length)];
+                                ScaffoldMessenger.of(ctx).clearSnackBars();
+                                ScaffoldMessenger.of(ctx).showSnackBar(
+                                  SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),
+                                );
+                              }
 
                               final bubble = app.recentBadgeBubble;
                               if (bubble != null) {
@@ -1198,7 +1200,7 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                   },
                 ),
               ),
-              if (_flashText != null)
+              if (_flashText != null && widget.app.settings.encouragementFlashEnabled)
                 Positioned(
                   top: 0,
                   left: 0,
