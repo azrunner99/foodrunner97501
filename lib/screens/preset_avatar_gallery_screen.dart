@@ -1,26 +1,77 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../app_state.dart';
 
 class PresetAvatarGalleryScreen extends StatelessWidget {
   final void Function(String path) onAvatarSelected;
-  const PresetAvatarGalleryScreen({super.key, required this.onAvatarSelected});
+  final String currentServerId;
+  const PresetAvatarGalleryScreen({super.key, required this.onAvatarSelected, required this.currentServerId});
 
   @override
   Widget build(BuildContext context) {
-    // Example preset avatars. Replace with your actual asset paths.
-  // List all avatar image filenames (update if you add/remove files)
-  final List<String> presetAvatars = List.generate(131, (i) => 'assets/avatars/image${(i+1).toString().padLeft(3, '0')}.png');
+    final app = context.watch<AppState>();
+    
+    // Get all preset avatars
+    final List<String> allPresetAvatars = List.generate(131, (i) => 'assets/avatars/image${(i+1).toString().padLeft(3, '0')}.png');
+    
+    // Get currently used preset avatars (excluding the current server's avatar)
+    final Set<String> usedAvatars = {};
+    for (var profile in app.profiles.values) {
+      if (profile.avatarPath != null && 
+          profile.avatarPath!.startsWith('assets/avatars/') &&
+          app.profiles.keys.firstWhere((id) => app.profiles[id] == profile, orElse: () => '') != currentServerId) {
+        usedAvatars.add(profile.avatarPath!);
+      }
+    }
+    
+    // Filter out used avatars
+    final List<String> availableAvatars = allPresetAvatars.where((avatar) => !usedAvatars.contains(avatar)).toList();
+    
     return Scaffold(
-      appBar: AppBar(title: const Text('Select Preset Avatar')),
-      body: GridView.builder(
-        padding: const EdgeInsets.all(16),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
+      appBar: AppBar(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Select Preset Avatar'),
+            if (availableAvatars.length < allPresetAvatars.length)
+              Text(
+                '${availableAvatars.length} of ${allPresetAvatars.length} available',
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.normal),
+              ),
+          ],
         ),
-        itemCount: presetAvatars.length,
-        itemBuilder: (context, i) {
-          final path = presetAvatars[i];
+      ),
+      body: availableAvatars.isEmpty
+        ? const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.face, size: 64, color: Colors.grey),
+                SizedBox(height: 16),
+                Text(
+                  'All preset avatars are currently in use!',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'You can still take a custom photo instead.',
+                  style: TextStyle(color: Colors.grey),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          )
+        : GridView.builder(
+            padding: const EdgeInsets.all(16),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+            ),
+            itemCount: availableAvatars.length,
+            itemBuilder: (context, i) {
+              final path = availableAvatars[i];
           return GestureDetector(
             onTap: () async {
               final result = await showDialog<String>(

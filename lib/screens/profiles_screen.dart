@@ -208,6 +208,7 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
         context,
         MaterialPageRoute(
           builder: (_) => PresetAvatarGalleryScreen(
+            currentServerId: widget.serverId,
             onAvatarSelected: (path) async {
               final app = Provider.of<AppState>(context, listen: false);
               app.updateAvatar(widget.serverId, path);
