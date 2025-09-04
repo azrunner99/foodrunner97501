@@ -482,12 +482,31 @@ class AppState extends ChangeNotifier {
         if (m >= end && _activeRosterView != 'dinner' && _shiftType == 'Lunch') {
           final lunchIds = plan.lunchRoster;
           final dinnerIds = plan.dinnerRoster;
+          
+          // FIRST: Preserve dinner-only server counts BEFORE any clearing
+          final lunchSet = lunchIds.toSet();
+          final dinnerSet = dinnerIds.toSet();
+          final dinnerOnly = dinnerSet.difference(lunchSet);
+          final preservedCounts = <String, int>{};
+          final preservedStreaks = <String, int>{};
+          final preservedPizookies = <String, int>{};
+          
+          print('[DEBUG] Preserving dinner-only servers: $dinnerOnly');
+          for (final id in dinnerOnly) {
+            preservedCounts[id] = _currentCounts[id] ?? 0;
+            preservedStreaks[id] = _currentStreaks[id] ?? 0;
+            preservedPizookies[id] = _currentPizookieCounts[id] ?? 0;
+            print('[DEBUG] Backing up server $id: ${preservedCounts[id]} counts');
+          }
+          
+          // SECOND: Save lunch shift data
           final lunchCounts = Map<String, int>.fromEntries(
             _currentCounts.entries.where((e) => lunchIds.contains(e.key)));
           final lunchPizookieCounts = Map<String, int>.fromEntries(
             _currentPizookieCounts.entries.where((e) => lunchIds.contains(e.key)));
           _savePartialShift('Lunch', lunchCounts, lunchPizookieCounts);
-          // Remove lunch servers from per-shift maps, preserve dinner
+          
+          // THIRD: Remove lunch-only servers from all maps
           _currentCounts.removeWhere((id, _) => lunchIds.contains(id) && !dinnerIds.contains(id));
           _currentStreaks.removeWhere((id, _) => lunchIds.contains(id) && !dinnerIds.contains(id));
           _lunchPeakCount.removeWhere((id, _) => lunchIds.contains(id) && !dinnerIds.contains(id));
@@ -495,14 +514,25 @@ class AppState extends ChangeNotifier {
           _lunchCloserCount.removeWhere((id, _) => lunchIds.contains(id) && !dinnerIds.contains(id));
           _dinnerCloserCount.removeWhere((id, _) => lunchIds.contains(id) && !dinnerIds.contains(id));
           _currentPizookieCounts.removeWhere((id, _) => lunchIds.contains(id) && !dinnerIds.contains(id));
+          
+          // FOURTH: Start dinner shift
           _beginShift('Dinner', plan.dinnerRoster, preserveCounts: true);
           _shiftActive = true;
+          
+          // FIFTH: Restore dinner-only server counts
+          print('[DEBUG] Restoring dinner-only server counts...');
+          for (final id in dinnerOnly) {
+            _currentCounts[id] = preservedCounts[id]!;
+            _currentStreaks[id] = preservedStreaks[id]!;
+            _currentPizookieCounts[id] = preservedPizookies[id]!;
+            print('[DEBUG] Restored server $id: ${_currentCounts[id]} counts');
+          }
+          
           // Always preserve existing counts first, then reset for both-shift servers
           updateActiveRoster(plan.dinnerRoster, preserveExistingCounts: true);
-          final lunchSet = plan.lunchRoster.toSet();
-          final dinnerSet = plan.dinnerRoster.toSet();
           final both = lunchSet.intersection(dinnerSet);
           // Reset counts ONLY for servers in both lunch and dinner
+          print('[DEBUG] Resetting both-shift servers: $both');
           for (final id in both) {
             _currentCounts[id] = 0;
             _currentStreaks[id] = 0;
@@ -662,9 +692,15 @@ class AppState extends ChangeNotifier {
       }
       return;
     }
-    // Outside of open hours
+    // Outside of open hours - but handle transition end specially
     if (_shiftActive) {
-      _finalizeAndSaveShift(_shiftType);
+      // If we're at transition end, let the ticker handle it with preservation logic
+      final plan = _todayPlan;
+      final isTransitionEnd = plan != null && m >= plan.transitionEndMinutes && _shiftType == 'Lunch';
+      
+      if (!isTransitionEnd) {
+        _finalizeAndSaveShift(_shiftType);
+      }
     }
     _shiftActive = false;
     _shiftType = intended;
