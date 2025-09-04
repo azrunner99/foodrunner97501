@@ -551,7 +551,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: ShiftStartNotice(app: app),
                       ),
                     Expanded(
-                      child: _ActiveGrid(ids: ids, shiftActive: app.shiftActive, app: app),
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 120.0), // Add bottom padding to prevent overlap with "last run" area
+                        child: _ActiveGrid(ids: ids, shiftActive: app.shiftActive, app: app),
+                      ),
                     ),
                   ],
                 );
