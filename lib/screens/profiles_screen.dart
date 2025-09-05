@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 import '../app_state.dart';
 import 'preset_avatar_gallery_screen.dart';
+import 'profile_banner_screen.dart';
 // import removed: achievementsCatalog no longer used
 
 class ProfilesScreen extends StatelessWidget {
@@ -281,6 +282,40 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
+          Center(
+            child: Column(
+              children: [
+                // Add Profile Banner text
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ProfileBannerScreen(serverId: widget.serverId),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade200,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: const Text(
+                      'Add Profile Banner',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.black87,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+            ),
+          ),
           Center(
             child: Stack(
               alignment: Alignment.center,
