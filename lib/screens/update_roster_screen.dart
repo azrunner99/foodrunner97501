@@ -356,10 +356,10 @@ class _RosterBodyState extends State<_RosterBody> {
                 Container(
                   width: double.infinity,
                   constraints: const BoxConstraints(
-                    minHeight: 180,
-                    maxHeight: 320,
+                    minHeight: 120,
+                    maxHeight: 200,
                   ),
-                  margin: const EdgeInsets.only(bottom: 20),
+                  margin: const EdgeInsets.only(bottom: 12),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
@@ -383,7 +383,7 @@ class _RosterBodyState extends State<_RosterBody> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Container(
-                        padding: const EdgeInsets.fromLTRB(20, 16, 16, 0),
+                        padding: const EdgeInsets.fromLTRB(20, 12, 16, 0),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -478,7 +478,7 @@ class _RosterBodyState extends State<_RosterBody> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 8),
                       // Assigned servers list
                       Expanded(
                         child: Container(
@@ -489,23 +489,23 @@ class _RosterBodyState extends State<_RosterBody> {
                               final s = assignedServers[index];
                               final teamColor = teamColors[s.id];
                               return Container(
-                                margin: const EdgeInsets.only(bottom: 10),
+                                margin: const EdgeInsets.only(bottom: 1),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
-                                  borderRadius: BorderRadius.circular(16),
+                                  borderRadius: BorderRadius.circular(6),
                                   border: teamColor != null 
                                     ? Border.all(color: _getTeamColorValue(teamColor), width: 2)
                                     : Border.all(color: Colors.grey[200]!, width: 1),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.05),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
+                                      color: Colors.black.withOpacity(0.03),
+                                      blurRadius: 2,
+                                      offset: const Offset(0, 0.5),
                                     ),
                                   ],
                                 ),
                                 child: InkWell(
-                                  borderRadius: BorderRadius.circular(16),
+                                  borderRadius: BorderRadius.circular(6),
                                   onTap: () {
                                     setState(() {
                                       roster.remove(s.id);
@@ -515,70 +515,57 @@ class _RosterBodyState extends State<_RosterBody> {
                                     });
                                   },
                                   child: Padding(
-                                    padding: const EdgeInsets.all(16),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
                                     child: Row(
                                       children: [
-                                        Container(
-                                          width: 50,
-                                          height: 50,
-                                          decoration: BoxDecoration(
-                                            color: Colors.grey[100],
-                                            borderRadius: BorderRadius.circular(12),
-                                            border: teamColor != null 
-                                              ? Border.all(color: _getTeamColorValue(teamColor), width: 2)
-                                              : null,
-                                          ),
-                                          child: Icon(
-                                            Icons.person,
-                                            color: Colors.grey[600],
-                                            size: 28,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 16),
                                         Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                          child: Row(
                                             children: [
                                               Text(
                                                 s.name,
                                                 style: const TextStyle(
-                                                  fontSize: 16,
+                                                  fontSize: 15,
                                                   fontWeight: FontWeight.w600,
                                                   color: Colors.black87,
                                                 ),
                                               ),
-                                              if (teamColor != null)
+                                              if (serverStationSection[s.id] != null) ...[
+                                                const SizedBox(width: 6),
                                                 Container(
-                                                  margin: const EdgeInsets.only(top: 6),
-                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                                                   decoration: BoxDecoration(
-                                                    color: _getTeamColorValue(teamColor).withOpacity(0.1),
-                                                    borderRadius: BorderRadius.circular(8),
-                                                    border: Border.all(color: _getTeamColorValue(teamColor), width: 1),
+                                                    color: Colors.grey[100],
+                                                    borderRadius: BorderRadius.circular(3),
                                                   ),
                                                   child: Text(
-                                                    teamColor,
+                                                    serverStationSection[s.id]!,
                                                     style: TextStyle(
-                                                      fontSize: 12,
+                                                      fontSize: 11,
+                                                      color: Colors.grey[700],
                                                       fontWeight: FontWeight.w500,
-                                                      color: _getTeamColorValue(teamColor),
                                                     ),
                                                   ),
                                                 ),
+                                              ],
                                             ],
                                           ),
                                         ),
-                                        Container(
-                                          padding: const EdgeInsets.all(8),
-                                          decoration: BoxDecoration(
-                                            color: Colors.red[50],
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: Icon(
-                                            Icons.remove_circle_outline,
+                                        IconButton(
+                                          onPressed: () {
+                                            setState(() {
+                                              roster.remove(s.id);
+                                              teamColors.remove(s.id);
+                                              serverStationType.remove(s.id);
+                                              serverStationSection.remove(s.id);
+                                            });
+                                          },
+                                          icon: Icon(
+                                            Icons.close,
                                             color: Colors.red[400],
                                             size: 20,
                                           ),
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(),
                                         ),
                                       ],
                                     ),
@@ -669,22 +656,64 @@ class _RosterBodyState extends State<_RosterBody> {
                             itemBuilder: (context, index) {
                               final s = unassignedServers[index];
                               return Container(
-                                margin: const EdgeInsets.only(bottom: 8),
+                                margin: const EdgeInsets.only(bottom: 12),
+                                height: 80,
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: Colors.grey[200]!, width: 1),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: Colors.grey[300]!, width: 2),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.05),
+                                      color: Colors.black.withOpacity(0.1),
                                       blurRadius: 8,
-                                      offset: const Offset(0, 2),
+                                      offset: const Offset(0, 4),
                                     ),
                                   ],
                                 ),
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(16),
-                                  onTap: () async {
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(18),
+                                  child: Stack(
+                                    children: [
+                                      // Banner background
+                                      Container(
+                                        width: double.infinity,
+                                        height: double.infinity,
+                                        child: Image.asset(
+                                          widget.app.profiles[s.id]?.bannerPath ?? 'assets/banners/image001.webp',
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) {
+                                            return Container(
+                                              decoration: BoxDecoration(
+                                                gradient: LinearGradient(
+                                                  begin: Alignment.topLeft,
+                                                  end: Alignment.bottomRight,
+                                                  colors: [
+                                                    Colors.green[400]!,
+                                                    Colors.blue[400]!,
+                                                  ],
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                      // Gradient overlay for better text readability
+                                      Container(
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            begin: Alignment.centerLeft,
+                                            end: Alignment.centerRight,
+                                            colors: [
+                                              Colors.black.withOpacity(0.5),
+                                              Colors.transparent,
+                                              Colors.black.withOpacity(0.3),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                      // Content overlay
+                                      InkWell(
+                                        borderRadius: BorderRadius.circular(18),
+                                        onTap: () async {
                                     final selectedTypeName = await _showStationTypeDialog(context);
                                     if (selectedTypeName != null) {
                                       final selectedType = stationTypes.firstWhere((t) => t.name == selectedTypeName);
@@ -823,62 +852,106 @@ class _RosterBodyState extends State<_RosterBody> {
                                       }
                                     }
                                   },
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(16),
-                                    child: Row(
-                                      children: [
-                                        Container(
-                                          width: 50,
-                                          height: 50,
-                                          decoration: BoxDecoration(
-                                            color: Colors.grey[100],
-                                            borderRadius: BorderRadius.circular(12),
-                                          ),
-                                          child: Icon(
-                                            Icons.person_add,
-                                            color: Colors.blue[600],
-                                            size: 24,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 16),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                          child: Row(
                                             children: [
-                                              Text(
-                                                s.name,
-                                                style: const TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: Colors.black87,
+                                              // Server name on the left
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  mainAxisAlignment: MainAxisAlignment.center,
+                                                  children: [
+                                                    Text(
+                                                      s.name,
+                                                      style: const TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 18,
+                                                        fontWeight: FontWeight.bold,
+                                                        shadows: [
+                                                          Shadow(
+                                                            color: Colors.black54,
+                                                            blurRadius: 4,
+                                                            offset: Offset(1, 1),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 2),
+                                                    Text(
+                                                      'Available for assignment',
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        color: Colors.white.withOpacity(0.9),
+                                                        shadows: const [
+                                                          Shadow(
+                                                            color: Colors.black54,
+                                                            blurRadius: 2,
+                                                            offset: Offset(0.5, 0.5),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ),
                                               ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                'Available for assignment',
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  color: Colors.grey[600],
-                                                  fontStyle: FontStyle.italic,
+                                              // Avatar on the right
+                                              Container(
+                                                width: 56,
+                                                height: 56,
+                                                decoration: BoxDecoration(
+                                                  shape: BoxShape.circle,
+                                                  border: Border.all(
+                                                    color: Colors.white,
+                                                    width: 3,
+                                                  ),
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: Colors.black.withOpacity(0.3),
+                                                      blurRadius: 8,
+                                                      offset: const Offset(0, 2),
+                                                    ),
+                                                  ],
+                                                ),
+                                                child: ClipOval(
+                                                  child: Image.asset(
+                                                    widget.app.profiles[s.id]?.avatarPath ?? 'assets/avatars/image001.png',
+                                                    fit: BoxFit.cover,
+                                                    errorBuilder: (context, error, stackTrace) {
+                                                      return Container(
+                                                        color: Colors.grey[300],
+                                                        child: Icon(
+                                                          Icons.person_add,
+                                                          color: Colors.blue[600],
+                                                          size: 30,
+                                                        ),
+                                                      );
+                                                    },
+                                                  ),
                                                 ),
                                               ),
                                             ],
                                           ),
                                         ),
-                                        Container(
-                                          padding: const EdgeInsets.all(8),
+                                      ),
+                                      // Add indicator (top right corner)
+                                      Positioned(
+                                        top: 8,
+                                        right: 8,
+                                        child: Container(
+                                          padding: const EdgeInsets.all(4),
                                           decoration: BoxDecoration(
-                                            color: Colors.blue[50],
-                                            borderRadius: BorderRadius.circular(8),
+                                            color: Colors.green.withOpacity(0.9),
+                                            shape: BoxShape.circle,
                                           ),
-                                          child: Icon(
-                                            Icons.add_circle_outline,
-                                            color: Colors.blue[600],
-                                            size: 20,
+                                          child: const Icon(
+                                            Icons.add,
+                                            color: Colors.white,
+                                            size: 16,
                                           ),
                                         ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               );
