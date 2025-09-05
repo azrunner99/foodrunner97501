@@ -27,6 +27,7 @@ flutter:
   - assets/splash.png
   - assets/foodrunner.png
   - assets/avatars/
+  - assets/banners/
   fonts:
     - family: Luckiest Guy
       fonts:
