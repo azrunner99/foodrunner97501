@@ -600,6 +600,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           final lastId = app.lastRunServerId;
                           final profile = lastId != null ? app.profiles[lastId] : null;
                           final avatarPath = profile?.avatarPath;
+                          final bannerPath = profile?.bannerPath;
                           ImageProvider? avatarImage;
                           if (avatarPath != null && avatarPath.isNotEmpty) {
                             if (avatarPath.startsWith('/') || avatarPath.contains(':')) {
