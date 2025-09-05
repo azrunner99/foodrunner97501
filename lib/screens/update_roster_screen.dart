@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:io';
 import 'dart:convert';
 import '../app_state.dart';
 import 'station_types_screen.dart';
@@ -11,8 +10,24 @@ class UpdateRosterScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Update Active Roster'),
+        title: const Text(
+          'Update Active Roster',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.grey[800],
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(
+            height: 1,
+            color: Colors.grey[200],
+          ),
+        ),
       ),
       body: _RosterBody(app: app),
     );
@@ -48,91 +63,881 @@ class _RosterBodyState extends State<_RosterBody> {
   Map<String, String?> dinnerStationSection = {};
   List<StationType> stationTypes = [];
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Load station types from StationTypesScreen's storage
-    _loadStationTypes();
+  // Helper method to get Color from team color string
+  Color _getTeamColorValue(String teamColor) {
+    switch (teamColor.toLowerCase()) {
+      case 'blue':
+        return Colors.blue;
+      case 'purple':
+        return Colors.purple;
+      case 'silver':
+        return Colors.grey;
+      default:
+        return Colors.grey;
+    }
   }
 
-  Future<void> _loadStationTypes() async {
+  @override
+  void initState() {
+    super.initState();
+    _loadStoredData();
+  }
+
+  void _loadStoredData() async {
     final prefs = await SharedPreferences.getInstance();
-    final jsonString = prefs.getString('station_types');
-    if (jsonString != null) {
-      final List decoded = json.decode(jsonString);
-      setState(() {
-        stationTypes = decoded.map((e) => StationType.fromJson(e)).cast<StationType>().toList();
-      });
+    
+    // Load station types
+    stationTypes = await loadStationTypes();
+    
+    // Load stored station assignments
+    final lunchStationTypeJson = prefs.getString('lunchStationType') ?? '{}';
+    final dinnerStationTypeJson = prefs.getString('dinnerStationType') ?? '{}';
+    final lunchStationSectionJson = prefs.getString('lunchStationSection') ?? '{}';
+    final dinnerStationSectionJson = prefs.getString('dinnerStationSection') ?? '{}';
+    
+    setState(() {
+      lunchStationType = Map<String, String?>.from(json.decode(lunchStationTypeJson));
+      dinnerStationType = Map<String, String?>.from(json.decode(dinnerStationTypeJson));
+      lunchStationSection = Map<String, String?>.from(json.decode(lunchStationSectionJson));
+      dinnerStationSection = Map<String, String?>.from(json.decode(dinnerStationSectionJson));
+      
+      // Initialize rosters from app state
+      lunchRoster = List<String>.from(widget.app.todayPlan?.lunchRoster ?? []);
+      dinnerRoster = List<String>.from(widget.app.todayPlan?.dinnerRoster ?? []);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    void saveRoster() async {
+      widget.app.setTodayPlan(lunchRoster, dinnerRoster);
+
+      // Persist station assignments to SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('lunchStationType', json.encode(lunchStationType));
+      await prefs.setString('dinnerStationType', json.encode(dinnerStationType));
+      await prefs.setString('lunchStationSection', json.encode(lunchStationSection));
+      await prefs.setString('dinnerStationSection', json.encode(dinnerStationSection));
+
+      // Sync teamColor assignments to AppState servers
+      for (final s in widget.app.servers) {
+        s.teamColor = isLunch ? lunchTeamColors[s.id] : dinnerTeamColors[s.id];
+      }
+
+      // Update the active roster immediately
+      final now = DateTime.now();
+      final intended = widget.app.currentIntendedShiftType(now);
+      if (intended == 'Lunch') {
+        widget.app.updateActiveRoster(lunchRoster);
+      } else {
+        widget.app.updateActiveRoster(dinnerRoster);
+      }
     }
+
+    // Sync teamColor on server objects when switching between lunch/dinner
+    void _syncServerTeamColors() {
+      for (final s in widget.app.servers) {
+        s.teamColor = isLunch ? lunchTeamColors[s.id] : dinnerTeamColors[s.id];
+      }
+    }
+
+    // Current state variables
+    final roster = isLunch ? lunchRoster : dinnerRoster;
+    final teamColors = isLunch ? lunchTeamColors : dinnerTeamColors;
+    final serverStationType = isLunch ? lunchStationType : dinnerStationType;
+    final serverStationSection = isLunch ? lunchStationSection : dinnerStationSection;
+
+    final assignedServers = widget.app.servers.where((s) => roster.contains(s.id)).toList();
+    final unassignedServers = widget.app.servers.where((s) => !roster.contains(s.id)).toList();
+
+    return WillPopScope(
+      onWillPop: () async {
+        saveRoster();
+        return true;
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.grey[50]!,
+              Colors.white,
+            ],
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              // Enhanced Controls Section
+              Container(
+                padding: const EdgeInsets.all(16),
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    // Small centered Teams toggle at top
+                    Center(
+                      child: GestureDetector(
+                        onTap: () => setState(() => showTeams = !showTeams),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: showTeams ? Colors.purple[50] : Colors.transparent,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: showTeams ? Colors.purple[300]! : Colors.grey[300]!,
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.groups,
+                                size: 16,
+                                color: showTeams ? Colors.purple[600] : Colors.grey[600],
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Assign Teams',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  color: showTeams ? Colors.purple[700] : Colors.grey[700],
+                                  fontSize: 12,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                width: 30,
+                                height: 16,
+                                decoration: BoxDecoration(
+                                  color: showTeams ? Colors.purple[400] : Colors.grey[300],
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: AnimatedAlign(
+                                  duration: const Duration(milliseconds: 200),
+                                  alignment: showTeams ? Alignment.centerRight : Alignment.centerLeft,
+                                  child: Container(
+                                    width: 12,
+                                    height: 12,
+                                    margin: const EdgeInsets.all(2),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Lunch/Dinner Toggle below, full width
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.all(4),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  isLunch = true;
+                                  _syncServerTeamColors();
+                                });
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: isLunch ? Colors.orange[400] : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(8),
+                                  boxShadow: isLunch ? [
+                                    BoxShadow(
+                                      color: Colors.orange.withOpacity(0.3),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ] : [],
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.wb_sunny,
+                                      size: 20,
+                                      color: isLunch ? Colors.white : Colors.grey[600],
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Lunch',
+                                      style: TextStyle(
+                                        color: isLunch ? Colors.white : Colors.grey[700],
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  isLunch = false;
+                                  _syncServerTeamColors();
+                                });
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: !isLunch ? Colors.indigo[400] : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(8),
+                                  boxShadow: !isLunch ? [
+                                    BoxShadow(
+                                      color: Colors.indigo.withOpacity(0.3),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ] : [],
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.nights_stay,
+                                      size: 20,
+                                      color: !isLunch ? Colors.white : Colors.grey[600],
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Dinner',
+                                      style: TextStyle(
+                                        color: !isLunch ? Colors.white : Colors.grey[700],
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Assigned Servers Section
+              if (assignedServers.isNotEmpty)
+                Container(
+                  width: double.infinity,
+                  constraints: const BoxConstraints(
+                    minHeight: 180,
+                    maxHeight: 320,
+                  ),
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.green[50]!,
+                        Colors.white,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.green[200]!, width: 1.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.green.withOpacity(0.15),
+                        blurRadius: 15,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 16, 0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green[100],
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Icon(
+                                    Icons.check_circle,
+                                    color: Colors.green[600],
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Assigned Servers',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                    Text(
+                                      '${assignedServers.length} ${assignedServers.length == 1 ? 'server' : 'servers'} ready',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.green[600],
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.red[50],
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.red[200]!, width: 1),
+                              ),
+                              child: TextButton(
+                                style: TextButton.styleFrom(
+                                  backgroundColor: Colors.transparent,
+                                  foregroundColor: Colors.red[600],
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    if (isLunch) {
+                                      lunchRoster.clear();
+                                      for (var s in widget.app.servers) {
+                                        lunchTeamColors[s.id] = null;
+                                        lunchStationType.remove(s.id);
+                                        lunchStationSection.remove(s.id);
+                                      }
+                                    } else {
+                                      dinnerRoster.clear();
+                                      for (var s in widget.app.servers) {
+                                        dinnerTeamColors[s.id] = null;
+                                        dinnerStationType.remove(s.id);
+                                        dinnerStationSection.remove(s.id);
+                                      }
+                                    }
+                                  });
+                                },
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.clear_all, color: Colors.red[600], size: 16),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Clear All',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.red[600],
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      // Assigned servers list
+                      Expanded(
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 16),
+                          child: ListView.builder(
+                            itemCount: assignedServers.length,
+                            itemBuilder: (context, index) {
+                              final s = assignedServers[index];
+                              final teamColor = teamColors[s.id];
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 10),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: teamColor != null 
+                                    ? Border.all(color: _getTeamColorValue(teamColor), width: 2)
+                                    : Border.all(color: Colors.grey[200]!, width: 1),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.05),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(16),
+                                  onTap: () {
+                                    setState(() {
+                                      roster.remove(s.id);
+                                      teamColors.remove(s.id);
+                                      serverStationType.remove(s.id);
+                                      serverStationSection.remove(s.id);
+                                    });
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 50,
+                                          height: 50,
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey[100],
+                                            borderRadius: BorderRadius.circular(12),
+                                            border: teamColor != null 
+                                              ? Border.all(color: _getTeamColorValue(teamColor), width: 2)
+                                              : null,
+                                          ),
+                                          child: Icon(
+                                            Icons.person,
+                                            color: Colors.grey[600],
+                                            size: 28,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                s.name,
+                                                style: const TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.black87,
+                                                ),
+                                              ),
+                                              if (teamColor != null)
+                                                Container(
+                                                  margin: const EdgeInsets.only(top: 6),
+                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                  decoration: BoxDecoration(
+                                                    color: _getTeamColorValue(teamColor).withOpacity(0.1),
+                                                    borderRadius: BorderRadius.circular(8),
+                                                    border: Border.all(color: _getTeamColorValue(teamColor), width: 1),
+                                                  ),
+                                                  child: Text(
+                                                    teamColor,
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      fontWeight: FontWeight.w500,
+                                                      color: _getTeamColorValue(teamColor),
+                                                    ),
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: Colors.red[50],
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Icon(
+                                            Icons.remove_circle_outline,
+                                            color: Colors.red[400],
+                                            size: 20,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                  ),
+                ),
+
+              // Available Servers Section
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.blue[50]!,
+                        Colors.white,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.blue[200]!, width: 1.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.blue.withOpacity(0.1),
+                        blurRadius: 15,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 16, 12),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.blue[100],
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                Icons.people_outline,
+                                color: Colors.blue[600],
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Available Servers',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                                Text(
+                                  'Tap to assign to ${isLunch ? 'lunch' : 'dinner'} shift',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.blue[600],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Available servers list
+                      Expanded(
+                        child: Container(
+                          margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                          child: ListView.builder(
+                            itemCount: unassignedServers.length,
+                            itemBuilder: (context, index) {
+                              final s = unassignedServers[index];
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: Colors.grey[200]!, width: 1),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.05),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(16),
+                                  onTap: () async {
+                                    final selectedTypeName = await _showStationTypeDialog(context);
+                                    if (selectedTypeName != null) {
+                                      final selectedType = stationTypes.firstWhere((t) => t.name == selectedTypeName);
+                                      final selectedSection = await showDialog<String>(
+                                        context: context,
+                                        barrierDismissible: true,
+                                        builder: (sectionContext) {
+                                          return Dialog(
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                                            backgroundColor: Theme.of(context).colorScheme.surface,
+                                            child: Padding(
+                                              padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 24),
+                                              child: Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                crossAxisAlignment: CrossAxisAlignment.center,
+                                                children: [
+                                                  Text(
+                                                    s.name,
+                                                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                                                    textAlign: TextAlign.center,
+                                                  ),
+                                                  const SizedBox(height: 8),
+                                                  Text(selectedType.name, style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.primary)),
+                                                  const SizedBox(height: 24),
+                                                  Wrap(
+                                                    spacing: 16,
+                                                    runSpacing: 16,
+                                                    alignment: WrapAlignment.center,
+                                                    children: List.generate(selectedType.sections, (i) {
+                                                      final sectionLabel = '${selectedType.abbreviation} ${i + 1}';
+                                                      return SizedBox(
+                                                        width: 120,
+                                                        height: 44,
+                                                        child: ElevatedButton(
+                                                          style: ElevatedButton.styleFrom(
+                                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                                            backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+                                                            foregroundColor: Theme.of(context).colorScheme.onSecondaryContainer,
+                                                            textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                                                            elevation: 1,
+                                                          ),
+                                                          onPressed: () => Navigator.pop(sectionContext, sectionLabel),
+                                                          child: Text(sectionLabel),
+                                                        ),
+                                                      );
+                                                    }),
+                                                  ),
+                                                  const SizedBox(height: 12),
+                                                  TextButton(
+                                                    onPressed: () => Navigator.pop(sectionContext),
+                                                    child: const Text('Cancel'),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      );
+                                      if (selectedSection != null) {
+                                        setState(() {
+                                          serverStationType[s.id] = selectedTypeName;
+                                          serverStationSection[s.id] = selectedSection;
+                                          final currentRoster = isLunch ? lunchRoster : dinnerRoster;
+                                          if (!currentRoster.contains(s.id)) {
+                                            currentRoster.add(s.id);
+                                          }
+                                        });
+                                        if (showTeams) {
+                                          WidgetsBinding.instance.addPostFrameCallback((_) async {
+                                            final selectedColor = await showDialog<String?>(
+                                              context: context,
+                                              barrierDismissible: true,
+                                              builder: (colorContext) {
+                                                return Dialog(
+                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                                                  backgroundColor: Theme.of(context).colorScheme.surface,
+                                                  child: Padding(
+                                                    padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 24),
+                                                    child: Column(
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                                      children: [
+                                                        const Text('Select Team Color', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                                                        const SizedBox(height: 24),
+                                                        Wrap(
+                                                          spacing: 16,
+                                                          runSpacing: 16,
+                                                          alignment: WrapAlignment.center,
+                                                          children: teamColorOptions.map((color) {
+                                                            final isSelected = color == teamColors[s.id];
+                                                            return GestureDetector(
+                                                              onTap: () => Navigator.pop(colorContext, color),
+                                                              child: Container(
+                                                                width: 80,
+                                                                height: 80,
+                                                                decoration: BoxDecoration(
+                                                                  color: color == null ? Colors.grey.shade200 : null,
+                                                                  borderRadius: BorderRadius.circular(12),
+                                                                  border: Border.all(
+                                                                    color: isSelected ? Colors.blue : Colors.transparent,
+                                                                    width: 2,
+                                                                  ),
+                                                                ),
+                                                                child: Center(
+                                                                  child: Text(
+                                                                    color == null ? 'None' : color,
+                                                                    style: TextStyle(
+                                                                      fontSize: 16,
+                                                                      fontWeight: FontWeight.w500,
+                                                                      color: isSelected ? Colors.blue : Colors.black87,
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            );
+                                                          }).toList(),
+                                                        ),
+                                                        const SizedBox(height: 12),
+                                                        TextButton(
+                                                          onPressed: () => Navigator.pop(colorContext),
+                                                          child: const Text('Cancel'),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                            );
+                                            if (selectedColor != null) {
+                                              setState(() {
+                                                teamColors[s.id] = selectedColor;
+                                              });
+                                            }
+                                          });
+                                        }
+                                      }
+                                    }
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 50,
+                                          height: 50,
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey[100],
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: Icon(
+                                            Icons.person_add,
+                                            color: Colors.blue[600],
+                                            size: 24,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                s.name,
+                                                style: const TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.black87,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                'Available for assignment',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.grey[600],
+                                                  fontStyle: FontStyle.italic,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: Colors.blue[50],
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Icon(
+                                            Icons.add_circle_outline,
+                                            color: Colors.blue[600],
+                                            size: 20,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ], // closes children of main Column
+          ), // closes Column
+        ), // closes Padding
+      ), // closes Container with gradient
+    ); // closes WillPopScope
   }
 
   Future<String?> _showStationTypeDialog(BuildContext context) async {
-    // Always reload station types before showing dialog
-    final prefs = await SharedPreferences.getInstance();
-    final jsonString = prefs.getString('station_types');
-    List<StationType> types = [];
-    if (jsonString != null) {
-      final List decoded = json.decode(jsonString);
-      types = decoded.map((e) => StationType.fromJson(e)).cast<StationType>().toList();
+    if (stationTypes.isEmpty) {
+      return null;
     }
-    if (types.isEmpty) {
-      return await showDialog<String>(
-        context: context,
-        builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: const Text('No station types configured'),
-          content: const Padding(
-            padding: EdgeInsets.all(16),
-            child: Text('Please add station types in Manage Stations.'),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('OK'),
-            ),
-          ],
-        ),
-      );
-    }
-    // Get the server name from ModalRoute arguments if available
-    String serverName = 'Assign Station Type';
-    if (ModalRoute.of(context)?.settings.arguments is String) {
-      serverName = ModalRoute.of(context)!.settings.arguments as String;
-    }
-    return await showDialog<String>(
+
+    return showDialog<String>(
       context: context,
       barrierDismissible: true,
-      builder: (context) {
+      builder: (BuildContext context) {
         return Dialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           backgroundColor: Theme.of(context).colorScheme.surface,
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 24),
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text(serverName, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 24),
+                const Text('Select Station Type', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 20),
                 Wrap(
                   spacing: 16,
                   runSpacing: 16,
                   alignment: WrapAlignment.center,
-                  children: types.map((type) => SizedBox(
-                    width: 140,
-                    height: 48,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                        foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
-                        textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                        elevation: 2,
+                  children: stationTypes.map((stationType) {
+                    return SizedBox(
+                      width: 120,
+                      height: 44,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                          foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
+                          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          elevation: 1,
+                        ),
+                        onPressed: () => Navigator.pop(context, stationType.name),
+                        child: Text(stationType.name),
                       ),
-                      onPressed: () => Navigator.pop(context, type.name),
-                      child: Text(type.name),
-                    ),
-                  )).toList(),
+                    );
+                  }).toList(),
                 ),
                 const SizedBox(height: 12),
                 TextButton(
@@ -146,523 +951,4 @@ class _RosterBodyState extends State<_RosterBody> {
       },
     );
   }
-
-
-  @override
-  void initState() {
-    super.initState();
-    final todayPlan = widget.app.todayPlan;
-    lunchRoster = todayPlan?.lunchRoster.toList() ?? [];
-    dinnerRoster = todayPlan?.dinnerRoster.toList() ?? [];
-
-    // Restore team colors from AppState servers if available
-    lunchTeamColors = { for (var s in widget.app.servers) s.id: s.teamColor };
-    dinnerTeamColors = { for (var s in widget.app.servers) s.id: s.teamColor };
-
-    // Restore station assignments from SharedPreferences
-    _restoreStationAssignments();
-
-    // Set showTeams toggle if any team color is assigned for current shift
-    final anyLunchTeam = lunchTeamColors.values.any((c) => c != null);
-    final anyDinnerTeam = dinnerTeamColors.values.any((c) => c != null);
-    showTeams = isLunch ? anyLunchTeam : anyDinnerTeam;
-  }
-
-  Future<void> _restoreStationAssignments() async {
-    final prefs = await SharedPreferences.getInstance();
-    final lunchTypeJson = prefs.getString('lunchStationType');
-    final dinnerTypeJson = prefs.getString('dinnerStationType');
-    final lunchSectionJson = prefs.getString('lunchStationSection');
-    final dinnerSectionJson = prefs.getString('dinnerStationSection');
-    setState(() {
-      lunchStationType = lunchTypeJson != null ? Map<String, String?>.from(json.decode(lunchTypeJson)) : {};
-      dinnerStationType = dinnerTypeJson != null ? Map<String, String?>.from(json.decode(dinnerTypeJson)) : {};
-      lunchStationSection = lunchSectionJson != null ? Map<String, String?>.from(json.decode(lunchSectionJson)) : {};
-      dinnerStationSection = dinnerSectionJson != null ? Map<String, String?>.from(json.decode(dinnerSectionJson)) : {};
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-  // final servers = widget.app.servers; // No longer needed
-    final teamToggle = Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Switch(
-          value: showTeams,
-          onChanged: (v) => setState(() => showTeams = v),
-        ),
-        const SizedBox(width: 8),
-        const Text('Assign Teams', style: TextStyle(fontWeight: FontWeight.w600)),
-      ],
-    );
-
-    void saveRoster() async {
-      // Optionally persist team colors and station assignments if needed
-      widget.app.setTodayPlan(lunchRoster, dinnerRoster);
-
-      // Persist station assignments to SharedPreferences
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('lunchStationType', json.encode(lunchStationType));
-      await prefs.setString('dinnerStationType', json.encode(dinnerStationType));
-      await prefs.setString('lunchStationSection', json.encode(lunchStationSection));
-      await prefs.setString('dinnerStationSection', json.encode(dinnerStationSection));
-
-      // --- Sync teamColor assignments to AppState servers for correct outlines and pie chart ---
-      // Always sync both lunch and dinner team colors to the server objects
-      for (final s in widget.app.servers) {
-        s.teamColor = isLunch ? lunchTeamColors[s.id] : dinnerTeamColors[s.id];
-      }
-
-      // --- Ensure the active roster is updated immediately ---
-      final now = DateTime.now();
-      final intended = widget.app.currentIntendedShiftType(now);
-      if (intended == 'Lunch') {
-        widget.app.updateActiveRoster(lunchRoster);
-      } else {
-        widget.app.updateActiveRoster(dinnerRoster);
-      }
-      // -------------------------------------------------------
-    }
-
-  // Also sync teamColor on server objects when switching between lunch/dinner
-  void _syncServerTeamColors() {
-    for (final s in widget.app.servers) {
-      s.teamColor = isLunch ? lunchTeamColors[s.id] : dinnerTeamColors[s.id];
-    }
-  }
-
-    // --- Assigned servers pane ---
-    final roster = isLunch ? lunchRoster : dinnerRoster;
-    final teamColors = isLunch ? lunchTeamColors : dinnerTeamColors;
-    final serverStationType = isLunch ? lunchStationType : dinnerStationType;
-    final serverStationSection = isLunch ? lunchStationSection : dinnerStationSection;
-
-  final assignedServers = widget.app.servers.where((s) => roster.contains(s.id)).toList();
-  final unassignedServers = widget.app.servers.where((s) => !roster.contains(s.id)).toList();
-
-    return WillPopScope(
-      onWillPop: () async {
-        saveRoster();
-        return true;
-      },
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            // Combined Lunch/Dinner switch and Assign Teams toggle in one row
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            isLunch = true;
-                            _syncServerTeamColors();
-                          });
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: isLunch ? Colors.blue : Colors.grey[300],
-                          foregroundColor: isLunch ? Colors.white : Colors.black,
-                          minimumSize: const Size(80, 36),
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                        ),
-                        child: const Text('Lunch'),
-                      ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            isLunch = false;
-                            _syncServerTeamColors();
-                          });
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: !isLunch ? Colors.blue : Colors.grey[300],
-                          foregroundColor: !isLunch ? Colors.white : Colors.black,
-                          minimumSize: const Size(80, 36),
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                        ),
-                        child: const Text('Dinner'),
-                      ),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      Switch(
-                        value: showTeams,
-                        onChanged: (v) => setState(() => showTeams = v),
-                      ),
-                      const SizedBox(width: 4),
-                      const Text('Assign Teams', style: TextStyle(fontWeight: FontWeight.w600)),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            // --- Assigned Servers Pane with Clear All Button inside top right ---
-            if (assignedServers.isNotEmpty)
-              Container(
-                width: double.infinity,
-                constraints: BoxConstraints(
-                  minHeight: 180,
-                  maxHeight: 320,
-                ),
-                padding: const EdgeInsets.fromLTRB(10, 0, 10, 1),
-                margin: const EdgeInsets.only(bottom: 0),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.blue.shade200),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.blue.shade100.withOpacity(0.2),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('Assigned Servers:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                        if (isLunch)
-                          TextButton(
-                            style: TextButton.styleFrom(
-                              backgroundColor: Colors.transparent,
-                              foregroundColor: Colors.blue,
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                lunchRoster.clear();
-                                for (var s in widget.app.servers) {
-                                  lunchTeamColors[s.id] = null;
-                                  lunchStationType.remove(s.id);
-                                  lunchStationSection.remove(s.id);
-                                }
-                              });
-                            },
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.close, color: Colors.blue, size: 18),
-                                const SizedBox(width: 4),
-                                Text('Clear All', style: TextStyle(fontWeight: FontWeight.w500, color: Colors.blue, fontSize: 14)),
-                              ],
-                            ),
-                          ),
-                        if (!isLunch)
-                          TextButton(
-                            style: TextButton.styleFrom(
-                              backgroundColor: Colors.transparent,
-                              foregroundColor: Colors.blue,
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                dinnerRoster.clear();
-                                for (var s in widget.app.servers) {
-                                  dinnerTeamColors[s.id] = null;
-                                  dinnerStationType.remove(s.id);
-                                  dinnerStationSection.remove(s.id);
-                                }
-                              });
-                            },
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.close, color: Colors.blue, size: 18),
-                                const SizedBox(width: 4),
-                                Text('Clear All', style: TextStyle(fontWeight: FontWeight.w500, color: Colors.blue, fontSize: 14)),
-                              ],
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Expanded(
-                      child: Scrollbar(
-                        thumbVisibility: true,
-                        child: ListView(
-                          children: assignedServers.map((s) => Card(
-                            margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 0),
-                            elevation: 1,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                            color: Colors.white,
-                            child: Container(
-                              height: 24,
-                              padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 0),
-                              child: Row(
-                                children: [
-                                  Text(
-                                    s.name,
-                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                                  ),
-                                  if (serverStationSection[s.id] != null)
-                                    Padding(
-                                      padding: const EdgeInsets.only(left: 3.0),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0),
-                                        decoration: BoxDecoration(
-                                          color: teamColors[s.id] == null
-                                              ? Colors.grey.shade200
-                                              : (
-                                                  teamColors[s.id] == 'Blue'
-                                                      ? Colors.blue.withOpacity(0.7)
-                                                      : teamColors[s.id] == 'Purple'
-                                                          ? Colors.purple.withOpacity(0.7)
-                                                          : Colors.grey.withOpacity(0.7)
-                                                ),
-                                          borderRadius: BorderRadius.circular(5),
-                                          border: Border.all(color: Colors.grey.shade400),
-                                        ),
-                                        child: Text(
-                                          serverStationSection[s.id] ?? '',
-                                          style: TextStyle(
-                                            fontSize: 8,
-                                            fontWeight: FontWeight.w500,
-                                            color: teamColors[s.id] == null
-                                                ? Colors.black87
-                                                : Colors.white,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  const Spacer(),
-                                  IconButton(
-                                    icon: const Icon(Icons.close, color: Colors.red, size: 16),
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
-                                    onPressed: () {
-                                      setState(() {
-                                        roster.remove(s.id);
-                                        serverStationType.remove(s.id);
-                                        serverStationSection.remove(s.id);
-                                        teamColors[s.id] = null;
-                                      });
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
-                          )).toList(),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            // --- Divider for separation ---
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 0),
-              child: Divider(
-                thickness: 3.5,
-                color: Colors.blue.shade700,
-                height: 36,
-                indent: 0,
-                endIndent: 0,
-              ),
-            ),
-            // --- Main List: Only unassigned servers ---
-            Expanded(
-              child: ListView.builder(
-                itemCount: unassignedServers.length,
-                itemBuilder: (ctx, i) {
-                  final s = unassignedServers[i];
-                  final teamColors = isLunch ? lunchTeamColors : dinnerTeamColors;
-                  final serverStationType = isLunch ? lunchStationType : dinnerStationType;
-                  final serverStationSection = isLunch ? lunchStationSection : dinnerStationSection;
-                  return Card(
-                    margin: const EdgeInsets.symmetric(vertical: 6),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Checkbox(
-                            value: false,
-                            onChanged: (v) async {
-                              if (v == true) {
-                                final selectedTypeName = await _showStationTypeDialog(context);
-                                if (selectedTypeName != null) {
-                                  final selectedType = stationTypes.firstWhere((t) => t.name == selectedTypeName);
-                                  final selectedSection = await showDialog<String>(
-                                    context: context,
-                                    barrierDismissible: true,
-                                    builder: (sectionContext) {
-                                      return Dialog(
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                                        backgroundColor: Theme.of(context).colorScheme.surface,
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 24),
-                                          child: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            crossAxisAlignment: CrossAxisAlignment.center,
-                                            children: [
-                                              Text(
-                                                s.name,
-                                                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                                                textAlign: TextAlign.center,
-                                              ),
-                                              const SizedBox(height: 8),
-                                              Text(selectedType.name, style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.primary)),
-                                              const SizedBox(height: 24),
-                                              Wrap(
-                                                spacing: 16,
-                                                runSpacing: 16,
-                                                alignment: WrapAlignment.center,
-                                                children: List.generate(selectedType.sections, (i) {
-                                                  final sectionLabel = '${selectedType.abbreviation} ${i + 1}';
-                                                  return SizedBox(
-                                                    width: 120,
-                                                    height: 44,
-                                                    child: ElevatedButton(
-                                                      style: ElevatedButton.styleFrom(
-                                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                                                        backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
-                                                        foregroundColor: Theme.of(context).colorScheme.onSecondaryContainer,
-                                                        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                                                        elevation: 1,
-                                                      ),
-                                                      onPressed: () => Navigator.pop(sectionContext, sectionLabel),
-                                                      child: Text(sectionLabel),
-                                                    ),
-                                                  );
-                                                }),
-                                              ),
-                                              const SizedBox(height: 12),
-                                              TextButton(
-                                                onPressed: () => Navigator.pop(sectionContext),
-                                                child: const Text('Cancel'),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  );
-                                  if (selectedSection != null) {
-                                    setState(() {
-                                      serverStationType[s.id] = selectedTypeName;
-                                      serverStationSection[s.id] = selectedSection;
-                                      final currentRoster = isLunch ? lunchRoster : dinnerRoster;
-                                      if (!currentRoster.contains(s.id)) {
-                                        currentRoster.add(s.id);
-                                      }
-                                    });
-                                    if (showTeams) {
-                                      WidgetsBinding.instance.addPostFrameCallback((_) async {
-                                        final selectedColor = await showDialog<String?>(
-                                          context: context,
-                                          barrierDismissible: true,
-                                          builder: (colorContext) {
-                                            return Dialog(
-                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                                              backgroundColor: Theme.of(context).colorScheme.surface,
-                                              child: Padding(
-                                                padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 24),
-                                                child: Column(
-                                                  mainAxisSize: MainAxisSize.min,
-                                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                                  children: [
-                                                    const Text('Select Team Color', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                                                    const SizedBox(height: 24),
-                                                    Wrap(
-                                                      spacing: 16,
-                                                      runSpacing: 16,
-                                                      alignment: WrapAlignment.center,
-                                                      children: teamColorOptions.map((color) {
-                                                        final isSelected = color == teamColors[s.id];
-                                                        return GestureDetector(
-                                                          onTap: () => Navigator.pop(colorContext, color),
-                                                          child: Container(
-                                                            width: 80,
-                                                            height: 80,
-                                                            decoration: BoxDecoration(
-                                                              color: color == null ? Colors.grey.shade200 : null,
-                                                              borderRadius: BorderRadius.circular(12),
-                                                              border: Border.all(
-                                                                color: isSelected ? Colors.blue : Colors.transparent,
-                                                                width: 2,
-                                                              ),
-                                                            ),
-                                                            child: Center(
-                                                              child: Text(
-                                                                color == null ? 'None' : color,
-                                                                style: TextStyle(
-                                                                  fontSize: 16,
-                                                                  fontWeight: FontWeight.w500,
-                                                                  color: isSelected ? Colors.blue : Colors.black87,
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        );
-                                                      }).toList(),
-                                                    ),
-                                                    const SizedBox(height: 12),
-                                                    TextButton(
-                                                      onPressed: () => Navigator.pop(colorContext),
-                                                      child: const Text('Cancel'),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                        );
-                                        if (selectedColor != null) {
-                                          setState(() {
-                                            teamColors[s.id] = selectedColor;
-                                          });
-                                        }
-                                      });
-                                    }
-                                  }
-                                }
-                              }
-                            }, // closes onChanged for Checkbox
-                          ),
-                          Text(
-                            s.name,
-                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.normal),
-                          ),
-                          if (serverStationSection[s.id] != null)
-                            Padding(
-                              padding: const EdgeInsets.only(left: 6.0),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade200,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.grey.shade400),
-                                ),
-                                child: Text(
-                                  serverStationSection[s.id] ?? '',
-                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.black87),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ); // closes Card
-                  }, // closes itemBuilder
-                ), // closes ListView.builder
-              ), // closes Expanded
-      ], // closes children of Column
-    ), // closes Column
-      ), // closes Padding
-    ); // closes WillPopScope
-  } // closes class method
-} // closes class
+}
