@@ -600,6 +600,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           final lastId = app.lastRunServerId;
                           final profile = lastId != null ? app.profiles[lastId] : null;
                           final avatarPath = profile?.avatarPath;
+                          final bannerPath = profile?.bannerPath;
                           ImageProvider? avatarImage;
                           if (avatarPath != null && avatarPath.isNotEmpty) {
                             if (avatarPath.startsWith('/') || avatarPath.contains(':')) {
@@ -608,9 +609,34 @@ class _HomeScreenState extends State<HomeScreen> {
                               avatarImage = AssetImage(avatarPath);
                             }
                           }
+                          ImageProvider? bannerImage;
+                          if (bannerPath != null && bannerPath.isNotEmpty) {
+                            if (bannerPath.startsWith('/') || bannerPath.contains(':')) {
+                              bannerImage = FileImage(File(bannerPath));
+                            } else {
+                              bannerImage = AssetImage(bannerPath);
+                            }
+                          }
                           final serverName = lastId != null ? app.serverById(lastId)?.name ?? '' : '';
                           return Stack(
                             children: [
+                              // Banner background (if available)
+                              if (bannerImage != null)
+                                Positioned.fill(
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      image: DecorationImage(
+                                        image: bannerImage,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey[200]!.withOpacity(0.85), // Semi-transparent overlay
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               // Server name at top right inside grey area
                               if (serverName.isNotEmpty)
                                 Positioned(
