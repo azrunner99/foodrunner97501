@@ -30,6 +30,7 @@ class ServerProfile {
   int tapIntervalsCount;
   String? lastTapIso;
   String? avatarPath;
+  String? bannerPath;
   List<Map<String, dynamic>> avatarHistory;
 
   ServerProfile({
@@ -45,6 +46,7 @@ class ServerProfile {
     this.tapIntervalsCount = 0,
     this.lastTapIso,
     this.avatarPath,
+    this.bannerPath,
     this.avatarHistory = const [],
   })  : achievements = achievements ?? [],
         repeatEarnedDates = repeatEarnedDates ?? [];
@@ -62,6 +64,7 @@ class ServerProfile {
     tapIntervalsCount: (m['tapIntervalsCount'] ?? 0) as int,
     lastTapIso: m['lastTapIso'] as String?,
     avatarPath: m['avatarPath'] as String?,
+    bannerPath: m['bannerPath'] as String?,
     avatarHistory: (m['avatarHistory'] as List?)?.map((e) {
       if (e is String) {
         return {'path': e, 'timestamp': null};
@@ -86,6 +89,7 @@ class ServerProfile {
     'tapIntervalsCount': tapIntervalsCount,
     'lastTapIso': lastTapIso,
     'avatarPath': avatarPath,
+    'bannerPath': bannerPath,
     'avatarHistory': avatarHistory,
   };
 }
@@ -1347,6 +1351,18 @@ class AppState extends ChangeNotifier {
         'timestamp': now.toIso8601String(),
       };
       profile.avatarHistory = [...profile.avatarHistory, entry];
+      // Force Provider to notify listeners by assigning a new map
+      _profiles = Map<String, ServerProfile>.from(_profiles);
+      notifyListeners();
+      _persistProfiles();
+    }
+  }
+
+  void updateBanner(String serverId, String bannerPath) {
+    print('AppState.updateBanner called for $serverId with $bannerPath');
+    final profile = _profiles[serverId];
+    if (profile != null) {
+      profile.bannerPath = bannerPath;
       // Force Provider to notify listeners by assigning a new map
       _profiles = Map<String, ServerProfile>.from(_profiles);
       notifyListeners();

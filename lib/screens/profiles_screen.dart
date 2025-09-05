@@ -57,19 +57,9 @@ class ProfileDetailScreen extends StatefulWidget {
 }
 
 class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
-  String? _avatarPath;
-
   @override
   void initState() {
     super.initState();
-    _loadAvatar();
-  }
-
-  Future<void> _loadAvatar() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _avatarPath = prefs.getString('avatar_${widget.serverId}');
-    });
   }
 
   // Badge mode removed
@@ -122,9 +112,6 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
       await File(pickedFile.path).copy(newPath);
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('avatar_${widget.serverId}', newPath);
-      setState(() {
-        _avatarPath = newPath;
-      });
       // Save avatar path to ServerProfile for global access
       final app = Provider.of<AppState>(context, listen: false);
       app.updateAvatar(widget.serverId, newPath);
@@ -221,14 +208,11 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
         ),
       );
       if (selected != null && selected.isNotEmpty) {
-        setState(() {}); // Force rebuild to refresh avatar
+        // Avatar updated through AppState - no local state needed
       }
     } else if (result == 'remove') {
       final app = Provider.of<AppState>(context, listen: false);
       app.updateAvatar(widget.serverId, '');
-      setState(() {
-        _avatarPath = null;
-      });
     }
   }
 
@@ -302,9 +286,9 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: Colors.grey.shade300),
                     ),
-                    child: const Text(
-                      'Add Profile Banner',
-                      style: TextStyle(
+                    child: Text(
+                      p.bannerPath != null ? 'Change Profile Banner' : 'Add Profile Banner',
+                      style: const TextStyle(
                         fontSize: 12,
                         color: Colors.black87,
                         fontWeight: FontWeight.w500,
@@ -312,62 +296,175 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 20),
               ],
             ),
           ),
-          Center(
+          // Banner section with avatar and name overlay - full width
+          Container(
+            width: double.infinity,
+            height: 240, // Height to accommodate avatar + name + spacing
             child: Stack(
-              alignment: Alignment.center,
               children: [
-                GestureDetector(
-                  onTap: _onAvatarTap,
-          child: CircleAvatar(
-          radius: 80,
-          backgroundColor: Colors.deepPurple.shade100,
-          child: (p.avatarPath == null || p.avatarPath!.isEmpty)
-            ? null
-            : (p.avatarPath!.startsWith('assets/')
-              ? ClipOval(child: Image.asset(p.avatarPath!, width: 160, height: 160, fit: BoxFit.cover))
-              : null),
-          backgroundImage: (p.avatarPath != null && p.avatarPath!.isNotEmpty && !p.avatarPath!.startsWith('assets/'))
-            ? FileImage(File(p.avatarPath!))
-            : null,
-          ),
-                ),
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.75),
-                      borderRadius: BorderRadius.circular(18),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.18),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
+                // Banner background - full width, no rounded corners
+                Container(
+                  width: double.infinity,
+                  height: double.infinity,
+                  child: p.bannerPath != null
+                      ? Image.asset(
+                          p.bannerPath!,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          height: double.infinity,
+                          errorBuilder: (context, error, stackTrace) {
+                            // Fallback to gradient if banner fails to load
+                            return Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    Colors.deepPurple.shade300,
+                                    Colors.blue.shade400,
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        )
+                      : Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Colors.deepPurple.shade300,
+                                Colors.blue.shade400,
+                              ],
+                            ),
+                          ),
                         ),
+                ),
+                // Semi-transparent overlay for better text readability
+                Container(
+                  width: double.infinity,
+                  height: double.infinity,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withOpacity(0.3),
+                        Colors.black.withOpacity(0.1),
                       ],
                     ),
-                    child: Text(
-                      'Lvl${p.level}',
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
+                  ),
+                ),
+                // Avatar and name overlay
+                Positioned.fill(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Avatar with level badge
+                      Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          GestureDetector(
+                            onTap: _onAvatarTap,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 4,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.2),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: CircleAvatar(
+                                radius: 60,
+                                backgroundColor: Colors.deepPurple.shade100,
+                                child: (p.avatarPath == null || p.avatarPath!.isEmpty)
+                                  ? null
+                                  : (p.avatarPath!.startsWith('assets/')
+                                    ? ClipOval(child: Image.asset(p.avatarPath!, width: 120, height: 120, fit: BoxFit.cover))
+                                    : null),
+                                backgroundImage: (p.avatarPath != null && p.avatarPath!.isNotEmpty && !p.avatarPath!.startsWith('assets/'))
+                                  ? FileImage(File(p.avatarPath!))
+                                  : null,
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.85),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: Colors.white, width: 2),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.3),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Text(
+                                'Lvl${p.level}',
+                                style: const TextStyle(
+                                  color: Colors.white, 
+                                  fontWeight: FontWeight.bold, 
+                                  fontSize: 14
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      // Server name with enhanced contrast styling - no bubble background
+                      Text(
+                        s.name,
+                        style: const TextStyle(
+                          fontSize: 42,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black,
+                              blurRadius: 6,
+                              offset: Offset(0, 2),
+                            ),
+                            Shadow(
+                              color: Colors.black,
+                              blurRadius: 12,
+                              offset: Offset(0, 4),
+                            ),
+                            // Additional shadow for extra contrast
+                            Shadow(
+                              color: Colors.black,
+                              blurRadius: 20,
+                              offset: Offset(0, 0),
+                            ),
+                          ],
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
-          Center(
-            child: Text(
-              s.name,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold, fontSize: 32),
-            ),
-          ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 20),
           Center(
             child: Text(
               '${p.points} points • Next level at: ${p.nextLevelAt}',
