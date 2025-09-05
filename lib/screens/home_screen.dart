@@ -593,7 +593,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     right: 0,
                     child: Container(
                       width: double.infinity,
-                      color: Colors.grey[200],
                       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
                       child: Consumer<AppState>(
                         builder: (context, app, _) {
@@ -618,63 +617,62 @@ class _HomeScreenState extends State<HomeScreen> {
                             }
                           }
                           final serverName = lastId != null ? app.serverById(lastId)?.name ?? '' : '';
-                          return Stack(
-                            children: [
-                              // Banner background (if available)
-                              if (bannerImage != null)
-                                Positioned.fill(
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      image: DecorationImage(
-                                        image: bannerImage,
-                                        fit: BoxFit.cover,
-                                      ),
-                                    ),
+                          return Container(
+                            decoration: BoxDecoration(
+                              color: bannerImage == null ? Colors.grey[200] : null,
+                            ),
+                            child: Stack(
+                              children: [
+                                // Banner background (if available)
+                                if (bannerImage != null)
+                                  Positioned.fill(
                                     child: Container(
                                       decoration: BoxDecoration(
-                                        color: Colors.grey[200]!.withOpacity(0.85), // Semi-transparent overlay
+                                        image: DecorationImage(
+                                          image: bannerImage,
+                                          fit: BoxFit.cover,
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                              // Server name at top right inside grey area
-                              if (serverName.isNotEmpty)
-                                Positioned(
-                                  top: 0,
-                                  right: 0,
-                                  child: Container(
-                                    padding: const EdgeInsets.only(top: 4, right: 10),
-                                    constraints: const BoxConstraints(
-                                      maxWidth: 200,
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.end,
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        OutlinedText(
-                                          text: Text(
-                                            serverName,
-                                            style: const TextStyle(
-                                              fontFamily: 'Montserrat',
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 28,
-                                              color: Colors.black,
-                                              shadows: [
-                                                Shadow(
-                                                  blurRadius: 1,
-                                                  color: Colors.black12,
-                                                  offset: Offset(1, 1),
-                                                ),
-                                              ],
+                                // Server name at top right inside grey area
+                                if (serverName.isNotEmpty)
+                                  Positioned(
+                                    top: 0,
+                                    right: 0,
+                                    child: Container(
+                                      padding: const EdgeInsets.only(top: 4, right: 10),
+                                      constraints: const BoxConstraints(
+                                        maxWidth: 200,
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.end,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          OutlinedText(
+                                            text: Text(
+                                              serverName,
+                                              style: const TextStyle(
+                                                fontFamily: 'Montserrat',
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 28,
+                                                color: Colors.black,
+                                                shadows: [
+                                                  Shadow(
+                                                    blurRadius: 1,
+                                                    color: Colors.black12,
+                                                    offset: Offset(1, 1),
+                                                  ),
+                                                ],
+                                              ),
+                                              textAlign: TextAlign.right,
+                                              overflow: TextOverflow.ellipsis,
+                                              maxLines: 1,
                                             ),
-                                            textAlign: TextAlign.right,
-                                            overflow: TextOverflow.ellipsis,
-                                            maxLines: 1,
+                                            strokes: [
+                                              OutlinedTextStroke(color: Colors.white, width: 1),
+                                            ],
                                           ),
-                                          strokes: [
-                                            OutlinedTextStroke(color: Colors.white, width: 1),
-                                          ],
-                                        ),
                                         // Full-width line under the name
                                         Container(
                                           margin: const EdgeInsets.only(top: 4, bottom: 2),
@@ -734,8 +732,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ),
                                   ),
                                 ),
-                              // Avatar row
-                              Row(
+                                // Avatar row
+                                Row(
                                 children: [
                                   Padding(
                                     padding: const EdgeInsets.only(left: 0, right: 12.0),
@@ -884,6 +882,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ],
                               ),
                             ],
+                            ),
                           );
                         },
                       ),
