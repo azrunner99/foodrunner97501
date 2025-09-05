@@ -677,24 +677,37 @@ class _RosterBodyState extends State<_RosterBody> {
                                       Container(
                                         width: double.infinity,
                                         height: double.infinity,
-                                        child: Image.asset(
-                                          widget.app.profiles[s.id]?.bannerPath ?? 'assets/banners/image001.webp',
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (context, error, stackTrace) {
-                                            return Container(
-                                              decoration: BoxDecoration(
-                                                gradient: LinearGradient(
-                                                  begin: Alignment.topLeft,
-                                                  end: Alignment.bottomRight,
-                                                  colors: [
-                                                    Colors.green[400]!,
-                                                    Colors.blue[400]!,
-                                                  ],
+                                        child: widget.app.profiles[s.id]?.bannerPath != null
+                                            ? Image.asset(
+                                                widget.app.profiles[s.id]!.bannerPath!,
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (context, error, stackTrace) {
+                                                  return Container(
+                                                    decoration: BoxDecoration(
+                                                      gradient: LinearGradient(
+                                                        begin: Alignment.topLeft,
+                                                        end: Alignment.bottomRight,
+                                                        colors: [
+                                                          Colors.grey[400]!,
+                                                          Colors.grey[500]!,
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                              )
+                                            : Container(
+                                                decoration: BoxDecoration(
+                                                  gradient: LinearGradient(
+                                                    begin: Alignment.topLeft,
+                                                    end: Alignment.bottomRight,
+                                                    colors: [
+                                                      Colors.grey[400]!,
+                                                      Colors.grey[500]!,
+                                                    ],
+                                                  ),
                                                 ),
                                               ),
-                                            );
-                                          },
-                                        ),
                                       ),
                                       // Gradient overlay for better text readability
                                       Container(
@@ -937,28 +950,13 @@ class _RosterBodyState extends State<_RosterBody> {
                                                       s.name,
                                                       style: const TextStyle(
                                                         color: Colors.white,
-                                                        fontSize: 18,
+                                                        fontSize: 26,
                                                         fontWeight: FontWeight.bold,
                                                         shadows: [
                                                           Shadow(
                                                             color: Colors.black54,
                                                             blurRadius: 4,
                                                             offset: Offset(1, 1),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                    const SizedBox(height: 2),
-                                                    Text(
-                                                      'Available for assignment',
-                                                      style: TextStyle(
-                                                        fontSize: 12,
-                                                        color: Colors.white.withOpacity(0.9),
-                                                        shadows: const [
-                                                          Shadow(
-                                                            color: Colors.black54,
-                                                            blurRadius: 2,
-                                                            offset: Offset(0.5, 0.5),
                                                           ),
                                                         ],
                                                       ),
@@ -985,40 +983,32 @@ class _RosterBodyState extends State<_RosterBody> {
                                                   ],
                                                 ),
                                                 child: ClipOval(
-                                                  child: Image.asset(
-                                                    widget.app.profiles[s.id]?.avatarPath ?? 'assets/avatars/image001.png',
-                                                    fit: BoxFit.cover,
-                                                    errorBuilder: (context, error, stackTrace) {
-                                                      return Container(
-                                                        color: Colors.grey[300],
-                                                        child: Icon(
-                                                          Icons.person_add,
-                                                          color: Colors.blue[600],
-                                                          size: 30,
+                                                  child: widget.app.profiles[s.id]?.avatarPath != null
+                                                      ? Image.asset(
+                                                          widget.app.profiles[s.id]!.avatarPath!,
+                                                          fit: BoxFit.cover,
+                                                          errorBuilder: (context, error, stackTrace) {
+                                                            return Container(
+                                                              color: Colors.grey[300],
+                                                              child: Icon(
+                                                                Icons.person_add,
+                                                                color: Colors.blue[600],
+                                                                size: 30,
+                                                              ),
+                                                            );
+                                                          },
+                                                        )
+                                                      : Container(
+                                                          color: Colors.grey[300],
+                                                          child: Icon(
+                                                            Icons.person_add,
+                                                            color: Colors.blue[600],
+                                                            size: 30,
+                                                          ),
                                                         ),
-                                                      );
-                                                    },
-                                                  ),
                                                 ),
                                               ),
                                             ],
-                                          ),
-                                        ),
-                                      ),
-                                      // Add indicator (top right corner)
-                                      Positioned(
-                                        top: 8,
-                                        right: 8,
-                                        child: Container(
-                                          padding: const EdgeInsets.all(4),
-                                          decoration: BoxDecoration(
-                                            color: Colors.green.withOpacity(0.9),
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: const Icon(
-                                            Icons.add,
-                                            color: Colors.white,
-                                            size: 16,
                                           ),
                                         ),
                                       ),
