@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 import '../app_state.dart';
+import '../gamification.dart';
 import 'preset_avatar_gallery_screen.dart';
 import 'profile_banner_screen.dart';
 // import removed: achievementsCatalog no longer used
@@ -23,24 +24,285 @@ class ProfilesScreen extends StatelessWidget {
       body: servers.isEmpty
           ? const Center(child: Text('No servers yet. Add from Assign or Manage.'))
           : ListView.separated(
+              padding: const EdgeInsets.all(16),
               itemCount: servers.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
+              separatorBuilder: (_, __) => const SizedBox(height: 16),
               itemBuilder: (_, i) {
                 final s = servers[i];
                 final prof = app.profiles[s.id];
-                final level = prof?.level ?? 1;
-                final runs = prof?.allTimeRuns ?? 0;
-                final pizookies = prof?.pizookieRuns ?? 0;
-                return ListTile(
-                  title: Text(s.name),
-                  subtitle: Text('Level $level • All-time runs: $runs (includes $pizookies Pizookies)'),
-                  trailing: const Icon(Icons.chevron_right),
+                final bannerPath = prof?.bannerPath;
+                
+                return GestureDetector(
                   onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => ProfileDetailScreen(serverId: s.id)),
                     );
                   },
+                  child: Container(
+                    height: 120,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Stack(
+                        children: [
+                          // Banner background
+                          Positioned.fill(
+                            child: bannerPath != null && bannerPath.isNotEmpty
+                                ? Image.asset(
+                                    bannerPath,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) =>
+                                        Container(
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              colors: [Colors.blue.shade400, Colors.purple.shade400],
+                                              begin: Alignment.topLeft,
+                                              end: Alignment.bottomRight,
+                                            ),
+                                          ),
+                                        ),
+                                  )
+                                : Container(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [Colors.grey.shade300, Colors.grey.shade500],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      ),
+                                    ),
+                                  ),
+                          ),
+                          // Gradient overlay for text readability
+                          Positioned.fill(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.black.withOpacity(0.0),
+                                    Colors.black.withOpacity(0.3),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          // Content
+                          Positioned.fill(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
+                                children: [
+                                  // Avatar section
+                                  Container(
+                                    width: 100, // Increased width to accommodate level bubble
+                                    height: 80,
+                                    child: Stack(
+                                      children: [
+                                        Positioned(
+                                          left: 0,
+                                          child: Container(
+                                            width: 80,
+                                            height: 80,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              border: Border.all(color: Colors.white, width: 3),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black.withOpacity(0.3),
+                                                  blurRadius: 8,
+                                                  offset: const Offset(0, 2),
+                                                ),
+                                              ],
+                                            ),
+                                            child: CircleAvatar(
+                                              radius: 37,
+                                              backgroundImage: prof?.avatarPath != null && prof!.avatarPath!.isNotEmpty
+                                                  ? (prof.avatarPath!.startsWith('assets/')
+                                                      ? AssetImage(prof.avatarPath!)
+                                                      : FileImage(File(prof.avatarPath!))) as ImageProvider
+                                                  : null,
+                                              backgroundColor: Colors.grey.shade300,
+                                              child: prof?.avatarPath == null || prof!.avatarPath!.isEmpty
+                                                  ? Icon(Icons.person, size: 40, color: Colors.grey.shade600)
+                                                  : null,
+                                            ),
+                                          ),
+                                        ),
+                                        // Level bubble
+                                        Positioned(
+                                          bottom: 0,
+                                          right: 8,
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: Colors.blue.shade600,
+                                              borderRadius: BorderRadius.circular(12),
+                                              border: Border.all(color: Colors.white, width: 2),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black.withOpacity(0.3),
+                                                  blurRadius: 4,
+                                                  offset: const Offset(0, 1),
+                                                ),
+                                              ],
+                                            ),
+                                            child: Text(
+                                              'Lvl${prof?.level ?? 1}',
+                                              style: const TextStyle(
+                                                color: Colors.white, 
+                                                fontWeight: FontWeight.bold, 
+                                                fontSize: 12
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  // Server info
+                                  Expanded(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          s.name,
+                                          style: TextStyle(
+                                            fontSize: 28,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                            shadows: [
+                                              Shadow(
+                                                color: Colors.black.withOpacity(0.7),
+                                                offset: const Offset(1, 1),
+                                                blurRadius: 3,
+                                              ),
+                                              Shadow(
+                                                color: Colors.black.withOpacity(0.5),
+                                                offset: const Offset(2, 2),
+                                                blurRadius: 6,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        // XP Progress bar
+                                        Container(
+                                          height: 10,
+                                          width: double.infinity,
+                                          margin: const EdgeInsets.only(right: 20),
+                                          decoration: BoxDecoration(
+                                            color: Colors.black.withOpacity(0.4),
+                                            borderRadius: BorderRadius.circular(4),
+                                            border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black.withOpacity(0.6),
+                                                blurRadius: 6,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                              BoxShadow(
+                                                color: Colors.black.withOpacity(0.3),
+                                                blurRadius: 12,
+                                                offset: const Offset(0, 4),
+                                              ),
+                                            ],
+                                          ),
+                                          child: FractionallySizedBox(
+                                            alignment: Alignment.centerLeft,
+                                            widthFactor: prof != null 
+                                                ? () {
+                                                    // Calculate progress same as home_screen.dart
+                                                    final points = prof.points;
+                                                    final lvl = levelForPoints(points);
+                                                    final prevLevelXp = xpTable[lvl];
+                                                    final nextLevelXp = xpTable[lvl + 1];
+                                                    
+                                                    if (nextLevelXp > prevLevelXp) {
+                                                      return ((points - prevLevelXp) / (nextLevelXp - prevLevelXp)).clamp(0.0, 1.0);
+                                                    }
+                                                    return 1.0;
+                                                  }()
+                                                : 0.0,
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                gradient: LinearGradient(
+                                                  colors: [
+                                                    Colors.white,
+                                                    Colors.white.withOpacity(0.9),
+                                                  ],
+                                                  begin: Alignment.topCenter,
+                                                  end: Alignment.bottomCenter,
+                                                ),
+                                                borderRadius: BorderRadius.circular(4),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.white.withOpacity(0.6),
+                                                    blurRadius: 8,
+                                                    offset: const Offset(0, 0),
+                                                  ),
+                                                  BoxShadow(
+                                                    color: Colors.white.withOpacity(0.3),
+                                                    blurRadius: 16,
+                                                    offset: const Offset(0, 0),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 3),
+                                        // XP Metrics
+                                        prof != null 
+                                            ? () {
+                                                final points = prof.points;
+                                                final lvl = levelForPoints(points);
+                                                final nextLevelXp = xpTable[lvl + 1];
+                                                return Text(
+                                                  '$points / $nextLevelXp XP',
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: Colors.white,
+                                                    shadows: [
+                                                      Shadow(
+                                                        color: Colors.black.withOpacity(0.8),
+                                                        offset: const Offset(1, 1),
+                                                        blurRadius: 3,
+                                                      ),
+                                                      Shadow(
+                                                        color: Colors.black.withOpacity(0.6),
+                                                        offset: const Offset(2, 2),
+                                                        blurRadius: 6,
+                                                      ),
+                                                    ],
+                                                  ),
+                                                );
+                                              }()
+                                            : const SizedBox.shrink(),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 );
               },
             ),
