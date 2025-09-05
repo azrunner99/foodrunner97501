@@ -427,6 +427,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   }
                 }
                 ids = ids.toSet().toList();
+                
+                // Sort servers alphabetically by name
+                ids.sort((a, b) {
+                  final serverA = app.serverById(a);
+                  final serverB = app.serverById(b);
+                  if (serverA == null && serverB == null) return 0;
+                  if (serverA == null) return 1;
+                  if (serverB == null) return -1;
+                  return serverA.name.toLowerCase().compareTo(serverB.name.toLowerCase());
+                });
+                
                 bool isDinner = (m >= end || (app.activeRosterView == 'dinner' && showToggle));
                 if (ids.isEmpty) {
                   return Padding(
@@ -937,6 +948,17 @@ class _Body extends StatelessWidget {
       }
     }
     ids = ids.toSet().toList();
+    
+    // Sort servers alphabetically by name
+    ids.sort((a, b) {
+      final serverA = app.serverById(a);
+      final serverB = app.serverById(b);
+      if (serverA == null && serverB == null) return 0;
+      if (serverA == null) return 1;
+      if (serverB == null) return -1;
+      return serverA.name.toLowerCase().compareTo(serverB.name.toLowerCase());
+    });
+    
     bool isDinner = (m >= end || (app.activeRosterView == 'dinner' && showToggle));
 
     // Calculate team run counts
