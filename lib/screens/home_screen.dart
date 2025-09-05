@@ -633,6 +633,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                           fit: BoxFit.cover,
                                         ),
                                       ),
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withOpacity(0.3), // Light dark overlay for text readability
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 // Server name at top right inside grey area
@@ -656,12 +661,17 @@ class _HomeScreenState extends State<HomeScreen> {
                                                 fontFamily: 'Montserrat',
                                                 fontWeight: FontWeight.bold,
                                                 fontSize: 28,
-                                                color: Colors.black,
+                                                color: Colors.white,
                                                 shadows: [
                                                   Shadow(
-                                                    blurRadius: 1,
-                                                    color: Colors.black12,
-                                                    offset: Offset(1, 1),
+                                                    blurRadius: 4,
+                                                    color: Colors.black,
+                                                    offset: Offset(2, 2),
+                                                  ),
+                                                  Shadow(
+                                                    blurRadius: 8,
+                                                    color: Colors.black54,
+                                                    offset: Offset(0, 0),
                                                   ),
                                                 ],
                                               ),
@@ -670,7 +680,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                               maxLines: 1,
                                             ),
                                             strokes: [
-                                              OutlinedTextStroke(color: Colors.white, width: 1),
+                                              OutlinedTextStroke(color: Colors.black, width: 2),
                                             ],
                                           ),
                                         // Full-width line under the name
@@ -702,8 +712,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                               'Shift XP Earned: $shiftXp',
                                               style: TextStyle(
                                                 fontSize: 14,
-                                                color: Colors.grey[800],
-                                                fontWeight: FontWeight.w500,
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.w600,
+                                                shadows: [
+                                                  Shadow(
+                                                    blurRadius: 3,
+                                                    color: Colors.black,
+                                                    offset: Offset(1, 1),
+                                                  ),
+                                                ],
                                               ),
                                               textAlign: TextAlign.right,
                                               overflow: TextOverflow.ellipsis,
@@ -720,8 +737,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                               '$xp / Next at $next',
                                               style: TextStyle(
                                                 fontSize: 14,
-                                                color: Colors.grey[700],
-                                                fontWeight: FontWeight.w400,
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.w500,
+                                                shadows: [
+                                                  Shadow(
+                                                    blurRadius: 3,
+                                                    color: Colors.black,
+                                                    offset: Offset(1, 1),
+                                                  ),
+                                                ],
                                               ),
                                               textAlign: TextAlign.right,
                                               overflow: TextOverflow.ellipsis,
@@ -806,7 +830,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                               style: const TextStyle(
                                                 fontSize: 17,
                                                 fontWeight: FontWeight.w900,
-                                                color: Colors.black87,
+                                                color: Colors.white,
+                                                shadows: [
+                                                  Shadow(
+                                                    blurRadius: 3,
+                                                    color: Colors.black,
+                                                    offset: Offset(1, 1),
+                                                  ),
+                                                ],
                                               ),
                                             ),
                                             Row(
@@ -817,7 +848,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                                   style: const TextStyle(
                                                     fontSize: 13,
                                                     fontWeight: FontWeight.w500,
-                                                    color: Colors.black87,
+                                                    color: Colors.white,
+                                                    shadows: [
+                                                      Shadow(
+                                                        blurRadius: 2,
+                                                        color: Colors.black,
+                                                        offset: Offset(1, 1),
+                                                      ),
+                                                    ],
                                                   ),
                                                 ),
                                                 if (runRank == 1)
@@ -843,7 +881,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                               style: const TextStyle(
                                                 fontSize: 17,
                                                 fontWeight: FontWeight.w900,
-                                                color: Colors.black87,
+                                                color: Colors.white,
+                                                shadows: [
+                                                  Shadow(
+                                                    blurRadius: 3,
+                                                    color: Colors.black,
+                                                    offset: Offset(1, 1),
+                                                  ),
+                                                ],
                                               ),
                                             ),
                                             Row(
@@ -854,7 +899,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                                   style: const TextStyle(
                                                     fontSize: 13,
                                                     fontWeight: FontWeight.w500,
-                                                    color: Colors.black87,
+                                                    color: Colors.white,
+                                                    shadows: [
+                                                      Shadow(
+                                                        blurRadius: 2,
+                                                        color: Colors.black,
+                                                        offset: Offset(1, 1),
+                                                      ),
+                                                    ],
                                                   ),
                                                 ),
                                                 if (pizookieRank == 1)
