@@ -16,6 +16,21 @@ class _ProfileBannerScreenState extends State<ProfileBannerScreen> {
   String? selectedBannerPath;
 
   @override
+  void initState() {
+    super.initState();
+    // Initialize with the current banner selection from app state
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final app = context.read<AppState>();
+      final profile = app.profiles[widget.serverId];
+      if (profile?.bannerPath != null) {
+        setState(() {
+          selectedBannerPath = profile!.bannerPath;
+        });
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
     final server = app.serverById(widget.serverId);
@@ -27,6 +42,23 @@ class _ProfileBannerScreenState extends State<ProfileBannerScreen> {
         body: const Center(child: Text('Server not found.')),
       );
     }
+
+    // Calculate ranks for this server
+    final allProfiles = app.profiles.entries.toList();
+    
+    // Rank by all-time runs (descending)
+    allProfiles.sort((a, b) => (b.value.allTimeRuns).compareTo(a.value.allTimeRuns));
+    final runsRank = allProfiles.indexWhere((entry) => entry.key == widget.serverId) + 1;
+    
+    // Rank by pizookie runs (descending)
+    allProfiles.sort((a, b) => (b.value.pizookieRuns).compareTo(a.value.pizookieRuns));
+    final pizookieRank = allProfiles.indexWhere((entry) => entry.key == widget.serverId) + 1;
+    
+    // Rank by XP/points (descending)
+    allProfiles.sort((a, b) => (b.value.points).compareTo(a.value.points));
+    final xpRank = allProfiles.indexWhere((entry) => entry.key == widget.serverId) + 1;
+    
+    final totalServers = allProfiles.length;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -114,12 +146,12 @@ class _ProfileBannerScreenState extends State<ProfileBannerScreen> {
                               ? Image.asset(
                                   selectedBannerPath!,
                                   width: double.infinity,
-                                  height: 160,
+                                  height: 200,
                                   fit: BoxFit.cover,
                                 )
                               : Container(
                                   width: double.infinity,
-                                  height: 160,
+                                  height: 200,
                                   decoration: const BoxDecoration(
                                     gradient: LinearGradient(
                                       begin: Alignment.topLeft,
@@ -134,17 +166,17 @@ class _ProfileBannerScreenState extends State<ProfileBannerScreen> {
                           padding: const EdgeInsets.all(20),
                           child: Row(
                             children: [
-                              // Enhanced avatar with the server's chosen avatar (much bigger size)
+                              // Enhanced avatar with the server's chosen avatar (larger size)
                               Container(
                                 padding: const EdgeInsets.all(6),
                                 decoration: BoxDecoration(
                                   gradient: const LinearGradient(
                                     colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
                                   ),
-                                  borderRadius: BorderRadius.circular(60),
+                                  borderRadius: BorderRadius.circular(72),
                                 ),
                                 child: CircleAvatar(
-                                  radius: 54,
+                                  radius: 66,
                                   backgroundColor: Colors.white,
                                   backgroundImage: profile?.avatarPath != null && profile!.avatarPath!.isNotEmpty
                                       ? (profile.avatarPath!.startsWith('/') || profile.avatarPath!.contains(':')
@@ -155,7 +187,7 @@ class _ProfileBannerScreenState extends State<ProfileBannerScreen> {
                                       ? Text(
                                           server.name.isNotEmpty ? server.name[0].toUpperCase() : 'S',
                                           style: const TextStyle(
-                                            fontSize: 36,
+                                            fontSize: 42,
                                             fontWeight: FontWeight.w600,
                                             color: Color(0xFF667EEA),
                                           ),
@@ -164,24 +196,30 @@ class _ProfileBannerScreenState extends State<ProfileBannerScreen> {
                                 ),
                               ),
                               const SizedBox(width: 16),
-                              // Enhanced stats with better typography
+                              // Enhanced stats with consistent dark background for readability
                               Expanded(
                                 child: Container(
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.9),
+                                    color: Colors.black.withOpacity(0.65),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      _buildStatRow('🏃‍♂️ Runs: 15, Rank: 2/5', const Color(0xFF10B981)),
-                                      const SizedBox(height: 6),
-                                      _buildStatRow('🍪 Pizookies: 3, Rank: 1/5', const Color(0xFFF59E0B)),
-                                      const SizedBox(height: 6),
-                                      _buildStatRow('✨ Shift XP Earned: 150', const Color(0xFF8B5CF6)),
-                                      const SizedBox(height: 6),
-                                      _buildStatRow('🎯 5525 / Next at 7000', const Color(0xFF6366F1)),
+                                      _buildStatRow('All-time runs: ${profile?.allTimeRuns ?? 0}', const Color(0xFF10B981)),
+                                      const SizedBox(height: 2),
+                                      _buildStatRow('Rank: $runsRank/$totalServers', const Color(0xFF10B981)),
+                                      const SizedBox(height: 8),
+                                      _buildStatRow('All-time pizookies: ${profile?.pizookieRuns ?? 0}', const Color(0xFFF59E0B)),
+                                      const SizedBox(height: 2),
+                                      _buildStatRow('Rank: $pizookieRank/$totalServers', const Color(0xFFF59E0B)),
+                                      const SizedBox(height: 8),
+                                      _buildStatRow('Current XP: ${profile?.points ?? 0}', const Color(0xFF8B5CF6)),
+                                      const SizedBox(height: 2),
+                                      _buildStatRow('Rank: $xpRank/$totalServers', const Color(0xFF8B5CF6)),
+                                      const SizedBox(height: 8),
+                                      _buildStatRow('XP to level up: ${(profile?.nextLevelAt ?? 0) - (profile?.points ?? 0)}', const Color(0xFF6366F1)),
                                     ],
                                   ),
                                 ),
@@ -327,9 +365,9 @@ class _ProfileBannerScreenState extends State<ProfileBannerScreen> {
       selectedBannerPath = bannerPath;
     });
     
-    // TODO: Save banner selection to app state
-    // final app = Provider.of<AppState>(context, listen: false);
-    // app.setServerBanner(widget.serverId, bannerId);
+    // Save banner selection to app state
+    final app = Provider.of<AppState>(context, listen: false);
+    app.updateBanner(widget.serverId, bannerPath);
     
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -356,8 +394,8 @@ class _ProfileBannerScreenState extends State<ProfileBannerScreen> {
             text,
             style: const TextStyle(
               fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: Color(0xFF374151),
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
               height: 1.2,
             ),
           ),
