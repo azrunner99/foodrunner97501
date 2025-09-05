@@ -723,53 +723,124 @@ class _RosterBodyState extends State<_RosterBody> {
                                         builder: (sectionContext) {
                                           return Dialog(
                                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                                            backgroundColor: Theme.of(context).colorScheme.surface,
-                                            child: Padding(
-                                              padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 24),
-                                              child: Column(
-                                                mainAxisSize: MainAxisSize.min,
-                                                crossAxisAlignment: CrossAxisAlignment.center,
-                                                children: [
-                                                  Text(
-                                                    s.name,
-                                                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                                                    textAlign: TextAlign.center,
+                                            backgroundColor: Colors.transparent,
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                gradient: const LinearGradient(
+                                                  begin: Alignment.topLeft,
+                                                  end: Alignment.bottomRight,
+                                                  colors: [
+                                                    Color(0xFFF8FAFF),
+                                                    Color(0xFFFFFFFF),
+                                                    Color(0xFFF5F3FF),
+                                                  ],
+                                                  stops: [0.0, 0.5, 1.0],
+                                                ),
+                                                borderRadius: BorderRadius.circular(24),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.blue.withOpacity(0.08),
+                                                    blurRadius: 25,
+                                                    offset: const Offset(0, 10),
                                                   ),
-                                                  const SizedBox(height: 8),
-                                                  Text(selectedType.name, style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.primary)),
-                                                  const SizedBox(height: 24),
+                                                  BoxShadow(
+                                                    color: Colors.black.withOpacity(0.04),
+                                                    blurRadius: 10,
+                                                    offset: const Offset(0, 2),
+                                                  ),
+                                                ],
+                                                border: Border.all(
+                                                  color: Colors.white.withOpacity(0.2),
+                                                  width: 1.5,
+                                                ),
+                                              ),
+                                              child: Padding(
+                                                padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 24),
+                                                child: Column(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                                  children: [
                                                   Wrap(
                                                     spacing: 16,
                                                     runSpacing: 16,
                                                     alignment: WrapAlignment.center,
                                                     children: List.generate(selectedType.sections, (i) {
                                                       final sectionLabel = '${selectedType.abbreviation} ${i + 1}';
-                                                      return SizedBox(
-                                                        width: 120,
-                                                        height: 44,
-                                                        child: ElevatedButton(
-                                                          style: ElevatedButton.styleFrom(
-                                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                                                            backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
-                                                            foregroundColor: Theme.of(context).colorScheme.onSecondaryContainer,
-                                                            textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                                                            elevation: 1,
+                                                      return Container(
+                                                        width: 140,
+                                                        height: 54,
+                                                        decoration: BoxDecoration(
+                                                          gradient: const LinearGradient(
+                                                            begin: Alignment.topLeft,
+                                                            end: Alignment.bottomRight,
+                                                            colors: [
+                                                              Color(0xFF4FC3F7),
+                                                              Color(0xFF29B6F6),
+                                                            ],
                                                           ),
-                                                          onPressed: () => Navigator.pop(sectionContext, sectionLabel),
-                                                          child: Text(sectionLabel),
+                                                          borderRadius: BorderRadius.circular(18),
+                                                          boxShadow: [
+                                                            BoxShadow(
+                                                              color: Colors.blue.withOpacity(0.15),
+                                                              blurRadius: 8,
+                                                              offset: const Offset(0, 4),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        child: Material(
+                                                          color: Colors.transparent,
+                                                          child: InkWell(
+                                                            borderRadius: BorderRadius.circular(18),
+                                                            onTap: () => Navigator.pop(sectionContext, sectionLabel),
+                                                            child: Center(
+                                                              child: Text(
+                                                                sectionLabel,
+                                                                style: const TextStyle(
+                                                                  color: Colors.white,
+                                                                  fontSize: 16,
+                                                                  fontWeight: FontWeight.w600,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ),
                                                         ),
                                                       );
                                                     }),
                                                   ),
                                                   const SizedBox(height: 12),
-                                                  TextButton(
-                                                    onPressed: () => Navigator.pop(sectionContext),
-                                                    child: const Text('Cancel'),
+                                                  Container(
+                                                    width: double.infinity,
+                                                    height: 54,
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.grey[100],
+                                                      borderRadius: BorderRadius.circular(18),
+                                                      border: Border.all(
+                                                        color: Colors.grey[300]!,
+                                                        width: 1.5,
+                                                      ),
+                                                    ),
+                                                    child: Material(
+                                                      color: Colors.transparent,
+                                                      child: InkWell(
+                                                        borderRadius: BorderRadius.circular(18),
+                                                        onTap: () => Navigator.pop(sectionContext),
+                                                        child: const Center(
+                                                          child: Text(
+                                                            'Cancel',
+                                                            style: TextStyle(
+                                                              color: Colors.black54,
+                                                              fontSize: 16,
+                                                              fontWeight: FontWeight.w500,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
                                                   ),
                                                 ],
                                               ),
                                             ),
-                                          );
+                                          ));
                                         },
                                       );
                                       if (selectedSection != null) {
@@ -981,43 +1052,110 @@ class _RosterBodyState extends State<_RosterBody> {
       builder: (BuildContext context) {
         return Dialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          backgroundColor: Theme.of(context).colorScheme.surface,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const Text('Select Station Type', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 20),
-                Wrap(
-                  spacing: 16,
-                  runSpacing: 16,
-                  alignment: WrapAlignment.center,
-                  children: stationTypes.map((stationType) {
-                    return SizedBox(
-                      width: 120,
-                      height: 44,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                          foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
-                          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                          elevation: 1,
-                        ),
-                        onPressed: () => Navigator.pop(context, stationType.name),
-                        child: Text(stationType.name),
-                      ),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 12),
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
+          backgroundColor: Colors.transparent,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.blue[50]!,
+                  Colors.white,
+                  Colors.purple[50]!,
+                ],
+              ),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.blue[200]!, width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.blue.withOpacity(0.2),
+                  blurRadius: 25,
+                  offset: const Offset(0, 10),
                 ),
               ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Wrap(
+                    spacing: 14,
+                    runSpacing: 14,
+                    alignment: WrapAlignment.center,
+                    children: stationTypes.map((stationType) {
+                      return Container(
+                        width: 140,
+                        height: 54,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Colors.blue[100]!,
+                              Colors.blue[50]!,
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: Colors.blue[300]!, width: 1.5),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.blue.withOpacity(0.15),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(18),
+                            onTap: () => Navigator.pop(context, stationType.name),
+                            child: Center(
+                              child: Text(
+                                stationType.name,
+                                style: const TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.black87,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 20),
+                  Container(
+                    width: double.infinity,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.grey[350]!, width: 1.5),
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(14),
+                        onTap: () => Navigator.pop(context),
+                        child: const Center(
+                          child: Text(
+                            'Cancel',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black54,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
