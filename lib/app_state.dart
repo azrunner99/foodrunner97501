@@ -472,6 +472,22 @@ class AppState extends ChangeNotifier {
       _maybeActivateShiftByClock();
       _pruneOldTapBuckets();
 
+      // --- CRITICAL TRANSITION LOGIC - DO NOT MODIFY WITHOUT CAREFUL TESTING ---
+      // This section handles the complex lunch-to-dinner transition that preserves
+      // dinner-only server counts while resetting both-shift servers to 0.
+      // 
+      // EXPECTED BEHAVIOR:
+      // - Lunch-only servers: Work until transition end, then removed
+      // - Both-shift servers: Work both shifts, reset to 0 at dinner start  
+      // - Dinner-only servers: Start during transition, preserve counts into dinner
+      //
+      // ROSTER LOGIC:
+      // - dinnerOnly = servers in dinner roster but NOT in lunch roster
+      // - bothShifts = servers in BOTH lunch AND dinner rosters
+      // - lunchOnly = servers in lunch roster but NOT in dinner roster (auto-removed)
+      //
+      // ⚠️ CRITICAL: Order of operations matters for count preservation!
+      // ⚠️ See commit a7fa1ef for working implementation details
       // --- Auto-switch from lunch to dinner at end of transition ---
       final now = DateTime.now();
       final m = now.hour * 60 + now.minute;
