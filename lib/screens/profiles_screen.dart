@@ -8,7 +8,7 @@ import 'package:uuid/uuid.dart';
 import '../app_state.dart';
 import '../gamification.dart';
 import 'preset_avatar_gallery_screen.dart';
-import 'profile_banner_screen.dart';
+import 'profile_banner_screen_new.dart';
 // import removed: achievementsCatalog no longer used
 
 class ProfilesScreen extends StatelessWidget {
