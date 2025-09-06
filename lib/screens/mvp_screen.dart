@@ -5,8 +5,25 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../app_state.dart';
 
-class MvpScreen extends StatelessWidget {
+enum SortOption {
+  allTimeRuns('All Time Runs'),
+  pizookieRuns('Pizookie Runs'),
+  currentXp('Current XP'),
+  mvpAwards('MVP Awards');
+
+  const SortOption(this.displayName);
+  final String displayName;
+}
+
+class MvpScreen extends StatefulWidget {
   const MvpScreen({super.key});
+
+  @override
+  State<MvpScreen> createState() => _MvpScreenState();
+}
+
+class _MvpScreenState extends State<MvpScreen> {
+  SortOption _currentSort = SortOption.allTimeRuns;
 
   @override
   Widget build(BuildContext context) {
@@ -39,59 +56,119 @@ class MvpScreen extends StatelessWidget {
             bannerPath: bannerPath,
             currentXp: currentXp,
           );
-        }).toList()
-          ..sort((a, b) {
-            final c = b.pct.compareTo(a.pct);
-            if (c != 0) return c;
-            final d = b.runs.compareTo(a.runs);
-            if (d != 0) return d;
-            return a.name.toLowerCase().compareTo(b.name.toLowerCase());
-          });
+        }).toList();
+
+        // Sort based on current selection
+        entries.sort((a, b) {
+          switch (_currentSort) {
+            case SortOption.allTimeRuns:
+              final c = b.runs.compareTo(a.runs);
+              if (c != 0) return c;
+              return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+            case SortOption.pizookieRuns:
+              final c = b.pizookieRuns.compareTo(a.pizookieRuns);
+              if (c != 0) return c;
+              return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+            case SortOption.currentXp:
+              final c = b.currentXp.compareTo(a.currentXp);
+              if (c != 0) return c;
+              return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+            case SortOption.mvpAwards:
+              final c = b.shiftsAsMvp.compareTo(a.shiftsAsMvp);
+              if (c != 0) return c;
+              return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+          }
+        });
 
         return Scaffold(
           appBar: AppBar(title: const Text('Leaderboard')),
           body: entries.isEmpty
               ? const Center(child: Text('No data yet.'))
-              : ListView.separated(
-                  itemCount: entries.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
-                  itemBuilder: (_, i) {
-                    final e = entries[i];
-                    final rank = i + 1;
-                    final leading = rank <= 3
-                        ? Container(
-                            padding: const EdgeInsets.all(4),
+              : Column(
+                  children: [
+                    // Sort selection dropdown
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Sort by:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                          const SizedBox(height: 8),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                             decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.7),
-                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.grey),
+                              borderRadius: BorderRadius.circular(4),
                             ),
-                            child: Icon(Icons.emoji_events,
-                                color: rank == 1
-                                    ? Colors.amber[700]
-                                    : rank == 2
-                                        ? Colors.grey[300]
-                                        : Colors.brown[400],
-                                size: 28,
-                            ),
-                        )
-                        : Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.8),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Text(
-                              rank.toString(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 20, // Increased from 16
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<SortOption>(
+                                value: _currentSort,
+                                isExpanded: true,
+                                onChanged: (SortOption? value) {
+                                  if (value != null) {
+                                    setState(() {
+                                      _currentSort = value;
+                                    });
+                                  }
+                                },
+                                items: SortOption.values.map((SortOption option) {
+                                  return DropdownMenuItem<SortOption>(
+                                    value: option,
+                                    child: Text(option.displayName),
+                                  );
+                                }).toList(),
                               ),
                             ),
-                          );
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Leaderboard list
+                    Expanded(
+                      child: ListView.separated(
+                        itemCount: entries.length,
+                        separatorBuilder: (_, __) => const Divider(height: 1),
+                        itemBuilder: (_, i) {
+                          final e = entries[i];
+                          final rank = i + 1;
+                          final leading = rank <= 3
+                              ? Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withOpacity(0.7),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(Icons.emoji_events,
+                                      color: rank == 1
+                                          ? Colors.amber[700]
+                                          : rank == 2
+                                              ? Colors.grey[300]
+                                              : Colors.brown[400],
+                                      size: 28,
+                                  ),
+                              )
+                              : Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withOpacity(0.8),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Text(
+                                    rank.toString(),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 20, // Increased from 16
+                                    ),
+                                  ),
+                                );
 
-                    return _buildLeaderboardItem(e, rank, leading);
-                  },
+                          return _buildLeaderboardItem(e, rank, leading);
+                        },
+                      ),
+                    ),
+                  ],
                 ),
         );
       },
