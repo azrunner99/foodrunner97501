@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../app_state.dart';
 import '../models.dart';
 import 'encouragement_options_screen.dart';
+import 'wallpaper_gallery_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -54,6 +55,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 MaterialPageRoute(builder: (_) => const EncouragementOptionsScreen()),
               );
             },
+          ),
+          const Divider(height: 1),
+          const ListTile(title: Text('Appearance')),
+          ListTile(
+            leading: const Icon(Icons.wallpaper),
+            title: const Text('Home Screen Wallpaper'),
+            subtitle: const Text('Choose a background for the server grid'),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const WallpaperGalleryScreen()),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.shuffle),
+            title: const Text('Update with random selection daily'),
+            trailing: Switch(
+              value: app.autoRotateWallpaper,
+              onChanged: (value) {
+                app.setAutoRotateWallpaper(value);
+              },
+            ),
           ),
           ExpansionPanelList(
             expansionCallback: (int index, bool isExpanded) {

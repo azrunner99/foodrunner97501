@@ -11,6 +11,7 @@ import '../models.dart';
 import 'shift_leaderboard_screen.dart';
 import '../gamification.dart';
 import '../section_assignments.dart';
+import '../widgets/wallpaper_background.dart';
 
 // Screens
 import 'update_roster_screen.dart';
@@ -353,7 +354,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 Icon(isDinner ? Icons.nights_stay : Icons.wb_sunny, color: Colors.grey[700]),
                                 const SizedBox(width: 8),
                                 Text(
-                                  isDinner ? 'Dinner shift displayed' : 'Lunch shift displayed',
+                                  isDinner ? 'Dinner Shift Leaderboard' : 'Lunch Shift Leaderboard',
                                   textAlign: TextAlign.center,
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
@@ -1145,11 +1146,12 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
           ),
         ),
         Expanded(
-          child: Stack(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: GridView.builder(
+          child: WallpaperBackground(
+            child: Stack(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: GridView.builder(
                   itemCount: ids.length,
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: columns,
@@ -1756,6 +1758,7 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                 ),
             ],
           ),
+        ),
         ),
       ],
     );

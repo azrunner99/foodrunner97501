@@ -29,6 +29,7 @@ flutter:
   - assets/runner.png
   - assets/avatars/
   - assets/banners/
+  - assets/wallpapers/
   fonts:
     - family: Luckiest Guy
       fonts:
