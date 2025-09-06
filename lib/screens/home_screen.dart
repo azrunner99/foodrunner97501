@@ -297,22 +297,10 @@ class _HomeScreenState extends State<HomeScreen> {
         appBar: AppBar(
           title: GestureDetector(
             onTap: () => _handleRunnerTap(context),
-            child: const Text(
-              'RUNNER!',
-              style: TextStyle(
-                fontStyle: FontStyle.italic,
-                fontWeight: FontWeight.bold,
-                fontSize: 28,
-                letterSpacing: 2,
-                color: Color(0xFF1565C0), // A strong blue
-                shadows: [
-                  Shadow(
-                    blurRadius: 6,
-                    color: Colors.black26,
-                    offset: Offset(2, 2),
-                  ),
-                ],
-              ),
+            child: Image.asset(
+              'assets/runner.png',
+              height: 120,
+              fit: BoxFit.contain,
             ),
           ),
           actions: [
