@@ -20,7 +20,7 @@ class ShiftLeaderboardScreen extends StatefulWidget {
 
 class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
     with TickerProviderStateMixin {
-  bool _sortByRuns = true;
+  String _sortBy = 'xp'; // 'runs', 'pizookies', 'xp'
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
@@ -58,10 +58,16 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
     final sortedIds = [...ids];
 
     // Sort by selected metric
-    if (_sortByRuns) {
+    if (_sortBy == 'runs') {
       sortedIds.sort((a, b) => (widget.app.currentCounts[b] ?? 0).compareTo(widget.app.currentCounts[a] ?? 0));
-    } else {
-      sortedIds.sort((a, b) => (widget.app.profiles[b]?.pizookieRuns ?? 0).compareTo(widget.app.profiles[a]?.pizookieRuns ?? 0));
+    } else if (_sortBy == 'pizookies') {
+      sortedIds.sort((a, b) => (widget.app.currentPizookieCounts[b] ?? 0).compareTo(widget.app.currentPizookieCounts[a] ?? 0));
+    } else if (_sortBy == 'xp') {
+      sortedIds.sort((a, b) {
+        final xpA = ((widget.app.currentCounts[a] ?? 0) * 10) + ((widget.app.currentPizookieCounts[a] ?? 0) * 15);
+        final xpB = ((widget.app.currentCounts[b] ?? 0) * 10) + ((widget.app.currentPizookieCounts[b] ?? 0) * 15);
+        return xpB.compareTo(xpA);
+      });
     }
 
     // Calculate enhanced metrics
@@ -70,7 +76,7 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
     final avgRuns = totalRuns > 0 ? totalRuns / sortedIds.length : 0.0;
     final maxRuns = counts.isNotEmpty ? counts.reduce((a, b) => a > b ? a : b) : 0;
     final activeServers = counts.where((c) => c > 0).length;
-    final totalPizookies = sortedIds.map((id) => widget.app.profiles[id]?.pizookieRuns ?? 0).fold<int>(0, (a, b) => a + b);
+    final totalPizookies = sortedIds.map((id) => widget.app.currentPizookieCounts[id] ?? 0).fold<int>(0, (a, b) => a + b);
 
     return Scaffold(
       body: Container(
@@ -162,76 +168,63 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
   Widget _buildStatsDashboard(int totalRuns, double avgRuns, int maxRuns, int activeServers, int totalServers, int totalPizookies) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
       child: Column(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildStatCard('🎯', 'Total Runs', '$totalRuns', Colors.blue),
-              _buildStatCard('📊', 'Average', '${avgRuns.toStringAsFixed(1)}', Colors.green),
-              _buildStatCard('🔥', 'Top Score', '$maxRuns', Colors.red),
-              _buildStatCard('🍪', 'Pizookies', '$totalPizookies', Colors.orange),
+              _buildStatCard('Total Runs', '$totalRuns', Colors.blue),
+              _buildStatCard('Pizookies', '$totalPizookies', Colors.orange),
             ],
           ),
           const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(15),
-            ),
-            child: Text(
-              '⚡ $activeServers of $totalServers servers are active',
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-              ),
-            ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildStatCard(String emoji, String label, String value, Color color) {
+  Widget _buildStatCard(String label, String value, Color color) {
     return Column(
       children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(emoji, style: const TextStyle(fontSize: 24)),
-        ),
-        const SizedBox(height: 8),
         Text(
           value,
           style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: color,
+            fontSize: 48,
+            fontWeight: FontWeight.w900,
+            color: Colors.white,
+            shadows: [
+              Shadow(
+                blurRadius: 8,
+                color: Colors.black.withOpacity(0.8),
+                offset: const Offset(3, 3),
+              ),
+              Shadow(
+                blurRadius: 16,
+                color: color.withOpacity(0.9),
+                offset: const Offset(0, 0),
+              ),
+              Shadow(
+                blurRadius: 24,
+                color: Colors.black.withOpacity(0.4),
+                offset: const Offset(0, 0),
+              ),
+            ],
           ),
         ),
+        const SizedBox(height: 8),
         Text(
           label,
           style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
-            fontWeight: FontWeight.w500,
+            fontSize: 16,
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+            shadows: [
+              Shadow(
+                blurRadius: 3,
+                color: Colors.black.withOpacity(0.6),
+                offset: const Offset(1, 1),
+              ),
+            ],
           ),
         ),
       ],
@@ -257,27 +250,22 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
         children: [
           Expanded(
             child: GestureDetector(
-              onTap: () => setState(() => _sortByRuns = true),
+              onTap: () => setState(() => _sortBy = 'xp'),
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color: _sortByRuns ? Theme.of(context).primaryColor : Colors.transparent,
+                  color: _sortBy == 'xp' ? Theme.of(context).primaryColor : Colors.transparent,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      '🏃',
-                      style: TextStyle(fontSize: _sortByRuns ? 20 : 18),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Sort by Runs',
+                      'XP',
                       style: TextStyle(
-                        color: _sortByRuns ? Colors.white : Colors.grey[600],
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
+                        color: _sortBy == 'xp' ? Colors.white : Colors.grey[600],
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
                       ),
                     ),
                   ],
@@ -285,29 +273,59 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
               ),
             ),
           ),
+          Container(
+            height: 30,
+            width: 2,
+            color: Colors.grey[500],
+          ),
           Expanded(
             child: GestureDetector(
-              onTap: () => setState(() => _sortByRuns = false),
+              onTap: () => setState(() => _sortBy = 'runs'),
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color: !_sortByRuns ? Theme.of(context).primaryColor : Colors.transparent,
+                  color: _sortBy == 'runs' ? Theme.of(context).primaryColor : Colors.transparent,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      '🍪',
-                      style: TextStyle(fontSize: !_sortByRuns ? 20 : 18),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Sort by Pizookies',
+                      'Runs',
                       style: TextStyle(
-                        color: !_sortByRuns ? Colors.white : Colors.grey[600],
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
+                        color: _sortBy == 'runs' ? Colors.white : Colors.grey[600],
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Container(
+            height: 30,
+            width: 2,
+            color: Colors.grey[500],
+          ),
+          Expanded(
+            child: GestureDetector(
+              onTap: () => setState(() => _sortBy = 'pizookies'),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: _sortBy == 'pizookies' ? Theme.of(context).primaryColor : Colors.transparent,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Pizookies',
+                      style: TextStyle(
+                        color: _sortBy == 'pizookies' ? Colors.white : Colors.grey[600],
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
                       ),
                     ),
                   ],
@@ -484,7 +502,7 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
                                 style: const TextStyle(
                                   fontFamily: 'Montserrat',
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 22,
+                                  fontSize: 28,
                                   color: Colors.white,
                                   shadows: [
                                     Shadow(

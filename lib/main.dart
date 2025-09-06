@@ -29,7 +29,7 @@ class FoodRunsApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = const Color(0xFF7A0019); // BJ's maroon-ish vibe
+    final color = const Color(0xFF00B4D8); // Vibrant light blue
     return MaterialApp(
       title: "BJ's Food Runs",
       theme: ThemeData(
