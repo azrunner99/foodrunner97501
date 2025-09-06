@@ -297,22 +297,10 @@ class _HomeScreenState extends State<HomeScreen> {
         appBar: AppBar(
           title: GestureDetector(
             onTap: () => _handleRunnerTap(context),
-            child: const Text(
-              'RUNNER!',
-              style: TextStyle(
-                fontStyle: FontStyle.italic,
-                fontWeight: FontWeight.bold,
-                fontSize: 28,
-                letterSpacing: 2,
-                color: Color(0xFF1565C0), // A strong blue
-                shadows: [
-                  Shadow(
-                    blurRadius: 6,
-                    color: Colors.black26,
-                    offset: Offset(2, 2),
-                  ),
-                ],
-              ),
+            child: Image.asset(
+              'assets/runner.png',
+              height: 120,
+              fit: BoxFit.contain,
             ),
           ),
           actions: [
@@ -593,7 +581,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     right: 0,
                     child: Container(
                       width: double.infinity,
-                      color: Colors.grey[200],
                       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
                       child: Consumer<AppState>(
                         builder: (context, app, _) {
@@ -609,47 +596,81 @@ class _HomeScreenState extends State<HomeScreen> {
                               avatarImage = AssetImage(avatarPath);
                             }
                           }
+                          ImageProvider? bannerImage;
+                          if (bannerPath != null && bannerPath.isNotEmpty) {
+                            if (bannerPath.startsWith('/') || bannerPath.contains(':')) {
+                              bannerImage = FileImage(File(bannerPath));
+                            } else {
+                              bannerImage = AssetImage(bannerPath);
+                            }
+                          }
                           final serverName = lastId != null ? app.serverById(lastId)?.name ?? '' : '';
-                          return Stack(
-                            children: [
-                              // Server name at top right inside grey area
-                              if (serverName.isNotEmpty)
-                                Positioned(
-                                  top: 0,
-                                  right: 0,
-                                  child: Container(
-                                    padding: const EdgeInsets.only(top: 4, right: 10),
-                                    constraints: const BoxConstraints(
-                                      maxWidth: 200,
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.end,
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        OutlinedText(
-                                          text: Text(
-                                            serverName,
-                                            style: const TextStyle(
-                                              fontFamily: 'Montserrat',
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 28,
-                                              color: Colors.black,
-                                              shadows: [
-                                                Shadow(
-                                                  blurRadius: 1,
-                                                  color: Colors.black12,
-                                                  offset: Offset(1, 1),
-                                                ),
-                                              ],
-                                            ),
-                                            textAlign: TextAlign.right,
-                                            overflow: TextOverflow.ellipsis,
-                                            maxLines: 1,
-                                          ),
-                                          strokes: [
-                                            OutlinedTextStroke(color: Colors.white, width: 1),
-                                          ],
+                          return Container(
+                            decoration: BoxDecoration(
+                              color: bannerImage == null ? Colors.grey[200] : null,
+                            ),
+                            child: Stack(
+                              children: [
+                                // Banner background (if available)
+                                if (bannerImage != null)
+                                  Positioned.fill(
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        image: DecorationImage(
+                                          image: bannerImage,
+                                          fit: BoxFit.cover,
                                         ),
+                                      ),
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withOpacity(0.3), // Light dark overlay for text readability
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                // Server name at top right inside grey area
+                                if (serverName.isNotEmpty)
+                                  Positioned(
+                                    top: 0,
+                                    right: 0,
+                                    child: Container(
+                                      padding: const EdgeInsets.only(top: 4, right: 10),
+                                      constraints: const BoxConstraints(
+                                        maxWidth: 200,
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.end,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          OutlinedText(
+                                            text: Text(
+                                              serverName,
+                                              style: const TextStyle(
+                                                fontFamily: 'Montserrat',
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 28,
+                                                color: Colors.white,
+                                                shadows: [
+                                                  Shadow(
+                                                    blurRadius: 4,
+                                                    color: Colors.black,
+                                                    offset: Offset(2, 2),
+                                                  ),
+                                                  Shadow(
+                                                    blurRadius: 8,
+                                                    color: Colors.black54,
+                                                    offset: Offset(0, 0),
+                                                  ),
+                                                ],
+                                              ),
+                                              textAlign: TextAlign.right,
+                                              overflow: TextOverflow.ellipsis,
+                                              maxLines: 1,
+                                            ),
+                                            strokes: [
+                                              OutlinedTextStroke(color: Colors.black, width: 2),
+                                            ],
+                                          ),
                                         // Full-width line under the name
                                         Container(
                                           margin: const EdgeInsets.only(top: 4, bottom: 2),
@@ -679,8 +700,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                               'Shift XP Earned: $shiftXp',
                                               style: TextStyle(
                                                 fontSize: 14,
-                                                color: Colors.grey[800],
-                                                fontWeight: FontWeight.w500,
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.w600,
+                                                shadows: [
+                                                  Shadow(
+                                                    blurRadius: 3,
+                                                    color: Colors.black,
+                                                    offset: Offset(1, 1),
+                                                  ),
+                                                ],
                                               ),
                                               textAlign: TextAlign.right,
                                               overflow: TextOverflow.ellipsis,
@@ -697,8 +725,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                               '$xp / Next at $next',
                                               style: TextStyle(
                                                 fontSize: 14,
-                                                color: Colors.grey[700],
-                                                fontWeight: FontWeight.w400,
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.w500,
+                                                shadows: [
+                                                  Shadow(
+                                                    blurRadius: 3,
+                                                    color: Colors.black,
+                                                    offset: Offset(1, 1),
+                                                  ),
+                                                ],
                                               ),
                                               textAlign: TextAlign.right,
                                               overflow: TextOverflow.ellipsis,
@@ -709,8 +744,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ),
                                   ),
                                 ),
-                              // Avatar row
-                              Row(
+                                // Avatar row
+                                Row(
                                 children: [
                                   Padding(
                                     padding: const EdgeInsets.only(left: 0, right: 12.0),
@@ -783,7 +818,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                               style: const TextStyle(
                                                 fontSize: 17,
                                                 fontWeight: FontWeight.w900,
-                                                color: Colors.black87,
+                                                color: Colors.white,
+                                                shadows: [
+                                                  Shadow(
+                                                    blurRadius: 3,
+                                                    color: Colors.black,
+                                                    offset: Offset(1, 1),
+                                                  ),
+                                                ],
                                               ),
                                             ),
                                             Row(
@@ -794,7 +836,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                                   style: const TextStyle(
                                                     fontSize: 13,
                                                     fontWeight: FontWeight.w500,
-                                                    color: Colors.black87,
+                                                    color: Colors.white,
+                                                    shadows: [
+                                                      Shadow(
+                                                        blurRadius: 2,
+                                                        color: Colors.black,
+                                                        offset: Offset(1, 1),
+                                                      ),
+                                                    ],
                                                   ),
                                                 ),
                                                 if (runRank == 1)
@@ -820,7 +869,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                               style: const TextStyle(
                                                 fontSize: 17,
                                                 fontWeight: FontWeight.w900,
-                                                color: Colors.black87,
+                                                color: Colors.white,
+                                                shadows: [
+                                                  Shadow(
+                                                    blurRadius: 3,
+                                                    color: Colors.black,
+                                                    offset: Offset(1, 1),
+                                                  ),
+                                                ],
                                               ),
                                             ),
                                             Row(
@@ -831,7 +887,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                                   style: const TextStyle(
                                                     fontSize: 13,
                                                     fontWeight: FontWeight.w500,
-                                                    color: Colors.black87,
+                                                    color: Colors.white,
+                                                    shadows: [
+                                                      Shadow(
+                                                        blurRadius: 2,
+                                                        color: Colors.black,
+                                                        offset: Offset(1, 1),
+                                                      ),
+                                                    ],
                                                   ),
                                                 ),
                                                 if (pizookieRank == 1)
@@ -859,6 +922,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ],
                               ),
                             ],
+                            ),
                           );
                         },
                       ),

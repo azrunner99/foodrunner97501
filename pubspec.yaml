@@ -26,6 +26,7 @@ flutter:
   assets:
   - assets/splash.png
   - assets/foodrunner.png
+  - assets/runner.png
   - assets/avatars/
   - assets/banners/
   fonts:
