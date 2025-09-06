@@ -8,6 +8,7 @@ import 'dart:io';
 
 import '../app_state.dart';
 import '../models.dart';
+import 'shift_leaderboard_screen.dart';
 import '../gamification.dart';
 import '../section_assignments.dart';
 
@@ -41,173 +42,17 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   void _showCurrentShiftTotalsDialog(BuildContext context, AppState app, bool isDinner) {
-    final ids = isDinner
-        ? (app.todayPlan?.dinnerRoster ?? [])
-        : (app.todayPlan?.lunchRoster ?? []);
-    final label = isDinner ? 'Dinner' : 'Lunch';
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        final screenWidth = MediaQuery.of(ctx).size.width;
-        const double maxDialogWidth = 400;
-        final dialogWidth = screenWidth < maxDialogWidth ? screenWidth - 16 : maxDialogWidth;
-        return StatefulBuilder(
-          builder: (ctx, setState) {
-            String sortBy = _shiftSortBy;
-            List<String> sorted = ids.toList();
-            sorted.sort((a, b) {
-              final runsA = app.currentCounts[a] ?? 0;
-              final runsB = app.currentCounts[b] ?? 0;
-              final pizA = app.currentPizookieCounts[a] ?? 0;
-              final pizB = app.currentPizookieCounts[b] ?? 0;
-              if (sortBy == 'pizookie') {
-                if (pizA != pizB) return pizB.compareTo(pizA);
-              } else {
-                if (runsA != runsB) return runsB.compareTo(runsA);
-              }
-              final nameA = app.serverById(a)?.name ?? '';
-              final nameB = app.serverById(b)?.name ?? '';
-              return nameA.compareTo(nameB);
-            });
-            return Dialog(
-              insetPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 24),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              child: Container(
-                width: dialogWidth,
-                padding: const EdgeInsets.only(top: 16, left: 12, right: 12, bottom: 8),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Center(
-                      child: Text(
-                        label,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 22, letterSpacing: 0.5),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        ChoiceChip(
-                          label: const Text('Sort by Runs'),
-                          selected: sortBy == 'runs',
-                          onSelected: (selected) {
-                            if (selected) setState(() => sortBy = _shiftSortBy = 'runs');
-                          },
-                        ),
-                        const SizedBox(width: 12),
-                        ChoiceChip(
-                          label: const Text('Sort by Pizookies'),
-                          selected: sortBy == 'pizookie',
-                          onSelected: (selected) {
-                            if (selected) setState(() => sortBy = _shiftSortBy = 'pizookie');
-                          },
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      height: 260,
-                      child: Scrollbar(
-                        thumbVisibility: true,
-                        child: ListView.separated(
-                          shrinkWrap: true,
-                          itemCount: sorted.length,
-                          separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey[200]),
-                          itemBuilder: (context, i) {
-                            final id = sorted[i];
-                            final server = app.serverById(id);
-                            final runs = app.currentCounts[id] ?? 0;
-                            final pizookies = app.currentPizookieCounts[id] ?? 0;
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 0),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 28,
-                                    alignment: Alignment.centerRight,
-                                    child: Text(
-                                      '${i + 1}',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                        color: Colors.grey[700],
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    flex: 2,
-                                    child: Row(
-                                      children: [
-                                        if (i == 0)
-                                          Icon(Icons.emoji_events, color: Color(0xFFFFD700), size: 20), // Gold
-                                        if (i == 1)
-                                          Icon(Icons.emoji_events, color: Color(0xFFC0C0C0), size: 20), // Silver
-                                        if (i == 2)
-                                          Icon(Icons.emoji_events, color: Color(0xFFCD7F32), size: 20), // Bronze
-                                        const SizedBox(width: 4),
-                                        Expanded(
-                                          child: Text(
-                                            server?.name ?? id,
-                                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Expanded(
-                                    flex: 1,
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.end,
-                                      children: [
-                                        Text(
-                                          '$runs',
-                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                        ),
-                                        const SizedBox(width: 2),
-                                        const Text('runs', style: TextStyle(fontSize: 13, color: Colors.black54)),
-                                      ],
-                                    ),
-                                  ),
-                                  Expanded(
-                                    flex: 1,
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.end,
-                                      children: [
-                                        Icon(Icons.cookie, size: 16, color: Colors.brown[400]),
-                                        const SizedBox(width: 2),
-                                        Text('$pizookies', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.brown)),
-                                        const SizedBox(width: 2),
-                                        const Text('Pizookies', style: TextStyle(fontSize: 12, color: Colors.brown)),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () => Navigator.of(ctx).pop(),
-                        child: const Text('Close'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ShiftLeaderboardScreen(
+          app: app,
+          shiftType: isDinner ? 'Dinner' : 'Lunch',
+        ),
+      ),
     );
   }
+
   // Used to persist sort selection in dialog
   String _shiftSortBy = 'runs';
   int _runnerTapCount = 0;
@@ -1068,11 +913,14 @@ class _Body extends StatelessWidget {
             padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
             child: GestureDetector(
               onTap: () {
-                showDialog(
-                  context: context,
-                  builder: (ctx) {
-                    return _RosterPopup(app: app, rosterLabel: isDinner ? 'DINNER ROSTER DISPLAYED' : 'LUNCH ROSTER DISPLAYED');
-                  },
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ShiftLeaderboardScreen(
+                      app: app,
+                      shiftType: isDinner ? 'Dinner' : 'Lunch',
+                    ),
+                  ),
                 );
               },
               child: Center(
@@ -2009,6 +1857,7 @@ class _RosterPopup extends StatefulWidget {
 
 class _RosterPopupState extends State<_RosterPopup> {
   bool showLunch = true;
+  bool _sortByRuns = true; // true = runs, false = pizookies
 
   @override
   void initState() {
@@ -2026,152 +1875,355 @@ class _RosterPopupState extends State<_RosterPopup> {
     final isAfterTransition = m >= (plan?.transitionEndMinutes ?? widget.app.settings.transitionEndMinutes);
     final header = showLunch ? 'Lunch' : 'Dinner';
 
-    // --- Get the correct roster and sort by runs descending ---
+    // --- Get the correct roster and sort by selected metric ---
     final ids = showLunch ? lunchIds : dinnerIds;
     final sortedIds = [...ids];
-    sortedIds.sort((a, b) => (widget.app.currentCounts[b] ?? 0).compareTo(widget.app.currentCounts[a] ?? 0));
+    
+    if (_sortByRuns) {
+      sortedIds.sort((a, b) => (widget.app.currentCounts[b] ?? 0).compareTo(widget.app.currentCounts[a] ?? 0));
+    } else {
+      sortedIds.sort((a, b) => (widget.app.profiles[b]?.pizookieRuns ?? 0).compareTo(widget.app.profiles[a]?.pizookieRuns ?? 0));
+    }
 
-  // Calculate total runs for this roster (matching grid logic)
-  final counts = sortedIds.map((id) => widget.app.currentCounts[id] ?? 0).toList();
-  final totalRuns = counts.fold<int>(0, (a, b) => a + b);
-  // No team percent widgets needed
-  List<Widget> teamPercentWidgets = [];
+    // Calculate enhanced metrics
+    final counts = sortedIds.map((id) => widget.app.currentCounts[id] ?? 0).toList();
+    final totalRuns = counts.fold<int>(0, (a, b) => a + b);
+    final avgRuns = totalRuns > 0 ? totalRuns / sortedIds.length : 0.0;
+    final maxRuns = counts.isNotEmpty ? counts.reduce((a, b) => a > b ? a : b) : 0;
+    final activeServers = counts.where((c) => c > 0).length;
 
     return AlertDialog(
+      backgroundColor: Colors.grey[50],
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Center(
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Theme.of(context).primaryColor, Theme.of(context).primaryColor.withOpacity(0.7)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(25),
+              boxShadow: [
+                BoxShadow(
+                  color: Theme.of(context).primaryColor.withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
             child: Text(
-              header,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+              '🍴 $header Leaderboard',
+              style: const TextStyle(
+                fontSize: 22, 
+                fontWeight: FontWeight.bold, 
+                color: Colors.white,
+                letterSpacing: 1.2
+              ),
               textAlign: TextAlign.center,
             ),
           ),
           if (showLunch && isAfterTransition)
-            const Padding(
-              padding: EdgeInsets.only(top: 2.0),
-              child: Text('finalized', style: TextStyle(fontStyle: FontStyle.italic, fontSize: 13, color: Colors.grey)),
+            Container(
+              margin: const EdgeInsets.only(top: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.orange[100],
+                borderRadius: BorderRadius.circular(15),
+                border: Border.all(color: Colors.orange[300]!, width: 1),
+              ),
+              child: const Text(
+                '✅ FINALIZED', 
+                style: TextStyle(
+                  fontStyle: FontStyle.italic, 
+                  fontSize: 12, 
+                  color: Colors.orange,
+                  fontWeight: FontWeight.bold
+                )
+              ),
             ),
-          if (teamPercentWidgets.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 8.0, bottom: 2.0),
-              child: Wrap(children: teamPercentWidgets),
+          // Fun statistics row
+          Container(
+            margin: const EdgeInsets.only(top: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(15),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.2),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildStatItem('🎯', 'Total', '$totalRuns'),
+                _buildStatItem('📊', 'Average', '${avgRuns.toStringAsFixed(1)}'),
+                _buildStatItem('🔥', 'Top Score', '$maxRuns'),
+                _buildStatItem('⚡', 'Active', '$activeServers/${sortedIds.length}'),
+              ],
+            ),
+          ),
         ],
       ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Center(
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: ToggleButtons(
-                isSelected: [showLunch, !showLunch],
-                onPressed: (idx) => setState(() => showLunch = idx == 0),
-                borderRadius: BorderRadius.circular(20),
-                constraints: const BoxConstraints(minWidth: 80, minHeight: 36),
-                selectedColor: Colors.white,
-                fillColor: Theme.of(context).primaryColor,
-                children: const [Text('Lunch'), Text('Dinner')],
-              ),
-            ),
-          ),
-          // Column headers
-          Container(
-            margin: const EdgeInsets.symmetric(vertical: 4),
-            child: Scrollbar(
-              thumbVisibility: true,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 600),
-                  child: Scrollbar(
-                    thumbVisibility: true,
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.vertical,
-                      child: DataTable(
-                        headingRowHeight: 38,
-                        dataRowHeight: 32,
-                        columnSpacing: 18,
-                        horizontalMargin: 8,
-                        columns: const [
-                          DataColumn(label: Text('Servers', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15))),
-                          DataColumn(label: Text('Runs', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15))),
-                          DataColumn(label: Text('Pizookie', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15))),
-                          DataColumn(label: Text('% Food', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15))),
-                        ],
-                        rows: List.generate(sortedIds.length, (i) {
-                          final id = sortedIds[i];
-                          final server = widget.app.servers.firstWhere((s) => s.id == id, orElse: () => Server(id: id, name: 'Unknown'));
-                          final count = widget.app.currentCounts[id] ?? 0;
-                          final pct = totalRuns > 0 ? ((count / totalRuns) * 100).round() : 0;
-                          final pizookieRuns = widget.app.profiles[id]?.pizookieRuns ?? 0;
-                          Color? nameColor;
-                          FontWeight nameWeight = FontWeight.bold;
-                          if (i == 0) nameColor = Color(0xFFFFD700); // Gold
-                          else if (i == 1) nameColor = Color(0xFFC0C0C0); // Silver
-                          else if (i == 2) nameColor = Color(0xFFCD7F32); // Bronze
-                          String? trophy;
-                          if (i == 0) trophy = '🥇';
-                          else if (i == 1) trophy = '🥈';
-                          else if (i == 2) trophy = '🥉';
-                          return DataRow(
-                            cells: [
-                              DataCell(
-                                Text.rich(
-                                  TextSpan(
-                                    children: [
-                                      if (trophy != null)
-                                        WidgetSpan(
-                                          alignment: PlaceholderAlignment.middle,
-                                          child: Padding(
-                                            padding: const EdgeInsets.only(right: 4),
-                                            child: Text(trophy, style: const TextStyle(fontSize: 18)),
-                                          ),
-                                        ),
-                                      TextSpan(
-                                        text: server.name,
-                                        style: TextStyle(
-                                          fontWeight: nameWeight,
-                                          color: nameColor,
-                                          fontSize: 15,
-                                          letterSpacing: 0.2,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  textAlign: TextAlign.left,
-                                ),
-                              ),
-                              DataCell(Text('$count', style: const TextStyle(fontSize: 14))),
-                              DataCell(Text('$pizookieRuns', style: const TextStyle(fontSize: 14))),
-                              DataCell(Text('$pct%', style: const TextStyle(fontSize: 14))),
-                            ],
-                          );
-                        }),
-                      ),
-                    ),
+          // Enhanced toggle buttons with sort options
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                  child: ToggleButtons(
+                    isSelected: [showLunch, !showLunch],
+                    onPressed: (idx) => setState(() => showLunch = idx == 0),
+                    borderRadius: BorderRadius.circular(25),
+                    constraints: const BoxConstraints(minWidth: 80, minHeight: 36),
+                    selectedColor: Colors.white,
+                    fillColor: Theme.of(context).primaryColor,
+                    children: const [
+                      Text('🍽️ Lunch'), 
+                      Text('🌙 Dinner')
+                    ],
                   ),
                 ),
               ),
+              const SizedBox(width: 8),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(25),
+                ),
+                child: ToggleButtons(
+                  isSelected: [_sortByRuns, !_sortByRuns],
+                  onPressed: (idx) => setState(() => _sortByRuns = idx == 0),
+                  borderRadius: BorderRadius.circular(25),
+                  constraints: const BoxConstraints(minWidth: 60, minHeight: 36),
+                  selectedColor: Colors.white,
+                  fillColor: Colors.orange,
+                  children: const [
+                    Text('🏃', style: TextStyle(fontSize: 18)),
+                    Text('🍪', style: TextStyle(fontSize: 18)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Enhanced server list with progress bars
+          Container(
+            constraints: const BoxConstraints(maxHeight: 300),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(15),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: sortedIds.length,
+              separatorBuilder: (context, index) => Divider(height: 1, color: Colors.grey[200]),
+              itemBuilder: (context, i) {
+                final id = sortedIds[i];
+                final server = widget.app.servers.firstWhere((s) => s.id == id, orElse: () => Server(id: id, name: 'Unknown'));
+                final count = widget.app.currentCounts[id] ?? 0;
+                final pizookieRuns = widget.app.profiles[id]?.pizookieRuns ?? 0;
+                final pct = totalRuns > 0 ? ((count / totalRuns) * 100) : 0.0;
+                final isTop3 = i < 3;
+                
+                return _buildEnhancedServerRow(
+                  server: server,
+                  rank: i + 1,
+                  runs: count,
+                  pizookies: pizookieRuns,
+                  percentage: pct,
+                  maxRuns: maxRuns,
+                  isTop3: isTop3,
+                );
+              },
             ),
           ),
         ],
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Close'),
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.grey[400]!, Colors.grey[500]!],
+            ),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
         ),
       ],
+    );
+  }
+
+  Widget _buildStatItem(String emoji, String label, String value) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(emoji, style: const TextStyle(fontSize: 20)),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            color: Colors.grey[600],
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEnhancedServerRow({
+    required Server server,
+    required int rank,
+    required int runs,
+    required int pizookies,
+    required double percentage,
+    required int maxRuns,
+    required bool isTop3,
+  }) {
+    // Determine rank styling
+    String rankEmoji = '';
+    Color? rankColor;
+    Color backgroundColor = Colors.transparent;
+    
+    if (rank == 1) {
+      rankEmoji = '🥇';
+      rankColor = const Color(0xFFFFD700);
+      backgroundColor = const Color(0xFFFFF8DC);
+    } else if (rank == 2) {
+      rankEmoji = '🥈';
+      rankColor = const Color(0xFFC0C0C0);
+      backgroundColor = const Color(0xFFF5F5F5);
+    } else if (rank == 3) {
+      rankEmoji = '🥉';
+      rankColor = const Color(0xFFCD7F32);
+      backgroundColor = const Color(0xFFFFF0E6);
+    } else {
+      rankEmoji = '#$rank';
+    }
+
+    // Determine activity indicators
+    String activityIndicator = '';
+    if (runs == 0) {
+      activityIndicator = '😴';
+    } else if (runs >= maxRuns * 0.8) {
+      activityIndicator = '🔥';
+    } else if (runs >= maxRuns * 0.5) {
+      activityIndicator = '⚡';
+    } else {
+      activityIndicator = '👍';
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        border: isTop3 ? Border.all(color: rankColor!.withOpacity(0.3), width: 1) : null,
+      ),
+      child: ListTile(
+        dense: true,
+        leading: CircleAvatar(
+          radius: 20,
+          backgroundColor: rankColor?.withOpacity(0.2) ?? Colors.grey[200],
+          child: Text(
+            rankEmoji,
+            style: TextStyle(
+              fontSize: isTop3 ? 16 : 12,
+              fontWeight: FontWeight.bold,
+              color: rankColor ?? Colors.grey[600],
+            ),
+          ),
+        ),
+        title: Row(
+          children: [
+            Expanded(
+              flex: 3,
+              child: Text(
+                server.name,
+                style: TextStyle(
+                  fontWeight: isTop3 ? FontWeight.bold : FontWeight.w600,
+                  fontSize: isTop3 ? 15 : 14,
+                  color: rankColor ?? Colors.black87,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Text(
+              activityIndicator,
+              style: const TextStyle(fontSize: 16),
+            ),
+          ],
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 4),
+            // Progress bar
+            LinearProgressIndicator(
+              value: maxRuns > 0 ? (runs / maxRuns) : 0.0,
+              backgroundColor: Colors.grey[300],
+              valueColor: AlwaysStoppedAnimation<Color>(
+                isTop3 ? (rankColor ?? Theme.of(context).primaryColor) : Theme.of(context).primaryColor,
+              ),
+              minHeight: 6,
+            ),
+            const SizedBox(height: 6),
+            // Stats row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '🏃 $runs runs',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+                Text(
+                  '🍪 $pizookies',
+                  style: const TextStyle(fontSize: 12),
+                ),
+                Text(
+                  '${percentage.toStringAsFixed(1)}%',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: percentage > 0 ? Colors.green[700] : Colors.grey[500],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
