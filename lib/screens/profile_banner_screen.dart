@@ -12,7 +12,18 @@ class ProfileBannerScreen extends StatefulWidget {
   State<ProfileBannerScreen> createState() => _ProfileBannerScreenState();
 }
 
-class _ProfileBannerScreenState extends State<ProfileBannerScreen> {
+class _ProfileBannerScreenState ext                      },
+                    );
+                  },
+                ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );<ProfileBannerScreen> {
   String? selectedBannerPath;
 
   @override
@@ -60,16 +71,38 @@ class _ProfileBannerScreenState extends State<ProfileBannerScreen> {
     
     final totalServers = allProfiles.length;
 
+    // Calculate available banners for app bar
+    final List<String> allPresetBanners = List.generate(174, (i) => 'assets/banners/image${(i+1).toString().padLeft(3, '0')}.webp');
+    final Set<String> usedBanners = {};
+    for (var profile in app.profiles.values) {
+      if (profile.bannerPath != null && 
+          profile.bannerPath!.startsWith('assets/banners/') &&
+          app.profiles.keys.firstWhere((id) => app.profiles[id] == profile, orElse: () => '') != widget.serverId) {
+        usedBanners.add(profile.bannerPath!);
+      }
+    }
+    final availableBannerCount = allPresetBanners.length - usedBanners.length;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Text(
-          '${server.name}\'s Banner',
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 18,
-            color: Color(0xFF1A202C),
-          ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${server.name}\'s Banner',
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 18,
+                color: Color(0xFF1A202C),
+              ),
+            ),
+            if (availableBannerCount < allPresetBanners.length)
+              Text(
+                '$availableBannerCount of ${allPresetBanners.length} available',
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.normal),
+              ),
+          ],
         ),
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF4A5568),
@@ -296,14 +329,55 @@ class _ProfileBannerScreenState extends State<ProfileBannerScreen> {
               color: Colors.white,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-                child: ListView.builder(
-                  physics: const BouncingScrollPhysics(),
-                  itemCount: 174, // Total number of banner images
-                  itemBuilder: (context, index) {
-                    final bannerPath = 'assets/banners/image${(index + 1).toString().padLeft(3, '0')}.webp';
-                    final bannerId = 'image${(index + 1).toString().padLeft(3, '0')}';
+                child: Builder(
+                  builder: (context) {
+                    // Get all preset banners
+                    final List<String> allPresetBanners = List.generate(174, (i) => 'assets/banners/image${(i+1).toString().padLeft(3, '0')}.webp');
                     
-                    return Padding(
+                    // Get currently used preset banners (excluding the current server's banner)
+                    final Set<String> usedBanners = {};
+                    for (var profile in app.profiles.values) {
+                      if (profile.bannerPath != null && 
+                          profile.bannerPath!.startsWith('assets/banners/') &&
+                          app.profiles.keys.firstWhere((id) => app.profiles[id] == profile, orElse: () => '') != widget.serverId) {
+                        usedBanners.add(profile.bannerPath!);
+                      }
+                    }
+                    
+                    // Filter out used banners
+                    final List<String> availableBanners = allPresetBanners.where((banner) => !usedBanners.contains(banner)).toList();
+                    
+                    if (availableBanners.isEmpty) {
+                      return const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.image, size: 64, color: Colors.grey),
+                            SizedBox(height: 16),
+                            Text(
+                              'All preset banners are currently in use!',
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                              textAlign: TextAlign.center,
+                            ),
+                            SizedBox(height: 8),
+                            Text(
+                              'Try again when other servers change their banners.',
+                              style: TextStyle(color: Colors.grey),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    
+                    return ListView.builder(
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: availableBanners.length,
+                      itemBuilder: (context, index) {
+                        final bannerPath = availableBanners[index];
+                        final bannerId = bannerPath.split('/').last.split('.').first; // Extract image001, image002, etc.
+                        
+                        return Padding(
                       padding: const EdgeInsets.only(bottom: 16),
                       child: GestureDetector(
                         onTap: () => _selectBanner(context, bannerPath, bannerId),

@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../app_state.dart';
+import '../utils/banner_assets.dart';
 
 class ProfileBannerScreen extends StatefulWidget {
   final String serverId;
@@ -14,6 +15,40 @@ class ProfileBannerScreen extends StatefulWidget {
 
 class _ProfileBannerScreenState extends State<ProfileBannerScreen> {
   String? selectedBannerPath;
+  List<String> availableBanners = [];
+  bool isLoadingBanners = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize with current banner selection
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final app = context.read<AppState>();
+      final profile = app.profiles[widget.serverId];
+      if (profile?.bannerPath != null) {
+        setState(() {
+          selectedBannerPath = profile!.bannerPath;
+        });
+      }
+    });
+    _loadAvailableBanners();
+  }
+
+  Future<void> _loadAvailableBanners() async {
+    final app = context.read<AppState>();
+    try {
+      final banners = await BannerAssets.getAvailableBanners(widget.serverId, app.profiles);
+      setState(() {
+        availableBanners = banners;
+        isLoadingBanners = false;
+      });
+    } catch (e) {
+      print('Error loading banners: $e');
+      setState(() {
+        isLoadingBanners = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,13 +66,36 @@ class _ProfileBannerScreenState extends State<ProfileBannerScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Text(
-          '${server.name}\'s Banner',
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 18,
-            color: Color(0xFF1A202C),
-          ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              '${server.name}\'s Banner',
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 18,
+                color: Color(0xFF1A202C),
+              ),
+            ),
+            if (!isLoadingBanners && availableBanners.isNotEmpty)
+              FutureBuilder<List<String>>(
+                future: BannerAssets.getAllBannerPaths(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasData) {
+                    final totalBanners = snapshot.data!.length;
+                    return Text(
+                      '${availableBanners.length} of $totalBanners available',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.normal,
+                        color: Color(0xFF718096),
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
+          ],
         ),
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF4A5568),
@@ -258,25 +316,48 @@ class _ProfileBannerScreenState extends State<ProfileBannerScreen> {
               color: Colors.white,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-                child: ListView.builder(
-                  physics: const BouncingScrollPhysics(),
-                  itemCount: 174, // Total number of banner images
-                  itemBuilder: (context, index) {
-                    final bannerPath = 'assets/banners/image${(index + 1).toString().padLeft(3, '0')}.webp';
-                    final bannerId = 'image${(index + 1).toString().padLeft(3, '0')}';
-                    
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: GestureDetector(
-                        onTap: () => _selectBanner(context, bannerPath, bannerId),
-                        child: Container(
-                          height: 120, // Good height for 800x320 aspect ratio
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: selectedBannerPath == bannerPath 
-                                  ? const Color(0xFF667EEA)
-                                  : const Color(0xFFE2E8F0),
+                child: isLoadingBanners
+                  ? const Center(child: CircularProgressIndicator())
+                  : availableBanners.isEmpty
+                    ? const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.image, size: 64, color: Colors.grey),
+                            SizedBox(height: 16),
+                            Text(
+                              'All banners are currently in use!',
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                              textAlign: TextAlign.center,
+                            ),
+                            SizedBox(height: 8),
+                            Text(
+                              'Choose a different banner when other servers change theirs.',
+                              style: TextStyle(color: Colors.grey),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        physics: const BouncingScrollPhysics(),
+                        itemCount: availableBanners.length,
+                        itemBuilder: (context, index) {
+                          final bannerPath = availableBanners[index];
+                          final bannerId = bannerPath.split('/').last.replaceAll('.webp', '');
+                          
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: GestureDetector(
+                              onTap: () => _selectBanner(context, bannerPath, bannerId),
+                              child: Container(
+                                height: 120, // Good height for banner aspect ratio
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: selectedBannerPath == bannerPath 
+                                        ? const Color(0xFF667EEA)
+                                        : const Color(0xFFE2E8F0),
                               width: selectedBannerPath == bannerPath ? 3 : 2,
                             ),
                             boxShadow: [
@@ -327,16 +408,21 @@ class _ProfileBannerScreenState extends State<ProfileBannerScreen> {
       selectedBannerPath = bannerPath;
     });
     
-    // TODO: Save banner selection to app state
-    // final app = Provider.of<AppState>(context, listen: false);
-    // app.setServerBanner(widget.serverId, bannerId);
+    // Save banner selection to app state
+    final app = Provider.of<AppState>(context, listen: false);
+    app.updateBanner(widget.serverId, bannerPath);
     
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Selected banner for ${context.read<AppState>().serverById(widget.serverId)?.name ?? "server"}'),
+        content: Text('Selected banner for ${app.serverById(widget.serverId)?.name ?? "server"}'),
         duration: const Duration(seconds: 2),
+        backgroundColor: const Color(0xFF667EEA),
+        behavior: SnackBarBehavior.floating,
       ),
     );
+    
+    // Reload available banners since one was just selected
+    _loadAvailableBanners();
   }
 
   Widget _buildStatRow(String text, Color accentColor) {
