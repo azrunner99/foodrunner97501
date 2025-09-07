@@ -1129,10 +1129,9 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
         Padding(
           padding: const EdgeInsets.only(top: 4, bottom: 4, left: 8, right: 8),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const Text('🍪', style: TextStyle(fontSize: 28, shadows: [Shadow(blurRadius: 2, color: Colors.black26, offset: Offset(1,1))])),
               Expanded(
                 child: Text(
                   'Long Press When Running a Pizookie!',
@@ -1148,7 +1147,6 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const Text('🍪', style: TextStyle(fontSize: 28, shadows: [Shadow(blurRadius: 2, color: Colors.black26, offset: Offset(1,1))])),
             ],
           ),
         ),

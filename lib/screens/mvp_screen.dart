@@ -81,7 +81,24 @@ class _MvpScreenState extends State<MvpScreen> {
         });
 
         return Scaffold(
-          appBar: AppBar(title: const Text('Leaderboard')),
+          appBar: AppBar(
+            title: const Text('Leaderboard'),
+            actions: [
+              PopupMenuButton<String>(
+                onSelected: (value) {
+                  if (value == 'recalculate_mvp') {
+                    _recalculateMVPAwards(context, app);
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'recalculate_mvp',
+                    child: Text('Recalculate MVP Awards'),
+                  ),
+                ],
+              ),
+            ],
+          ),
           body: entries.isEmpty
               ? const Center(child: Text('No data yet.'))
               : Column(
@@ -413,6 +430,35 @@ class _MvpScreenState extends State<MvpScreen> {
       }
     }
     return const SizedBox(width: 120); // Increased width to match larger avatar
+  }
+
+  void _recalculateMVPAwards(BuildContext context, AppState app) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Recalculate MVP Awards'),
+        content: const Text(
+          'This will recalculate MVP awards for all historical shifts based on XP earned (runs × 10 + pizookies × 15). '
+          'Current MVP award counts will be reset and recalculated. Continue?'
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              app.recalculateMVPAwards();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('MVP awards recalculated successfully!')),
+              );
+            },
+            child: const Text('Recalculate'),
+          ),
+        ],
+      ),
+    );
   }
 }
 
