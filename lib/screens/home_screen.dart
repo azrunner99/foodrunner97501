@@ -254,7 +254,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ids = dinnerIds;
                 } else {
                   if (app.activeRosterView == 'dinner') {
-                    ids = dinnerIds.where((id) => !lunchIds.contains(id)).toList();
+                    ids = dinnerIds;
                   } else {
                     ids = lunchIds;
                   }
@@ -850,8 +850,8 @@ class _Body extends StatelessWidget {
     } else {
       // During transition: show toggle, and show correct ids for each view
       if (app.activeRosterView == 'dinner') {
-        // Show only dinner-only servers (not on lunch) during transition
-        ids = dinnerIds.where((id) => !lunchIds.contains(id)).toList();
+        // Show all dinner servers during transition
+        ids = dinnerIds;
       } else {
         // Show all lunch servers (including those who work both)
         ids = lunchIds;
