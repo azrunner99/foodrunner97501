@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../app_state.dart';
+import '../utils/banner_assets.dart';
 
 class ProfileBannerScreen extends StatefulWidget {
   final String serverId;
@@ -12,24 +13,15 @@ class ProfileBannerScreen extends StatefulWidget {
   State<ProfileBannerScreen> createState() => _ProfileBannerScreenState();
 }
 
-class _ProfileBannerScreenState ext                      },
-                    );
-                  },
-                ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );<ProfileBannerScreen> {
+class _ProfileBannerScreenState extends State<ProfileBannerScreen> {
   String? selectedBannerPath;
+  List<String> availableBanners = [];
+  bool isLoadingBanners = true;
 
   @override
   void initState() {
     super.initState();
-    // Initialize with the current banner selection from app state
+    // Initialize with current banner selection
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final app = context.read<AppState>();
       final profile = app.profiles[widget.serverId];
@@ -39,6 +31,23 @@ class _ProfileBannerScreenState ext                      },
         });
       }
     });
+    _loadAvailableBanners();
+  }
+
+  Future<void> _loadAvailableBanners() async {
+    final app = context.read<AppState>();
+    try {
+      final banners = await BannerAssets.getAvailableBanners(widget.serverId, app.profiles);
+      setState(() {
+        availableBanners = banners;
+        isLoadingBanners = false;
+      });
+    } catch (e) {
+      print('Error loading banners: $e');
+      setState(() {
+        isLoadingBanners = false;
+      });
+    }
   }
 
   @override
@@ -54,40 +63,11 @@ class _ProfileBannerScreenState ext                      },
       );
     }
 
-    // Calculate ranks for this server
-    final allProfiles = app.profiles.entries.toList();
-    
-    // Rank by all-time runs (descending)
-    allProfiles.sort((a, b) => (b.value.allTimeRuns).compareTo(a.value.allTimeRuns));
-    final runsRank = allProfiles.indexWhere((entry) => entry.key == widget.serverId) + 1;
-    
-    // Rank by pizookie runs (descending)
-    allProfiles.sort((a, b) => (b.value.pizookieRuns).compareTo(a.value.pizookieRuns));
-    final pizookieRank = allProfiles.indexWhere((entry) => entry.key == widget.serverId) + 1;
-    
-    // Rank by XP/points (descending)
-    allProfiles.sort((a, b) => (b.value.points).compareTo(a.value.points));
-    final xpRank = allProfiles.indexWhere((entry) => entry.key == widget.serverId) + 1;
-    
-    final totalServers = allProfiles.length;
-
-    // Calculate available banners for app bar
-    final List<String> allPresetBanners = List.generate(174, (i) => 'assets/banners/image${(i+1).toString().padLeft(3, '0')}.webp');
-    final Set<String> usedBanners = {};
-    for (var profile in app.profiles.values) {
-      if (profile.bannerPath != null && 
-          profile.bannerPath!.startsWith('assets/banners/') &&
-          app.profiles.keys.firstWhere((id) => app.profiles[id] == profile, orElse: () => '') != widget.serverId) {
-        usedBanners.add(profile.bannerPath!);
-      }
-    }
-    final availableBannerCount = allPresetBanners.length - usedBanners.length;
-
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
               '${server.name}\'s Banner',
@@ -97,10 +77,23 @@ class _ProfileBannerScreenState ext                      },
                 color: Color(0xFF1A202C),
               ),
             ),
-            if (availableBannerCount < allPresetBanners.length)
-              Text(
-                '$availableBannerCount of ${allPresetBanners.length} available',
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.normal),
+            if (!isLoadingBanners && availableBanners.isNotEmpty)
+              FutureBuilder<List<String>>(
+                future: BannerAssets.getAllBannerPaths(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasData) {
+                    final totalBanners = snapshot.data!.length;
+                    return Text(
+                      '${availableBanners.length} of $totalBanners available',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.normal,
+                        color: Color(0xFF718096),
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
               ),
           ],
         ),
@@ -179,12 +172,12 @@ class _ProfileBannerScreenState ext                      },
                               ? Image.asset(
                                   selectedBannerPath!,
                                   width: double.infinity,
-                                  height: 200,
+                                  height: 120,
                                   fit: BoxFit.cover,
                                 )
                               : Container(
                                   width: double.infinity,
-                                  height: 200,
+                                  height: 120,
                                   decoration: const BoxDecoration(
                                     gradient: LinearGradient(
                                       begin: Alignment.topLeft,
@@ -199,17 +192,17 @@ class _ProfileBannerScreenState ext                      },
                           padding: const EdgeInsets.all(20),
                           child: Row(
                             children: [
-                              // Enhanced avatar with the server's chosen avatar (larger size)
+                              // Enhanced avatar with the server's chosen avatar (bigger size)
                               Container(
-                                padding: const EdgeInsets.all(6),
+                                padding: const EdgeInsets.all(4),
                                 decoration: BoxDecoration(
                                   gradient: const LinearGradient(
                                     colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
                                   ),
-                                  borderRadius: BorderRadius.circular(72),
+                                  borderRadius: BorderRadius.circular(38),
                                 ),
                                 child: CircleAvatar(
-                                  radius: 66,
+                                  radius: 34,
                                   backgroundColor: Colors.white,
                                   backgroundImage: profile?.avatarPath != null && profile!.avatarPath!.isNotEmpty
                                       ? (profile.avatarPath!.startsWith('/') || profile.avatarPath!.contains(':')
@@ -220,7 +213,7 @@ class _ProfileBannerScreenState ext                      },
                                       ? Text(
                                           server.name.isNotEmpty ? server.name[0].toUpperCase() : 'S',
                                           style: const TextStyle(
-                                            fontSize: 42,
+                                            fontSize: 24,
                                             fontWeight: FontWeight.w600,
                                             color: Color(0xFF667EEA),
                                           ),
@@ -229,30 +222,24 @@ class _ProfileBannerScreenState ext                      },
                                 ),
                               ),
                               const SizedBox(width: 16),
-                              // Enhanced stats with consistent dark background for readability
+                              // Enhanced stats with better typography
                               Expanded(
                                 child: Container(
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.65),
+                                    color: Colors.white.withOpacity(0.9),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      _buildStatRow('All-time runs: ${profile?.allTimeRuns ?? 0}', const Color(0xFF10B981)),
-                                      const SizedBox(height: 2),
-                                      _buildStatRow('Rank: $runsRank/$totalServers', const Color(0xFF10B981)),
-                                      const SizedBox(height: 8),
-                                      _buildStatRow('All-time pizookies: ${profile?.pizookieRuns ?? 0}', const Color(0xFFF59E0B)),
-                                      const SizedBox(height: 2),
-                                      _buildStatRow('Rank: $pizookieRank/$totalServers', const Color(0xFFF59E0B)),
-                                      const SizedBox(height: 8),
-                                      _buildStatRow('Current XP: ${profile?.points ?? 0}', const Color(0xFF8B5CF6)),
-                                      const SizedBox(height: 2),
-                                      _buildStatRow('Rank: $xpRank/$totalServers', const Color(0xFF8B5CF6)),
-                                      const SizedBox(height: 8),
-                                      _buildStatRow('XP to level up: ${(profile?.nextLevelAt ?? 0) - (profile?.points ?? 0)}', const Color(0xFF6366F1)),
+                                      _buildStatRow('🏃‍♂️ Runs: 15, Rank: 2/5', const Color(0xFF10B981)),
+                                      const SizedBox(height: 6),
+                                      _buildStatRow('🍪 Pizookies: 3, Rank: 1/5', const Color(0xFFF59E0B)),
+                                      const SizedBox(height: 6),
+                                      _buildStatRow('✨ Shift XP Earned: 150', const Color(0xFF8B5CF6)),
+                                      const SizedBox(height: 6),
+                                      _buildStatRow('🎯 5525 / Next at 7000', const Color(0xFF6366F1)),
                                     ],
                                   ),
                                 ),
@@ -329,66 +316,48 @@ class _ProfileBannerScreenState ext                      },
               color: Colors.white,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-                child: Builder(
-                  builder: (context) {
-                    // Get all preset banners
-                    final List<String> allPresetBanners = List.generate(174, (i) => 'assets/banners/image${(i+1).toString().padLeft(3, '0')}.webp');
-                    
-                    // Get currently used preset banners (excluding the current server's banner)
-                    final Set<String> usedBanners = {};
-                    for (var profile in app.profiles.values) {
-                      if (profile.bannerPath != null && 
-                          profile.bannerPath!.startsWith('assets/banners/') &&
-                          app.profiles.keys.firstWhere((id) => app.profiles[id] == profile, orElse: () => '') != widget.serverId) {
-                        usedBanners.add(profile.bannerPath!);
-                      }
-                    }
-                    
-                    // Filter out used banners
-                    final List<String> availableBanners = allPresetBanners.where((banner) => !usedBanners.contains(banner)).toList();
-                    
-                    if (availableBanners.isEmpty) {
-                      return const Center(
+                child: isLoadingBanners
+                  ? const Center(child: CircularProgressIndicator())
+                  : availableBanners.isEmpty
+                    ? const Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.image, size: 64, color: Colors.grey),
                             SizedBox(height: 16),
                             Text(
-                              'All preset banners are currently in use!',
+                              'All banners are currently in use!',
                               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                               textAlign: TextAlign.center,
                             ),
                             SizedBox(height: 8),
                             Text(
-                              'Try again when other servers change their banners.',
+                              'Choose a different banner when other servers change theirs.',
                               style: TextStyle(color: Colors.grey),
                               textAlign: TextAlign.center,
                             ),
                           ],
                         ),
-                      );
-                    }
-                    
-                    return ListView.builder(
-                      physics: const BouncingScrollPhysics(),
-                      itemCount: availableBanners.length,
-                      itemBuilder: (context, index) {
-                        final bannerPath = availableBanners[index];
-                        final bannerId = bannerPath.split('/').last.split('.').first; // Extract image001, image002, etc.
-                        
-                        return Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: GestureDetector(
-                        onTap: () => _selectBanner(context, bannerPath, bannerId),
-                        child: Container(
-                          height: 120, // Good height for 800x320 aspect ratio
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: selectedBannerPath == bannerPath 
-                                  ? const Color(0xFF667EEA)
-                                  : const Color(0xFFE2E8F0),
+                      )
+                    : ListView.builder(
+                        physics: const BouncingScrollPhysics(),
+                        itemCount: availableBanners.length,
+                        itemBuilder: (context, index) {
+                          final bannerPath = availableBanners[index];
+                          final bannerId = bannerPath.split('/').last.replaceAll('.webp', '');
+                          
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: GestureDetector(
+                              onTap: () => _selectBanner(context, bannerPath, bannerId),
+                              child: Container(
+                                height: 120, // Good height for banner aspect ratio
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: selectedBannerPath == bannerPath 
+                                        ? const Color(0xFF667EEA)
+                                        : const Color(0xFFE2E8F0),
                               width: selectedBannerPath == bannerPath ? 3 : 2,
                             ),
                             boxShadow: [
@@ -445,10 +414,15 @@ class _ProfileBannerScreenState ext                      },
     
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Selected banner for ${context.read<AppState>().serverById(widget.serverId)?.name ?? "server"}'),
+        content: Text('Selected banner for ${app.serverById(widget.serverId)?.name ?? "server"}'),
         duration: const Duration(seconds: 2),
+        backgroundColor: const Color(0xFF667EEA),
+        behavior: SnackBarBehavior.floating,
       ),
     );
+    
+    // Reload available banners since one was just selected
+    _loadAvailableBanners();
   }
 
   Widget _buildStatRow(String text, Color accentColor) {
@@ -468,8 +442,8 @@ class _ProfileBannerScreenState ext                      },
             text,
             style: const TextStyle(
               fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF374151),
               height: 1.2,
             ),
           ),

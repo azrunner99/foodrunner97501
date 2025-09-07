@@ -46,6 +46,9 @@ class _ProfileDetail extends StatelessWidget {
   final String name;
   const _ProfileDetail({required this.serverId, required this.name});
 
+  // Pre-define colors to avoid expensive withOpacity calculations
+  static const Color achievementBackgroundColor = Color(0x26FFC107); // Colors.amber with 0.15 opacity
+
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
@@ -81,7 +84,7 @@ class _ProfileDetail extends StatelessWidget {
                       got.contains(a.id) ? Icons.emoji_events : Icons.lock_outline,
                       color: got.contains(a.id) ? Colors.amber[700] : Colors.grey,
                     ),
-                    backgroundColor: got.contains(a.id) ? Colors.amber.withOpacity(0.15) : null,
+                    backgroundColor: got.contains(a.id) ? achievementBackgroundColor : null,
                   ),
               ],
             )
