@@ -161,8 +161,8 @@ class GamificationSettings {
   List<String>? customEncouragements;
 
   GamificationSettings({
-    this.transitionStartMinutes = 15 * 60 + 30, // Default 3:30 PM
-    this.transitionEndMinutes = 17 * 60,        // Default 5:00 PM
+    this.transitionStartMinutes = 85,   // TESTING: 1:25 AM
+    this.transitionEndMinutes = 86,     // TESTING: 1:26 AM
     this.gamificationEnabled = true,
     this.encouragementFlashEnabled = true,
     this.customEncouragements,

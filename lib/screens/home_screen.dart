@@ -246,20 +246,37 @@ class _HomeScreenState extends State<HomeScreen> {
                 final end = app.todayPlan?.transitionEndMinutes ?? app.settings.transitionEndMinutes;
                 final lunchIds = app.todayPlan?.lunchRoster ?? [];
                 final dinnerIds = app.todayPlan?.dinnerRoster ?? [];
+                print('[DEBUG] HomeScreen: m=$m, start=$start, end=$end');
+                print('[DEBUG] HomeScreen: lunchIds=$lunchIds, dinnerIds=$dinnerIds');
+                print('[DEBUG] HomeScreen: activeRosterView=${app.activeRosterView}');
+                
                 List<String> ids = [];
                 final showToggle = m >= start && m < end;
+                print('[DEBUG] HomeScreen: showToggle=$showToggle (transition period)');
+                
                 if (m < start) {
                   ids = lunchIds;
+                  print('[DEBUG] HomeScreen: Before transition, using lunch roster');
                 } else if (m >= end) {
                   ids = dinnerIds;
+                  print('[DEBUG] HomeScreen: After transition, using dinner roster');
                 } else {
+                  // During transition: show correct servers for each view
                   if (app.activeRosterView == 'dinner') {
-                    ids = dinnerIds;
+                    // Dinner view during transition: show only dinner-only servers
+                    final lunchSet = lunchIds.toSet();
+                    final dinnerSet = dinnerIds.toSet();
+                    final dinnerOnly = dinnerSet.difference(lunchSet);
+                    ids = dinnerOnly.toList();
+                    print('[DEBUG] HomeScreen: During transition, dinner view selected - showing dinner-only servers: $ids');
                   } else {
+                    // Lunch view during transition: show only lunch servers
                     ids = lunchIds;
+                    print('[DEBUG] HomeScreen: During transition, lunch view selected - showing lunch servers: $ids');
                   }
                 }
                 ids = ids.toSet().toList();
+                print('[DEBUG] HomeScreen: Final ids to display: $ids');
                 
                 // Sort servers alphabetically by name
                 ids.sort((a, b) {
@@ -850,10 +867,13 @@ class _Body extends StatelessWidget {
     } else {
       // During transition: show toggle, and show correct ids for each view
       if (app.activeRosterView == 'dinner') {
-        // Show all dinner servers during transition
-        ids = dinnerIds;
+        // During transition, dinner view shows only dinner-only servers
+        final lunchSet = lunchIds.toSet();
+        final dinnerSet = dinnerIds.toSet();
+        final dinnerOnly = dinnerSet.difference(lunchSet);
+        ids = dinnerOnly.toList();
       } else {
-        // Show all lunch servers (including those who work both)
+        // During transition, lunch view shows all lunch servers
         ids = lunchIds;
       }
     }
@@ -1221,42 +1241,61 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                             padding: const EdgeInsets.all(8),
                           ),
                           onPressed: () {
+                            print('[DEBUG] Server ${s.name} (id: $id) clicked');
+                            print('[DEBUG] isOpenNow: ${app.isOpenNow}');
+                            print('[DEBUG] shiftActive: ${app.shiftActive}');
+                            print('[DEBUG] workingServerIds: ${app.workingServerIds}');
+                            print('[DEBUG] workingServerIds.contains($id): ${app.workingServerIds.contains(id)}');
+                            
                             // Only increment normal run on tap, not on long press
                             if (!this._isLongPress) {
-                              final achievement = app.increment(id);
-                              int xpEarned = 10;
-                              if (achievement == 'full_hands') {
-                                xpEarned = 35;
-                                _showAchievement('Full Hands!');
-                              } else if (achievement == 'five_streak') {
-                                xpEarned = 30;
-                              } else if (achievement == 'ten_in_shift') {
-                                xpEarned = 20;
-                              } else if (achievement == 'twenty_in_shift') {
-                                xpEarned = 30;
-                              }
-                              _showFlash(
-                                '+$xpEarned XP',
-                                'Next level: $pointsToNext XP',
-                              );
-                              if (app.settings.encouragementFlashEnabled) {
-                                final msg = encouragements[Random().nextInt(encouragements.length)];
+                              // Check if restaurant is open before allowing increments
+                              if (app.isOpenNow) {
+                                final achievement = app.increment(id);
+                                int xpEarned = 10;
+                                if (achievement == 'full_hands') {
+                                  xpEarned = 35;
+                                  _showAchievement('Full Hands!');
+                                } else if (achievement == 'five_streak') {
+                                  xpEarned = 30;
+                                } else if (achievement == 'ten_in_shift') {
+                                  xpEarned = 20;
+                                } else if (achievement == 'twenty_in_shift') {
+                                  xpEarned = 30;
+                                }
+                                _showFlash(
+                                  '+$xpEarned XP',
+                                  'Next level: $pointsToNext XP',
+                                );
+                                if (app.settings.encouragementFlashEnabled) {
+                                  final msg = encouragements[Random().nextInt(encouragements.length)];
+                                  ScaffoldMessenger.of(ctx).clearSnackBars();
+                                  ScaffoldMessenger.of(ctx).showSnackBar(
+                                    SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),
+                                  );
+                                }
+
+                                final bubble = app.recentBadgeBubble;
+                                if (bubble != null) {
+                                  ScaffoldMessenger.of(ctx).showSnackBar(
+                                    SnackBar(content: Text(bubble), duration: const Duration(seconds: 3)),
+                                  );
+                                  app.clearRecentBadgeBubble();
+                                }
+
+                                // Set lastRunServerId so avatar appears in bottom grey area
+                                app.lastRunServerId = id;
+                              } else {
+                                // Restaurant is closed - show message
+                                print('[DEBUG] Click blocked: Restaurant is closed');
                                 ScaffoldMessenger.of(ctx).clearSnackBars();
                                 ScaffoldMessenger.of(ctx).showSnackBar(
-                                  SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),
+                                  const SnackBar(
+                                    content: Text('Restaurant is closed!'),
+                                    duration: Duration(seconds: 2),
+                                  ),
                                 );
                               }
-
-                              final bubble = app.recentBadgeBubble;
-                              if (bubble != null) {
-                                ScaffoldMessenger.of(ctx).showSnackBar(
-                                  SnackBar(content: Text(bubble), duration: const Duration(seconds: 3)),
-                                );
-                                app.clearRecentBadgeBubble();
-                              }
-
-                              // Set lastRunServerId so avatar appears in bottom grey area
-                              app.lastRunServerId = id;
                             }
                           },
                           onLongPress: () {
