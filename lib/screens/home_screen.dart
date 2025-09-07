@@ -159,6 +159,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               },
             ),
+            IconButton(
+              tooltip: 'Shift History',
+              icon: const Icon(Icons.calendar_month),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const HistoryScreen()),
+                );
+              },
+            ),
             PopupMenuButton<_MoreAction>(
               tooltip: 'More',
               onSelected: (a) {
