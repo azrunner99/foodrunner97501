@@ -236,7 +236,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   const SizedBox(width: 16),
                   Text(
                     _selectedDay != null
-                        ? 'Shifts for ${_selectedDay!.day}/${_selectedDay!.month}'
+                        ? 'Shifts for ${_selectedDay!.month}/${_selectedDay!.day}'
                         : 'Select a date to view shifts',
                     style: const TextStyle(
                       fontSize: 18,

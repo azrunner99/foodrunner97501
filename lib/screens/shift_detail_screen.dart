@@ -51,16 +51,16 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
           sortedIds.sort((a, b) => (widget.shift.counts[b] ?? 0).compareTo(widget.shift.counts[a] ?? 0));
         } else if (_sortBy == 'pizookies') {
           sortedIds.sort((a, b) {
-            final pizookiesA = appState.profiles[a]?.pizookieRuns ?? 0;
-            final pizookiesB = appState.profiles[b]?.pizookieRuns ?? 0;
+            final pizookiesA = widget.shift.pizookieCounts[a] ?? 0;
+            final pizookiesB = widget.shift.pizookieCounts[b] ?? 0;
             return pizookiesB.compareTo(pizookiesA);
           });
         } else if (_sortBy == 'xp') {
           sortedIds.sort((a, b) {
             final runsA = widget.shift.counts[a] ?? 0;
             final runsB = widget.shift.counts[b] ?? 0;
-            final pizookiesA = appState.profiles[a]?.pizookieRuns ?? 0;
-            final pizookiesB = appState.profiles[b]?.pizookieRuns ?? 0;
+            final pizookiesA = widget.shift.pizookieCounts[a] ?? 0;
+            final pizookiesB = widget.shift.pizookieCounts[b] ?? 0;
             final xpA = (runsA * 10) + (pizookiesA * 15);
             final xpB = (runsB * 10) + (pizookiesB * 15);
             return xpB.compareTo(xpA);
@@ -69,7 +69,7 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
 
         // Calculate metrics
         final totalRuns = widget.shift.counts.values.fold<int>(0, (a, b) => a + b);
-        final totalPizookies = serverIds.map((id) => appState.profiles[id]?.pizookieRuns ?? 0).fold<int>(0, (a, b) => a + b);
+        final totalPizookies = widget.shift.pizookieCounts.values.fold<int>(0, (a, b) => a + b);
         final maxRuns = widget.shift.counts.values.isNotEmpty ? widget.shift.counts.values.reduce((a, b) => a > b ? a : b) : 0;
 
         return Scaffold(
@@ -158,7 +158,7 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
                       ),
                     ),
                     Text(
-                      '${_hm(widget.shift.start)} - ${_hm(widget.shift.start.add(const Duration(hours: 8)))}',
+                      '${_hm(widget.shift.start)} - ${_getShiftEndTime()}',
                       style: const TextStyle(
                         fontSize: 14,
                         color: Colors.white70,
@@ -358,7 +358,7 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
     
     for (final id in sortedIds) {
       final runs = widget.shift.counts[id] ?? 0;
-      final pizookies = appState.profiles[id]?.pizookieRuns ?? 0;
+      final pizookies = widget.shift.pizookieCounts[id] ?? 0;
       final xp = (runs * 10) + (pizookies * 15);
       
       if (xp > highestXP) {
@@ -391,7 +391,7 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
             orElse: () => Server(id: id, name: 'Unknown'),
           );
           final runs = widget.shift.counts[id] ?? 0;
-          final pizookies = appState.profiles[id]?.pizookieRuns ?? 0;
+          final pizookies = widget.shift.pizookieCounts[id] ?? 0;
           final isMVP = id == mvpServerId && highestXP > 0; // Only show MVP if someone earned XP
 
           return _buildEnhancedServerCard(
@@ -451,9 +451,9 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
     runRanks.sort((a, b) => (widget.shift.counts[b] ?? 0).compareTo(widget.shift.counts[a] ?? 0));
     final runRank = runRanks.indexOf(server.id) + 1;
     
-    // Rank for pizookies
+    // Rank for pizookies (for this shift only)
     final pizookieRanks = List<String>.from(allServerIds);
-    pizookieRanks.sort((a, b) => (appState.profiles[b]?.pizookieRuns ?? 0).compareTo(appState.profiles[a]?.pizookieRuns ?? 0));
+    pizookieRanks.sort((a, b) => (widget.shift.pizookieCounts[b] ?? 0).compareTo(widget.shift.pizookieCounts[a] ?? 0));
     final pizookieRank = pizookieRanks.indexOf(server.id) + 1;
     final totalServers = allServerIds.length;
     
@@ -974,5 +974,43 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
         );
       },
     );
+  }
+
+  String _getShiftEndTime() {
+    // For historical shifts, calculate end time based on restaurant hours for that day
+    final appState = Provider.of<AppState>(context, listen: false);
+    final dayOfWeek = widget.shift.start.weekday;
+    final weeklyHours = WeeklyHours.defaults(); // Use default restaurant hours
+    
+    DateTime? endTime;
+    if (widget.shift.shiftType == 'Lunch') {
+      // Lunch ends at transition start or restaurant close (whichever comes first)
+      final settings = appState.settings;
+      final transitionStart = widget.shift.start.copyWith(
+        hour: settings.transitionStartMinutes ~/ 60,
+        minute: settings.transitionStartMinutes % 60,
+        second: 0,
+        millisecond: 0,
+      );
+      final closeMinutes = weeklyHours.closeMinutes[dayOfWeek] ?? 22 * 60;
+      final restaurantClose = widget.shift.start.copyWith(
+        hour: closeMinutes ~/ 60,
+        minute: closeMinutes % 60,
+        second: 0,
+        millisecond: 0,
+      );
+      endTime = transitionStart.isBefore(restaurantClose) ? transitionStart : restaurantClose;
+    } else {
+      // Dinner ends at restaurant close
+      final closeMinutes = weeklyHours.closeMinutes[dayOfWeek] ?? 22 * 60;
+      endTime = widget.shift.start.copyWith(
+        hour: closeMinutes ~/ 60,
+        minute: closeMinutes % 60,
+        second: 0,
+        millisecond: 0,
+      );
+    }
+    
+    return _hm(endTime);
   }
 }

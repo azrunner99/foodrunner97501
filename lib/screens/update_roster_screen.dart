@@ -451,6 +451,39 @@ class _RosterBodyState extends State<_RosterBody> {
     final assignedServers = widget.app.servers.where((s) => roster.contains(s.id)).toList();
     final unassignedServers = widget.app.servers.where((s) => !roster.contains(s.id)).toList();
 
+    // Sort assigned servers by station type order, then by section number within each station type
+    assignedServers.sort((a, b) {
+      final aStationType = serverStationType[a.id];
+      final bStationType = serverStationType[b.id];
+      final aSection = serverStationSection[a.id];
+      final bSection = serverStationSection[b.id];
+      
+      // Get the index of each station type in the stationTypes list
+      // Check both name and abbreviation since either could be stored
+      final aStationIndex = stationTypes.indexWhere((st) => 
+        st.name == aStationType || st.abbreviation == aStationType);
+      final bStationIndex = stationTypes.indexWhere((st) => 
+        st.name == bStationType || st.abbreviation == bStationType);
+      
+      // If both servers have station types, sort by station type order first
+      if (aStationIndex != -1 && bStationIndex != -1) {
+        final stationComparison = aStationIndex.compareTo(bStationIndex);
+        if (stationComparison != 0) return stationComparison;
+        
+        // Within the same station type, sort by section number
+        final aSectionNum = int.tryParse(aSection ?? '0') ?? 0;
+        final bSectionNum = int.tryParse(bSection ?? '0') ?? 0;
+        final sectionComparison = aSectionNum.compareTo(bSectionNum);
+        if (sectionComparison != 0) return sectionComparison;
+      }
+      // If only one has a station type, prioritize the one with a station type
+      else if (aStationIndex != -1) return -1;
+      else if (bStationIndex != -1) return 1;
+      
+      // If section numbers are the same (or both have no station type), sort by name
+      return a.name.compareTo(b.name);
+    });
+
     return WillPopScope(
       onWillPop: () async {
         saveRoster();
@@ -953,6 +986,7 @@ class _RosterBodyState extends State<_RosterBody> {
                         child: Container(
                           margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                           child: ListView.builder(
+                            physics: const AlwaysScrollableScrollPhysics(),
                             itemCount: unassignedServers.length,
                             itemBuilder: (context, index) {
                               final s = unassignedServers[index];
