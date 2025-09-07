@@ -5,6 +5,7 @@ import '../models.dart';
 import '../widgets/wallpaper_background.dart';
 import 'encouragement_options_screen.dart';
 import 'wallpaper_gallery_screen.dart';
+import 'admin_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -180,6 +181,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ],
                 ),
+              ),
+              const SizedBox(height: 16),
+              _buildSectionCard(
+                'Administration',
+                Icons.admin_panel_settings,
+                [
+                  _buildSettingsTile(
+                    icon: Icons.admin_panel_settings,
+                    title: 'Admin Panel',
+                    subtitle: 'Access administrative tools and controls',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const AdminScreen()),
+                      );
+                    },
+                  ),
+                ],
               ),
               const SizedBox(height: 32),
             ],
