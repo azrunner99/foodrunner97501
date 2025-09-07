@@ -12,6 +12,7 @@ import 'shift_leaderboard_screen.dart';
 import '../gamification.dart';
 import '../section_assignments.dart';
 import '../widgets/wallpaper_background.dart';
+import 'app_features_screen.dart';
 
 // Screens
 import 'update_roster_screen.dart';
@@ -69,68 +70,14 @@ class _HomeScreenState extends State<HomeScreen> {
     _lastTapTime = now;
     if (_runnerTapCount >= 5) {
       _runnerTapCount = 0;
-      _showFeatureBubble(context);
+      _navigateToFeaturesScreen(context);
     }
   }
 
-  void _showFeatureBubble(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: const Text('App Features', style: TextStyle(fontWeight: FontWeight.bold)),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text('• Shift Tracking: Track server runs for each shift (Lunch/Dinner) with real-time updates.'),
-                SizedBox(height: 10),
-                Text('• Roster Management: Assign servers to lunch and dinner rosters, with a toggle to switch between them during transition.'),
-                SizedBox(height: 10),
-                Text('• Shift Transition: Handles lunch/dinner transitions, preserving and resetting counts for lunch-only, dinner-only, and both-shift servers.'),
-                SizedBox(height: 10),
-                Text('• Click Tracking: Counts runs and pizookie runs for each server, with streaks, peaks, and closer bonuses.'),
-                SizedBox(height: 10),
-                Text('• Pizookie Runs: Special long-press action to log Pizookie runs, which count as shift runs and are tracked separately.'),
-                SizedBox(height: 10),
-                Text('• Visual Leaderboards: Popup and main grid show sorted server stats, including runs, percentages, and Pizookie runs.'),
-                SizedBox(height: 10),
-                Text('• Sortable Shift Totals: Tap shift notification to view and sort server totals by runs or pizookie runs, with medals for top 3.'),
-                SizedBox(height: 10),
-                Text('• Leveling System: Each server has a visible level badge, XP, and progress to next level.'),
-                SizedBox(height: 10),
-                Text('• Team Competition: Pie chart and details for team-based run competition (Blue, Purple, Silver).'),
-                SizedBox(height: 10),
-                Text('• History & Profiles: Access to shift history and individual server profiles.'),
-                SizedBox(height: 10),
-                Text('• Admin & Settings: Admin screen for management and settings for app configuration.'),
-                SizedBox(height: 10),
-                Text('• Visual Feedback: Snackbars, achievement flashes, encouragements, and clickable banners for actions.'),
-                SizedBox(height: 10),
-                Text('• Feature Bubble: Tap "RUNNER!" title 5 times to view this feature list.'),
-                SizedBox(height: 10),
-                Text('• Responsive UI: Grid adapts to screen size, with clear, modern design and color-coded elements.'),
-                SizedBox(height: 10),
-                Text('• Persistent Data: All stats and settings are saved and restored across sessions.'),
-                SizedBox(height: 10),
-                Text('• Gold/Silver/Bronze Medals: Top 3 servers in shift totals dialog are visually highlighted.'),
-                SizedBox(height: 10),
-                Text('• Scrollable and Adaptive Dialogs: All popups and dialogs are scrollable and fit any device.'),
-              ],
-            ),
-          ),
-          actions: [
-            Padding(
-              padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8, top: 8),
-              child: Text('Version: 1.4.0+140', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600)),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Close'),
-            ),
-          ],
-        );
-      },
+  void _navigateToFeaturesScreen(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AppFeaturesScreen()),
     );
   }
 
