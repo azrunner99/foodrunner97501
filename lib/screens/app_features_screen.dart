@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'version_history_screen.dart';
+import 'about_screen.dart';
 
 class AppFeaturesScreen extends StatelessWidget {
   const AppFeaturesScreen({super.key});
@@ -47,20 +48,10 @@ class AppFeaturesScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(24),
                 child: Column(
                   children: [
-                    Icon(
-                      Icons.restaurant,
-                      size: 64,
-                      color: Colors.blue.shade600,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'RUNNER!',
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue.shade800,
-                        fontFamily: 'Montserrat',
-                      ),
+                    Image.asset(
+                      'assets/runner.png',
+                      height: 120,
+                      fit: BoxFit.contain,
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -72,6 +63,27 @@ class AppFeaturesScreen extends StatelessWidget {
                       ),
                       textAlign: TextAlign.center,
                     ),
+                    const SizedBox(height: 8),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const AboutScreen(),
+                          ),
+                        );
+                      },
+                      child: Text(
+                        'About',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.blue.shade600,
+                          fontWeight: FontWeight.w600,
+                          decoration: TextDecoration.underline,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -79,72 +91,142 @@ class AppFeaturesScreen extends StatelessWidget {
 
             // Feature Categories
             _buildFeatureCategory(
-              title: 'Core Tracking',
+              title: 'Core Shift Management',
               icon: Icons.track_changes,
               color: Colors.blue,
               features: [
-                'Shift Tracking: Track server runs for each shift (Lunch/Dinner) with real-time updates and automatic transition handling.',
-                'Click Tracking: Counts runs and pizookie runs for each server, with streaks, peak bonuses, and closer bonuses.',
-                'Pizookie Runs: Special long-press action to log Pizookie runs (25 XP each), tracked separately from regular runs.',
+                'Real-Time Shift Tracking: Track server runs for Lunch and Dinner shifts with live count updates and automatic timing.',
+                'Smart Transition System: Intelligent lunch-to-dinner transitions that preserve counts for cross-shift servers while resetting lunch-only servers.',
+                'Click & Long-Press Actions: Standard runs (10 XP) via tap, Pizookie runs (25 XP) via long-press with distinct tracking.',
+                'Automatic Shift Activation: Time-based shift activation with configurable transition periods and manual override capabilities.',
+                'Working Server Management: Dynamic roster management ensuring only assigned servers can receive clicks during their shifts.',
+                'Shift History & Records: Complete historical tracking of all shifts with detailed server performance and timing data.',
               ],
             ),
 
             _buildFeatureCategory(
-              title: 'Team & Competition',
+              title: 'Advanced Roster &\nStation Management',
+              icon: Icons.assignment_ind,
+              color: Colors.teal,
+              features: [
+                'Dual Roster System: Separate lunch and dinner rosters with cross-shift server support for maximum flexibility.',
+                'Station Type Assignments: Configure custom station types (Cocktail, Dining Room, Patio, Test Kitchen) with abbreviations.',
+                'Section Number Organization: Assign servers to numbered sections within station types for organized floor management.',
+                'Persistent Station Data: All station assignments saved across sessions with SharedPreferences integration.',
+                'Team Color Assignments: Assign servers to Blue, Purple, or Silver teams with separate lunch/dinner team configurations.',
+                'Smart Roster Switching: Auto/manual toggle between lunch and dinner views with intelligent transition period handling.',
+                'Visual Roster Indicators: Clear visual feedback showing current roster status, assigned servers, and team affiliations.',
+              ],
+            ),
+
+            _buildFeatureCategory(
+              title: 'Team Competition\n& Analytics',
               icon: Icons.groups,
               color: Colors.purple,
               features: [
-                'Team Competition: Color-coded team assignments (Blue, Purple, Silver) with detailed pie chart analytics and performance tracking.',
-                'Visual Leaderboards: Enhanced shift detail screens with sortable stats, MVP badges, and top 3 medal rankings.',
-                'Roster Management: Assign servers to lunch and dinner rosters, with station types and sections (Cocktail, Dining Room, Patio, Test).',
+                'Color-Coded Team System: Three-team competition (Blue, Purple, Silver) with visual color coding throughout the interface.',
+                'Dynamic Pie Chart Analytics: Real-time team performance visualization with tap-to-cycle display modes and percentage breakdowns.',
+                'Team Performance Tracking: Comprehensive team statistics with run counts, percentages, and comparative performance metrics.',
+                'Cross-Shift Team Management: Teams can be configured differently for lunch and dinner shifts with automatic synchronization.',
+                'Team Competition Details: Dedicated screen showing detailed team breakdowns with member lists and individual contributions.',
+                'Team Goal System: Configurable team goals with achievement tracking when targets are met collectively.',
+                'Team Toggle Functionality: Easy enable/disable of team features without losing assignment data.',
               ],
             ),
 
             _buildFeatureCategory(
-              title: 'Gamification',
+              title: 'Advanced Gamification\nSystem',
               icon: Icons.emoji_events,
               color: Colors.orange,
               features: [
-                'Leveling System: Each server has a visible level badge, XP points, and progress bar to next level with achievement unlocks.',
-                'Achievement System: Unlock badges for milestones, streaks, and special accomplishments with visual feedback.',
-                'XP & Rewards: Dynamic point system with bonus multipliers, achievement flashes, and progress tracking.',
+                'Multi-Level XP System: 150-level progression system with exponentially increasing requirements and visual level badges.',
+                'Comprehensive Achievement System: 12+ unique achievements including streaks, milestones, MVP awards, and team goals.',
+                'Repeatable Achievements: Some achievements (MVP, Team Goal) can be earned multiple times for ongoing engagement.',
+                'Smart Achievement Detection: Automatic achievement detection with visual feedback and XP bonus rewards.',
+                'Configurable Gamification: Complete enable/disable toggle for all gamification features while preserving core functionality.',
+                'Streak Tracking: Multi-run streak detection with bonus XP rewards for consecutive successful runs.',
+                'Performance Bonuses: Peak hour bonuses, closer bonuses, and special circumstance multipliers.',
+                'Progress Visualization: Real-time XP progress bars, level indicators, and achievement status displays.',
               ],
             ),
 
             _buildFeatureCategory(
-              title: 'Customization',
+              title: 'Rich Customization &\nPersonalization',
               icon: Icons.palette,
               color: Colors.green,
               features: [
-                'Avatar Gallery: Choose from 38+ preset avatars or upload custom photos with automatic resizing and circular cropping.',
-                'Banner System: 174+ professional profile banners (800x320px) with availability management and dynamic display.',
-                'Wallpaper Gallery: 73+ background wallpapers for complete visual customization of the app interface.',
+                'Extensive Avatar Gallery: 38+ professionally designed preset avatars with circular cropping and automatic resizing.',
+                'Custom Avatar Upload: Photo upload capability with automatic processing, circular cropping, and quality optimization.',
+                'Avatar History Tracking: Complete history of avatar changes with timestamps for server profile continuity.',
+                'Professional Banner System: 174+ high-quality profile banners (800x320px) with availability management.',
+                'Dynamic Banner Display: Intelligent banner rotation with availability status and visual consistency.',
+                'Wallpaper Gallery: 73+ background wallpapers for complete app interface customization and personalization.',
+                'Color Theme Integration: Consistent color schemes throughout the interface with theme-aware component design.',
+                'Profile Customization: Complete server profile customization with visual elements and personal branding.',
               ],
             ),
 
             _buildFeatureCategory(
-              title: 'Management & Settings',
-              icon: Icons.settings,
-              color: Colors.teal,
+              title: 'Data Management &\nAdmin Controls',
+              icon: Icons.admin_panel_settings,
+              color: Colors.red,
               features: [
-                'Station Types & Sections: Configure custom station types with abbreviations and section numbers for organized server assignments.',
-                'Shift Transition: Intelligent lunch/dinner transitions preserving counts for cross-shift servers and resetting lunch-only servers.',
-                'Admin Controls: PIN-protected admin access for roster management, server settings, and data management.',
-                'Smart Roster Switching: Auto/manual toggle between lunch and dinner views with transition period handling.',
+                'PIN-Protected Admin Access: Secure 4-digit PIN system protecting all administrative functions and sensitive data.',
+                'Comprehensive Server Management: Add, edit, delete servers with profile data, statistics, and configuration management.',
+                'Data Import/Export: Complete data backup and restore capabilities with JSON-based data structures.',
+                'Settings Management: Granular control over all app features, timings, and behavioral configurations.',
+                'Shift Control Panel: Manual shift start/stop, pause/resume functionality with administrative override capabilities.',
+                'Server Integrity Monitoring: Built-in data validation and integrity checking with automated repair suggestions.',
+                'Bulk Operations: Mass server management, roster updates, and configuration changes for efficiency.',
+                'Administrative Logging: Detailed logging of administrative actions for audit trails and troubleshooting.',
               ],
             ),
 
             _buildFeatureCategory(
-              title: 'User Experience',
-              icon: Icons.phone_android,
+              title: 'Analytics & Performance\nTracking',
+              icon: Icons.analytics,
               color: Colors.indigo,
               features: [
-                'Visual Feedback: Real-time snackbars, achievement flashes, encouragement messages, and interactive UI elements.',
-                'Responsive Design: Adaptive grid layouts, scrollable dialogs, and optimized UI for different screen sizes.',
-                'Data Persistence: All stats, settings, avatars, and configurations automatically saved and restored across sessions.',
-                'Profile Management: Individual server profiles with detailed statistics, avatar history, and performance analytics.',
-                'History & Profiles: Access to shift history, server profiles, and comprehensive performance analytics.',
-                'Feature Discovery: Multiple ways to explore app features including this dedicated screen.',
+                'Individual Server Profiles: Comprehensive statistics including all-time runs, best shift performance, and streak records.',
+                'Detailed Shift Analytics: Complete shift breakdowns with sortable statistics, MVP identification, and performance rankings.',
+                'Historical Trend Analysis: Long-term performance tracking with shift-over-shift comparisons and trend identification.',
+                'Performance Metrics: Advanced statistics including average runs per shift, consistency ratings, and improvement tracking.',
+                'Sortable Leaderboards: Multiple sorting options (runs, pizookies, XP, level) with medal awards for top performers.',
+                'Real-Time Statistics: Live updating statistics during shifts with immediate feedback and performance indicators.',
+                'Export Capabilities: Data export functionality for external analysis and reporting requirements.',
+                'Visual Performance Indicators: Charts, graphs, and visual elements showing performance trends and achievements.',
+              ],
+            ),
+
+            _buildFeatureCategory(
+              title: 'User Experience\n& Interface',
+              icon: Icons.phone_android,
+              color: Colors.cyan,
+              features: [
+                'Responsive Adaptive Design: Optimized layouts for phones, tablets, and desktop with automatic scaling and adjustment.',
+                'Intuitive Touch Interface: Large touch targets, gesture support, and accessibility-compliant interaction design.',
+                'Real-Time Visual Feedback: Instant snackbar notifications, achievement flashes, and progress animations.',
+                'Smart Navigation: Context-aware navigation with breadcrumbs, back button handling, and deep linking support.',
+                'Accessibility Features: Screen reader support, high contrast options, and keyboard navigation compatibility.',
+                'Performance Optimization: Smooth 60fps animations, efficient memory usage, and fast startup times.',
+                'Cross-Platform Compatibility: Full support for Android, iOS, Web, Windows, macOS, and Linux platforms.',
+                'Offline Functionality: Local data storage ensuring full functionality without internet connectivity.',
+              ],
+            ),
+
+            _buildFeatureCategory(
+              title: 'Advanced Features &\nIntegrations',
+              icon: Icons.extension,
+              color: Colors.deepOrange,
+              features: [
+                'Intelligent Encouragement System: Contextual motivational messages with customizable frequency and content.',
+                'Easter Egg Features: Hidden features accessible through special interactions (5-tap feature discovery).',
+                'Version History Tracking: Complete changelog with feature additions, bug fixes, and version progression.',
+                'Data Persistence Engine: Robust SharedPreferences integration ensuring no data loss across app sessions.',
+                'Background Processing: Efficient background tasks for data synchronization and automatic backups.',
+                'Performance Monitoring: Built-in performance tracking with optimization suggestions and health metrics.',
+                'Feature Toggle System: Granular control over feature availability without requiring app updates.',
+                'Integration APIs: Extensible architecture supporting future integrations and third-party connectivity.',
               ],
             ),
 
@@ -260,12 +342,16 @@ class AppFeaturesScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 16),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: color,
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                      height: 1.2,
+                    ),
+                    textAlign: TextAlign.left,
                   ),
                 ),
               ],
