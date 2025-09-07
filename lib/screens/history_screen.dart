@@ -3,6 +3,23 @@ import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../app_state.dart';
 import '../models.dart';
+import 'shift_detail_screen.dart';
+
+extension StringExt on String {
+  String capitalize() {
+    if (isEmpty) return this;
+    return this[0].toUpperCase() + substring(1);
+  }
+}
+
+extension DateTimeExt on DateTime {
+  String _weekday(DateTime d) {
+    const weekdays = [
+      'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
+    ];
+    return weekdays[d.weekday - 1];
+  }
+}
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -12,310 +29,499 @@ class HistoryScreen extends StatefulWidget {
 }
 
 class _HistoryScreenState extends State<HistoryScreen> {
-  static String _weekday(DateTime d) {
+  DateTime _focusedDay = DateTime.now();
+  DateTime? _selectedDay;
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<AppState>(
+      builder: (context, appState, child) {
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.blue.shade300.withOpacity(0.8),
+                Colors.blue.shade500.withOpacity(0.8),
+              ],
+            ),
+          ),
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            appBar: AppBar(
+              title: const Text('Shift History'),
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              foregroundColor: Colors.white,
+              centerTitle: true,
+            ),
+            body: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.blue.shade200.withOpacity(0.3),
+                    Colors.blue.shade400.withOpacity(0.3),
+                  ],
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    _buildCalendarCard(appState),
+                    const SizedBox(height: 16),
+                    Expanded(
+                      child: _buildShiftsCard(appState),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCalendarCard(AppState appState) {
+    return Card(
+      elevation: 8,
+      shadowColor: Colors.blue.withOpacity(0.3),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white.withOpacity(0.95),
+              Colors.blue.shade50.withOpacity(0.95),
+            ],
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: Colors.white.withOpacity(0.7),
+                ),
+                child: TableCalendar<ShiftRecord>(
+                  firstDay: DateTime.utc(2020, 1, 1),
+                  lastDay: DateTime.utc(2030, 12, 31),
+                  focusedDay: _focusedDay,
+                  calendarFormat: CalendarFormat.month,
+                  eventLoader: (day) {
+                    return appState.history
+                        .where((shift) => isSameDay(shift.start, day))
+                        .toList();
+                  },
+                  startingDayOfWeek: StartingDayOfWeek.monday,
+                  selectedDayPredicate: (day) {
+                    return isSameDay(_selectedDay, day);
+                  },
+                  onDaySelected: (selectedDay, focusedDay) {
+                    if (!isSameDay(_selectedDay, selectedDay)) {
+                      setState(() {
+                        _selectedDay = selectedDay;
+                        _focusedDay = focusedDay;
+                      });
+                    }
+                  },
+                  onPageChanged: (focusedDay) {
+                    _focusedDay = focusedDay;
+                  },
+                  calendarStyle: CalendarStyle(
+                    outsideDaysVisible: false,
+                    markerDecoration: BoxDecoration(
+                      color: Colors.blue.shade400,
+                      shape: BoxShape.circle,
+                    ),
+                    selectedDecoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.blue.shade400,
+                          Colors.blue.shade600,
+                        ],
+                      ),
+                      shape: BoxShape.circle,
+                    ),
+                    todayDecoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.blue.shade200,
+                          Colors.blue.shade400,
+                        ],
+                      ),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  headerStyle: const HeaderStyle(
+                    formatButtonVisible: false,
+                    titleCentered: true,
+                    titleTextStyle: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+              ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildShiftsCard(AppState appState) {
+    final selectedDayShifts = _selectedDay != null
+        ? appState.history
+            .where((shift) => isSameDay(shift.start, _selectedDay!))
+            .toList()
+        : <ShiftRecord>[];
+
+    return Card(
+      elevation: 8,
+      shadowColor: Colors.blue.withOpacity(0.3),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white.withOpacity(0.95),
+              Colors.blue.shade50.withOpacity(0.95),
+            ],
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.blue.shade300,
+                          Colors.blue.shade500,
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.history,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Text(
+                    _selectedDay != null
+                        ? 'Shifts for ${_selectedDay!.day}/${_selectedDay!.month}'
+                        : 'Select a date to view shifts',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Expanded(
+                child: _selectedDay == null
+                    ? _buildEmptyState()
+                    : selectedDayShifts.isEmpty
+                        ? _buildNoShiftsState()
+                        : _buildShiftsList(selectedDayShifts),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.blue.shade100,
+                  Colors.blue.shade200,
+                ],
+              ),
+            ),
+            child: Icon(
+              Icons.calendar_today,
+              size: 48,
+              color: Colors.blue.shade600,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Select a Date',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey.shade700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Tap on a date in the calendar above to view shift history',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey.shade600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoShiftsState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.grey.shade100,
+                  Colors.grey.shade200,
+                ],
+              ),
+            ),
+            child: Icon(
+              Icons.event_busy,
+              size: 48,
+              color: Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No Shifts Found',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey.shade700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'No shifts were recorded for this date',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey.shade600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildShiftsList(List<ShiftRecord> shifts) {
+    return ListView.builder(
+      itemCount: shifts.length,
+      itemBuilder: (context, index) {
+        final shift = shifts[index];
+        return Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          child: Card(
+            elevation: 4,
+            shadowColor: Colors.blue.withOpacity(0.2),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ShiftDetailScreen(shift: shift),
+                ),
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.white,
+                      Colors.blue.shade50.withOpacity(0.5),
+                    ],
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              _getShiftTypeColor(shift.shiftType),
+                              _getShiftTypeColor(shift.shiftType).withOpacity(0.7),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          _getShiftTypeIcon(shift.shiftType),
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  shift.shiftType,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        _getShiftTypeColor(shift.shiftType).withOpacity(0.2),
+                                        _getShiftTypeColor(shift.shiftType).withOpacity(0.3),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    '${_getTotalRuns(shift)} runs',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: _getShiftTypeColor(shift.shiftType),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              '${_hm(shift.start)} - ${_hm(shift.start.add(const Duration(hours: 8)))}',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${shift.counts.length} servers active',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Icons.chevron_right,
+                        color: Colors.grey,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Color _getShiftTypeColor(String shiftType) {
+    switch (shiftType.toLowerCase()) {
+      case 'lunch':
+        return Colors.orange;
+      case 'dinner':
+        return Colors.deepPurple;
+      default:
+        return Colors.blue;
+    }
+  }
+
+  IconData _getShiftTypeIcon(String shiftType) {
+    switch (shiftType.toLowerCase()) {
+      case 'lunch':
+        return Icons.wb_sunny;
+      case 'dinner':
+        return Icons.nights_stay;
+      default:
+        return Icons.schedule;
+    }
+  }
+
+  int _getTotalRuns(ShiftRecord shift) {
+    return shift.counts.values.fold(0, (sum, count) => sum + count);
+  }
+
+  String _weekday(DateTime d) {
     const weekdays = [
       'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
     ];
     return weekdays[d.weekday - 1];
   }
-  DateTime _selectedDay = DateTime.now();
 
-  @override
-  Widget build(BuildContext context) {
-    final app = context.watch<AppState>();
-    final shiftsToday = app.shiftsOnDate(_selectedDay);
-
-    return Scaffold(
-      appBar: AppBar(title: const Text('History')),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TableCalendar(
-                firstDay: DateTime.utc(2022, 1, 1),
-                lastDay: DateTime.utc(2100, 12, 31),
-                focusedDay: _selectedDay,
-                selectedDayPredicate: (d) => d.year == _selectedDay.year && d.month == _selectedDay.month && d.day == _selectedDay.day,
-                onDaySelected: (sel, foc) => setState(() => _selectedDay = sel),
-                calendarBuilders: CalendarBuilders(
-                  markerBuilder: (context, day, events) {
-                    final d = DateTime(day.year, day.month, day.day);
-                    final hist = app.history;
-                    final daysWith = <DateTime, int>{};
-                    for (final h in hist) {
-                      final dd = DateTime(h.start.year, h.start.month, h.start.day);
-                      daysWith[dd] = (daysWith[dd] ?? 0) + 1;
-                    }
-                    final count = daysWith[d] ?? 0;
-                    if (count == 0) return const SizedBox.shrink();
-                    return Align(
-                      alignment: Alignment.bottomCenter,
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 2),
-                        child: Text('$count', style: const TextStyle(fontSize: 10, color: Colors.teal)),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 16),
-              Align(alignment: Alignment.centerLeft, child: Text('Shifts on ${_ymd(_selectedDay)}')),
-              const SizedBox(height: 8),
-              if (shiftsToday.isEmpty)
-                const Text('No shifts this day.')
-              else
-                ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: shiftsToday.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
-                  itemBuilder: (_, i) {
-                    final s = shiftsToday[i];
-                    final app = context.read<AppState>();
-                    final pizookieTotal = s.pizookieCounts.values.fold(0, (a, b) => a + b);
-                    final totalRuns = s.counts.values.fold(0, (a, b) => a + b);
-                    return ListTile(
-                      leading: const Icon(Icons.event_available),
-                      title: Text('${s.shiftType} • ${_hm(s.start)}'),
-                      subtitle: Text('$totalRuns runs ($pizookieTotal pizookie)'),
-                      onTap: () => _showShiftDialog(context, s),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        tooltip: 'Delete shift',
-                        onPressed: () async {
-                          final confirm = await showDialog<bool>(
-                            context: context,
-                            builder: (ctx) => AlertDialog(
-                              title: const Text('Delete Shift'),
-                              content: const Text('Are you sure you want to delete this shift? This cannot be undone.'),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(ctx, false),
-                                  child: const Text('Cancel'),
-                                ),
-                                TextButton(
-                                  onPressed: () => Navigator.pop(ctx, true),
-                                  child: const Text('Delete', style: TextStyle(color: Colors.red)),
-                                ),
-                              ],
-                            ),
-                          );
-                          if (confirm == true) {
-                            final pinController = TextEditingController();
-                            final pin = await showDialog<String>(
-                              context: context,
-                              builder: (ctx) => AlertDialog(
-                                title: const Text('Admin Pin Required'),
-                                content: TextField(
-                                  controller: pinController,
-                                  autofocus: true,
-                                  obscureText: true,
-                                  keyboardType: TextInputType.number,
-                                  decoration: const InputDecoration(labelText: 'Enter admin pin'),
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(ctx, null),
-                                    child: const Text('Cancel'),
-                                  ),
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(ctx, pinController.text),
-                                    child: const Text('OK'),
-                                  ),
-                                ],
-                              ),
-                            );
-                            if (pin != null && pin.isNotEmpty) {
-                              final success = await app.deleteShiftWithPin(s, pin);
-                              if (success) {
-                                setState(() {});
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Incorrect admin pin. Shift not deleted.'), backgroundColor: Colors.red),
-                                );
-                              }
-                            }
-                          }
-                        },
-                      ),
-                    );
-                  },
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showShiftDialog(BuildContext context, ShiftRecord s) {
-    final app = context.read<AppState>();
-    final items = s.counts.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
-    showDialog(
-      context: context,
-      builder: (_) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: Container(
-          width: 340,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF8EDEE),
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.10),
-                blurRadius: 32,
-                offset: const Offset(0, 12),
-              ),
-            ],
-          ),
-          child: SizedBox(
-            height: 400,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text(s.shiftType, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 24, color: Color(0xFF3A2D4B))),
-                const SizedBox(height: 6),
-                Text('${_weekday(s.start)} - ${_hm(s.start)}', style: const TextStyle(fontSize: 18, color: Color(0xFF6D5A7C))),
-                const SizedBox(height: 18),
-                Padding(
-                  padding: const EdgeInsets.only(left: 8, right: 8, bottom: 4),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: SizedBox(),
-                      ),
-                      Expanded(
-                        flex: 3,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    children: [
-                                      Text('Shift Runs', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF6D5A7C))),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        '(Includes Pizookies)',
-                                        style: TextStyle(
-                                          fontStyle: FontStyle.italic,
-                                          fontSize: 11,
-                                          color: Color(0xFF6D5A7C),
-                                        ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Column(
-                                    children: [
-                                      Text('Pizookie Runs', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFFB85C5C))),
-                                      const SizedBox(height: 17),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // Server list scrolls vertically
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      children: [
-                        ...items.map((e) {
-                          final totalRuns = s.counts[e.key] ?? 0;
-                          final pizookieRuns = s.pizookieCounts[e.key] ?? 0;
-                          return Container(
-                            margin: const EdgeInsets.symmetric(vertical: 6),
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  flex: 2,
-                                  child: Text(
-                                    app.serverById(e.key)?.name ?? 'Unknown',
-                                    style: const TextStyle(fontSize: 16, color: Color(0xFF3A2D4B)),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                Expanded(
-                                  flex: 3,
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Expanded(
-                                        child: Center(
-                                          child: Container(
-                                            constraints: const BoxConstraints(minHeight: 36),
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color: Color(0xFFF3EAF7),
-                                              borderRadius: BorderRadius.circular(8),
-                                            ),
-                                            child: Text('$totalRuns runs', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF6D5A7C))),
-                                          ),
-                                        ),
-                                      ),
-                                      Expanded(
-                                        child: Center(
-                                          child: Container(
-                                            constraints: const BoxConstraints(minHeight: 36),
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color: Color(0xFFFFF3E6),
-                                              borderRadius: BorderRadius.circular(8),
-                                            ),
-                                            child: Text('$pizookieRuns', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFFB85C5C))),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Close', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFFB85C5C))),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  static String _ymd(DateTime d) => '${d.year}-${d.month.toString().padLeft(2,'0')}-${d.day.toString().padLeft(2,'0')}';
-  static String _hm(DateTime d) {
+  String _hm(DateTime d) {
     int hour = d.hour;
     final minute = d.minute.toString().padLeft(2, '0');
     final ampm = hour >= 12 ? 'pm' : 'am';
@@ -323,80 +529,4 @@ class _HistoryScreenState extends State<HistoryScreen> {
     if (hour == 0) hour = 12;
     return '$hour:$minute$ampm';
   }
-}
-
-class _CalendarTab extends StatelessWidget {
-  final DateTime selectedDay;
-  final ValueChanged<DateTime> onDaySelected;
-  const _CalendarTab({required this.selectedDay, required this.onDaySelected});
-
-  @override
-  Widget build(BuildContext context) {
-    final app = context.watch<AppState>();
-    final hist = app.history;
-
-    final daysWith = <DateTime, int>{};
-    for (final h in hist) {
-      final d = DateTime(h.start.year, h.start.month, h.start.day);
-      daysWith[d] = (daysWith[d] ?? 0) + 1;
-    }
-
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          TableCalendar(
-            firstDay: DateTime.utc(2022, 1, 1),
-            lastDay: DateTime.utc(2100, 12, 31),
-            focusedDay: selectedDay,
-            selectedDayPredicate: (d) => d.year == selectedDay.year && d.month == selectedDay.month && d.day == selectedDay.day,
-            onDaySelected: (sel, foc) => onDaySelected(sel),
-            calendarBuilders: CalendarBuilders(
-              markerBuilder: (context, day, events) {
-                final d = DateTime(day.year, day.month, day.day);
-                final count = daysWith[d] ?? 0;
-                if (count == 0) return const SizedBox.shrink();
-                return Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 2),
-                    child: Text('$count', style: const TextStyle(fontSize: 10, color: Colors.teal)),
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 12),
-        ],
-      ),
-    );
-  }
-}
-
-class _ListTab extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final app = context.watch<AppState>();
-    final hist = app.history;
-    if (hist.isEmpty) return const Center(child: Text('No shifts yet.'));
-    return ListView.separated(
-      itemCount: hist.length,
-      separatorBuilder: (_, __) => const Divider(height: 1),
-      itemBuilder: (_, i) {
-        final s = hist[i];
-        final total = s.counts.values.fold<int>(0, (a, b) => a + b);
-        return ListTile(
-          leading: const Icon(Icons.event_note),
-          title: Text('${s.shiftType} • ${_ymd(s.start)} ${_hm(s.start)}'),
-          subtitle: Text('Total runs: $total • ${s.counts.length} servers'),
-          onTap: () {
-            final host = context.findAncestorStateOfType<_HistoryScreenState>();
-            host?._showShiftDialog(context, s);
-          },
-        );
-      },
-    );
-  }
-
-  static String _ymd(DateTime d) => '${d.year}-${d.month.toString().padLeft(2,'0')}-${d.day.toString().padLeft(2,'0')}';
-  static String _hm(DateTime d) => '${d.hour.toString().padLeft(2,'0')}:${d.minute.toString().padLeft(2,'0')}';
 }

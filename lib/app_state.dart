@@ -396,6 +396,10 @@ class AppState extends ChangeNotifier {
       await Storage.settingsBox.put('gamification', settings.toMap());
     }
 
+    // Load wallpaper settings
+    _selectedWallpaper = (await Storage.settingsBox.get('selectedWallpaper') as String?) ?? 'none';
+    _autoRotateWallpaper = (await Storage.settingsBox.get('autoRotateWallpaper') as bool?) ?? false;
+
     _teamGoal = _computeGoalFromHistory();
 
     _startTicker();
@@ -594,6 +598,46 @@ class AppState extends ChangeNotifier {
     }
   }
   Future<void> _persistHours() async => Storage.settingsBox.put('weekly_hours', _hours.toMap());
+
+  // Recalculate MVP awards from all historical shifts
+  void recalculateMVPAwards() {
+    // Reset all MVP awards to 0
+    for (final profile in _profiles.values) {
+      profile.shiftsAsMvp = 0;
+    }
+
+    // Go through each shift in history and determine MVP
+    for (final shift in _history) {
+      String? mvpId;
+      int highestXP = 0;
+
+      // Calculate XP for each server in this shift
+      for (final entry in shift.counts.entries) {
+        final serverId = entry.key;
+        final runs = entry.value;
+        final pizookieRuns = shift.pizookieCounts[serverId] ?? 0; // Use shift-specific pizookie data
+        
+        final xp = (runs * 10) + (pizookieRuns * 15);
+        
+        if (xp > highestXP) {
+          highestXP = xp;
+          mvpId = serverId;
+        }
+      }
+
+      // Award MVP to the highest XP earner (if any XP was earned)
+      if (mvpId != null && highestXP > 0) {
+        final profile = _profiles[mvpId];
+        if (profile != null) {
+          profile.shiftsAsMvp += 1;
+        }
+      }
+    }
+
+    // Persist the updated profiles
+    _persistProfiles();
+    notifyListeners();
+  }
   Future<void> _persistDayPlan() async {
     if (_todayPlan != null) {
       await Storage.dayPlanBox.put(_todayPlan!.ymd, _todayPlan!.toMap());
@@ -1375,5 +1419,24 @@ class AppState extends ChangeNotifier {
       notifyListeners();
       _persistProfiles();
     }
+  }
+
+  // Wallpaper system
+  String _selectedWallpaper = 'none';
+  bool _autoRotateWallpaper = false;
+
+  String get selectedWallpaper => _selectedWallpaper;
+  bool get autoRotateWallpaper => _autoRotateWallpaper;
+
+  void setWallpaper(String wallpaperId) {
+    _selectedWallpaper = wallpaperId;
+    notifyListeners();
+    Storage.settingsBox.put('selectedWallpaper', wallpaperId);
+  }
+
+  void setAutoRotateWallpaper(bool enabled) {
+    _autoRotateWallpaper = enabled;
+    notifyListeners();
+    Storage.settingsBox.put('autoRotateWallpaper', enabled);
   }
 }
