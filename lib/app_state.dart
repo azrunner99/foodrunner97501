@@ -830,7 +830,7 @@ class AppState extends ChangeNotifier {
       }
       
       // Finalize lunch shift and save records
-      _finalizeAndSaveShift('Lunch');
+      _finalizeAndSaveShift('Lunch', lunchRoster);
       
       // Start dinner shift normally (this clears all counts)
       _beginShift('Dinner', dinnerRoster, preserveCounts: false);
@@ -970,21 +970,31 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  void _finalizeAndSaveShift(String type) {
-    // Build pizookieCounts for this shift from _currentPizookieCounts
+  void _finalizeAndSaveShift(String type, [List<String>? roster]) {
+    // Filter counts to only include servers assigned to this shift
+    final filteredCounts = <String, int>{};
     final pizookieCounts = <String, int>{};
-    for (final id in _currentCounts.keys) {
-      pizookieCounts[id] = _currentPizookieCounts[id] ?? 0;
+    
+    final keysToSave = roster != null ? roster.where((id) => _currentCounts.containsKey(id)) : _currentCounts.keys;
+    
+    for (final id in keysToSave) {
+      final count = _currentCounts[id] ?? 0;
+      if (count > 0) {  // Only save servers with actual runs
+        filteredCounts[id] = count;
+        pizookieCounts[id] = _currentPizookieCounts[id] ?? 0;
+      }
     }
+    
     print('[DEBUG] Finalizing shift: type=$type');
-    print('[DEBUG] Saving counts: ${_currentCounts}');
+    print('[DEBUG] Roster filter: ${roster ?? 'none (all servers)'}');
+    print('[DEBUG] Saving counts: $filteredCounts');
     print('[DEBUG] Saving pizookieCounts: $pizookieCounts');
     final rec = ShiftRecord(
       id: _randId(),
       label: type,
       shiftType: type,
       start: _shiftStart ?? DateTime.now(),
-      counts: Map<String, int>.from(_currentCounts),
+      counts: filteredCounts,
       pizookieCounts: pizookieCounts,
     );
     _history.add(rec);
