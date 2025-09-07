@@ -118,6 +118,14 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             PopupMenuButton<_MoreAction>(
               tooltip: 'More',
+              icon: const Icon(Icons.more_vert, color: Colors.black, size: 28),
+              color: Colors.white,
+              surfaceTintColor: Colors.transparent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 12,
+              offset: const Offset(0, 55),
               onSelected: (a) {
                 if (a == _MoreAction.profiles) {
                   Navigator.push(
@@ -134,46 +142,32 @@ class _HomeScreenState extends State<HomeScreen> {
                     context,
                     MaterialPageRoute(builder: (_) => const MvpScreen()),
                   );
-                } else if (a == _MoreAction.history) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const HistoryScreen()),
-                  );
                 }
               },
               itemBuilder: (ctx) => [
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: _MoreAction.profiles,
                   child: ListTile(
-                    leading: Icon(Icons.person),
-                    title: Text('Profiles'),
+                    leading: Icon(Icons.person, color: Colors.blue[700]),
+                    title: const Text('Profiles', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w500)),
                     dense: true,
                     contentPadding: EdgeInsets.zero,
                   ),
                 ),
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: _MoreAction.mvp,
                   child: ListTile(
-                    leading: Icon(Icons.emoji_events),
-                    title: Text('Leaderboards'),
+                    leading: Icon(Icons.emoji_events, color: Colors.amber[600]),
+                    title: const Text('Leaderboards', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w500)),
                     dense: true,
                     contentPadding: EdgeInsets.zero,
                   ),
                 ),
-                const PopupMenuItem(
-                  value: _MoreAction.history,
-                  child: ListTile(
-                    leading: Icon(Icons.history),
-                    title: Text('Shift History'),
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: _MoreAction.settings,
                   child: ListTile(
-                    leading: Icon(Icons.settings),
-                    title: Text('Settings'),
+                    leading: Icon(Icons.settings, color: Colors.blue[400]),
+                    title: const Text('Settings', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w500)),
                     dense: true,
                     contentPadding: EdgeInsets.zero,
                   ),
@@ -747,7 +741,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-enum _MoreAction { profiles, settings, mvp, history }
+enum _MoreAction { profiles, settings, mvp }
 
 
 class TeamPieChart extends StatelessWidget {
