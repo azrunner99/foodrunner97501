@@ -1075,14 +1075,19 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
     _achievementController?.forward();
   }
 
-  Color _tierColor(int my, int max) {
-    if (max <= 0) return Colors.grey.shade400;
-    final ratio = my / max;
-    if (ratio >= 1.0) return const Color(0xFF145A32); // deep green
-    if (ratio >= 0.75) return const Color(0xFF2ECC71); // green
-    if (ratio >= 0.50) return const Color(0xFFF1C40F); // yellow
-    if (ratio >= 0.25) return const Color(0xFFE67E22); // orange-red
-    return const Color(0xFFC0392B); // red
+  Color _tierColor(int myRuns, int maxRuns, int myPizookies, int maxPizookies) {
+    // Calculate XP for current shift (10 XP per run + 25 XP per pizookie)
+    final myXP = (myRuns * 10) + (myPizookies * 25);
+    final maxXP = (maxRuns * 10) + (maxPizookies * 25);
+    
+    if (maxXP <= 0) return Colors.grey.shade400;
+    
+    final ratio = myXP / maxXP;
+    if (ratio >= 0.80) return const Color(0xFF1B5E20); // deep green
+    if (ratio >= 0.60) return const Color(0xFF43A047); // green
+    if (ratio >= 0.30) return const Color(0xFFFBC02D); // yellow
+    if (ratio >= 0.10) return const Color(0xFFEF5350); // light red
+    return const Color(0xFFB71C1C); // deep red
   }
 
   Color? _teamColor(String? team) {
@@ -1112,7 +1117,9 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
     final ids = widget.ids;
     final app = widget.app;
     final counts = ids.map((id) => app.currentCounts[id] ?? 0).toList();
+    final pizookieCounts = ids.map((id) => app.currentPizookieCounts[id] ?? 0).toList();
     final maxCount = counts.isEmpty ? 0 : counts.reduce((a, b) => a > b ? a : b);
+    final maxPizookieCount = pizookieCounts.isEmpty ? 0 : pizookieCounts.reduce((a, b) => a > b ? a : b);
     final total = counts.fold<int>(0, (a, b) => a + b);
     final columns = MediaQuery.of(context).size.width > 800 ? 4 : 2;
 
@@ -1165,8 +1172,9 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                     if (s == null) return const SizedBox.shrink();
 
                     final my = app.currentCounts[id] ?? 0;
+                    final myPizookies = app.currentPizookieCounts[id] ?? 0;
                     final pct = total == 0 ? 0 : ((my / total) * 100).round();
-                    final color = _tierColor(my, maxCount);
+                    final color = _tierColor(my, maxCount, myPizookies, maxPizookieCount);
                     final level = app.profiles[id]?.level ?? 1;
                     final borderColor = _teamColor(s.teamColor) ?? Colors.transparent;
                     final points = app.profiles[id]?.points ?? 0;
