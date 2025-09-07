@@ -15,7 +15,6 @@ import '../widgets/wallpaper_background.dart';
 
 // Screens
 import 'update_roster_screen.dart';
-import 'admin_screen.dart';
 import 'profiles_screen.dart';
 import 'settings_screen.dart';
 import 'mvp_screen.dart';
@@ -157,16 +156,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => UpdateRosterScreen()),
-                );
-              },
-            ),
-            IconButton(
-              tooltip: 'Admin',
-              icon: const Icon(Icons.admin_panel_settings),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AdminScreen()),
                 );
               },
             ),
