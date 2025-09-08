@@ -42,6 +42,90 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  bool _hasCheckedForBackups = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Check for existing backups after the widget is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkForExistingBackupsOnFreshInstall();
+    });
+  }
+
+  Future<void> _checkForExistingBackupsOnFreshInstall() async {
+    if (_hasCheckedForBackups) return;
+    _hasCheckedForBackups = true;
+    
+    final app = Provider.of<AppState>(context, listen: false);
+    final backupInfo = await app.getExistingBackupInfo();
+    
+    if (backupInfo['hasBackups'] == true && mounted) {
+      final count = backupInfo['count'] as int;
+      _showBackupRestoreDialog(count);
+    }
+  }
+
+  void _showBackupRestoreDialog(int backupCount) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.backup, color: Colors.blue),
+            SizedBox(width: 8),
+            Text('Existing Backups Found'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Found $backupCount existing backup${backupCount > 1 ? 's' : ''} on this device.'),
+            const SizedBox(height: 16),
+            const Text('This appears to be a fresh app installation. Would you like to:'),
+            const SizedBox(height: 12),
+            const Text('• Restore from existing backup, or'),
+            const Text('• Start fresh with a new setup'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // User wants to start fresh - no action needed
+            },
+            child: const Text('Start Fresh'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/admin').then((_) {
+                // After returning from admin, show backup screen
+                Future.delayed(const Duration(milliseconds: 500), () {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Navigate to "Data Backup & Restore" to restore your data'),
+                        duration: Duration(seconds: 4),
+                        backgroundColor: Colors.blue,
+                      ),
+                    );
+                  }
+                });
+              });
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Restore Data'),
+          ),
+        ],
+      ),
+    );
+  }
   void _showCurrentShiftTotalsDialog(BuildContext context, AppState app, bool isDinner) {
     Navigator.push(
       context,

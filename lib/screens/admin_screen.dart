@@ -6,6 +6,7 @@ import 'active_roster_screen.dart';
 import 'manage_servers_screen.dart';
 import 'server_avatar_settings_screen.dart';
 import 'server_integrity_screen.dart';
+import 'backup_manager_screen.dart';
 
 class AdminScreen extends StatefulWidget {
   const AdminScreen({super.key});
@@ -337,6 +338,18 @@ class _AdminScreenState extends State<AdminScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const ServerIntegrityScreen()),
+                      );
+                    },
+                  ),
+                  _buildAdminTile(
+                    icon: Icons.backup,
+                    title: 'Data Backup & Restore',
+                    subtitle: 'Backup and restore all app data',
+                    enabled: true,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const BackupManagerScreen()),
                       );
                     },
                   ),
