@@ -128,7 +128,7 @@ class _ManageServersScreenState extends State<ManageServersScreen> {
                   ElevatedButton.icon(
                     onPressed: () async {
                       if (_nameCtrl.text.trim().isEmpty) return;
-                      await context.read<AppState>().addServer(_nameCtrl.text.trim());
+                      await _addServerWithBirthday(context, _nameCtrl.text.trim());
                       _nameCtrl.clear();
                     },
                     icon: const Icon(Icons.person_add),
@@ -611,6 +611,59 @@ class _ManageServersScreenState extends State<ManageServersScreen> {
         ],
       ),
     );
+  }
+
+  // Method to add server with birthday prompt
+  Future<void> _addServerWithBirthday(BuildContext context, String serverName) async {
+    // Show birthday collection with immediate date picker
+    String? birthday;
+    
+    // Show date picker with custom actions
+    final date = await showDatePicker(
+      context: context,
+      initialDate: DateTime(1990, 1, 1),
+      firstDate: DateTime(1950),
+      lastDate: DateTime.now(),
+      helpText: 'Add Birthday for $serverName',
+      cancelText: 'Skip',
+      confirmText: 'Add Birthday',
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+              primary: Colors.blue,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    
+    // If date was selected, format it
+    if (date != null) {
+      birthday = '${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}';
+    }
+
+    // Create the server
+    final app = context.read<AppState>();
+    await app.addServer(serverName);
+    
+    // Get the newly created server and set hire date + birthday (if provided)
+    final servers = app.servers;
+    final newServer = servers.lastWhere((s) => s.name == serverName);
+    final profile = app.profiles[newServer.id] ?? ServerProfile();
+    
+    // Automatically set hire date to today
+    final today = DateTime.now();
+    final hireDate = '${today.month.toString().padLeft(2, '0')}/${today.day.toString().padLeft(2, '0')}/${today.year}';
+    
+    // Update profile with hire date and birthday (if provided)
+    final updatedProfile = profile.copyWith(
+      hireDate: hireDate,
+      birthday: birthday ?? profile.birthday,
+    );
+    
+    await app.updateServerProfile(newServer.id, updatedProfile);
   }
 
   Future<void> _editServer(BuildContext context, Server server, ServerProfile profile) async {

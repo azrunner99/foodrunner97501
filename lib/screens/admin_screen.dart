@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../app_state.dart';
 import '../widgets/wallpaper_background.dart';
-import 'active_roster_screen.dart';
 import 'manage_servers_screen.dart';
 import 'server_avatar_settings_screen.dart';
 import 'server_integrity_screen.dart';
@@ -206,96 +205,9 @@ class _AdminScreenState extends State<AdminScreen> {
             padding: const EdgeInsets.all(16),
             children: [
               _buildSectionCard(
-                'Shift Controls',
-                Icons.schedule,
-                [
-                  _buildAdminTile(
-                    icon: Icons.play_circle_outline,
-                    title: 'Resume Paused Shift',
-                    subtitle: app.shiftPaused 
-                        ? 'Tap to resume ${app.shiftType}'
-                        : 'No paused shift',
-                    enabled: app.shiftPaused,
-                    onTap: app.shiftPaused
-                        ? () async {
-                            final ok = await context.read<AppState>().resumePausedShiftWithPin(AppState.adminPin);
-                            if (!mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(ok ? 'Shift resumed.' : 'Wrong PIN')),
-                            );
-                          }
-                        : null,
-                  ),
-                  _buildAdminTile(
-                    icon: Icons.pause_circle_outline,
-                    title: 'Pause Current Shift',
-                    subtitle: app.shiftActive 
-                        ? 'Temporarily stop counting'
-                        : 'No active shift',
-                    enabled: app.shiftActive,
-                    onTap: app.shiftActive
-                        ? () async {
-                            final ok = await context.read<AppState>().pauseCurrentShiftWithPin(AppState.adminPin);
-                            if (!mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(ok ? 'Shift paused.' : 'Wrong PIN')),
-                            );
-                          }
-                        : null,
-                  ),
-                  _buildAdminTile(
-                    icon: Icons.stop_circle_outlined,
-                    title: 'End Current Shift',
-                    subtitle: app.shiftActive
-                        ? 'Finalize ${app.shiftType} and award badges'
-                        : 'No active shift to finalize',
-                    enabled: app.shiftActive,
-                    onTap: app.shiftActive
-                        ? () async {
-                            final confirmed = await showDialog<bool>(
-                              context: context,
-                              builder: (_) => AlertDialog(
-                                title: const Text('End current shift?'),
-                                content: Text(
-                                    'This will finalize ${app.shiftType} and award badges/points. Continue?'),
-                                actions: [
-                                  TextButton(
-                                      onPressed: () => Navigator.pop(context, false),
-                                      child: const Text('Cancel')),
-                                  FilledButton(
-                                      onPressed: () => Navigator.pop(context, true),
-                                      child: const Text('End Now')),
-                                ],
-                              ),
-                            );
-                            if (confirmed != true) return;
-                            final ok = await context.read<AppState>().endCurrentShiftWithPin(AppState.adminPin);
-                            if (!mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(ok ? 'Shift finalized.' : 'Wrong PIN')),
-                            );
-                          }
-                        : null,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              _buildSectionCard(
                 'Management Tools',
                 Icons.settings,
                 [
-                  _buildAdminTile(
-                    icon: Icons.group,
-                    title: 'Modify Active Roster',
-                    subtitle: 'Add or remove servers from current shift',
-                    enabled: true,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => ActiveRosterScreen()),
-                      );
-                    },
-                  ),
                   _buildAdminTile(
                     icon: Icons.manage_accounts,
                     title: 'Manage Servers',

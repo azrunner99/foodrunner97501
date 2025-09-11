@@ -324,6 +324,136 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
     super.initState();
   }
 
+  // Helper method to extract month name from birthday
+  String _getBirthdayMonth(String birthday) {
+    if (birthday.isEmpty) return '';
+    
+    try {
+      final parts = birthday.split('/');
+      if (parts.length >= 1) {
+        final monthNum = int.parse(parts[0]);
+        const months = [
+          '', 'January', 'February', 'March', 'April', 'May', 'June',
+          'July', 'August', 'September', 'October', 'November', 'December'
+        ];
+        if (monthNum >= 1 && monthNum <= 12) {
+          return months[monthNum];
+        }
+      }
+    } catch (e) {
+      // Invalid format, return empty
+    }
+    return '';
+  }
+
+  // Helper method to calculate tenure from hire date
+  String _calculateTenure(String hireDate) {
+    if (hireDate.isEmpty) return 'Not specified';
+    
+    try {
+      final parts = hireDate.split('/');
+      if (parts.length == 3) {
+        final month = int.parse(parts[0]);
+        final day = int.parse(parts[1]);
+        final year = int.parse(parts[2]);
+        final hireDateObj = DateTime(year, month, day);
+        final now = DateTime.now();
+        
+        if (hireDateObj.isAfter(now)) {
+          return 'Future hire date';
+        }
+        
+        final difference = now.difference(hireDateObj);
+        final totalDays = difference.inDays;
+        
+        // Calculate years, months, and remaining days
+        final years = (totalDays / 365.25).floor();
+        final remainingDaysAfterYears = totalDays - (years * 365.25).floor();
+        final months = (remainingDaysAfterYears / 30.44).floor();
+        final days = remainingDaysAfterYears - (months * 30.44).floor();
+        
+        List<String> tenureParts = [];
+        
+        if (years > 0) {
+          tenureParts.add('$years year${years == 1 ? '' : 's'}');
+        }
+        if (months > 0) {
+          tenureParts.add('$months month${months == 1 ? '' : 's'}');
+        }
+        if (days > 0) {
+          tenureParts.add('$days day${days == 1 ? '' : 's'}');
+        }
+        
+        if (tenureParts.isEmpty) {
+          return 'Less than 1 day';
+        }
+        
+        // Join parts with commas and "and" for the last item
+        if (tenureParts.length == 1) {
+          return tenureParts[0];
+        } else if (tenureParts.length == 2) {
+          return '${tenureParts[0]}, ${tenureParts[1]}';
+        } else {
+          return '${tenureParts[0]}, ${tenureParts[1]}, ${tenureParts[2]}';
+        }
+      }
+    } catch (e) {
+      // Invalid format
+    }
+    return 'Invalid hire date';
+  }
+
+  // Helper method to calculate average runs per shift from history
+  double _calculateAvgRunsPerShift(AppState app, String serverId) {
+    int totalRuns = 0;
+    int totalShifts = 0;
+    
+    for (final shift in app.history) {
+      final runs = shift.counts[serverId] ?? 0;
+      if (runs > 0) {
+        totalRuns += runs;
+        totalShifts += 1;
+      }
+    }
+    
+    return totalShifts > 0 ? totalRuns / totalShifts : 0.0;
+  }
+
+  // Helper method to calculate average pizookie runs per shift from history
+  double _calculateAvgPizookiePerShift(AppState app, String serverId) {
+    int totalPizookieRuns = 0;
+    int totalShifts = 0;
+    
+    for (final shift in app.history) {
+      final pizookieRuns = shift.pizookieCounts[serverId] ?? 0;
+      if (pizookieRuns > 0) {
+        totalPizookieRuns += pizookieRuns;
+        totalShifts += 1;
+      }
+    }
+    
+    return totalShifts > 0 ? totalPizookieRuns / totalShifts : 0.0;
+  }
+
+  // Helper method to calculate average XP per shift from history
+  double _calculateAvgXpPerShift(AppState app, String serverId) {
+    int totalXp = 0;
+    int totalShifts = 0;
+    
+    for (final shift in app.history) {
+      final runs = shift.counts[serverId] ?? 0;
+      final pizookieRuns = shift.pizookieCounts[serverId] ?? 0;
+      if (runs > 0 || pizookieRuns > 0) {
+        // Calculate XP for this shift (same logic as gamification)
+        final shiftXp = (runs * 10) + (pizookieRuns * 25);
+        totalXp += shiftXp;
+        totalShifts += 1;
+      }
+    }
+    
+    return totalShifts > 0 ? totalXp / totalShifts : 0.0;
+  }
+
   // Badge mode removed
   // Metric card widget for visual separation
   Widget metricCard({required String label, required String value, required Color color, Widget? extra}) {
@@ -478,6 +608,38 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
     }
   }
 
+  Future<void> _editBirthday(BuildContext context, String serverId) async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: DateTime(1990, 1, 1),
+      firstDate: DateTime(1950),
+      lastDate: DateTime.now(),
+      helpText: 'Select Birthday',
+      cancelText: 'Cancel',
+      confirmText: 'Save',
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+              primary: Colors.blue,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    
+    if (date != null) {
+      final birthday = '${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}';
+      
+      // Update the profile with the new birthday
+      final app = Provider.of<AppState>(context, listen: false);
+      final currentProfile = app.profiles[serverId] ?? ServerProfile();
+      final updatedProfile = currentProfile.copyWith(birthday: birthday);
+      await app.updateServerProfile(serverId, updatedProfile);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
@@ -490,15 +652,6 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
         body: const Center(child: Text('Server not found.')),
       );
     }
-
-    String _formatMinSec(double seconds) {
-      final mins = seconds ~/ 60;
-      final secs = seconds % 60;
-      return '${mins}:${secs.toStringAsFixed(0).padLeft(2, '0')} min:sec';
-    }
-
-    final avg = p.avgSecondsBetweenRuns;
-    final avgStr = avg <= 0 ? '—' : _formatMinSec(avg);
 
     final repeatCounts = <String, int>{};
     for (final key in p.repeatEarnedDates) {
@@ -740,17 +893,98 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
               style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[700]),
             ),
           ),
+          if (p.hireDate.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Center(
+              child: Text(
+                'Hired: ${p.hireDate}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[700]),
+              ),
+            ),
+          ],
+          if (p.birthday.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Center(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Birthday: ${_getBirthdayMonth(p.birthday)}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[700]),
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () => _editBirthday(context, widget.serverId),
+                    child: Text(
+                      'edit',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.blue,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else ...[
+            const SizedBox(height: 4),
+            Center(
+              child: GestureDetector(
+                onTap: () => _editBirthday(context, widget.serverId),
+                child: Text(
+                  'Add Birthday',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.blue,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 24),
+          // Tenure card - show employment length
+          if (p.hireDate.isNotEmpty)
+            metricCard(
+              label: 'Tenure',
+              value: _calculateTenure(p.hireDate),
+              color: Colors.orange,
+            ),
+          // XP card
+          metricCard(
+            label: 'Current XP',
+            value: '${p.points} • Level ${p.level}',
+            color: Colors.purple,
+            extra: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Average XP per shift: ${_calculateAvgXpPerShift(app, widget.serverId).round()}', 
+                     style: const TextStyle(fontSize: 16)),
+                Text('Next level: ${p.nextLevelAt}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
           // Remove the metricCard for 'Points'
           metricCard(
             label: 'All-time Runs',
             value: '${p.allTimeRuns} • Best shift: ${p.bestShiftRuns}',
             color: Colors.blue,
-            extra: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            extra: Column(
               children: [
-                Text('$allTimePct% of team', style: const TextStyle(fontSize: 16)),
-                Text('Rank: $allTimeRank/$totalServers', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('$allTimePct% of team', style: const TextStyle(fontSize: 16)),
+                    Text('Rank: $allTimeRank/$totalServers', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Text('Average runs per shift: ${_calculateAvgRunsPerShift(app, widget.serverId).round()}', 
+                         style: const TextStyle(fontSize: 16)),
+                  ],
+                ),
               ],
             ),
           ),
@@ -758,18 +992,25 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
             label: 'Pizookie Runs',
             value: '${p.pizookieRuns}',
             color: Colors.pink,
-            extra: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            extra: Column(
               children: [
-                Text('$pizookiePct% of team', style: const TextStyle(fontSize: 16)),
-                Text('Rank: $pizookieRank/$totalServers', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('$pizookiePct% of team', style: const TextStyle(fontSize: 16)),
+                    Text('Rank: $pizookieRank/$totalServers', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Text('Average pizookie runs per shift: ${_calculateAvgPizookiePerShift(app, widget.serverId).round()}', 
+                         style: const TextStyle(fontSize: 16)),
+                  ],
+                ),
               ],
             ),
-          ),
-          metricCard(
-            label: 'Average Time Between Runs',
-            value: avgStr,
-            color: Colors.green,
           ),
           // Remove the metricCard for 'MVP Awards'
           // metricCard(

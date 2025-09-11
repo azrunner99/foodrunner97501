@@ -20,6 +20,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late int _transitionEnd;
 
   bool _hoursExpanded = false;
+  bool _gamificationExpanded = false;
+  bool _appearanceExpanded = false;
 
   @override
   void initState() {
@@ -67,53 +69,63 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              _buildSectionCard(
+              _buildExpandableCard(
                 'Gamification',
                 Icons.emoji_events,
-                [
-                  _buildSettingsTile(
-                    icon: Icons.emoji_events,
-                    title: 'Gamification Options',
-                    subtitle: 'Enable or disable achievements and streaks',
-                    onTap: () => Navigator.pushNamed(context, '/gamification_options'),
-                  ),
-                  _buildSettingsTile(
-                    icon: Icons.celebration,
-                    title: 'Encouragement Options',
-                    subtitle: 'Customize encouragement text and behavior',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const EncouragementOptionsScreen()),
-                      );
-                    },
-                  ),
-                ],
+                'Enable or disable achievements and streaks',
+                _gamificationExpanded,
+                () => setState(() => _gamificationExpanded = !_gamificationExpanded),
+                Column(
+                  children: [
+                    _buildSettingsTile(
+                      icon: Icons.emoji_events,
+                      title: 'Gamification Options',
+                      subtitle: 'Enable or disable achievements and streaks',
+                      onTap: () => Navigator.pushNamed(context, '/gamification_options'),
+                    ),
+                    _buildSettingsTile(
+                      icon: Icons.celebration,
+                      title: 'Encouragement Options',
+                      subtitle: 'Customize encouragement text and behavior',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const EncouragementOptionsScreen()),
+                        );
+                      },
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 16),
-              _buildSectionCard(
+              _buildExpandableCard(
                 'Appearance',
                 Icons.palette,
-                [
-                  _buildSettingsTile(
-                    icon: Icons.wallpaper,
-                    title: 'Home Screen Wallpaper',
-                    subtitle: 'Choose a background for the server grid',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const WallpaperGalleryScreen()),
-                      );
-                    },
-                  ),
-                  _buildSwitchTile(
-                    icon: Icons.shuffle,
-                    title: 'Auto-rotate wallpaper daily',
-                    subtitle: 'Update with random selection each day',
-                    value: app.autoRotateWallpaper,
-                    onChanged: (value) => app.setAutoRotateWallpaper(value),
-                  ),
-                ],
+                'Choose wallpapers and appearance settings',
+                _appearanceExpanded,
+                () => setState(() => _appearanceExpanded = !_appearanceExpanded),
+                Column(
+                  children: [
+                    _buildSettingsTile(
+                      icon: Icons.wallpaper,
+                      title: 'Home Screen Wallpaper',
+                      subtitle: 'Choose a background for the server grid',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const WallpaperGalleryScreen()),
+                        );
+                      },
+                    ),
+                    _buildSwitchTile(
+                      icon: Icons.shuffle,
+                      title: 'Auto-rotate wallpaper daily',
+                      subtitle: 'Update with random selection each day',
+                      value: app.autoRotateWallpaper,
+                      onChanged: (value) => app.setAutoRotateWallpaper(value),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 16),
               _buildExpandableCard(
@@ -183,22 +195,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              _buildSectionCard(
+              _buildClickableCard(
                 'Administration',
                 Icons.admin_panel_settings,
-                [
-                  _buildSettingsTile(
-                    icon: Icons.admin_panel_settings,
-                    title: 'Admin Panel',
-                    subtitle: 'Access administrative tools and controls',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const AdminScreen()),
-                      );
-                    },
-                  ),
-                ],
+                'Access administrative tools and controls',
+                () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AdminScreen()),
+                  );
+                },
               ),
               const SizedBox(height: 32),
             ],
@@ -223,72 +229,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final ampm = h >= 12 ? 'PM' : 'AM';
     final h12 = h == 0 ? 12 : (h > 12 ? h - 12 : h);
     return '${h12.toString()}:${mm.toString().padLeft(2, '0')} $ampm';
-  }
-
-  Widget _buildSectionCard(String title, IconData iconData, List<Widget> children) {
-    return Card(
-      elevation: 8,
-      shadowColor: Colors.black.withOpacity(0.3),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Colors.white.withOpacity(0.9),
-              Colors.white.withOpacity(0.7),
-            ],
-          ),
-          border: Border.all(
-            color: Colors.lightBlue.withOpacity(0.3),
-            width: 1,
-          ),
-        ),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16),
-                ),
-                gradient: LinearGradient(
-                  colors: [
-                    Colors.lightBlue.shade400.withOpacity(0.8),
-                    Colors.lightBlue.shade600.withOpacity(0.6),
-                  ],
-                ),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(iconData, color: Colors.lightBlue.shade700),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            ...children,
-          ],
-        ),
-      ),
-    );
   }
 
   Widget _buildExpandableCard(
@@ -325,7 +265,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onTap: onTap,
               borderRadius: BorderRadius.circular(16),
               child: Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
                   gradient: LinearGradient(
@@ -338,14 +278,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.9),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(6),
                       ),
-                      child: Icon(iconData, color: Colors.lightBlue.shade700),
+                      child: Icon(iconData, color: Colors.lightBlue.shade700, size: 16),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -353,16 +293,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           Text(
                             title,
                             style: const TextStyle(
-                              fontSize: 18,
+                              fontSize: 16,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 2),
                           Text(
                             subtitle,
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: 12,
                               color: Colors.white.withOpacity(0.9),
                             ),
                           ),
@@ -372,6 +312,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Icon(
                       isExpanded ? Icons.expand_less : Icons.expand_more,
                       color: Colors.white,
+                      size: 20,
                     ),
                   ],
                 ),
@@ -379,6 +320,93 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             if (isExpanded) expandedContent,
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildClickableCard(
+    String title,
+    IconData iconData,
+    String subtitle,
+    VoidCallback onTap,
+  ) {
+    return Card(
+      elevation: 8,
+      shadowColor: Colors.black.withOpacity(0.3),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white.withOpacity(0.9),
+              Colors.white.withOpacity(0.7),
+            ],
+          ),
+          border: Border.all(
+            color: Colors.lightBlue.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              gradient: LinearGradient(
+                colors: [
+                  Colors.lightBlue.shade400.withOpacity(0.8),
+                  Colors.lightBlue.shade600.withOpacity(0.6),
+                ],
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Icon(iconData, color: Colors.lightBlue.shade700, size: 16),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.white.withOpacity(0.9),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  color: Colors.white,
+                  size: 16,
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
