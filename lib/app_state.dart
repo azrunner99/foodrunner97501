@@ -32,6 +32,9 @@ class ServerProfile {
   String? avatarPath;
   String? bannerPath;
   List<Map<String, dynamic>> avatarHistory;
+  String hireDate;
+  String birthday;
+  bool isArchived;
 
   ServerProfile({
     this.allTimeRuns = 0,
@@ -48,8 +51,51 @@ class ServerProfile {
     this.avatarPath,
     this.bannerPath,
     this.avatarHistory = const [],
+    this.hireDate = '',
+    this.birthday = '',
+    this.isArchived = false,
   })  : achievements = achievements ?? [],
         repeatEarnedDates = repeatEarnedDates ?? [];
+
+  ServerProfile copyWith({
+    int? allTimeRuns,
+    int? pizookieRuns,
+    int? bestShiftRuns,
+    int? streakBest,
+    int? shiftsAsMvp,
+    List<String>? achievements,
+    List<String>? repeatEarnedDates,
+    int? points,
+    int? tapIntervalsMsSum,
+    int? tapIntervalsCount,
+    String? lastTapIso,
+    String? avatarPath,
+    String? bannerPath,
+    List<Map<String, dynamic>>? avatarHistory,
+    String? hireDate,
+    String? birthday,
+    bool? isArchived,
+  }) {
+    return ServerProfile(
+      allTimeRuns: allTimeRuns ?? this.allTimeRuns,
+      pizookieRuns: pizookieRuns ?? this.pizookieRuns,
+      bestShiftRuns: bestShiftRuns ?? this.bestShiftRuns,
+      streakBest: streakBest ?? this.streakBest,
+      shiftsAsMvp: shiftsAsMvp ?? this.shiftsAsMvp,
+      achievements: achievements ?? this.achievements,
+      repeatEarnedDates: repeatEarnedDates ?? this.repeatEarnedDates,
+      points: points ?? this.points,
+      tapIntervalsMsSum: tapIntervalsMsSum ?? this.tapIntervalsMsSum,
+      tapIntervalsCount: tapIntervalsCount ?? this.tapIntervalsCount,
+      lastTapIso: lastTapIso ?? this.lastTapIso,
+      avatarPath: avatarPath ?? this.avatarPath,
+      bannerPath: bannerPath ?? this.bannerPath,
+      avatarHistory: avatarHistory ?? this.avatarHistory,
+      hireDate: hireDate ?? this.hireDate,
+      birthday: birthday ?? this.birthday,
+      isArchived: isArchived ?? this.isArchived,
+    );
+  }
 
   static ServerProfile fromMap(Map m) => ServerProfile(
     allTimeRuns: (m['allTimeRuns'] ?? 0) as int,
@@ -74,6 +120,9 @@ class ServerProfile {
         return <String, dynamic>{};
       }
     }).toList() ?? <Map<String, dynamic>>[],
+    hireDate: (m['hireDate'] ?? '') as String,
+    birthday: (m['birthday'] ?? '') as String,
+    isArchived: (m['isArchived'] ?? false) as bool,
   );
 
   Map<String, dynamic> toMap() => {
@@ -91,6 +140,9 @@ class ServerProfile {
     'avatarPath': avatarPath,
     'bannerPath': bannerPath,
     'avatarHistory': avatarHistory,
+    'hireDate': hireDate,
+    'birthday': birthday,
+    'isArchived': isArchived,
   };
 }
 class AppState extends ChangeNotifier {
@@ -585,6 +637,17 @@ class AppState extends ChangeNotifier {
     }
   }
   Future<void> _persistHours() async => Storage.settingsBox.put('weekly_hours', _hours.toMap());
+
+  // Public save method to persist all data changes
+  Future<void> save() async {
+    await _persistServers();
+    await _persistProfiles();
+    await _persistTotals();
+    await _persistHistory();
+    await _persistHours();
+    await _persistDayPlan();
+    await _persistTapLog();
+  }
 
   // Recalculate MVP awards from all historical shifts
   void recalculateMVPAwards() {

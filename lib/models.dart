@@ -2,11 +2,13 @@ class Server {
   final String id;
   String name;
   String? teamColor;
+  String? stationType;
 
   Server({
     required this.id,
     required this.name,
     this.teamColor,
+    this.stationType,
   });
 
   // Add this factory constructor
@@ -15,6 +17,7 @@ class Server {
       id: map['id'] as String,
       name: map['name'] as String,
       teamColor: map['teamColor'] as String?,
+      stationType: map['stationType'] as String?,
     );
   }
 
@@ -24,6 +27,7 @@ class Server {
       'id': id,
       'name': name,
       'teamColor': teamColor,
+      'stationType': stationType,
     };
   }
 }
