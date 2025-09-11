@@ -405,7 +405,12 @@ class AppState extends ChangeNotifier {
     final loadedProfiles = <String, ServerProfile>{};
     for (final s in loadedServers) {
       final m = (await Storage.profilesBox.get(s.id) as Map?) ?? {};
-      loadedProfiles[s.id] = m.isEmpty ? ServerProfile() : ServerProfile.fromMap(m);
+      if (m.isEmpty) {
+        // Preserve existing profile if it exists, otherwise create new one
+        loadedProfiles[s.id] = _profiles[s.id] ?? ServerProfile();
+      } else {
+        loadedProfiles[s.id] = ServerProfile.fromMap(m);
+      }
     }
 
     // Merge with any in-memory data (shouldn't be needed, but extra safe)
@@ -440,6 +445,9 @@ class AppState extends ChangeNotifier {
     _tapPerMinute
       ..clear()
       ..addAll(tapRaw.map((sid, m) => MapEntry(sid as String, Map<int, int>.from((m as Map).map((k, v) => MapEntry(int.parse(k as String), v as int))))));
+
+    // Reconstruct allTimeRuns from historical tap data if needed
+    reconstructAllTimeRuns();
 
     final sm = (await Storage.settingsBox.get('gamification') as Map?) ?? {};
     // MIGRATION: Ensure encouragementFlashEnabled is always set in the map
@@ -1422,6 +1430,76 @@ class AppState extends ChangeNotifier {
     return {'1': s1, '2': s2, '3': s3, '4+': s4};
   }
 
+  Map<String, int> integrityBinsForDateRange(String serverId, {
+    DateTime? startDate,
+    DateTime? endDate,
+    bool todayOnly = false,
+  }) {
+    final buckets = _tapPerMinute[serverId];
+    if (buckets == null) return {'1': 0, '2': 0, '3': 0, '4+': 0};
+    
+    final now = DateTime.now();
+    final ymd = _ymd(now);
+    
+    // Default date ranges based on common selections
+    DateTime filterStartDate;
+    DateTime filterEndDate = now;
+    
+    if (todayOnly) {
+      filterStartDate = DateTime(now.year, now.month, now.day);
+      filterEndDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
+    } else if (startDate != null && endDate != null) {
+      filterStartDate = startDate;
+      filterEndDate = DateTime(endDate.year, endDate.month, endDate.day, 23, 59, 59, 999);
+    } else {
+      // Default to last 30 days if no specific range provided
+      filterStartDate = now.subtract(const Duration(days: 30));
+    }
+    
+    // Debug logging for custom range
+    if (serverId == '4f55jaewuhldbaoi' && startDate != null && endDate != null) {
+      print('DEBUG integrityBinsForDateRange for server $serverId:');
+      print('  Filter start: $filterStartDate');
+      print('  Filter end: $filterEndDate');
+      print('  Total tap buckets: ${buckets.length}');
+    }
+    
+    // For Server Integrity screen, we need actual run counts, not time period categorization
+    // Calculate total runs within the date range
+    int totalRuns = 0;
+    int processedCount = 0;
+    buckets.forEach((minuteEpoch, count) {
+      final d = DateTime.fromMillisecondsSinceEpoch(minuteEpoch);
+      
+      // Debug first few entries for server '4f55jaewuhldbaoi'
+      if (serverId == '4f55jaewuhldbaoi' && startDate != null && endDate != null && processedCount < 3) {
+        print('  Bucket $processedCount: date=$d, count=$count, inRange=${!d.isBefore(filterStartDate) && !d.isAfter(filterEndDate)}');
+        processedCount++;
+      }
+      
+      // Check if date falls within our filter range
+      if (d.isBefore(filterStartDate) || d.isAfter(filterEndDate)) {
+        return;
+      }
+      
+      if (todayOnly && _ymd(d) != ymd) {
+        return;
+      }
+      
+      if (count > 0) {
+        totalRuns += count;
+      }
+    });
+    
+    if (serverId == '4f55jaewuhldbaoi' && startDate != null && endDate != null) {
+      print('  Total runs in range: $totalRuns');
+    }
+    
+    // Return the total runs in the '4+' category since that's what the screen expects
+    // (The Server Integrity screen sums all values, so we put everything in one category)
+    return {'1': 0, '2': 0, '3': 0, '4+': totalRuns};
+  }
+
   void _pruneOldTapBuckets() {
     final cutoff = DateTime.now().subtract(const Duration(days: 180)).millisecondsSinceEpoch;
     for (final m in _tapPerMinute.values) {
@@ -1533,6 +1611,51 @@ class AppState extends ChangeNotifier {
     return m >= 21 * 60 && m < 23 * 60;
   }
 
+  /// Reconstructs allTimeRuns from historical tap data
+  void reconstructAllTimeRuns() {
+    print('[DEBUG] Starting allTimeRuns reconstruction from tap data...');
+    print('[DEBUG] _tapPerMinute has ${_tapPerMinute.length} servers');
+    
+    for (final serverId in _tapPerMinute.keys) {
+      final tapData = _tapPerMinute[serverId];
+      if (tapData == null) continue;
+      
+      // Sum all taps for this server across all time periods
+      final totalTaps = tapData.values.fold<int>(0, (sum, count) => sum + count);
+      print('[DEBUG] Server $serverId has ${tapData.length} time periods, $totalTaps total taps');
+      
+      // Get or create profile
+      final profile = _profiles[serverId] ?? ServerProfile();
+      
+      // Update profile.allTimeRuns if needed
+      if (profile.allTimeRuns < totalTaps) {
+        final oldValue = profile.allTimeRuns;
+        profile.allTimeRuns = totalTaps;
+        _profiles[serverId] = profile;
+        
+        print('[DEBUG] Reconstructed profile $serverId: allTimeRuns $oldValue → $totalTaps');
+      } else {
+        print('[DEBUG] Server $serverId: profile.allTimeRuns=${profile.allTimeRuns} already >= taps=$totalTaps, no change needed');
+      }
+      
+      // ALSO update _totals which is used by MVP screen
+      final currentTotals = _totals[serverId] ?? 0;
+      if (currentTotals < totalTaps) {
+        final oldTotals = currentTotals;
+        _totals[serverId] = totalTaps;
+        print('[DEBUG] Reconstructed totals $serverId: _totals $oldTotals → $totalTaps');
+      } else {
+        print('[DEBUG] Server $serverId: _totals=$currentTotals already >= taps=$totalTaps, no change needed');
+      }
+    }
+    
+    // Save the reconstructed data
+    _persistProfiles();
+    _persistTotals();
+    notifyListeners();
+    print('[DEBUG] allTimeRuns reconstruction complete!');
+  }
+
   void updateAvatar(String serverId, String avatarPath) {
   print('AppState.updateAvatar called for $serverId with $avatarPath');
     final profile = _profiles[serverId];
@@ -1590,5 +1713,10 @@ class AppState extends ChangeNotifier {
       'hasBackups': false,
       'count': 0,
     };
+  }
+
+  /// Public method to manually trigger allTimeRuns reconstruction for testing
+  void manuallyReconstructAllTimeRuns() {
+    reconstructAllTimeRuns();
   }
 }

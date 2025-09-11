@@ -140,7 +140,17 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
                   letterSpacing: 1.2,
                 ),
               ),
-              const SizedBox(width: 48), // Balance the back button
+              IconButton(
+                onPressed: () {
+                  print('[DEBUG] Manual reconstruction triggered');
+                  widget.app.manuallyReconstructAllTimeRuns();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Reconstruction triggered - check console')),
+                  );
+                },
+                icon: const Icon(Icons.refresh, color: Colors.white),
+                tooltip: 'Debug: Reconstruct All-Time Runs',
+              ),
             ],
           ),
           if (isLunch && isAfterTransition)
