@@ -14,6 +14,7 @@ import '../gamification.dart';
 import '../section_assignments.dart';
 import '../widgets/wallpaper_background.dart';
 import 'app_features_screen.dart';
+import 'level_color_demo_screen.dart';
 
 // Screens
 import 'update_roster_screen.dart';
@@ -227,6 +228,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     context,
                     MaterialPageRoute(builder: (_) => const MvpScreen()),
                   );
+                } else if (a == _MoreAction.colorDemo) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LevelColorDemoScreen()),
+                  );
                 }
               },
               itemBuilder: (ctx) => [
@@ -253,6 +259,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: ListTile(
                     leading: Icon(Icons.settings, color: Colors.blue[400]),
                     title: const Text('Settings', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w500)),
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+                PopupMenuItem(
+                  value: _MoreAction.colorDemo,
+                  child: ListTile(
+                    leading: Icon(Icons.palette, color: Colors.purple[400]),
+                    title: const Text('Server Levels', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w500)),
                     dense: true,
                     contentPadding: EdgeInsets.zero,
                   ),
@@ -834,7 +849,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-enum _MoreAction { profiles, settings, mvp }
+enum _MoreAction { profiles, settings, mvp, colorDemo }
 
 
 class TeamPieChart extends StatelessWidget {

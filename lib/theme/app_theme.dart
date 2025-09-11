@@ -516,92 +516,124 @@ class AppTheme {
   static const double iconXl = 48.0;
   
   // Level progression colors that represent advancement and achievement
+  // Colors progressively darken within each tier as players approach the next level
   static Color getLevelBubbleColor(int level) {
+    // Define level ranges and their base colors
+    final tierData = _getLevelTierData(level);
+    final baseColor = tierData['baseColor'] as Color;
+    final tierStart = tierData['tierStart'] as int;
+    final tierEnd = tierData['tierEnd'] as int;
+    
+    // Calculate progression within the tier (0.0 to 1.0)
+    final tierProgress = (level - tierStart) / (tierEnd - tierStart);
+    
+    // Create extremely dramatic progression: start almost original color to very dark
+    // This gives the most noticeable visual progression possible
+    final darkeningFactor = 0.005 + (tierProgress * 0.895); // 0.005 to 0.9 darkening
+    
+    return _darkenColor(baseColor, darkeningFactor);
+  }
+  
+  // Helper function to get tier information for a given level
+  static Map<String, dynamic> _getLevelTierData(int level) {
     if (level <= 5) {
       // Beginner - Green (fresh start, growth)
-      return const Color(0xFF4CAF50);
+      return {
+        'baseColor': const Color(0xFF4CAF50),
+        'tierStart': 1,
+        'tierEnd': 5,
+        'tierName': 'Beginner'
+      };
     } else if (level <= 15) {
       // Developing - Blue (steady progress)
-      return const Color(0xFF2196F3);
+      return {
+        'baseColor': const Color(0xFF2196F3),
+        'tierStart': 6,
+        'tierEnd': 15,
+        'tierName': 'Developing'
+      };
     } else if (level <= 30) {
       // Intermediate - Purple (gaining expertise)
-      return const Color(0xFF9C27B0);
+      return {
+        'baseColor': const Color(0xFF9C27B0),
+        'tierStart': 16,
+        'tierEnd': 30,
+        'tierName': 'Intermediate'
+      };
     } else if (level <= 50) {
       // Advanced - Orange (experienced)
-      return const Color(0xFFFF9800);
+      return {
+        'baseColor': const Color(0xFFFF9800),
+        'tierStart': 31,
+        'tierEnd': 50,
+        'tierName': 'Advanced'
+      };
     } else if (level <= 75) {
       // Expert - Red (mastery)
-      return const Color(0xFFF44336);
+      return {
+        'baseColor': const Color(0xFFF44336),
+        'tierStart': 51,
+        'tierEnd': 75,
+        'tierName': 'Expert'
+      };
     } else if (level <= 100) {
       // Master - Deep Purple (exceptional skill)
-      return const Color(0xFF673AB7);
+      return {
+        'baseColor': const Color(0xFF673AB7),
+        'tierStart': 76,
+        'tierEnd': 100,
+        'tierName': 'Master'
+      };
     } else if (level <= 125) {
       // Legendary - Gold (prestige)
-      return const Color(0xFFFFD700);
+      return {
+        'baseColor': const Color(0xFFFFD700),
+        'tierStart': 101,
+        'tierEnd': 125,
+        'tierName': 'Legendary'
+      };
     } else {
-      // Mythical - Gradient effect represented by cyan (ultimate achievement)
-      return const Color(0xFF00BCD4);
+      // Mythical - Cyan (ultimate achievement)
+      return {
+        'baseColor': const Color(0xFF00BCD4),
+        'tierStart': 126,
+        'tierEnd': 150, // Assuming max level 150
+        'tierName': 'Mythical'
+      };
     }
   }
   
-  // Level progression gradients for beautiful visual appeal - subtle and elegant
+  // Helper function to darken a color by a given factor (0.0 = no change, 1.0 = black)
+  static Color _darkenColor(Color color, double factor) {
+    final hsl = HSLColor.fromColor(color);
+    final darkenedLightness = (hsl.lightness * (1.0 - factor)).clamp(0.0, 1.0);
+    return hsl.withLightness(darkenedLightness).toColor();
+  }
+  
+  // Level progression gradients with progressive darkening within each tier
   static LinearGradient getLevelBubbleGradient(int level) {
-    if (level <= 5) {
-      // Beginner - Lighter, softer green gradient (fresh start, growth)
-      return LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFFA5D6A7), Color(0xFF81C784)],
-      );
-    } else if (level <= 15) {
-      // Developing - Lighter, softer blue gradient (steady progress)
-      return LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFF90CAF9), Color(0xFF64B5F6)],
-      );
-    } else if (level <= 30) {
-      // Intermediate - Lighter, softer purple gradient (gaining expertise)
-      return LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFFCE93D8), Color(0xFFBA68C8)],
-      );
-    } else if (level <= 50) {
-      // Advanced - Lighter, softer orange gradient (experienced)
-      return LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFFFFCC80), Color(0xFFFFB74D)],
-      );
-    } else if (level <= 75) {
-      // Expert - Lighter, softer red gradient (mastery)
-      return LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFFEF9A9A), Color(0xFFE57373)],
-      );
-    } else if (level <= 100) {
-      // Master - Lighter, softer deep purple gradient (exceptional skill)
-      return LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFFB39DDB), Color(0xFF9575CD)],
-      );
-    } else if (level <= 125) {
-      // Legendary - Lighter, softer gold gradient (prestige)
-      return LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFFFFF176), Color(0xFFFFEE58)],
-      );
-    } else {
-      // Mythical - Lighter, softer cyan gradient (ultimate achievement)
-      return LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFF80DEEA), Color(0xFF4DD0E1)],
-      );
-    }
+    // Get tier data and calculate progressive darkening
+    final tierData = _getLevelTierData(level);
+    final baseColor = tierData['baseColor'] as Color;
+    final tierStart = tierData['tierStart'] as int;
+    final tierEnd = tierData['tierEnd'] as int;
+    
+    // Calculate progression within the tier (0.0 to 1.0)
+    final tierProgress = (level - tierStart) / (tierEnd - tierStart);
+    
+    // Create gradient with extremely dramatic progression from almost original to very dark
+    // Light shade: start with almost no darkening to light darkening
+    // Dark shade: start with slight darkening to extremely dark
+    final lightDarkeningFactor = 0.002 + (tierProgress * 0.348); // 0.002 to 0.35
+    final darkDarkeningFactor = 0.08 + (tierProgress * 0.87);    // 0.08 to 0.95
+    
+    final lightColor = _darkenColor(baseColor, lightDarkeningFactor);
+    final darkColor = _darkenColor(baseColor, darkDarkeningFactor);
+    
+    return LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [lightColor, darkColor],
+    );
   }
 }
