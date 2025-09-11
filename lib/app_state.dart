@@ -829,8 +829,10 @@ class AppState extends ChangeNotifier {
         print('[DEBUG] _maybeActivateShiftByClock: Preserving dinner-only server $id: ${dinnerOnlyCounts[id]} counts');
       }
       
-      // Finalize lunch shift and save records
-      _finalizeAndSaveShift('Lunch', lunchRoster);
+      // Finalize lunch shift and save records - include lunch-only + both-shift workers
+      final lunchOnlyWorkers = lunchSet.difference(dinnerSet);
+      final lunchPeriodWorkers = [...lunchOnlyWorkers, ...bothShifts].toList();
+      _finalizeAndSaveShift('Lunch', lunchPeriodWorkers);
       
       // Start dinner shift normally (this clears all counts)
       _beginShift('Dinner', dinnerRoster, preserveCounts: false);
@@ -977,17 +979,25 @@ class AppState extends ChangeNotifier {
     
     final keysToSave = roster != null ? roster.where((id) => _currentCounts.containsKey(id)) : _currentCounts.keys;
     
+    print('[DEBUG] Finalizing shift: type=$type');
+    print('[DEBUG] Roster filter: ${roster ?? 'none (all servers)'}');
+    print('[DEBUG] Available _currentCounts: $_currentCounts');
+    print('[DEBUG] Keys to check for saving: ${keysToSave.toList()}');
+    
     for (final id in keysToSave) {
       final count = _currentCounts[id] ?? 0;
+      print('[DEBUG] Server $id: count=$count');
       if (count > 0) {  // Only save servers with actual runs
         filteredCounts[id] = count;
         pizookieCounts[id] = _currentPizookieCounts[id] ?? 0;
+        print('[DEBUG] Server $id SAVED to $type history with $count runs');
+      } else {
+        print('[DEBUG] Server $id SKIPPED (count=$count)');
       }
     }
     
-    print('[DEBUG] Finalizing shift: type=$type');
-    print('[DEBUG] Roster filter: ${roster ?? 'none (all servers)'}');
-    print('[DEBUG] Saving counts: $filteredCounts');
+    print('[DEBUG] Final saving counts: $filteredCounts');
+    print('[DEBUG] Final saving pizookieCounts: $pizookieCounts');
     print('[DEBUG] Saving pizookieCounts: $pizookieCounts');
     final rec = ShiftRecord(
       id: _randId(),
@@ -1493,5 +1503,15 @@ class AppState extends ChangeNotifier {
     _autoRotateWallpaper = enabled;
     notifyListeners();
     Storage.settingsBox.put('autoRotateWallpaper', enabled);
+  }
+
+  /// Returns backup information for fresh installs
+  Future<Map<String, dynamic>> getExistingBackupInfo() async {
+    // This is a stub implementation for the backup check functionality
+    // Returns false to indicate no existing backups found
+    return {
+      'hasBackups': false,
+      'count': 0,
+    };
   }
 }
