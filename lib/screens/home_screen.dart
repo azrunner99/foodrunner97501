@@ -8,6 +8,7 @@ import 'dart:io';
 
 import '../app_state.dart';
 import '../models.dart';
+import '../theme/app_theme.dart';
 import 'shift_leaderboard_screen.dart';
 import '../gamification.dart';
 import '../section_assignments.dart';
@@ -662,8 +663,16 @@ class _HomeScreenState extends State<HomeScreen> {
                                               child: Container(
                                                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                                                 decoration: BoxDecoration(
-                                                  color: Colors.black.withOpacity(0.8),
+                                                  gradient: AppTheme.getLevelBubbleGradient(profile.level),
                                                   borderRadius: BorderRadius.circular(12),
+                                                  border: Border.all(color: Colors.white, width: 1.5),
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: Colors.black.withOpacity(0.3),
+                                                      blurRadius: 3,
+                                                      offset: const Offset(0, 1),
+                                                    ),
+                                                  ],
                                                 ),
                                                 child: Text(
                                                   'Lvl${profile.level}',
@@ -1367,11 +1376,12 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                                         width: 44,
                                         height: 32,
                                         decoration: BoxDecoration(
-                                          color: Colors.black.withOpacity(0.18),
+                                          gradient: AppTheme.getLevelBubbleGradient(level),
                                           borderRadius: BorderRadius.circular(16),
+                                          border: Border.all(color: Colors.white, width: 1.5),
                                           boxShadow: [
                                             BoxShadow(
-                                              color: Colors.black.withOpacity(0.18),
+                                              color: Colors.black.withOpacity(0.3),
                                               blurRadius: 4,
                                               offset: Offset(1, 2),
                                             ),
@@ -1590,11 +1600,12 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                                     width: 44,
                                     height: 32,
                                     decoration: BoxDecoration(
-                                      color: Colors.black.withOpacity(0.18),
+                                      gradient: AppTheme.getLevelBubbleGradient(level),
                                       borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(color: Colors.white, width: 1.5),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.black.withOpacity(0.18),
+                                          color: Colors.black.withOpacity(0.3),
                                           blurRadius: 4,
                                           offset: Offset(1, 2),
                                         ),

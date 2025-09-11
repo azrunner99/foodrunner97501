@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 import '../app_state.dart';
 import '../gamification.dart';
+import '../theme/app_theme.dart';
 import 'preset_avatar_gallery_screen.dart';
 import 'profile_banner_screen_new.dart';
 // import removed: achievementsCatalog no longer used
@@ -40,7 +41,7 @@ class ProfilesScreen extends StatelessWidget {
                     );
                   },
                   child: Container(
-                    height: 120,
+                    height: 180,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
@@ -146,7 +147,7 @@ class ProfilesScreen extends StatelessWidget {
                                           child: Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                             decoration: BoxDecoration(
-                                              color: Colors.blue.shade600,
+                                              gradient: AppTheme.getLevelBubbleGradient(prof?.level ?? 1),
                                               borderRadius: BorderRadius.circular(12),
                                               border: Border.all(color: Colors.white, width: 2),
                                               boxShadow: [
@@ -162,7 +163,7 @@ class ProfilesScreen extends StatelessWidget {
                                               style: const TextStyle(
                                                 color: Colors.white, 
                                                 fontWeight: FontWeight.bold, 
-                                                fontSize: 12
+                                                fontSize: 14
                                               ),
                                             ),
                                           ),
@@ -180,7 +181,7 @@ class ProfilesScreen extends StatelessWidget {
                                         Text(
                                           s.name,
                                           style: TextStyle(
-                                            fontSize: 28,
+                                            fontSize: 32,
                                             fontWeight: FontWeight.bold,
                                             color: Colors.white,
                                             shadows: [
@@ -196,6 +197,8 @@ class ProfilesScreen extends StatelessWidget {
                                               ),
                                             ],
                                           ),
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 1,
                                         ),
                                         const SizedBox(height: 6),
                                         // XP Progress bar
@@ -273,7 +276,7 @@ class ProfilesScreen extends StatelessWidget {
                                                 return Text(
                                                   '$points / $nextLevelXp XP',
                                                   style: TextStyle(
-                                                    fontSize: 14,
+                                                    fontSize: 16,
                                                     fontWeight: FontWeight.w600,
                                                     color: Colors.white,
                                                     shadows: [

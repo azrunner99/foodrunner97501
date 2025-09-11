@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../app_state.dart';
+import '../theme/app_theme.dart';
 
 enum SortOption {
   allTimeRuns('All Time Runs'),
@@ -270,6 +271,7 @@ class _MvpScreenState extends State<MvpScreen> {
           final avatarPath = app.profiles[s.id]?.avatarPath;
           final bannerPath = app.profiles[s.id]?.bannerPath;
           final currentXp = app.profiles[s.id]?.points ?? 0;
+          final level = app.profiles[s.id]?.level ?? 1;
           
           return _Entry(
             name: s.name,
@@ -282,6 +284,7 @@ class _MvpScreenState extends State<MvpScreen> {
             avatarPath: avatarPath,
             bannerPath: bannerPath,
             currentXp: currentXp,
+            level: level,
           );
         }).toList();
 
@@ -636,7 +639,7 @@ class _MvpScreenState extends State<MvpScreen> {
                 const SizedBox(width: 12),
                 Column(
                   children: [
-                    _buildAvatar(e.avatarPath),
+                    _buildAvatar(e.avatarPath, e.level),
                     const SizedBox(height: 4),
                     Text(
                       '${e.currentXp} XP',
@@ -682,11 +685,13 @@ class _MvpScreenState extends State<MvpScreen> {
     };
   }
 
-  Widget _buildAvatar(String? avatarPath) {
+  Widget _buildAvatar(String? avatarPath, int level) {
+    Widget avatarWidget;
+    
     if (avatarPath != null && avatarPath.isNotEmpty) {
       // Check if it's an asset path or a file path
       if (avatarPath.startsWith('assets/')) {
-        return CircleAvatar(
+        avatarWidget = CircleAvatar(
           radius: 60, // Increased from 36 to make nearly as tall as card
           backgroundImage: AssetImage(avatarPath),
         );
@@ -694,14 +699,62 @@ class _MvpScreenState extends State<MvpScreen> {
         // It's a file path
         final file = File(avatarPath);
         if (file.existsSync()) {
-          return CircleAvatar(
+          avatarWidget = CircleAvatar(
             radius: 60, // Increased from 36 to make nearly as tall as card
             backgroundImage: FileImage(file),
           );
+        } else {
+          avatarWidget = CircleAvatar(
+            radius: 60,
+            backgroundColor: Colors.grey[300],
+          );
         }
       }
+    } else {
+      avatarWidget = CircleAvatar(
+        radius: 60,
+        backgroundColor: Colors.grey[300],
+      );
     }
-    return const SizedBox(width: 120); // Increased width to match larger avatar
+
+    return SizedBox(
+      width: 120,
+      height: 120,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          avatarWidget,
+          // Level bubble at bottom right
+          Positioned(
+            bottom: 6,
+            right: 0,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                gradient: AppTheme.getLevelBubbleGradient(level),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.white, width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.3),
+                    blurRadius: 3,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: Text(
+                'Lvl$level',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 10,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -716,6 +769,7 @@ class _Entry {
   final String? avatarPath;
   final String? bannerPath;
   final int currentXp;
+  final int level;
   _Entry({
     required this.id,
     required this.name,
@@ -727,5 +781,6 @@ class _Entry {
     this.avatarPath,
     this.bannerPath,
     required this.currentXp,
+    required this.level,
   });
 }

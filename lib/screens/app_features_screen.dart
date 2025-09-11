@@ -140,13 +140,15 @@ class AppFeaturesScreen extends StatelessWidget {
               color: Colors.orange,
               features: [
                 'Multi-Level XP System: 150-level progression system with exponentially increasing requirements and visual level badges.',
+                'Enhanced Level Visualization: Refined gradient level bubbles with softer colors for better visual integration across all screens.',
                 'Comprehensive Achievement System: 12+ unique achievements including streaks, milestones, MVP awards, and team goals.',
                 'Repeatable Achievements: Some achievements (MVP, Team Goal) can be earned multiple times for ongoing engagement.',
                 'Smart Achievement Detection: Automatic achievement detection with visual feedback and XP bonus rewards.',
                 'Configurable Gamification: Complete enable/disable toggle for all gamification features while preserving core functionality.',
                 'Streak Tracking: Multi-run streak detection with bonus XP rewards for consecutive successful runs.',
                 'Performance Bonuses: Peak hour bonuses, closer bonuses, and special circumstance multipliers.',
-                'Progress Visualization: Real-time XP progress bars, level indicators, and achievement status displays.',
+                'Progress Visualization: Real-time XP progress bars, level indicators, and achievement status displays with consistent theming.',
+                'Level Bubble Integration: Seamless level display integration across profiles, leaderboards, and all server displays.',
               ],
             ),
 
@@ -173,6 +175,8 @@ class AppFeaturesScreen extends StatelessWidget {
               features: [
                 'PIN-Protected Admin Access: Secure 4-digit PIN system protecting all administrative functions and sensitive data.',
                 'Comprehensive Server Management: Add, edit, delete servers with profile data, statistics, and configuration management.',
+                'Server Archiving System: Archive/restore servers with dedicated archived servers screen and visual archive indicators.',
+                'Archive Management: Safely archive inactive servers while preserving all historical data and statistics.',
                 'Data Import/Export: Complete data backup and restore capabilities with JSON-based data structures.',
                 'Settings Management: Granular control over all app features, timings, and behavioral configurations.',
                 'Shift Control Panel: Manual shift start/stop, pause/resume functionality with administrative override capabilities.',
@@ -188,9 +192,11 @@ class AppFeaturesScreen extends StatelessWidget {
               color: Colors.indigo,
               features: [
                 'Individual Server Profiles: Comprehensive statistics including all-time runs, best shift performance, and streak records.',
+                'Advanced Leaderboard System: Multi-screen leaderboard displays with enhanced server performance tracking and visual design.',
                 'Detailed Shift Analytics: Complete shift breakdowns with sortable statistics, MVP identification, and performance rankings.',
                 'Historical Trend Analysis: Long-term performance tracking with shift-over-shift comparisons and trend identification.',
                 'Performance Metrics: Advanced statistics including average runs per shift, consistency ratings, and improvement tracking.',
+                'Enhanced Level Visualization: Consistent level bubble display across all screens with refined gradient colors for better integration.',
                 'Sortable Leaderboards: Multiple sorting options (runs, pizookies, XP, level) with medal awards for top performers.',
                 'Real-Time Statistics: Live updating statistics during shifts with immediate feedback and performance indicators.',
                 'Export Capabilities: Data export functionality for external analysis and reporting requirements.',
@@ -263,7 +269,7 @@ class AppFeaturesScreen extends StatelessWidget {
                           );
                         },
                         child: Text(
-                          'Version: 3.0.0+300',
+                          'Version: 3.2.0+320',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,

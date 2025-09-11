@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../app_state.dart';
 import '../models.dart';
+import '../theme/app_theme.dart';
 
 class ShiftDetailScreen extends StatefulWidget {
   final ShiftRecord shift;
@@ -654,8 +655,16 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: Colors.black.withOpacity(0.8),
+                                      gradient: AppTheme.getLevelBubbleGradient(profile.level),
                                       borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: Colors.white, width: 1.5),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.3),
+                                          blurRadius: 3,
+                                          offset: const Offset(0, 1),
+                                        ),
+                                      ],
                                     ),
                                     child: Text(
                                       'Lvl${profile.level}',
