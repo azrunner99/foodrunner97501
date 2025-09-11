@@ -36,6 +36,9 @@ class VersionHistoryScreen extends StatelessWidget {
               changes: [
                 "🗄️ Added comprehensive server archiving/restoration system with dedicated archived servers screen",
                 "📁 Enhanced manage servers screen with archive functionality and visual archive indicators",
+                "� Added comprehensive backup system with ZIP file creation including all photos and data",
+                "�💾 Added backup export functionality enabling file sharing and external storage export",
+                "💾 Enhanced backup options: Quick JSON backups and Full ZIP backups with photos",
                 "🎨 Enhanced level bubble gradient system with softer, less bold colors for better visual integration",
                 "🏆 Added level bubbles to MVP/Leaderboards screen with consistent styling throughout app",
                 "📊 Improved leaderboard functionality with comprehensive server performance tracking",
