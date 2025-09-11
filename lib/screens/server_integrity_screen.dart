@@ -715,7 +715,8 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
       final bins = _getIntegrityBinsForDateRange(app, server.id);
       final runCount = _getRunCountForDateRange(app, server.id);
       
-      return IntegrityAnalyzer.analyzeServer(
+      // Generate enhanced assessment with advanced pattern recognition
+      final enhancedAssessment = IntegrityAnalyzer.analyzeServerAdvanced(
         serverId: server.id,
         serverName: server.name,
         clickBins: bins,
@@ -724,6 +725,9 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
         allServerCounts: allServerCounts,
         analysisTime: DateTime.now(),
       );
+      
+      // Return the enhanced assessment which contains all advanced analytics
+      return enhancedAssessment.toBasicAssessment();
     }).toList();
   }
 
