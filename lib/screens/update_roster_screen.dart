@@ -58,7 +58,7 @@ class _UpdateRosterScreenState extends State<UpdateRosterScreen> {
             ),
             child: Center(
               child: Card(
-                margin: const EdgeInsets.all(32),
+                margin: const EdgeInsets.all(20),
                 elevation: 12,
                 shadowColor: Colors.red.withOpacity(0.3),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -74,12 +74,13 @@ class _UpdateRosterScreenState extends State<UpdateRosterScreen> {
                       ],
                     ),
                   ),
-                  padding: const EdgeInsets.all(32),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
+                  padding: const EdgeInsets.all(24),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
                       Container(
-                        padding: const EdgeInsets.all(20),
+                        padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             begin: Alignment.topLeft,
@@ -102,27 +103,27 @@ class _UpdateRosterScreenState extends State<UpdateRosterScreen> {
                         child: const Icon(
                           Icons.lock,
                           color: Colors.white,
-                          size: 48,
+                          size: 40,
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 16),
                       const Text(
                         'Admin Access Required',
                         style: TextStyle(
-                          fontSize: 24,
+                          fontSize: 22,
                           fontWeight: FontWeight.bold,
                           color: Colors.black87,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       const Text(
                         'Enter PIN to modify server roster',
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: 15,
                           color: Colors.black54,
                         ),
                       ),
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 20),
                       Container(
                         decoration: BoxDecoration(
                           color: Colors.grey.shade50,
@@ -150,12 +151,12 @@ class _UpdateRosterScreenState extends State<UpdateRosterScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 16),
                       _buildKeypad(),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 16),
                       Container(
                         width: double.infinity,
-                        height: 50,
+                        height: 45,
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             begin: Alignment.centerLeft,
@@ -188,7 +189,7 @@ class _UpdateRosterScreenState extends State<UpdateRosterScreen> {
                             'Unlock',
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 18,
+                              fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -197,6 +198,7 @@ class _UpdateRosterScreenState extends State<UpdateRosterScreen> {
                     ],
                   ),
                 ),
+              ),
               ),
             ),
           ),
@@ -238,7 +240,7 @@ class _UpdateRosterScreenState extends State<UpdateRosterScreen> {
 
   Widget _buildKeypad() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       child: Column(
         children: [
           Row(
@@ -249,7 +251,7 @@ class _UpdateRosterScreenState extends State<UpdateRosterScreen> {
               _buildKeypadButton('3'),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -258,7 +260,7 @@ class _UpdateRosterScreenState extends State<UpdateRosterScreen> {
               _buildKeypadButton('6'),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -267,7 +269,7 @@ class _UpdateRosterScreenState extends State<UpdateRosterScreen> {
               _buildKeypadButton('9'),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -283,8 +285,8 @@ class _UpdateRosterScreenState extends State<UpdateRosterScreen> {
 
   Widget _buildKeypadButton(String text, {bool isSpecial = false}) {
     return SizedBox(
-      width: 70,
-      height: 60,
+      width: 60,
+      height: 50,
       child: ElevatedButton(
         onPressed: () => _onKeypadPressed(text),
         style: ElevatedButton.styleFrom(
@@ -307,7 +309,7 @@ class _UpdateRosterScreenState extends State<UpdateRosterScreen> {
         child: Text(
           text,
           style: TextStyle(
-            fontSize: isSpecial ? 16 : 20,
+            fontSize: isSpecial ? 14 : 18,
             fontWeight: FontWeight.w600,
           ),
         ),

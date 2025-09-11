@@ -35,6 +35,7 @@ class ServerProfile {
   String hireDate;
   String birthday;
   bool isArchived;
+  String archiveNotes;
 
   ServerProfile({
     this.allTimeRuns = 0,
@@ -54,6 +55,7 @@ class ServerProfile {
     this.hireDate = '',
     this.birthday = '',
     this.isArchived = false,
+    this.archiveNotes = '',
   })  : achievements = achievements ?? [],
         repeatEarnedDates = repeatEarnedDates ?? [];
 
@@ -75,6 +77,7 @@ class ServerProfile {
     String? hireDate,
     String? birthday,
     bool? isArchived,
+    String? archiveNotes,
   }) {
     return ServerProfile(
       allTimeRuns: allTimeRuns ?? this.allTimeRuns,
@@ -94,6 +97,7 @@ class ServerProfile {
       hireDate: hireDate ?? this.hireDate,
       birthday: birthday ?? this.birthday,
       isArchived: isArchived ?? this.isArchived,
+      archiveNotes: archiveNotes ?? this.archiveNotes,
     );
   }
 
@@ -123,6 +127,7 @@ class ServerProfile {
     hireDate: (m['hireDate'] ?? '') as String,
     birthday: (m['birthday'] ?? '') as String,
     isArchived: (m['isArchived'] ?? false) as bool,
+    archiveNotes: (m['archiveNotes'] ?? '') as String,
   );
 
   Map<String, dynamic> toMap() => {
@@ -143,6 +148,7 @@ class ServerProfile {
     'hireDate': hireDate,
     'birthday': birthday,
     'isArchived': isArchived,
+    'archiveNotes': archiveNotes,
   };
 }
 class AppState extends ChangeNotifier {
@@ -688,6 +694,14 @@ class AppState extends ChangeNotifier {
     _persistProfiles();
     notifyListeners();
   }
+
+  // Update a server profile and notify listeners
+  Future<void> updateServerProfile(String serverId, ServerProfile profile) async {
+    _profiles[serverId] = profile;
+    await _persistProfiles();
+    notifyListeners();
+  }
+
   Future<void> _persistDayPlan() async {
     if (_todayPlan != null) {
       await Storage.dayPlanBox.put(_todayPlan!.ymd, _todayPlan!.toMap());
