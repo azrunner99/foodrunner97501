@@ -14,6 +14,7 @@ import '../gamification.dart';
 import '../section_assignments.dart';
 import '../widgets/wallpaper_background.dart';
 import '../widgets/birthday_anniversary_banner.dart';
+import '../widgets/live_countdown_timer.dart';
 import 'app_features_screen.dart';
 import 'level_color_demo_screen.dart';
 
@@ -390,33 +391,111 @@ class _HomeScreenState extends State<HomeScreen> {
                         // Boost Mode Indicator
                         if (app.boostActive)
                           Container(
-                            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                             decoration: BoxDecoration(
-                              color: Colors.orange.withOpacity(0.1),
-                              border: Border.all(color: Colors.orange, width: 2),
-                              borderRadius: BorderRadius.circular(25),
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.orange.withOpacity(0.15), 
+                                  Colors.deepOrange.withOpacity(0.1)
+                                ],
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                              ),
+                              border: Border.all(color: Colors.orange, width: 3),
+                              borderRadius: BorderRadius.circular(30),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.orange.withOpacity(0.4),
+                                  blurRadius: 15,
+                                  spreadRadius: 2,
+                                  offset: Offset(0, 8),
+                                ),
+                              ],
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.rocket_launch, color: Colors.orange, size: 20),
-                                SizedBox(width: 8),
-                                Text(
-                                  'BOOST MODE: ${app.boostMultiplier}x XP',
-                                  style: TextStyle(
-                                    color: Colors.orange,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
+                                Container(
+                                  padding: EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [Colors.orange, Colors.deepOrange],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.orange.withOpacity(0.6),
+                                        blurRadius: 8,
+                                        spreadRadius: 1,
+                                        offset: Offset(0, 3),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Icon(
+                                    Icons.rocket_launch, 
+                                    color: Colors.white, 
+                                    size: 24
                                   ),
                                 ),
-                                SizedBox(width: 8),
+                                SizedBox(width: 12),
                                 Text(
-                                  '${app.boostTimeRemaining}',
+                                  'BOOST MODE: ',
                                   style: TextStyle(
-                                    color: Colors.orange,
-                                    fontWeight: FontWeight.w600,
+                                    color: Colors.orange[800],
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 20,
+                                    letterSpacing: 0.5,
                                   ),
                                 ),
+                                Container(
+                                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [Colors.orange, Colors.deepOrange],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(15),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.orange.withOpacity(0.6),
+                                        blurRadius: 8,
+                                        spreadRadius: 1,
+                                        offset: Offset(0, 3),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Text(
+                                    '${app.boostMultiplier}x XP',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 18,
+                                      letterSpacing: 0.5,
+                                      shadows: [
+                                        Shadow(
+                                          blurRadius: 3,
+                                          color: Colors.black.withOpacity(0.4),
+                                          offset: Offset(1, 1),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: 12),
+                                if (app.boostEndTime != null)
+                                  LiveCountdownTimer(
+                                    endTime: app.boostEndTime!,
+                                    textStyle: TextStyle(
+                                      color: Colors.orange[700],
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 16,
+                                    ),
+                                    prefix: '',
+                                    onExpired: () => app.checkBoostExpiry(),
+                                  ),
                               ],
                             ),
                           ),
@@ -467,28 +546,55 @@ class _HomeScreenState extends State<HomeScreen> {
                     // Boost Mode Indicator (when servers are active)
                     if (app.boostActive)
                       Container(
-                        margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        padding: EdgeInsets.all(16),
+                        margin: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        padding: EdgeInsets.all(10),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
-                            colors: [Colors.orange.withOpacity(0.1), Colors.orange.withOpacity(0.05)],
+                            colors: [
+                              Colors.orange.withOpacity(0.15), 
+                              Colors.deepOrange.withOpacity(0.1)
+                            ],
                             begin: Alignment.centerLeft,
                             end: Alignment.centerRight,
                           ),
-                          border: Border.all(color: Colors.orange, width: 2),
+                          border: Border.all(color: Colors.orange, width: 2.5),
                           borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.orange.withOpacity(0.3),
+                              blurRadius: 8,
+                              spreadRadius: 1,
+                              offset: Offset(0, 4),
+                            ),
+                          ],
                         ),
                         child: Row(
                           children: [
                             Container(
                               padding: EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: Colors.orange,
+                                gradient: LinearGradient(
+                                  colors: [Colors.orange, Colors.deepOrange],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
                                 shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.orange.withOpacity(0.6),
+                                    blurRadius: 6,
+                                    spreadRadius: 0,
+                                    offset: Offset(0, 2),
+                                  ),
+                                ],
                               ),
-                              child: Icon(Icons.rocket_launch, color: Colors.white, size: 24),
+                              child: Icon(
+                                Icons.rocket_launch, 
+                                color: Colors.white, 
+                                size: 20
+                              ),
                             ),
-                            SizedBox(width: 12),
+                            SizedBox(width: 10),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -496,27 +602,51 @@ class _HomeScreenState extends State<HomeScreen> {
                                   Text(
                                     'BOOST MODE ACTIVE!',
                                     style: TextStyle(
-                                      color: Colors.orange,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 18,
+                                      color: Colors.orange[800],
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 16,
+                                      letterSpacing: 0.6,
+                                      shadows: [
+                                        Shadow(
+                                          blurRadius: 1,
+                                          color: Colors.black.withOpacity(0.2),
+                                          offset: Offset(0.5, 0.5),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  SizedBox(height: 4),
-                                  Text(
-                                    '${app.boostMultiplier.toInt()}x XP Multiplier • ${app.boostTimeRemaining} remaining',
-                                    style: TextStyle(
-                                      color: Colors.orange[700],
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 14,
-                                    ),
+                                  SizedBox(height: 2),
+                                  Row(
+                                    children: [
+                                      Text(
+                                        '${app.boostMultiplier.toInt()}x XP • ',
+                                        style: TextStyle(
+                                          color: Colors.orange[700],
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                      if (app.boostEndTime != null)
+                                        LiveCountdownTimer(
+                                          endTime: app.boostEndTime!,
+                                          textStyle: TextStyle(
+                                            color: Colors.orange[700],
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 12,
+                                          ),
+                                          prefix: '',
+                                          onExpired: () => app.checkBoostExpiry(),
+                                        ),
+                                    ],
                                   ),
                                   if (app.boostDescription.isNotEmpty) ...[
-                                    SizedBox(height: 4),
+                                    SizedBox(height: 1),
                                     Text(
                                       app.boostDescription,
                                       style: TextStyle(
                                         color: Colors.orange[600],
-                                        fontSize: 12,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w500,
                                         fontStyle: FontStyle.italic,
                                       ),
                                     ),
@@ -524,18 +654,50 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ],
                               ),
                             ),
+                            SizedBox(width: 8),
+                            // Large central countdown display
+                            if (app.boostEndTime != null)
+                              LiveCountdownTimer(
+                                endTime: app.boostEndTime!,
+                                showLargeDisplay: true,
+                                onExpired: () {
+                                  // Ensure boost is deactivated when timer expires
+                                  app.checkBoostExpiry();
+                                },
+                              ),
+                            SizedBox(width: 8),
                             Container(
                               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
-                                color: Colors.orange,
-                                borderRadius: BorderRadius.circular(20),
+                                gradient: LinearGradient(
+                                  colors: [Colors.orange, Colors.deepOrange],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.orange.withOpacity(0.6),
+                                    blurRadius: 8,
+                                    spreadRadius: 1,
+                                    offset: Offset(0, 3),
+                                  ),
+                                ],
                               ),
                               child: Text(
                                 '${app.boostMultiplier.toInt()}X',
                                 style: TextStyle(
                                   color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 24,
+                                  letterSpacing: 1.2,
+                                  shadows: [
+                                    Shadow(
+                                      blurRadius: 4,
+                                      color: Colors.black.withOpacity(0.5),
+                                      offset: Offset(1, 1),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),

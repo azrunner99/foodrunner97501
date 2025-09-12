@@ -1,4 +1,4 @@
-name: bjs_food_runs
+name: food_runs_counter
 description: BJ's food run tracker with day planning, gamification, and admin controls
 publish_to: "none"
 version: 1.3.0+130
@@ -23,6 +23,10 @@ dependencies:
   share_plus: ^10.0.2
   file_picker: ^8.0.7
   archive: ^4.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
 
 flutter:
   uses-material-design: true
