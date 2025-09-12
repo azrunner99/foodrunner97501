@@ -46,80 +46,84 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final m = now.hour * 60 + now.minute;
-    final plan = widget.app.todayPlan;
-    final lunchIds = plan?.lunchRoster ?? [];
-    final dinnerIds = plan?.dinnerRoster ?? [];
-    final isLunch = widget.shiftType.toLowerCase() == 'lunch';
-    final isAfterTransition = m >= (plan?.transitionEndMinutes ?? widget.app.settings.transitionEndMinutes);
+    return Consumer<AppState>(
+      builder: (context, appState, _) {
+        final now = DateTime.now();
+        final m = now.hour * 60 + now.minute;
+        final plan = appState.todayPlan;
+        final lunchIds = plan?.lunchRoster ?? [];
+        final dinnerIds = plan?.dinnerRoster ?? [];
+        final isLunch = widget.shiftType.toLowerCase() == 'lunch';
+        final isAfterTransition = m >= (plan?.transitionEndMinutes ?? appState.settings.transitionEndMinutes);
 
-    // Get roster based on shift type
-    final ids = isLunch ? lunchIds : dinnerIds;
-    final sortedIds = [...ids];
+        // Get roster based on shift type
+        final ids = isLunch ? lunchIds : dinnerIds;
+        final sortedIds = [...ids];
 
-    // Sort by selected metric
-    if (_sortBy == 'runs') {
-      sortedIds.sort((a, b) => (widget.app.currentCounts[b] ?? 0).compareTo(widget.app.currentCounts[a] ?? 0));
-    } else if (_sortBy == 'pizookies') {
-      sortedIds.sort((a, b) => (widget.app.currentPizookieCounts[b] ?? 0).compareTo(widget.app.currentPizookieCounts[a] ?? 0));
-    } else if (_sortBy == 'xp') {
-      sortedIds.sort((a, b) {
-        final xpA = ((widget.app.currentCounts[a] ?? 0) * 10) + ((widget.app.currentPizookieCounts[a] ?? 0) * 15);
-        final xpB = ((widget.app.currentCounts[b] ?? 0) * 10) + ((widget.app.currentPizookieCounts[b] ?? 0) * 15);
-        return xpB.compareTo(xpA);
-      });
-    }
+        // Sort by selected metric
+        if (_sortBy == 'runs') {
+          sortedIds.sort((a, b) => (appState.currentCounts[b] ?? 0).compareTo(appState.currentCounts[a] ?? 0));
+        } else if (_sortBy == 'pizookies') {
+          sortedIds.sort((a, b) => (appState.currentPizookieCounts[b] ?? 0).compareTo(appState.currentPizookieCounts[a] ?? 0));
+        } else if (_sortBy == 'xp') {
+          sortedIds.sort((a, b) {
+            final xpA = ((appState.currentCounts[a] ?? 0) * 10) + ((appState.currentPizookieCounts[a] ?? 0) * 15);
+            final xpB = ((appState.currentCounts[b] ?? 0) * 10) + ((appState.currentPizookieCounts[b] ?? 0) * 15);
+            return xpB.compareTo(xpA);
+          });
+        }
 
-    // Calculate enhanced metrics
-    final counts = sortedIds.map((id) => widget.app.currentCounts[id] ?? 0).toList();
-    final totalRuns = counts.fold<int>(0, (a, b) => a + b);
-    final avgRuns = totalRuns > 0 ? totalRuns / sortedIds.length : 0.0;
-    final maxRuns = counts.isNotEmpty ? counts.reduce((a, b) => a > b ? a : b) : 0;
-    final activeServers = counts.where((c) => c > 0).length;
-    final totalPizookies = sortedIds.map((id) => widget.app.currentPizookieCounts[id] ?? 0).fold<int>(0, (a, b) => a + b);
+        // Calculate enhanced metrics
+        final counts = sortedIds.map((id) => appState.currentCounts[id] ?? 0).toList();
+        final totalRuns = counts.fold<int>(0, (a, b) => a + b);
+        final avgRuns = totalRuns > 0 ? totalRuns / sortedIds.length : 0.0;
+        final maxRuns = counts.isNotEmpty ? counts.reduce((a, b) => a > b ? a : b) : 0;
+        final activeServers = counts.where((c) => c > 0).length;
+        final totalPizookies = sortedIds.map((id) => appState.currentPizookieCounts[id] ?? 0).fold<int>(0, (a, b) => a + b);
 
-    return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Theme.of(context).primaryColor,
-              Theme.of(context).primaryColor.withOpacity(0.8),
-              Colors.white,
-            ],
-            stops: const [0.0, 0.3, 1.0],
-          ),
-        ),
-        child: SafeArea(
-          child: FadeTransition(
-            opacity: _fadeAnimation,
-            child: Column(
-              children: [
-                // Enhanced Header
-                _buildHeader(isLunch, isAfterTransition),
-                
-                // Stats Dashboard
-                _buildStatsDashboard(totalRuns, avgRuns, maxRuns, activeServers, sortedIds.length, totalPizookies),
-                
-                // Sort Controls
-                _buildSortControls(),
-                
-                // Leaderboard List
-                Expanded(
-                  child: _buildLeaderboardList(sortedIds, maxRuns),
+        return Scaffold(
+          body: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Theme.of(context).primaryColor,
+                  Theme.of(context).primaryColor.withOpacity(0.8),
+                  Colors.white,
+                ],
+                stops: const [0.0, 0.3, 1.0],
+              ),
+            ),
+            child: SafeArea(
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: Column(
+                  children: [
+                    // Enhanced Header
+                    _buildHeader(isLunch, isAfterTransition, appState),
+                    
+                    // Stats Dashboard
+                    _buildStatsDashboard(totalRuns, avgRuns, maxRuns, activeServers, sortedIds.length, totalPizookies),
+                    
+                    // Sort Controls
+                    _buildSortControls(),
+                    
+                    // Leaderboard List
+                    Expanded(
+                      child: _buildLeaderboardList(sortedIds, maxRuns, appState),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildHeader(bool isLunch, bool isAfterTransition) {
+  Widget _buildHeader(bool isLunch, bool isAfterTransition, AppState appState) {
     return Container(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -143,7 +147,7 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
               IconButton(
                 onPressed: () {
                   print('[DEBUG] Manual reconstruction triggered');
-                  widget.app.manuallyReconstructAllTimeRuns();
+                  appState.manuallyReconstructAllTimeRuns();
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Reconstruction triggered - check console')),
                   );
@@ -349,7 +353,7 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
     );
   }
 
-  Widget _buildLeaderboardList(List<String> sortedIds, int maxRuns) {
+  Widget _buildLeaderboardList(List<String> sortedIds, int maxRuns, AppState appState) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
@@ -369,13 +373,13 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
         separatorBuilder: (context, index) => const Divider(height: 20),
         itemBuilder: (context, index) {
           final id = sortedIds[index];
-          final server = widget.app.servers.firstWhere(
+          final server = appState.servers.firstWhere(
             (s) => s.id == id,
             orElse: () => Server(id: id, name: 'Unknown'),
           );
-          final runs = widget.app.currentCounts[id] ?? 0;
-          final pizookies = widget.app.profiles[id]?.pizookieRuns ?? 0;
-          final totalRuns = sortedIds.map((id) => widget.app.currentCounts[id] ?? 0).fold<int>(0, (a, b) => a + b);
+          final runs = appState.currentCounts[id] ?? 0;
+          final pizookies = appState.profiles[id]?.pizookieRuns ?? 0;
+          final totalRuns = sortedIds.map((id) => appState.currentCounts[id] ?? 0).fold<int>(0, (a, b) => a + b);
           final percentage = totalRuns > 0 ? (runs / totalRuns) * 100 : 0.0;
 
           return _buildEnhancedServerCard(

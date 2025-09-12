@@ -439,59 +439,240 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
     return totalShifts > 0 ? totalPizookieRuns / totalShifts : 0.0;
   }
 
-  // Helper method to calculate average XP per shift from history
-  double _calculateAvgXpPerShift(AppState app, String serverId) {
-    int totalXp = 0;
-    int totalShifts = 0;
-    
-    for (final shift in app.history) {
-      final runs = shift.counts[serverId] ?? 0;
-      final pizookieRuns = shift.pizookieCounts[serverId] ?? 0;
-      if (runs > 0 || pizookieRuns > 0) {
-        // Calculate XP for this shift (same logic as gamification)
-        final shiftXp = (runs * 10) + (pizookieRuns * 25);
-        totalXp += shiftXp;
-        totalShifts += 1;
-      }
-    }
-    
-    return totalShifts > 0 ? totalXp / totalShifts : 0.0;
-  }
-
-  // Badge mode removed
-  // Metric card widget for visual separation
+  // Enhanced metric card widget with modern design
   Widget metricCard({required String label, required String value, required Color color, Widget? extra}) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+      margin: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            color.withOpacity(0.1),
+            color.withOpacity(0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: color.withOpacity(0.3),
+          width: 1.5,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.07),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: color.withOpacity(0.15),
+            blurRadius: 15,
+            offset: const Offset(0, 6),
+            spreadRadius: 0,
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+            spreadRadius: 0,
           ),
         ],
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: Colors.black)),
-                const SizedBox(height: 6),
-                Text(value, style: const TextStyle(fontSize: 14, color: Colors.black)),
-                if (extra != null) ...[
-                  const SizedBox(height: 2),
-                  extra,
-                ],
-              ],
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        child: Row(
+          children: [
+            // Color accent bar
+            Container(
+              width: 4,
+              height: 60,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    color,
+                    color.withOpacity(0.6),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
+            const SizedBox(width: 20),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          label, 
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 22, // Increased from 18
+                            color: color.withOpacity(0.9),
+                            letterSpacing: 0.5,
+                          )
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          _getIconForLabel(label),
+                          size: 16,
+                          color: color,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    value, 
+                    style: const TextStyle(
+                      fontSize: 28, // Increased from 24
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                      height: 1.2,
+                    )
+                  ),
+                  if (extra != null) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.only(top: 12),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          top: BorderSide(
+                            color: color.withOpacity(0.2),
+                            width: 1,
+                          ),
+                        ),
+                      ),
+                      child: extra,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Helper method to get appropriate icons for each metric
+  IconData _getIconForLabel(String label) {
+    switch (label.toLowerCase()) {
+      case 'tenure':
+        return Icons.work_history;
+      case 'current xp':
+        return Icons.star;
+      case 'all-time runs':
+        return Icons.directions_run;
+      case 'average runs per shift':
+        return Icons.trending_up;
+      case 'pizookie runs':
+        return Icons.cookie;
+      default:
+        return Icons.analytics;
+    }
+  }
+
+  // Small info card for basic stats
+  Widget _infoCard({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13, // Increased from 11
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 16, // Increased from 14
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper method to build detail rows in metric cards
+  Widget _buildDetailRow(List<Widget> items) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: items,
+    );
+  }
+
+  // Helper method to build individual detail items
+  Widget _buildDetailItem(String label, String value, {bool highlight = false}) {
+    return Flexible(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: highlight ? Colors.black.withOpacity(0.05) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14, // Increased from 12
+                fontWeight: FontWeight.w500,
+                color: Colors.grey.shade600,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 17, // Increased from 15
+                fontWeight: highlight ? FontWeight.w700 : FontWeight.w600,
+                color: highlight ? Colors.black87 : Colors.black87,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -813,7 +994,7 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                               decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.85),
+                                gradient: AppTheme.getLevelBubbleGradient(p.level),
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(color: Colors.white, width: 2),
                                 boxShadow: [
@@ -871,68 +1052,132 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 20),
-          Center(
-            child: Text(
-              '${p.points} points • Next level at: ${p.nextLevelAt}',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[700]),
+          const SizedBox(height: 24),
+          // Enhanced info section with cards
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.shade200),
             ),
-          ),
-          const SizedBox(height: 4),
-          Center(
-            child: Text(
-              'MVP: ${p.shiftsAsMvp}',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[700]),
-            ),
-          ),
-          if (p.hireDate.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Center(
-              child: Text(
-                'Hired: ${p.hireDate}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[700]),
-              ),
-            ),
-          ],
-          if (p.birthday.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Center(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Birthday: ${_getBirthdayMonth(p.birthday)}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[700]),
-                  ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: () => _editBirthday(context, widget.serverId),
-                    child: Text(
-                      'edit',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.blue,
-                        decoration: TextDecoration.underline,
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: _infoCard(
+                        icon: Icons.star,
+                        label: 'Points',
+                        value: '${p.points}',
+                        color: Colors.amber,
                       ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _infoCard(
+                        icon: Icons.trending_up,
+                        label: 'Next Level',
+                        value: '${p.nextLevelAt}',
+                        color: Colors.blue,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _infoCard(
+                        icon: Icons.emoji_events,
+                        label: 'MVP Awards',
+                        value: '${p.shiftsAsMvp}',
+                        color: Colors.orange,
+                      ),
+                    ),
+                    if (p.hireDate.isNotEmpty) ...[
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _infoCard(
+                          icon: Icons.calendar_today,
+                          label: 'Hired',
+                          value: p.hireDate,
+                          color: Colors.green,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                if (p.birthday.isNotEmpty || p.birthday.isEmpty) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.pink.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.pink.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(Icons.cake, color: Colors.pink.shade400, size: 20),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Birthday',
+                                style: TextStyle(
+                                  fontSize: 14, // Increased from 12
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.pink.shade400,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                p.birthday.isNotEmpty ? _getBirthdayMonth(p.birthday) : 'Not set',
+                                style: const TextStyle(
+                                  fontSize: 16, // Increased from 14
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => _editBirthday(context, widget.serverId),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.pink.shade100,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              p.birthday.isNotEmpty ? 'Edit' : 'Add',
+                              style: TextStyle(
+                                fontSize: 14, // Increased from 12
+                                fontWeight: FontWeight.w600,
+                                color: Colors.pink.shade600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
-              ),
+              ],
             ),
-          ] else ...[
-            const SizedBox(height: 4),
-            Center(
-              child: GestureDetector(
-                onTap: () => _editBirthday(context, widget.serverId),
-                child: Text(
-                  'Add Birthday',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.blue,
-                    decoration: TextDecoration.underline,
-                  ),
-                ),
-              ),
-            ),
-          ],
+          ),
           const SizedBox(height: 24),
           // Tenure card - show employment length
           if (p.hireDate.isNotEmpty)
@@ -944,41 +1189,40 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
           // XP card
           metricCard(
             label: 'Current XP',
-            value: '${p.points} • Level ${p.level}',
+            value: '${p.points} points',
             color: Colors.purple,
-            extra: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Average XP per shift: ${_calculateAvgXpPerShift(app, widget.serverId).round()}', 
-                     style: const TextStyle(fontSize: 16)),
-                Text('Next level: ${p.nextLevelAt}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              ],
-            ),
+            extra: _buildDetailRow([
+              _buildDetailItem('Level ${p.level}', 'Current'),
+              _buildDetailItem('Next level', '${p.nextLevelAt} XP', highlight: true),
+            ]),
           ),
           // Remove the metricCard for 'Points'
           metricCard(
             label: 'All-time Runs',
-            value: '${p.allTimeRuns} • Best shift: ${p.bestShiftRuns}',
+            value: '${p.allTimeRuns}',
             color: Colors.blue,
             extra: Column(
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('$allTimePct% of team', style: const TextStyle(fontSize: 16)),
-                    Text('Rank: $allTimeRank/$totalServers', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    Text('Average runs per shift: ${_calculateAvgRunsPerShift(app, widget.serverId).round()}', 
-                         style: const TextStyle(fontSize: 16)),
-                  ],
-                ),
+                _buildDetailRow([
+                  _buildDetailItem('Best shift', '${p.bestShiftRuns}'),
+                  _buildDetailItem('Team share', '$allTimePct%'),
+                ]),
+                const SizedBox(height: 8),
+                _buildDetailRow([
+                  _buildDetailItem('Rank', '$allTimeRank/$totalServers', highlight: true),
+                ]),
               ],
             ),
+          ),
+          metricCard(
+            label: 'Average Runs Per Shift',
+            value: '${_calculateAvgRunsPerShift(app, widget.serverId).toStringAsFixed(1)} runs',
+            color: Colors.green,
+            extra: _buildDetailRow([
+              _buildDetailItem('Shifts worked', '${app.history.where((shift) => (shift.counts[widget.serverId] ?? 0) > 0).length}'),
+              if (p.bestShiftRuns > 0)
+                _buildDetailItem('Personal best', '${p.bestShiftRuns}', highlight: true),
+            ]),
           ),
           metricCard(
             label: 'Pizookie Runs',
@@ -986,21 +1230,14 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
             color: Colors.pink,
             extra: Column(
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('$pizookiePct% of team', style: const TextStyle(fontSize: 16)),
-                    Text('Rank: $pizookieRank/$totalServers', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    Text('Average pizookie runs per shift: ${_calculateAvgPizookiePerShift(app, widget.serverId).round()}', 
-                         style: const TextStyle(fontSize: 16)),
-                  ],
-                ),
+                _buildDetailRow([
+                  _buildDetailItem('Team share', '$pizookiePct%'),
+                  _buildDetailItem('Rank', '$pizookieRank/$totalServers', highlight: true),
+                ]),
+                const SizedBox(height: 8),
+                _buildDetailRow([
+                  _buildDetailItem('Avg per shift', '${_calculateAvgPizookiePerShift(app, widget.serverId).round()}'),
+                ]),
               ],
             ),
           ),

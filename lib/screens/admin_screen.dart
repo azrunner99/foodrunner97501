@@ -4,7 +4,7 @@ import '../app_state.dart';
 import '../widgets/wallpaper_background.dart';
 import 'manage_servers_screen.dart';
 import 'server_avatar_settings_screen.dart';
-import 'server_integrity_screen.dart';
+import 'server_dashboard_screen.dart';
 import 'backup_manager_screen.dart';
 
 class AdminScreen extends StatefulWidget {
@@ -242,14 +242,14 @@ class _AdminScreenState extends State<AdminScreen> {
                     },
                   ),
                   _buildAdminTile(
-                    icon: Icons.security,
-                    title: 'Server Integrity',
-                    subtitle: 'Monitor click rates and server behavior',
+                    icon: Icons.monitor_heart,
+                    title: 'Server Monitoring',
+                    subtitle: 'Monitor server activity and performance',
                     enabled: true,
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const ServerIntegrityScreen()),
+                        MaterialPageRoute(builder: (_) => const ServerDashboardScreen()),
                       );
                     },
                   ),
