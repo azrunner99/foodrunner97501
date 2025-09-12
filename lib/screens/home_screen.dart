@@ -147,6 +147,15 @@ class _HomeScreenState extends State<HomeScreen> {
   DateTime? _lastTapTime;
   bool _isLongPress = false;
 
+  void _showBoostDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return BoostModeDialog();
+      },
+    );
+  }
+
   void _handleRunnerTap(BuildContext context) {
     final now = DateTime.now();
     if (_lastTapTime == null || now.difference(_lastTapTime!) > const Duration(seconds: 2)) {
@@ -202,6 +211,33 @@ class _HomeScreenState extends State<HomeScreen> {
                   MaterialPageRoute(builder: (_) => const HistoryScreen()),
                 );
               },
+            ),
+            // Boost Mode Icon Button (for managers)
+            IconButton(
+              tooltip: 'Boost Mode',
+              icon: Stack(
+                children: [
+                  Icon(
+                    Icons.rocket_launch,
+                    color: app.boostActive ? Colors.orange : Colors.black,
+                    size: 28,
+                  ),
+                  if (app.boostActive)
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: Colors.orange,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              onPressed: _showBoostDialog,
             ),
             PopupMenuButton<_MoreAction>(
               tooltip: 'More',
@@ -332,10 +368,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 
                 bool isDinner = (m >= end || (app.activeRosterView == 'dinner' && showToggle));
                 if (ids.isEmpty) {
-                  return Padding(
-                    padding: const EdgeInsets.all(28),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                  return Center(
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(28),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         const SizedBox(height: 20),
                         Text(
@@ -348,6 +387,40 @@ class _HomeScreenState extends State<HomeScreen> {
                               const TextStyle(fontSize: 36, fontWeight: FontWeight.w800),
                         ),
                         const SizedBox(height: 12),
+                        // Boost Mode Indicator
+                        if (app.boostActive)
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.withOpacity(0.1),
+                              border: Border.all(color: Colors.orange, width: 2),
+                              borderRadius: BorderRadius.circular(25),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.rocket_launch, color: Colors.orange, size: 20),
+                                SizedBox(width: 8),
+                                Text(
+                                  'BOOST MODE: ${app.boostMultiplier}x XP',
+                                  style: TextStyle(
+                                    color: Colors.orange,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                SizedBox(width: 8),
+                                Text(
+                                  '${app.boostTimeRemaining}',
+                                  style: TextStyle(
+                                    color: Colors.orange,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        if (app.boostActive) const SizedBox(height: 12),
                         Text(
                           "Manager: assign servers to Lunch and Dinner to begin.",
                           textAlign: TextAlign.center,
@@ -372,6 +445,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ],
                     ),
+                  ),
                   );
                 }
                 // Show main UI when there are assigned servers
@@ -390,6 +464,84 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     TeamPieChart(teamCounts: teamCounts, teamColors: teamColors),
+                    // Boost Mode Indicator (when servers are active)
+                    if (app.boostActive)
+                      Container(
+                        margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Colors.orange.withOpacity(0.1), Colors.orange.withOpacity(0.05)],
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                          ),
+                          border: Border.all(color: Colors.orange, width: 2),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.orange,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(Icons.rocket_launch, color: Colors.white, size: 24),
+                            ),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'BOOST MODE ACTIVE!',
+                                    style: TextStyle(
+                                      color: Colors.orange,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    '${app.boostMultiplier.toInt()}x XP Multiplier • ${app.boostTimeRemaining} remaining',
+                                    style: TextStyle(
+                                      color: Colors.orange[700],
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  if (app.boostDescription.isNotEmpty) ...[
+                                    SizedBox(height: 4),
+                                    Text(
+                                      app.boostDescription,
+                                      style: TextStyle(
+                                        color: Colors.orange[600],
+                                        fontSize: 12,
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.orange,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                '${app.boostMultiplier.toInt()}X',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     // Birthday and Anniversary Banner
                     BirthdayAnniversaryBanner(appState: app),
                     Padding(
@@ -601,7 +753,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                             final appState = Provider.of<AppState>(context, listen: false);
                                             final runCount = appState.currentCounts[lastId] ?? 0;
                                             final pizookieCount = appState.currentPizookieCounts[lastId] ?? 0;
-                                            final shiftXp = (runCount * 10) + (pizookieCount * 15);
+                                            final boost = appState.boostActive ? appState.boostMultiplier : 1.0;
+                                            // Correct calculation: Pizookies are 25 XP total, not 10+25
+                                            final regularRuns = runCount - pizookieCount;
+                                            final shiftXp = (((regularRuns * 10) + (pizookieCount * 25)) * boost).round();
+                                            print('[DEBUG] HOME DISPLAY: server=$lastId, runs=$runCount, pizookies=$pizookieCount, regularRuns=$regularRuns, boost=${appState.boostActive ? "${appState.boostMultiplier}x" : "none"}, shiftXp=$shiftXp');
                                             return Text(
                                               'Shift XP Earned: $shiftXp',
                                               style: TextStyle(
@@ -1016,10 +1172,13 @@ class _Body extends StatelessWidget {
             ),
           ],
         if (ids.isEmpty)
-          Padding(
-            padding: const EdgeInsets.all(28),
+          Center(
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(28),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 const SizedBox(height: 20),
                 Text(
@@ -1056,6 +1215,7 @@ class _Body extends StatelessWidget {
                 ),
               ],
             ),
+          ),
           ),
       ],
     );
@@ -1304,19 +1464,45 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                               // Check if restaurant is open before allowing increments
                               if (app.isOpenNow) {
                                 final achievement = app.increment(id);
-                                int xpEarned = 10;
+                                
+                                // Calculate base XP and apply boost if active
+                                int baseXP = 10;
+                                int xpEarned = baseXP;
+                                bool isAchievement = false;
+                                bool isBoostActive = app.boostActive;
+                                
                                 if (achievement == 'full_hands') {
-                                  xpEarned = 35;
+                                  isAchievement = true;
                                   _showAchievement('Full Hands!');
+                                  // Full Hands = base boosted XP + 25 bonus
+                                  if (isBoostActive) {
+                                    xpEarned = (baseXP * app.boostMultiplier).round() + 25;
+                                  } else {
+                                    xpEarned = 35; // 10 base + 25 bonus
+                                  }
                                 } else if (achievement == 'five_streak') {
                                   xpEarned = 30;
+                                  isAchievement = true;
                                 } else if (achievement == 'ten_in_shift') {
                                   xpEarned = 20;
+                                  isAchievement = true;
                                 } else if (achievement == 'twenty_in_shift') {
                                   xpEarned = 30;
+                                  isAchievement = true;
+                                } else {
+                                  // Regular run - apply boost if active
+                                  if (isBoostActive) {
+                                    xpEarned = (baseXP * app.boostMultiplier).round();
+                                  }
                                 }
+                                
+                                String flashText = '+$xpEarned XP';
+                                if (isBoostActive && !isAchievement) {
+                                  flashText = '🚀 +$xpEarned XP\nBOOST ${app.boostMultiplier}x!';
+                                }
+                                
                                 _showFlash(
-                                  '+$xpEarned XP',
+                                  flashText,
                                   'Next level: $pointsToNext XP',
                                 );
                                 if (app.settings.encouragementFlashEnabled) {
@@ -1353,10 +1539,25 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                           onLongPress: () {
                             this._isLongPress = true;
                             app.incrementPizookie(id);
-                            int xpEarned = 25;
+                            
+                            // Calculate boosted Pizookie XP
+                            const basePizookieXP = 25;
+                            final isBoostActive = app.boostActive;
+                            final xpEarned = isBoostActive 
+                                ? (basePizookieXP * app.boostMultiplier).round()
+                                : basePizookieXP;
+                            
+                            String flashText = '+$xpEarned XP\nPizookie!';
+                            String subText = 'Sweet!  Ran a Pizookie';
+                            
+                            if (isBoostActive) {
+                              flashText = '🚀 +$xpEarned XP\nBOOST Pizookie!';
+                              subText = 'BOOST ${app.boostMultiplier}x • Sweet!';
+                            }
+                            
                             _showFlash(
-                              '+$xpEarned XP\nPizookie!',
-                              'Sweet!  Ran a Pizookie',
+                              flashText,
+                              subText,
                             );
                             // Removed Pizookie run SnackBar
                             Future.delayed(const Duration(milliseconds: 100), () {
@@ -1540,12 +1741,22 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                       ),
                       onPressed: () {
                         final achievement = app.increment(id);
-                        int xpEarned = 10;
+                        
+                        // Calculate base XP and apply boost if active
+                        int baseXP = 10;
+                        int xpEarned = baseXP;
                         bool isAchievement = false;
+                        bool isBoostActive = app.boostActive;
+                        
                         if (achievement == 'full_hands') {
-                          xpEarned = 35;
                           isAchievement = true;
                           _showAchievement('Full Hands!');
+                          // Full Hands = base boosted XP + 25 bonus
+                          if (isBoostActive) {
+                            xpEarned = (baseXP * app.boostMultiplier).round() + 25;
+                          } else {
+                            xpEarned = 35; // 10 base + 25 bonus
+                          }
                         } else if (achievement == 'five_streak') {
                           xpEarned = 30;
                           isAchievement = true;
@@ -1555,11 +1766,21 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                         } else if (achievement == 'twenty_in_shift') {
                           xpEarned = 30;
                           isAchievement = true;
+                        } else {
+                          // Regular run - apply boost if active
+                          if (isBoostActive) {
+                            xpEarned = (baseXP * app.boostMultiplier).round();
+                          }
                         }
+                        
                         // Only show XP flash for achievements if gamification is enabled
                         if (!isAchievement || app.settings.gamificationEnabled) {
+                          String flashText = '+$xpEarned XP';
+                          if (isBoostActive && !isAchievement) {
+                            flashText = '🚀 +$xpEarned XP\nBOOST ${app.boostMultiplier}x!';
+                          }
                           _showFlash(
-                            '+$xpEarned XP',
+                            flashText,
                             'Next level: $pointsToNext XP',
                             forAchievement: isAchievement,
                           );
@@ -1580,10 +1801,25 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                       },
                       onLongPress: () {
                         app.incrementPizookie(id);
-                        int xpEarned = 25;
+                        
+                        // Calculate boosted Pizookie XP
+                        const basePizookieXP = 25;
+                        final isBoostActive = app.boostActive;
+                        final xpEarned = isBoostActive 
+                            ? (basePizookieXP * app.boostMultiplier).round()
+                            : basePizookieXP;
+                        
+                        String flashText = '+$xpEarned XP\nPizookie!';
+                        String subText = 'Sweet!  Ran a Pizookie';
+                        
+                        if (isBoostActive) {
+                          flashText = '🚀 +$xpEarned XP\nBOOST Pizookie!';
+                          subText = 'BOOST ${app.boostMultiplier}x • Sweet!';
+                        }
+                        
                         _showFlash(
-                          '+$xpEarned XP\nPizookie!',
-                          'Sweet!  Ran a Pizookie',
+                          flashText,
+                          subText,
                         );
                         // Removed Pizookie run SnackBar
                       },
@@ -2325,6 +2561,341 @@ class _RosterPopupState extends State<_RosterPopup> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class BoostModeDialog extends StatefulWidget {
+  @override
+  _BoostModeDialogState createState() => _BoostModeDialogState();
+}
+
+class _BoostModeDialogState extends State<BoostModeDialog> {
+  double _multiplier = 2.0;
+  int _duration = 60; // minutes (1 hour default)
+  String _description = '';
+  bool _isAuthenticated = false;
+  String _enteredPin = '';
+
+  void _onPinNumberPressed(String number) {
+    if (_enteredPin.length < 4) {
+      setState(() {
+        _enteredPin += number;
+        if (_enteredPin.length == 4) {
+          _authenticatePin();
+        }
+      });
+    }
+  }
+
+  void _onPinBackspace() {
+    if (_enteredPin.isNotEmpty) {
+      setState(() {
+        _enteredPin = _enteredPin.substring(0, _enteredPin.length - 1);
+      });
+    }
+  }
+
+  void _onPinClear() {
+    setState(() {
+      _enteredPin = '';
+    });
+  }
+
+  void _authenticatePin() {
+    if (_enteredPin == '5520') {
+      setState(() {
+        _isAuthenticated = true;
+      });
+    } else {
+      setState(() {
+        _enteredPin = '';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Incorrect PIN'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  void _activateBoost() {
+    final appState = Provider.of<AppState>(context, listen: false);
+    
+    if (appState.boostActive) {
+      // Deactivate current boost
+      appState.deactivateBoost();
+    } else {
+      // Activate new boost
+      appState.activateBoost(_multiplier, _duration, _description.isEmpty ? 'Manager Boost' : _description, '5520');
+    }
+    
+    Navigator.of(context).pop();
+  }
+
+  Widget _buildPinButton(String number) {
+    return SizedBox(
+      width: 60,
+      height: 60,
+      child: ElevatedButton(
+        onPressed: () => _onPinNumberPressed(number),
+        style: ElevatedButton.styleFrom(
+          shape: CircleBorder(),
+          padding: EdgeInsets.all(0),
+          backgroundColor: Colors.blue[50],
+          foregroundColor: Colors.blue[800],
+        ),
+        child: Text(
+          number,
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPinActionButton(IconData icon, String tooltip, VoidCallback onPressed) {
+    return SizedBox(
+      width: 60,
+      height: 60,
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          shape: CircleBorder(),
+          padding: EdgeInsets.all(0),
+          backgroundColor: Colors.grey[200],
+          foregroundColor: Colors.grey[700],
+        ),
+        child: Icon(icon, size: 24),
+      ),
+    );
+  }
+
+  Widget _buildMultiplierButton(double multiplier) {
+    final isSelected = _multiplier == multiplier;
+    return Expanded(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 4),
+        child: ElevatedButton(
+          onPressed: () {
+            setState(() {
+              _multiplier = multiplier;
+            });
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: isSelected ? Colors.orange : Colors.grey[200],
+            foregroundColor: isSelected ? Colors.white : Colors.grey[700],
+            padding: EdgeInsets.symmetric(vertical: 12),
+          ),
+          child: Text(
+            '${multiplier.toInt()}x',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDurationButton(String label, int minutes) {
+    final isSelected = _duration == minutes;
+    return Expanded(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 2),
+        child: ElevatedButton(
+          onPressed: () {
+            setState(() {
+              _duration = minutes;
+            });
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: isSelected ? Colors.blue : Colors.grey[200],
+            foregroundColor: isSelected ? Colors.white : Colors.grey[700],
+            padding: EdgeInsets.symmetric(vertical: 10),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final appState = Provider.of<AppState>(context);
+    
+    return AlertDialog(
+      title: Row(
+        children: [
+          Icon(Icons.rocket_launch, color: Colors.orange),
+          SizedBox(width: 8),
+          Text('Boost Mode'),
+        ],
+      ),
+      content: Container(
+        width: double.maxFinite,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (!_isAuthenticated) ...[
+              Text(
+                'Enter Manager PIN to access Boost Mode:',
+                style: TextStyle(fontSize: 16),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 20),
+              // PIN Display
+              Container(
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    for (int i = 0; i < 4; i++)
+                      Container(
+                        margin: EdgeInsets.symmetric(horizontal: 8),
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: i < _enteredPin.length ? Colors.blue : Colors.grey[300],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 20),
+              // PIN Pad
+              Container(
+                width: 250,
+                child: Column(
+                  children: [
+                    // Row 1: 1, 2, 3
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _buildPinButton('1'),
+                        _buildPinButton('2'),
+                        _buildPinButton('3'),
+                      ],
+                    ),
+                    SizedBox(height: 12),
+                    // Row 2: 4, 5, 6
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _buildPinButton('4'),
+                        _buildPinButton('5'),
+                        _buildPinButton('6'),
+                      ],
+                    ),
+                    SizedBox(height: 12),
+                    // Row 3: 7, 8, 9
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _buildPinButton('7'),
+                        _buildPinButton('8'),
+                        _buildPinButton('9'),
+                      ],
+                    ),
+                    SizedBox(height: 12),
+                    // Row 4: Clear, 0, Backspace
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _buildPinActionButton(Icons.clear, 'Clear', _onPinClear),
+                        _buildPinButton('0'),
+                        _buildPinActionButton(Icons.backspace, 'Back', _onPinBackspace),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ] else if (appState.boostActive) ...[
+              Text(
+                'Boost is currently ACTIVE!',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.orange),
+              ),
+              SizedBox(height: 16),
+              Text('Multiplier: ${appState.boostMultiplier}x'),
+              Text('Time Remaining: ${appState.boostTimeRemaining}'),
+              Text('Description: ${appState.boostDescription}'),
+            ] else ...[
+              Text(
+                'Configure Boost Settings:',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 16),
+              Text('XP Multiplier:', style: TextStyle(fontWeight: FontWeight.w600)),
+              SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildMultiplierButton(2.0),
+                  _buildMultiplierButton(3.0),
+                  _buildMultiplierButton(4.0),
+                ],
+              ),
+              SizedBox(height: 20),
+              Text('Duration:', style: TextStyle(fontWeight: FontWeight.w600)),
+              SizedBox(height: 8),
+              Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildDurationButton('1 Hour', 60),
+                      _buildDurationButton('2 Hours', 120),
+                      _buildDurationButton('4 Hours', 240),
+                    ],
+                  ),
+                  SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildDurationButton('Lunch Shift', 300), // 5 hours
+                      _buildDurationButton('Dinner Shift', 360), // 6 hours
+                      _buildDurationButton('All Day', 720), // 12 hours
+                    ],
+                  ),
+                ],
+              ),
+              SizedBox(height: 16),
+              TextField(
+                decoration: InputDecoration(
+                  labelText: 'Description (optional)',
+                  hintText: 'e.g., Friday Night Rush',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) {
+                  _description = value;
+                },
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text('Cancel'),
+        ),
+        if (_isAuthenticated)
+          ElevatedButton(
+            onPressed: _activateBoost,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: appState.boostActive ? Colors.red : Colors.orange,
+            ),
+            child: Text(appState.boostActive ? 'Deactivate Boost' : 'Activate Boost'),
+          ),
+      ],
     );
   }
 }

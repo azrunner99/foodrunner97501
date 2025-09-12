@@ -236,6 +236,28 @@ class AppFeaturesScreen extends StatelessWidget {
               ],
             ),
 
+            _buildFeatureCategory(
+              title: 'Server Integrity &\nMonitoring System',
+              icon: Icons.security,
+              color: Colors.red,
+              features: [
+                'Advanced Pattern Recognition: AI-powered detection of suspicious clicking patterns with machine learning adaptation over time.',
+                'Multi-Dimensional Risk Assessment: 4-tier weighted scoring system analyzing temporal patterns (25%), volume metrics (30%), behavioral patterns (25%), and peer comparisons (20%).',
+                'Real-Time Integrity Dashboard: Live monitoring of all servers with risk scores, alerts, and detailed audit trails.',
+                'High-Speed Click Analysis: Detailed forensic analysis of rapid clicking instances with individual timestamp tracking and pattern visualization.',
+                'Statistical Outlier Detection: Z-score analysis for peer comparison and sophisticated anomaly detection with contextual intelligence.',
+                'Click Clustering Detection: Advanced burst analysis identifying mechanical patterns and coefficient of variation calculations.',
+                'Session Duration Analysis: Extended activity monitoring with trend analysis and predictive integrity analytics.',
+                'Volume Spike Detection: Sudden activity increase identification with historical context and baseline comparisons.',
+                'Comprehensive Alert System: Pattern-specific alerts with customizable thresholds and automated notification management.',
+                'Audit Server Profiles: Professional integrity assessment reports with detailed analysis and risk factor breakdown.',
+                'Expandable Click Details: Forensic-level click analysis showing individual timestamps, intervals, and behavioral patterns.',
+                'Server Sorting & Filtering: Advanced dashboard with sorting by name, integrity score, or alert count for efficient monitoring.',
+                'Adaptive Intelligence: System becomes more accurate over time, learning individual server patterns and reducing false positives.',
+                'Data-Driven Baselines: Personalized integrity profiles that adapt to each server\'s unique operating style and efficiency patterns.',
+              ],
+            ),
+
             // Version and Navigation
             const SizedBox(height: 24),
             Container(

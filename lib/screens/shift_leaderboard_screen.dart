@@ -69,8 +69,17 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
           sortedIds.sort((a, b) => (appState.currentPizookieCounts[b] ?? 0).compareTo(appState.currentPizookieCounts[a] ?? 0));
         } else if (_sortBy == 'xp') {
           sortedIds.sort((a, b) {
-            final xpA = ((appState.currentCounts[a] ?? 0) * 10) + ((appState.currentPizookieCounts[a] ?? 0) * 15);
-            final xpB = ((appState.currentCounts[b] ?? 0) * 10) + ((appState.currentPizookieCounts[b] ?? 0) * 15);
+            final runsA = appState.currentCounts[a] ?? 0;
+            final pizookiesA = appState.currentPizookieCounts[a] ?? 0;
+            final runsB = appState.currentCounts[b] ?? 0;
+            final pizookiesB = appState.currentPizookieCounts[b] ?? 0;
+            
+            // Apply boost multiplier if active - Pizookies are 25 XP total, not 10+25
+            final boost = appState.boostActive ? appState.boostMultiplier : 1.0;
+            final regularRunsA = runsA - pizookiesA;
+            final regularRunsB = runsB - pizookiesB;
+            final xpA = ((regularRunsA * 10) + (pizookiesA * 25)) * boost;
+            final xpB = ((regularRunsB * 10) + (pizookiesB * 25)) * boost;
             return xpB.compareTo(xpA);
           });
         }
@@ -430,10 +439,12 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
           }
         }
         
-        // Calculate shift XP
+        // Calculate shift XP with boost applied - Pizookies are 25 XP total, not 10+25
         final runCount = appState.currentCounts[server.id] ?? 0;
         final pizookieCount = appState.currentPizookieCounts[server.id] ?? 0;
-        final shiftXp = (runCount * 10) + (pizookieCount * 15);
+        final boost = appState.boostActive ? appState.boostMultiplier : 1.0;
+        final regularRuns = runCount - pizookieCount;
+        final shiftXp = (((regularRuns * 10) + (pizookieCount * 25)) * boost).round();
         
         // Get all working servers for rankings
         final workingServers = appState.servers.where((s) => appState.workingServerIds.contains(s.id)).toList();
