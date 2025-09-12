@@ -1464,10 +1464,11 @@ class AppState extends ChangeNotifier {
       print('  Total tap buckets: ${buckets.length}');
     }
     
-    // For Server Integrity screen, we need actual run counts, not time period categorization
-    // Calculate total runs within the date range
+    // Properly categorize minutes by click patterns (like integrityBinsFor but with date filtering)
+    int s1 = 0, s2 = 0, s3 = 0, s4 = 0;
     int totalRuns = 0;
     int processedCount = 0;
+    
     buckets.forEach((minuteEpoch, count) {
       final d = DateTime.fromMillisecondsSinceEpoch(minuteEpoch);
       
@@ -1486,18 +1487,22 @@ class AppState extends ChangeNotifier {
         return;
       }
       
-      if (count > 0) {
-        totalRuns += count;
-      }
+      // Categorize by click patterns (same logic as integrityBinsFor)
+      if (count <= 0) return;
+      totalRuns += count;
+      
+      if (count == 1) s1++;
+      else if (count == 2) s2++;
+      else if (count == 3) s3++;
+      else s4++;
     });
     
     if (serverId == '4f55jaewuhldbaoi' && startDate != null && endDate != null) {
       print('  Total runs in range: $totalRuns');
+      print('  Click pattern distribution: 1-click=$s1, 2-click=$s2, 3-click=$s3, 4+-click=$s4');
     }
     
-    // Return the total runs in the '4+' category since that's what the screen expects
-    // (The Server Integrity screen sums all values, so we put everything in one category)
-    return {'1': 0, '2': 0, '3': 0, '4+': totalRuns};
+    return {'1': s1, '2': s2, '3': s3, '4+': s4};
   }
 
   void _pruneOldTapBuckets() {

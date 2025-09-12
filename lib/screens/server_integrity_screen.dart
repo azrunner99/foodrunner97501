@@ -5,6 +5,7 @@ import '../app_state.dart';
 import '../models.dart';
 import '../widgets/wallpaper_background.dart';
 import '../utils/integrity_analyzer.dart';
+import 'integrity_executive_dashboard.dart';
 
 class ServerIntegrityScreen extends StatefulWidget {
   const ServerIntegrityScreen({super.key});
@@ -50,6 +51,17 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
           ),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.dashboard),
+            tooltip: 'Executive Dashboard',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const IntegrityExecutiveDashboard(),
+                ),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.sort),
             onPressed: _showSortOptions,
@@ -911,142 +923,147 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('${assessment.serverName} - Integrity Report'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Risk Score Summary
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: assessment.riskColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: assessment.riskColor.withOpacity(0.3)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.security, color: assessment.riskColor),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Risk Score: ${assessment.riskScore.toStringAsFixed(1)}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: assessment.riskColor,
-                      ),
-                    ),
-                    const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: assessment.riskColor,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        assessment.riskDescription,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              
-              const SizedBox(height: 16),
-              
-              // Click Data
-              Text(
-                'Click Analysis',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey.shade700,
-                ),
-              ),
-              const SizedBox(height: 8),
-              _buildClickDataGrid(assessment.clickData),
-              
-              const SizedBox(height: 16),
-              
-              // Risk Factors
-              if (assessment.riskFactors.isNotEmpty) ...[
-                Text(
-                  'Risk Factors',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey.shade700,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                ...assessment.riskFactors.map((factor) => Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Icons.warning_amber, 
-                           color: Colors.orange, size: 16),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          factor,
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                      ),
-                    ],
-                  ),
-                )),
-                const SizedBox(height: 16),
-              ],
-              
-              // Alerts
-              if (assessment.alerts.isNotEmpty) ...[
-                Text(
-                  'Active Alerts',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey.shade700,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                ...assessment.alerts.map((alert) => Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.all(8),
+        content: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.7,
+            maxWidth: MediaQuery.of(context).size.width * 0.9,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Risk Score Summary
+                Container(
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: alert.color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: alert.color.withOpacity(0.3)),
+                    color: assessment.riskColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: assessment.riskColor.withOpacity(0.3)),
                   ),
                   child: Row(
                     children: [
-                      Icon(alert.icon, color: alert.color, size: 18),
+                      Icon(Icons.security, color: assessment.riskColor),
                       const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              alert.title,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: alert.color,
-                                fontSize: 14,
-                              ),
-                            ),
-                            Text(
-                              alert.message,
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                          ],
+                      Text(
+                        'Risk Score: ${assessment.riskScore.toStringAsFixed(1)}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: assessment.riskColor,
+                        ),
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: assessment.riskColor,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          assessment.riskDescription,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ],
                   ),
-                )),
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Click Data
+                Text(
+                  'Click Analysis',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _buildClickDataGrid(assessment.clickData),
+                
+                const SizedBox(height: 16),
+                
+                // Risk Factors
+                if (assessment.riskFactors.isNotEmpty) ...[
+                  Text(
+                    'Risk Factors',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ...assessment.riskFactors.map((factor) => Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.warning_amber, 
+                             color: Colors.orange, size: 16),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            factor,
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )),
+                  const SizedBox(height: 16),
+                ],
+                
+                // Alerts
+                if (assessment.alerts.isNotEmpty) ...[
+                  Text(
+                    'Active Alerts',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ...assessment.alerts.map((alert) => Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: alert.color.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: alert.color.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(alert.icon, color: alert.color, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                alert.title,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: alert.color,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              Text(
+                                alert.message,
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  )),
+                ],
               ],
-            ],
+            ),
           ),
         ),
         actions: [
@@ -1078,15 +1095,15 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
           const SizedBox(height: 8),
           Row(
             children: [
-              Expanded(child: _buildDataCell('Single Clicks', '${data.singleClickMinutes}')),
-              Expanded(child: _buildDataCell('Double Clicks', '${data.doubleClickMinutes}')),
+              Expanded(child: _buildDataCell('1-Click Minutes', '${data.singleClickMinutes}')),
+              Expanded(child: _buildDataCell('2-Click Minutes', '${data.doubleClickMinutes}')),
             ],
           ),
           const SizedBox(height: 8),
           Row(
             children: [
-              Expanded(child: _buildDataCell('Triple Clicks', '${data.tripleClickMinutes}')),
-              Expanded(child: _buildDataCell('4+ Clicks', '${data.quadPlusClickMinutes}')),
+              Expanded(child: _buildDataCell('3-Click Minutes', '${data.tripleClickMinutes}')),
+              Expanded(child: _buildDataCell('4+ Click Minutes', '${data.quadPlusClickMinutes}')),
             ],
           ),
           const SizedBox(height: 8),
