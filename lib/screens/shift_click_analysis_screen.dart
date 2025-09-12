@@ -104,55 +104,15 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
   }
 
   List<DateTime> _getIndividualClicksForDate(DateTime date, AppState app) {
-    final List<DateTime> clicks = [];
-    
     // Get start and end of the selected date
     final startOfDay = DateTime(date.year, date.month, date.day);
     final endOfDay = startOfDay.add(Duration(days: 1));
     
-    // Get raw tap data for the server for this date
-    final tapData = app.getRawTapDataForTimeRange(widget.server.id, startOfDay, endOfDay);
+    // Use new individual timestamp method instead of artificial generation
+    final clicks = app.getIndividualClickTimestamps(widget.server.id, startOfDay, endOfDay);
     
-    print('DEBUG: Getting clicks for ${widget.server.id} on $date');
-    print('DEBUG: Tap data found: ${tapData.length} entries');
-    
-    // Convert tap data to individual click timestamps with realistic timing
-    for (final entry in tapData.entries) {
-      final minute = entry.key;
-      final count = entry.value;
-      
-      print('DEBUG: Processing minute $minute with $count clicks');
-      
-      // Generate realistic click timing patterns within the minute
-      for (int i = 0; i < count; i++) {
-        DateTime clickTime;
-        
-        if (count == 1) {
-          // Single click - place it randomly in the minute
-          final randomSeconds = DateTime.now().millisecond % 60;
-          final randomMillis = DateTime.now().microsecond % 1000;
-          clickTime = minute.add(Duration(seconds: randomSeconds, milliseconds: randomMillis));
-        } else if (count <= 5) {
-          // Few clicks - spread them with some randomness (1-15 seconds apart)
-          final baseOffset = (i * 12000) + (DateTime.now().millisecond % 3000); // 12s base + 0-3s random
-          clickTime = minute.add(Duration(milliseconds: baseOffset));
-        } else {
-          // Many clicks - simulate rapid clicking (100ms - 3 seconds apart)
-          final rapidOffset = (i * 500) + (DateTime.now().microsecond % 2500); // 0.5s base + 0-2.5s random
-          clickTime = minute.add(Duration(milliseconds: rapidOffset));
-        }
-        
-        // Ensure we don't go past the minute boundary
-        final minuteEnd = minute.add(Duration(minutes: 1));
-        if (clickTime.isAfter(minuteEnd)) {
-          clickTime = minuteEnd.subtract(Duration(milliseconds: (i + 1) * 100));
-        }
-        
-        clicks.add(clickTime);
-      }
-    }
-    
-    print('DEBUG: Total individual clicks found: ${clicks.length}');
+    print('DEBUG: Getting real clicks for ${widget.server.id} on $date');
+    print('DEBUG: Individual clicks found: ${clicks.length}');
     
     // Sort clicks by time (newest first for display)
     clicks.sort((a, b) => b.compareTo(a));

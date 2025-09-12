@@ -30,6 +30,7 @@ class Storage {
   static late _Box settingsBox;
   static late _Box dayPlanBox;
   static late _Box tapBox; // per-minute tap buckets
+  static late _Box tapTimestampsBox; // individual click timestamps
 
   static Future<void> init() async {
     serversBox = _Box('servers');
@@ -39,5 +40,6 @@ class Storage {
     settingsBox = _Box('settings');
     dayPlanBox = _Box('dayplan');
     tapBox = _Box('taplog');
+    tapTimestampsBox = _Box('tapTimestamps');
   }
 }
