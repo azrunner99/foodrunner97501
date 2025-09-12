@@ -13,6 +13,7 @@ import 'shift_leaderboard_screen.dart';
 import '../gamification.dart';
 import '../section_assignments.dart';
 import '../widgets/wallpaper_background.dart';
+import '../widgets/birthday_anniversary_banner.dart';
 import 'app_features_screen.dart';
 import 'level_color_demo_screen.dart';
 
@@ -389,6 +390,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     TeamPieChart(teamCounts: teamCounts, teamColors: teamColors),
+                    // Birthday and Anniversary Banner
+                    BirthdayAnniversaryBanner(appState: app),
                     Padding(
                       padding: const EdgeInsets.only(top: 8.0, bottom: 4.0, left: 24.0, right: 24.0),
                       child: Card(
