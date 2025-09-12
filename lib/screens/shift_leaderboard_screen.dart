@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../app_state.dart';
 import '../models.dart';
 import '../theme/app_theme.dart';
+import '../utils/integrity_analyzer.dart';
+import 'server_integrity_profile_screen.dart';
 
 class ShiftLeaderboardScreen extends StatefulWidget {
   final AppState app;
@@ -846,10 +848,151 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
                   ),
                 ),
               ),
+              
+              // Easter egg: Hidden admin access in bottom-right corner
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: GestureDetector(
+                  onTap: () => _showAdminPinDialog(context, server),
+                  child: Container(
+                    width: 25,
+                    height: 25,
+                    decoration: BoxDecoration(
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(8),
+                        bottomRight: Radius.circular(12),
+                      ),
+                    ),
+                    child: Container(
+                      margin: EdgeInsets.all(2),
+                      child: Icon(
+                        Icons.admin_panel_settings,
+                        size: 16,
+                        color: Colors.white.withOpacity(0.3),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         );
       },
     );
+  }
+
+  void _showAdminPinDialog(BuildContext context, Server server) {
+    final TextEditingController pinController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.admin_panel_settings, color: Colors.orange),
+            SizedBox(width: 8),
+            Text('Admin Access'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Enter admin PIN to access ${server.name}\'s integrity profile:'),
+            SizedBox(height: 16),
+            TextField(
+              controller: pinController,
+              obscureText: true,
+              keyboardType: TextInputType.number,
+              maxLength: 4,
+              decoration: InputDecoration(
+                labelText: 'Admin PIN',
+                border: OutlineInputBorder(),
+                counterText: '',
+              ),
+              onSubmitted: (value) => _handlePinSubmission(context, server, value),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => _handlePinSubmission(context, server, pinController.text),
+            child: Text('Access'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _handlePinSubmission(BuildContext context, Server server, String pin) {
+    if (pin == AppState.adminPin) {
+      Navigator.of(context).pop(); // Close dialog
+      _navigateToServerIntegrityProfile(context, server);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Incorrect PIN'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _navigateToServerIntegrityProfile(BuildContext context, Server server) {
+    final app = Provider.of<AppState>(context, listen: false);
+    
+    // Generate current assessment for the server
+    final bins = app.integrityBinsForDateRange(server.id, todayOnly: true);
+    final runCount = app.currentCounts[server.id] ?? 0;
+    final allServerCounts = <String, int>{};
+    for (final s in app.servers) {
+      allServerCounts[s.id] = app.currentCounts[s.id] ?? 0;
+    }
+    
+    try {
+      final assessment = IntegrityAnalyzer.analyzeServerAdvanced(
+        serverId: server.id,
+        serverName: server.name,
+        clickBins: bins,
+        totalRuns: runCount,
+        allServers: app.servers,
+        allServerCounts: allServerCounts,
+        analysisTime: DateTime.now(),
+      ).toBasicAssessment();
+      
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => ServerIntegrityProfileScreen(
+            server: server,
+            assessment: assessment,
+          ),
+        ),
+      );
+    } catch (e) {
+      // Fallback to basic assessment if enhanced fails
+      final basicAssessment = IntegrityAnalyzer.analyzeServer(
+        serverId: server.id,
+        serverName: server.name,
+        clickBins: bins,
+        totalRuns: runCount,
+        allServers: app.servers,
+        allServerCounts: allServerCounts,
+        analysisTime: DateTime.now(),
+      );
+      
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => ServerIntegrityProfileScreen(
+            server: server,
+            assessment: basicAssessment,
+          ),
+        ),
+      );
+    }
   }
 }

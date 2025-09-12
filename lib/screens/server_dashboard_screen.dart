@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../app_state.dart';
 import '../models.dart';
 import '../utils/integrity_analyzer.dart';
+import 'integrity_monitoring_info_screen.dart';
+import 'server_integrity_profile_screen.dart';
 
 class ServerDashboardScreen extends StatefulWidget {
   const ServerDashboardScreen({Key? key}) : super(key: key);
@@ -13,6 +15,8 @@ class ServerDashboardScreen extends StatefulWidget {
 
 class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
   String selectedPeriod = 'Today';
+  bool _systemHealthExpanded = false;
+  String _sortBy = 'name'; // 'name', 'integrity', 'alerts'
   
   @override
   Widget build(BuildContext context) {
@@ -20,7 +24,7 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
     
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Server Dashboard'),
+        title: const Text('Server Monitoring Dashboard'),
         backgroundColor: Colors.blue[700],
         foregroundColor: Colors.white,
       ),
@@ -81,52 +85,89 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
     
     return Card(
       elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.shield, color: Colors.blue[600]),
-                const SizedBox(width: 8),
-                const Text(
-                  'System Health',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Container(
-              width: double.infinity,
+      child: Column(
+        children: [
+          InkWell(
+            onTap: () {
+              setState(() {
+                _systemHealthExpanded = !_systemHealthExpanded;
+              });
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: healthColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: healthColor.withOpacity(0.3)),
-              ),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(healthIcon, color: healthColor, size: 24),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          healthStatus,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: healthColor,
-                          ),
+                  Row(
+                    children: [
+                      Icon(Icons.shield, color: Colors.blue[600]),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'System Health',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      const Spacer(),
+                      Icon(
+                        _systemHealthExpanded ? Icons.expand_less : Icons.expand_more,
+                        color: Colors.grey[600],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const IntegrityMonitoringInfoScreen(),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '$totalServers servers monitored • ${highRisk + mediumRisk} requiring review',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
+                      );
+                    },
+                    child: Text(
+                      'Learn more about integrity monitoring systems',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.blue[600],
+                        decoration: TextDecoration.underline,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: healthColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: healthColor.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(healthIcon, color: healthColor, size: 24),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                healthStatus,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: healthColor,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '$totalServers servers monitored • ${highRisk + mediumRisk} requiring review',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -135,8 +176,45 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
                 ],
               ),
             ),
+          ),
+          if (_systemHealthExpanded) ...[
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'System Details:',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildHealthDetailRow('Total Servers Monitored', '$totalServers', Icons.computer),
+                  _buildHealthDetailRow('Green Status (Normal)', '${totalServers - highRisk - mediumRisk}', Icons.check_circle, Colors.green),
+                  if (mediumRisk > 0)
+                    _buildHealthDetailRow('Medium Risk Servers', '$mediumRisk', Icons.warning, Colors.orange),
+                  if (highRisk > 0)
+                    _buildHealthDetailRow('High Risk Servers', '$highRisk', Icons.error, Colors.red),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.schedule, size: 16, color: Colors.grey[600]),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Last updated: ${DateTime.now().toString().substring(11, 19)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -441,7 +519,7 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
     final profiles = app.profiles;
     final assessments = _generateIntegrityAssessments(app, servers);
     
-    // Create a list of server data sorted by runs
+    // Create a list of server data
     final serverData = servers
         .map((server) => {
               'server': server,
@@ -471,7 +549,24 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
         .where((data) => data['runs'] as int > 0)
         .toList();
     
-    serverData.sort((a, b) => (b['runs'] as int).compareTo(a['runs'] as int));
+    // Sort based on selected criteria
+    switch (_sortBy) {
+      case 'name':
+        serverData.sort((a, b) => (a['server'] as Server).name.compareTo((b['server'] as Server).name));
+        break;
+      case 'integrity':
+        serverData.sort((a, b) => (b['assessment'] as IntegrityAssessment).riskScore.compareTo((a['assessment'] as IntegrityAssessment).riskScore));
+        break;
+      case 'alerts':
+        serverData.sort((a, b) {
+          final aAlerts = (a['assessment'] as IntegrityAssessment).alerts.length;
+          final bAlerts = (b['assessment'] as IntegrityAssessment).alerts.length;
+          return bAlerts.compareTo(aAlerts);
+        });
+        break;
+      default:
+        serverData.sort((a, b) => (b['runs'] as int).compareTo(a['runs'] as int));
+    }
     
     return Card(
       child: Padding(
@@ -479,9 +574,48 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'All Servers - Integrity Scores (Tap servers with alerts to review)',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'All Servers - Integrity Scores (Tap any server to view profile)',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey[300]!),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: DropdownButton<String>(
+                    value: _sortBy,
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        _sortBy = newValue!;
+                      });
+                    },
+                    underline: const SizedBox.shrink(),
+                    icon: const Icon(Icons.sort, size: 18),
+                    style: const TextStyle(fontSize: 12, color: Colors.black87),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'name',
+                        child: Text('Sort by Name'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'integrity',
+                        child: Text('Sort by Integrity'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'alerts',
+                        child: Text('Sort by Alerts'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             if (serverData.isEmpty)
@@ -510,7 +644,15 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
         alert.level == AlertLevel.high || alert.level == AlertLevel.critical);
     
     return InkWell(
-      onTap: hasAlerts ? () => _showServerReviewDialog(server, assessment) : null,
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ServerIntegrityProfileScreen(
+            server: server,
+            assessment: assessment,
+          ),
+        ),
+      ),
       borderRadius: BorderRadius.circular(8),
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
@@ -562,22 +704,20 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
                         server.name,
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
-                      if (hasAlerts) ...[
-                        const SizedBox(width: 8),
-                        Icon(
-                          Icons.touch_app,
-                          size: 14,
+                      const SizedBox(width: 8),
+                      Icon(
+                        Icons.touch_app,
+                        size: 14,
+                        color: Colors.blue[600],
+                      ),
+                      Text(
+                        ' View profile',
+                        style: TextStyle(
+                          fontSize: 12,
                           color: Colors.blue[600],
+                          fontStyle: FontStyle.italic,
                         ),
-                        Text(
-                          ' Tap to review',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.blue[600],
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                      ],
+                      ),
                     ],
                   ),
                   Row(
@@ -837,167 +977,34 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
     return insights;
   }
 
-  void _showServerReviewDialog(Server server, IntegrityAssessment assessment) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Row(
-            children: [
-              Icon(Icons.warning, color: Colors.orange[600]),
-              const SizedBox(width: 8),
-              Text('Review: ${server.name}'),
-            ],
+  Widget _buildHealthDetailRow(String label, String value, IconData icon, [Color? color]) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 16,
+            color: color ?? Colors.grey[600],
           ),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Risk Score Summary
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: assessment.riskColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: assessment.riskColor.withOpacity(0.3)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Risk Score: ${assessment.riskScore.toInt()}%',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: assessment.riskColor,
-                          fontSize: 16,
-                        ),
-                      ),
-                      Text(
-                        assessment.riskDescription,
-                        style: TextStyle(color: assessment.riskColor),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                
-                // Alerts Section
-                if (assessment.alerts.isNotEmpty) ...[
-                  const Text(
-                    'Active Alerts:',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                  const SizedBox(height: 8),
-                  ...assessment.alerts.map((alert) => Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: _getAlertColor(alert.level).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: _getAlertColor(alert.level).withOpacity(0.3)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              _getAlertIcon(alert.level),
-                              size: 16,
-                              color: _getAlertColor(alert.level),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              alert.title,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: _getAlertColor(alert.level),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          alert.message,
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                      ],
-                    ),
-                  )).toList(),
-                  const SizedBox(height: 16),
-                ],
-                
-                // Risk Factors
-                if (assessment.riskFactors.isNotEmpty) ...[
-                  const Text(
-                    'Risk Factors:',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                  const SizedBox(height: 8),
-                  ...assessment.riskFactors.map((factor) => Container(
-                    margin: const EdgeInsets.only(bottom: 4),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('• ', style: TextStyle(fontWeight: FontWeight.bold)),
-                        Expanded(child: Text(factor)),
-                      ],
-                    ),
-                  )).toList(),
-                ],
-              ],
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 13),
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Close'),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: color ?? Colors.grey[800],
             ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                // TODO: Navigate to detailed server integrity screen for this server
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Detailed analysis for ${server.name} - Feature coming soon'),
-                    backgroundColor: Colors.blue,
-                  ),
-                );
-              },
-              child: const Text('View Details'),
-            ),
-          ],
-        );
-      },
+          ),
+        ],
+      ),
     );
-  }
-
-  Color _getAlertColor(AlertLevel level) {
-    switch (level) {
-      case AlertLevel.low:
-        return Colors.yellow[700]!;
-      case AlertLevel.medium:
-        return Colors.orange[700]!;
-      case AlertLevel.high:
-        return Colors.red[700]!;
-      case AlertLevel.critical:
-        return Colors.red[900]!;
-    }
-  }
-
-  IconData _getAlertIcon(AlertLevel level) {
-    switch (level) {
-      case AlertLevel.low:
-        return Icons.info;
-      case AlertLevel.medium:
-        return Icons.warning;
-      case AlertLevel.high:
-        return Icons.error;
-      case AlertLevel.critical:
-        return Icons.dangerous;
-    }
   }
 
   String _getPlainEnglishExplanation(IntegrityAssessment assessment) {
