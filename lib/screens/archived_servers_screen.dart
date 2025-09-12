@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../app_state.dart';
 import '../models.dart';
+import '../widgets/month_day_picker.dart';
 
 class ArchivedServersScreen extends StatefulWidget {
   const ArchivedServersScreen({super.key});
@@ -575,11 +576,12 @@ class _ArchivedServersScreenState extends State<ArchivedServersScreen> {
                 ),
                 readOnly: true,
                 onTap: () async {
-                  final date = await showDatePicker(
+                  final date = await showMonthDayPicker(
                     context: context,
-                    initialDate: _parseBirthday(birthdayController.text) ?? DateTime(1990, 1, 1),
-                    firstDate: DateTime(1950),
-                    lastDate: DateTime.now(),
+                    initialDate: _parseBirthday(birthdayController.text) ?? DateTime(DateTime.now().year, 1, 1),
+                    helpText: 'Select Birthday',
+                    cancelText: 'Cancel',
+                    confirmText: 'Save',
                   );
                   if (date != null) {
                     birthdayController.text = '${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}';

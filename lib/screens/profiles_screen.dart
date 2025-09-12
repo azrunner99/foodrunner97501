@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 import '../app_state.dart';
 import '../gamification.dart';
 import '../theme/app_theme.dart';
+import '../widgets/month_day_picker.dart';
 import 'preset_avatar_gallery_screen.dart';
 import 'profile_banner_screen_new.dart';
 // import removed: achievementsCatalog no longer used
@@ -612,24 +613,12 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
   }
 
   Future<void> _editBirthday(BuildContext context, String serverId) async {
-    final date = await showDatePicker(
+    final date = await showMonthDayPicker(
       context: context,
-      initialDate: DateTime(1990, 1, 1),
-      firstDate: DateTime(1950),
-      lastDate: DateTime.now(),
+      initialDate: DateTime(DateTime.now().year, 1, 1),
       helpText: 'Select Birthday',
       cancelText: 'Cancel',
       confirmText: 'Save',
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context).colorScheme.copyWith(
-              primary: Colors.blue,
-            ),
-          ),
-          child: child!,
-        );
-      },
     );
     
     if (date != null) {

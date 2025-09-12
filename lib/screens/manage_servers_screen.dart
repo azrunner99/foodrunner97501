@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../app_state.dart';
 import '../models.dart';
+import '../widgets/month_day_picker.dart';
 import 'archived_servers_screen.dart';
 
 class ManageServersScreen extends StatefulWidget {
@@ -618,25 +619,13 @@ class _ManageServersScreenState extends State<ManageServersScreen> {
     // Show birthday collection with immediate date picker
     String? birthday;
     
-    // Show date picker with custom actions
-    final date = await showDatePicker(
+    // Show custom month/day picker
+    final date = await showMonthDayPicker(
       context: context,
-      initialDate: DateTime(1990, 1, 1),
-      firstDate: DateTime(1950),
-      lastDate: DateTime.now(),
+      initialDate: DateTime(DateTime.now().year, 1, 1),
       helpText: 'Add Birthday for $serverName',
       cancelText: 'Skip',
       confirmText: 'Add Birthday',
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context).colorScheme.copyWith(
-              primary: Colors.blue,
-            ),
-          ),
-          child: child!,
-        );
-      },
     );
     
     // If date was selected, format it
@@ -718,11 +707,12 @@ class _ManageServersScreenState extends State<ManageServersScreen> {
                 ),
                 readOnly: true,
                 onTap: () async {
-                  final date = await showDatePicker(
+                  final date = await showMonthDayPicker(
                     context: context,
-                    initialDate: _parseBirthday(birthdayController.text) ?? DateTime(1990, 1, 1),
-                    firstDate: DateTime(1950),
-                    lastDate: DateTime.now(),
+                    initialDate: _parseBirthday(birthdayController.text) ?? DateTime(DateTime.now().year, 1, 1),
+                    helpText: 'Select Birthday',
+                    cancelText: 'Cancel',
+                    confirmText: 'Save',
                   );
                   if (date != null) {
                     birthdayController.text = '${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}';
