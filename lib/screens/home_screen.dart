@@ -255,19 +255,19 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 PopupMenuItem(
-                  value: _MoreAction.settings,
+                  value: _MoreAction.colorDemo,
                   child: ListTile(
-                    leading: Icon(Icons.settings, color: Colors.blue[400]),
-                    title: const Text('Settings', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w500)),
+                    leading: Icon(Icons.palette, color: Colors.purple[400]),
+                    title: const Text('Server Levels', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w500)),
                     dense: true,
                     contentPadding: EdgeInsets.zero,
                   ),
                 ),
                 PopupMenuItem(
-                  value: _MoreAction.colorDemo,
+                  value: _MoreAction.settings,
                   child: ListTile(
-                    leading: Icon(Icons.palette, color: Colors.purple[400]),
-                    title: const Text('Server Levels', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w500)),
+                    leading: Icon(Icons.settings, color: Colors.blue[400]),
+                    title: const Text('Settings', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w500)),
                     dense: true,
                     contentPadding: EdgeInsets.zero,
                   ),
