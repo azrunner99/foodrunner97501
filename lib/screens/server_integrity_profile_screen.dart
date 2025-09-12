@@ -4,7 +4,7 @@ import 'dart:async';
 import '../app_state.dart';
 import '../models.dart';
 import '../utils/integrity_analyzer.dart';
-import 'click_instances_detail_screen.dart';
+import 'shift_click_analysis_screen.dart';
 
 class ServerIntegrityProfileScreen extends StatefulWidget {
   final Server server;
@@ -639,10 +639,8 @@ class _ServerIntegrityProfileScreenState extends State<ServerIntegrityProfileScr
   void _navigateToClickInstances(int instanceCount) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => ClickInstancesDetailScreen(
+        builder: (context) => ShiftClickAnalysisScreen(
           server: widget.server,
-          instanceCount: instanceCount,
-          timeframe: selectedTimeframe,
         ),
       ),
     );
@@ -652,52 +650,106 @@ class _ServerIntegrityProfileScreenState extends State<ServerIntegrityProfileScr
     final clickData = assessment.clickData;
     
     return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      elevation: 6,
+      shadowColor: Colors.purple.withOpacity(0.3),
+      child: InkWell(
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => ShiftClickAnalysisScreen(
+                server: widget.server,
+              ),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            gradient: LinearGradient(
+              colors: [
+                Colors.purple.withOpacity(0.02),
+                Colors.purple.withOpacity(0.05),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.mouse, color: Colors.purple[600]),
-                const SizedBox(width: 8),
+                Row(
+                  children: [
+                    Icon(Icons.mouse, color: Colors.purple[600]),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'Click Pattern Analysis',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.purple.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'View Details',
+                            style: TextStyle(
+                              color: Colors.purple[700],
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.arrow_forward_ios,
+                            color: Colors.purple[700],
+                            size: 12,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildClickStatCard(
+                        'Total Minutes',
+                        clickData.totalClickMinutes.toString(),
+                        Icons.schedule,
+                        Colors.blue,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildClickStatCard(
+                        'Total Runs',
+                        clickData.totalRuns.toString(),
+                        Icons.directions_run,
+                        Colors.green,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
                 const Text(
-                  'Click Pattern Analysis',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  'Click Distribution per Minute',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                 ),
+                const SizedBox(height: 8),
+                _buildClickDistributionChart(clickData),
               ],
             ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildClickStatCard(
-                    'Total Minutes',
-                    clickData.totalClickMinutes.toString(),
-                    Icons.schedule,
-                    Colors.blue,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildClickStatCard(
-                    'Total Runs',
-                    clickData.totalRuns.toString(),
-                    Icons.directions_run,
-                    Colors.green,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Click Distribution per Minute',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 8),
-            _buildClickDistributionChart(clickData),
-          ],
+          ),
         ),
       ),
     );

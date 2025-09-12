@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../app_state.dart';
@@ -26,6 +27,10 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
   String _sortBy = 'xp'; // 'runs', 'pizookies', 'xp'
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+  
+  // Easter egg tap counting
+  Map<String, int> _easterEggTapCounts = {};
+  Map<String, Timer?> _easterEggTimers = {};
 
   @override
   void initState() {
@@ -43,6 +48,10 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
   @override
   void dispose() {
     _animationController.dispose();
+    // Clean up easter egg timers
+    for (var timer in _easterEggTimers.values) {
+      timer?.cancel();
+    }
     super.dispose();
   }
 
@@ -865,7 +874,7 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
                 bottom: 0,
                 right: 0,
                 child: GestureDetector(
-                  onTap: () => _showAdminPinDialog(context, server),
+                  onTap: () => _handleEasterEggTap(context, server),
                   child: Container(
                     width: 25,
                     height: 25,
@@ -894,116 +903,265 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
     );
   }
 
-  void _showAdminPinDialog(BuildContext context, Server server) {
-    final TextEditingController pinController = TextEditingController();
+  // Easter egg: Track taps on bottom-right corner for admin access
+  void _handleEasterEggTap(BuildContext context, Server server) {
+    final serverId = server.id;
     
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.admin_panel_settings, color: Colors.orange),
-            SizedBox(width: 8),
-            Text('Admin Access'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Enter admin PIN to access ${server.name}\'s integrity profile:'),
-            SizedBox(height: 16),
-            TextField(
-              controller: pinController,
-              obscureText: true,
-              keyboardType: TextInputType.number,
-              maxLength: 4,
-              decoration: InputDecoration(
-                labelText: 'Admin PIN',
-                border: OutlineInputBorder(),
-                counterText: '',
-              ),
-              onSubmitted: (value) => _handlePinSubmission(context, server, value),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => _handlePinSubmission(context, server, pinController.text),
-            child: Text('Access'),
-          ),
-        ],
-      ),
-    );
+    // Cancel existing timer for this server
+    _easterEggTimers[serverId]?.cancel();
+    
+    // Increment tap count
+    _easterEggTapCounts[serverId] = (_easterEggTapCounts[serverId] ?? 0) + 1;
+    
+    // Show admin dialog after 5 taps
+    if (_easterEggTapCounts[serverId]! >= 5) {
+      _easterEggTapCounts[serverId] = 0; // Reset counter
+      _showAdminPinDialog(context, server);
+      return;
+    }
+    
+    // Reset counter after 2 seconds of inactivity
+    _easterEggTimers[serverId] = Timer(Duration(seconds: 2), () {
+      if (mounted) {
+        setState(() {
+          _easterEggTapCounts[serverId] = 0;
+        });
+      }
+    });
   }
 
-  void _handlePinSubmission(BuildContext context, Server server, String pin) {
-    if (pin == AppState.adminPin) {
-      Navigator.of(context).pop(); // Close dialog
-      _navigateToServerIntegrityProfile(context, server);
+  void _showAdminPinDialog(BuildContext context, Server server) {
+    showDialog(
+      context: context,
+      builder: (context) => IntegrityPinDialog(server: server),
+    );
+  }
+}
+
+class IntegrityPinDialog extends StatefulWidget {
+  final Server server;
+
+  const IntegrityPinDialog({Key? key, required this.server}) : super(key: key);
+
+  @override
+  _IntegrityPinDialogState createState() => _IntegrityPinDialogState();
+}
+
+class _IntegrityPinDialogState extends State<IntegrityPinDialog> {
+  String _enteredPin = '';
+
+  void _onPinNumberPressed(String number) {
+    if (_enteredPin.length < 4) {
+      setState(() {
+        _enteredPin += number;
+        if (_enteredPin.length == 4) {
+          _authenticatePin();
+        }
+      });
+    }
+  }
+
+  void _onPinBackspace() {
+    if (_enteredPin.isNotEmpty) {
+      setState(() {
+        _enteredPin = _enteredPin.substring(0, _enteredPin.length - 1);
+      });
+    }
+  }
+
+  void _onPinClear() {
+    setState(() {
+      _enteredPin = '';
+    });
+  }
+
+  void _authenticatePin() {
+    if (_enteredPin == AppState.adminPin) {
+      Navigator.of(context).pop();
+      _navigateToServerIntegrityProfile();
     } else {
+      setState(() {
+        _enteredPin = '';
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Incorrect PIN'),
           backgroundColor: Colors.red,
+          duration: Duration(seconds: 2),
         ),
       );
     }
   }
 
-  void _navigateToServerIntegrityProfile(BuildContext context, Server server) {
+  void _navigateToServerIntegrityProfile() {
     final app = Provider.of<AppState>(context, listen: false);
     
     // Generate current assessment for the server
-    final bins = app.integrityBinsForDateRange(server.id, todayOnly: true);
-    final runCount = app.currentCounts[server.id] ?? 0;
+    final bins = app.integrityBinsForDateRange(widget.server.id, todayOnly: true);
+    final runCount = app.currentCounts[widget.server.id] ?? 0;
     final allServerCounts = <String, int>{};
     for (final s in app.servers) {
       allServerCounts[s.id] = app.currentCounts[s.id] ?? 0;
     }
-    
-    try {
-      final assessment = IntegrityAnalyzer.analyzeServerAdvanced(
-        serverId: server.id,
-        serverName: server.name,
-        clickBins: bins,
-        totalRuns: runCount,
-        allServers: app.servers,
-        allServerCounts: allServerCounts,
-        analysisTime: DateTime.now(),
-      ).toBasicAssessment();
-      
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => ServerIntegrityProfileScreen(
-            server: server,
-            assessment: assessment,
-          ),
+
+    final basicAssessment = IntegrityAnalyzer.analyzeServer(
+      serverId: widget.server.id,
+      serverName: widget.server.name,
+      clickBins: bins,
+      totalRuns: runCount,
+      allServers: app.servers,
+      allServerCounts: allServerCounts,
+      analysisTime: DateTime.now(),
+    );
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ServerIntegrityProfileScreen(
+          server: widget.server,
+          assessment: basicAssessment,
         ),
-      );
-    } catch (e) {
-      // Fallback to basic assessment if enhanced fails
-      final basicAssessment = IntegrityAnalyzer.analyzeServer(
-        serverId: server.id,
-        serverName: server.name,
-        clickBins: bins,
-        totalRuns: runCount,
-        allServers: app.servers,
-        allServerCounts: allServerCounts,
-        analysisTime: DateTime.now(),
-      );
-      
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => ServerIntegrityProfileScreen(
-            server: server,
-            assessment: basicAssessment,
-          ),
+      ),
+    );
+  }
+
+  Widget _buildPinButton(String number) {
+    return SizedBox(
+      width: 60,
+      height: 60,
+      child: ElevatedButton(
+        onPressed: () => _onPinNumberPressed(number),
+        style: ElevatedButton.styleFrom(
+          shape: CircleBorder(),
+          padding: EdgeInsets.all(0),
+          backgroundColor: Colors.blue[50],
+          foregroundColor: Colors.blue[800],
         ),
-      );
-    }
+        child: Text(
+          number,
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPinActionButton(IconData icon, String tooltip, VoidCallback onPressed) {
+    return SizedBox(
+      width: 60,
+      height: 60,
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          shape: CircleBorder(),
+          padding: EdgeInsets.all(0),
+          backgroundColor: Colors.grey[200],
+          foregroundColor: Colors.grey[700],
+        ),
+        child: Icon(icon, size: 24),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Row(
+        children: [
+          Icon(Icons.admin_panel_settings, color: Colors.orange),
+          SizedBox(width: 8),
+          Text('Admin Access'),
+        ],
+      ),
+      content: Container(
+        width: double.maxFinite,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Enter admin PIN to access ${widget.server.name}\'s integrity profile:',
+              style: TextStyle(fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 20),
+            // PIN Display
+            Container(
+              padding: EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  for (int i = 0; i < 4; i++)
+                    Container(
+                      margin: EdgeInsets.symmetric(horizontal: 8),
+                      width: 20,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: i < _enteredPin.length ? Colors.blue : Colors.grey[300],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            SizedBox(height: 20),
+            // PIN Pad
+            Container(
+              width: 250,
+              child: Column(
+                children: [
+                  // Row 1: 1, 2, 3
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildPinButton('1'),
+                      _buildPinButton('2'),
+                      _buildPinButton('3'),
+                    ],
+                  ),
+                  SizedBox(height: 12),
+                  // Row 2: 4, 5, 6
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildPinButton('4'),
+                      _buildPinButton('5'),
+                      _buildPinButton('6'),
+                    ],
+                  ),
+                  SizedBox(height: 12),
+                  // Row 3: 7, 8, 9
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildPinButton('7'),
+                      _buildPinButton('8'),
+                      _buildPinButton('9'),
+                    ],
+                  ),
+                  SizedBox(height: 12),
+                  // Row 4: Clear, 0, Backspace
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildPinActionButton(Icons.clear, 'Clear', _onPinClear),
+                      _buildPinButton('0'),
+                      _buildPinActionButton(Icons.backspace, 'Back', _onPinBackspace),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text('Cancel'),
+        ),
+      ],
+    );
   }
 }
