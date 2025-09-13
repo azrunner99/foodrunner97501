@@ -3,12 +3,14 @@ class Server {
   String name;
   String? teamColor;
   String? stationType;
+  DateTime? hireDate;
 
   Server({
     required this.id,
     required this.name,
     this.teamColor,
     this.stationType,
+    this.hireDate,
   });
 
   // Add this factory constructor
@@ -18,6 +20,7 @@ class Server {
       name: map['name'] as String,
       teamColor: map['teamColor'] as String?,
       stationType: map['stationType'] as String?,
+      hireDate: map['hireDate'] != null ? DateTime.parse(map['hireDate'] as String) : null,
     );
   }
 
@@ -28,6 +31,7 @@ class Server {
       'name': name,
       'teamColor': teamColor,
       'stationType': stationType,
+      'hireDate': hireDate?.toIso8601String(),
     };
   }
 }

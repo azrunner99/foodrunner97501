@@ -79,8 +79,8 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
       );
       
       for (final server in app.servers) {
-        // Estimate hire date (for now, use a default)
-        final hireDate = DateTime.now().subtract(const Duration(days: 180));
+        // Use actual hire date or default to 6 months ago for servers without hire date
+        final hireDate = server.hireDate ?? DateTime.now().subtract(const Duration(days: 180));
         
         final performance = PerformanceCalculator.calculateServerPerformance(
           serverId: server.id,
@@ -90,6 +90,7 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
           businessData: _currentBusinessData,
           hireDate: hireDate,
           npsHistory: npsHistory,
+          totalServerCount: app.servers.length,
         );
         
         performanceDataList.add(performance);

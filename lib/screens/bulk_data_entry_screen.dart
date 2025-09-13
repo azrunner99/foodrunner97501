@@ -36,6 +36,8 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
   DateTime _selectedStartDate = DateTime.now();
   DateTime _selectedEndDate = DateTime.now();
   bool _isLoading = false;
+  bool _hasUnsavedChanges = false; // Track if user has entered data
+  List<String> _existingDataWarnings = []; // Track warnings about existing data
 
   @override
   void initState() {
@@ -44,6 +46,7 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
     _selectedStartDate = DateTime(currentMonth.year, currentMonth.month, 1);
     _selectedEndDate = DateTime(currentMonth.year, currentMonth.month + 1, 0);
     _initializeControllers();
+    _checkExistingDataWarning(); // Check for existing data on initialization
   }
 
   @override
@@ -64,6 +67,10 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
       _salesController.text = widget.existingBusinessData!.totalSales.toStringAsFixed(2);
     }
     
+    // Add listeners to track changes
+    _guestCountController.addListener(_onDataChanged);
+    _salesController.addListener(_onDataChanged);
+    
     // Initialize server-specific controllers
     for (final server in servers) {
       _serverGuestControllers[server.id] = TextEditingController();
@@ -71,6 +78,13 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
       _npsAllTimeControllers[server.id] = TextEditingController();
       _npsThreeMonthControllers[server.id] = TextEditingController();
       _npsOneMonthControllers[server.id] = TextEditingController();
+      
+      // Add listeners to server controllers
+      _serverGuestControllers[server.id]!.addListener(_onDataChanged);
+      _serverSalesControllers[server.id]!.addListener(_onDataChanged);
+      _npsAllTimeControllers[server.id]!.addListener(_onDataChanged);
+      _npsThreeMonthControllers[server.id]!.addListener(_onDataChanged);
+      _npsOneMonthControllers[server.id]!.addListener(_onDataChanged);
       
       // Load existing server-specific data if available
       if (widget.existingBusinessData != null) {
@@ -84,6 +98,14 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
           _serverSalesControllers[server.id]!.text = existingSales.toStringAsFixed(2);
         }
       }
+    }
+  }
+
+  void _onDataChanged() {
+    if (!_hasUnsavedChanges) {
+      setState(() {
+        _hasUnsavedChanges = true;
+      });
     }
   }
 
@@ -109,48 +131,62 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
   Widget build(BuildContext context) {
     final servers = context.watch<AppState>().servers;
     
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Bulk Data Entry'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.blue.shade600.withOpacity(0.8),
-                Colors.blue.shade400.withOpacity(0.6),
-              ],
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Bulk Data Entry'),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          flexibleSpace: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.blue.shade600.withOpacity(0.8),
+                  Colors.blue.shade400.withOpacity(0.6),
+                ],
+              ),
             ),
           ),
-        ),
-        actions: [
-          if (_isLoading)
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+          actions: [
+            if (_isLoading)
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
                 ),
               ),
-            )
-          else
-            TextButton.icon(
-              onPressed: _saveData,
-              icon: const Icon(Icons.save, color: Colors.white),
-              label: const Text(
-                'Save All Data',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ],
+        ),
+        floatingActionButton: _isLoading
+            ? null
+            : Container(
+                width: 180,
+                height: 56,
+                child: FloatingActionButton.extended(
+                  onPressed: _saveData,
+                  backgroundColor: Colors.green.shade600,
+                  elevation: 8,
+                  icon: const Icon(Icons.save, color: Colors.white, size: 28),
+                  label: const Text(
+                    'Save All Data',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
               ),
-            ),
-        ],
-      ),
-      body: WallpaperBackground(
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+        body: WallpaperBackground(
         child: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -235,6 +271,54 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
                   ],
                 ),
               ),
+              
+              // Existing Data Warning
+              if (_existingDataWarnings.isNotEmpty)
+                Container(
+                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.shade300),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning, color: Colors.orange.shade700),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Existing Data Found',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.orange.shade700,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _existingDataWarnings.join(', '),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.orange.shade600,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Saving will prompt you to overwrite existing data.',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               
               // Tab Selector
               Container(
@@ -347,8 +431,40 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
             ],
           ),
         ),
+        ),
       ),
     );
+  }
+
+  Future<bool> _onWillPop() async {
+    if (!_hasUnsavedChanges) {
+      return true; // Allow navigation if no unsaved changes
+    }
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Save entered data?'),
+        content: const Text('You have unsaved changes. Do you want to save your data before leaving?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false), // Don't save
+            child: const Text('Discard'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true), // Save
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true) {
+      // Save the data
+      await _saveData();
+    }
+
+    return true; // Allow navigation after handling save
   }
 
   String _formatDate(DateTime date) {
@@ -364,6 +480,7 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
     );
     if (picked != null) {
       setState(() => _selectedStartDate = picked);
+      await _checkExistingDataWarning();
     }
   }
 
@@ -376,6 +493,7 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
     );
     if (picked != null) {
       setState(() => _selectedEndDate = picked);
+      await _checkExistingDataWarning();
     }
   }
 
@@ -695,79 +813,25 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final currentMonth = widget.initialMonth ?? DateTime.now();
-      final monthKey = '${currentMonth.year}-${currentMonth.month.toString().padLeft(2, '0')}';
+      // Use the user-selected date range, not widget.initialMonth
+      final startDate = _selectedStartDate;
+      final endDate = _selectedEndDate;
       
-      // Collect server-specific data
-      final Map<String, double> serverGuests = {};
-      final Map<String, double> serverSales = {};
+      // Check if we need to handle multiple months or a custom date range
+      final isMultiMonth = startDate.month != endDate.month || startDate.year != endDate.year;
       
-      for (final entry in _serverGuestControllers.entries) {
-        final serverId = entry.key;
-        final guestText = entry.value.text;
-        final salesText = _serverSalesControllers[serverId]!.text;
-        
-        if (guestText.isNotEmpty) {
-          serverGuests[serverId] = double.parse(guestText);
-        }
-        if (salesText.isNotEmpty) {
-          serverSales[serverId] = double.parse(salesText);
-        }
+      if (isMultiMonth) {
+        // Handle date range spanning multiple months
+        await _saveDateRangeData(startDate, endDate);
+      } else {
+        // Single month - use existing logic but with correct date
+        await _saveSingleMonthData(startDate);
       }
-      
-      // Create business data
-      final businessData = MonthlyBusinessData(
-        month: currentMonth,
-        totalGuestCount: double.tryParse(_guestCountController.text) ?? 0.0,
-        totalSales: double.tryParse(_salesController.text) ?? 0.0,
-        serverSpecificGuests: serverGuests,
-        serverSpecificSales: serverSales,
-        validated: true,
-        entryDate: DateTime.now(),
-      );
-      
-      // Save business data
-      await Storage.saveMonthlyBusinessData(monthKey, businessData.toMap());
-      
-      // Save NPS data for each server with scores
-      for (final serverId in _npsAllTimeControllers.keys) {
-        final allTimeText = _npsAllTimeControllers[serverId]!.text;
-        final threeMonthText = _npsThreeMonthControllers[serverId]!.text;
-        final oneMonthText = _npsOneMonthControllers[serverId]!.text;
-        
-        if (allTimeText.isNotEmpty || threeMonthText.isNotEmpty || oneMonthText.isNotEmpty) {
-          final allTimeScore = double.tryParse(allTimeText) ?? 0.0;
-          final threeMonthScore = double.tryParse(threeMonthText) ?? allTimeScore;
-          final oneMonthScore = double.tryParse(oneMonthText) ?? threeMonthScore;
-          
-          // Create NPSData for this server
-          final npsData = NPSData(
-            serverId: serverId,
-            month: currentMonth,
-            monthlyScore: oneMonthScore,
-            threeMonthAverage: threeMonthScore,
-            responseCount: 10, // Default response count
-            categoryBreakdown: {
-              'Service Quality': oneMonthScore,
-              'Food Quality': oneMonthScore,
-              'Atmosphere': oneMonthScore,
-              'Speed of Service': oneMonthScore,
-              'Overall Experience': oneMonthScore,
-            },
-            guestComments: [],
-            lastUpdated: DateTime.now(),
-          );
-          
-          // Save NPS data using the storage box
-          final npsKey = '${monthKey}_nps_$serverId';
-          await Storage.enhancedBusinessDataBox.put(npsKey, npsData.toMap());
-        }
-      }
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('All business data saved successfully!'),
+          SnackBar(
+            content: Text('Data saved successfully for ${_formatDate(startDate)} to ${_formatDate(endDate)}!'),
             backgroundColor: Colors.green,
           ),
         );
@@ -787,5 +851,265 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  Future<void> _saveSingleMonthData(DateTime monthDate) async {
+    final monthKey = '${monthDate.year}-${monthDate.month.toString().padLeft(2, '0')}';
+    
+    // Collect server-specific data first
+    final Map<String, double> serverGuests = {};
+    final Map<String, double> serverSales = {};
+    
+    for (final entry in _serverGuestControllers.entries) {
+      final serverId = entry.key;
+      final guestText = entry.value.text;
+      final salesText = _serverSalesControllers[serverId]!.text;
+      
+      if (guestText.isNotEmpty) {
+        serverGuests[serverId] = double.parse(guestText);
+      }
+      if (salesText.isNotEmpty) {
+        serverSales[serverId] = double.parse(salesText);
+      }
+    }
+    
+    // Check for existing data and confirm overwrite if needed
+    final existingData = await Storage.getMonthlyBusinessData(monthKey);
+    if (existingData != null && mounted) {
+      final decision = await _confirmDataOverwrite(monthDate);
+      if (decision == 'cancel') {
+        return; // User cancelled
+      } else if (decision == 'merge') {
+        // Handle merge logic
+        final existingBusinessData = MonthlyBusinessData.fromMap(existingData);
+        final newBusinessData = MonthlyBusinessData(
+          month: monthDate,
+          totalGuestCount: double.tryParse(_guestCountController.text) ?? 0.0,
+          totalSales: double.tryParse(_salesController.text) ?? 0.0,
+          serverSpecificGuests: serverGuests,
+          serverSpecificSales: serverSales,
+          validated: true,
+          entryDate: DateTime.now(),
+        );
+        final mergedData = await _mergeBusinessData(existingBusinessData, newBusinessData);
+        await Storage.saveMonthlyBusinessData(monthKey, mergedData.toMap());
+        return; // Merge complete, exit method
+      }
+      // If decision == 'overwrite', continue with normal save
+    }
+    
+    // Create business data
+    final businessData = MonthlyBusinessData(
+      month: monthDate,
+      totalGuestCount: double.tryParse(_guestCountController.text) ?? 0.0,
+      totalSales: double.tryParse(_salesController.text) ?? 0.0,
+      serverSpecificGuests: serverGuests,
+      serverSpecificSales: serverSales,
+      validated: true,
+      entryDate: DateTime.now(),
+    );
+    
+    // Save business data
+    await Storage.saveMonthlyBusinessData(monthKey, businessData.toMap());
+    
+    // Save NPS data for each server with scores
+    for (final serverId in _npsAllTimeControllers.keys) {
+      final allTimeText = _npsAllTimeControllers[serverId]!.text;
+      final threeMonthText = _npsThreeMonthControllers[serverId]!.text;
+      final oneMonthText = _npsOneMonthControllers[serverId]!.text;
+      
+      if (allTimeText.isNotEmpty || threeMonthText.isNotEmpty || oneMonthText.isNotEmpty) {
+        final allTimeScore = double.tryParse(allTimeText) ?? 0.0;
+        final threeMonthScore = double.tryParse(threeMonthText) ?? allTimeScore;
+        final oneMonthScore = double.tryParse(oneMonthText) ?? threeMonthScore;
+        
+        // Create NPSData for this server
+        final npsData = NPSData(
+          serverId: serverId,
+          month: monthDate,
+          monthlyScore: oneMonthScore,
+          threeMonthAverage: threeMonthScore,
+          responseCount: 10, // Default response count
+          categoryBreakdown: {
+            'Service Quality': oneMonthScore,
+            'Food Quality': oneMonthScore,
+            'Atmosphere': oneMonthScore,
+            'Speed of Service': oneMonthScore,
+            'Overall Experience': oneMonthScore,
+          },
+          guestComments: [],
+          lastUpdated: DateTime.now(),
+        );
+        
+        // Save NPS data using the storage box
+        final npsKey = '${monthKey}_nps_$serverId';
+        await Storage.enhancedBusinessDataBox.put(npsKey, npsData.toMap());
+      }
+    }
+  }
+
+  Future<void> _saveDateRangeData(DateTime startDate, DateTime endDate) async {
+    // For now, distribute the data proportionally across the months in the range
+    // This is a simplified implementation - could be enhanced for more complex scenarios
+    
+    final months = <DateTime>[];
+    DateTime current = DateTime(startDate.year, startDate.month, 1);
+    final end = DateTime(endDate.year, endDate.month, 1);
+    
+    while (current.isBefore(end) || current == end) {
+      months.add(current);
+      current = DateTime(current.year, current.month + 1, 1);
+    }
+    
+    // Distribute the totals across the months proportionally
+    final totalGuests = double.tryParse(_guestCountController.text) ?? 0.0;
+    final totalSales = double.tryParse(_salesController.text) ?? 0.0;
+    final guestsPerMonth = totalGuests / months.length;
+    final salesPerMonth = totalSales / months.length;
+    
+    for (final month in months) {
+      // Check for existing data
+      final monthKey = '${month.year}-${month.month.toString().padLeft(2, '0')}';
+      final existingData = await Storage.getMonthlyBusinessData(monthKey);
+      if (existingData != null && mounted) {
+        final decision = await _confirmDataOverwrite(month);
+        if (decision == 'cancel') {
+          continue; // Skip this month
+        }
+        // Note: For date range data, we don't support merge - only overwrite or cancel
+      }
+      
+      // Create proportional business data for this month
+      final businessData = MonthlyBusinessData(
+        month: month,
+        totalGuestCount: guestsPerMonth,
+        totalSales: salesPerMonth,
+        serverSpecificGuests: {}, // Could distribute server data proportionally too
+        serverSpecificSales: {},
+        validated: true,
+        entryDate: DateTime.now(),
+      );
+      
+      await Storage.saveMonthlyBusinessData(monthKey, businessData.toMap());
+    }
+  }
+
+  Future<String?> _confirmDataOverwrite(DateTime month) async {
+    final monthKey = Storage.generateMonthKey(month);
+    final existingData = await Storage.getMonthlyBusinessData(monthKey);
+    
+    if (existingData == null) return 'proceed'; // No conflict
+    
+    final existingGuests = existingData['totalGuestCount']?.toString() ?? '0';
+    final existingSales = existingData['totalSales']?.toString() ?? '0';
+    final existingEntryDate = existingData['entryDate'] != null 
+        ? DateTime.parse(existingData['entryDate']).toString().substring(0, 16)
+        : 'Unknown';
+    
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Data Conflict for ${_getMonthName(month)}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Existing data found:'),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('• Guests: $existingGuests'),
+                  Text('• Sales: \$${double.parse(existingSales).toStringAsFixed(2)}'),
+                  Text('• Entered: $existingEntryDate'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text('How would you like to proceed?'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop('cancel'),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop('merge'),
+            child: const Text('Merge Data'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop('overwrite'),
+            child: const Text('Overwrite'),
+          ),
+        ],
+      ),
+    );
+    return result;
+  }
+  
+  Future<MonthlyBusinessData> _mergeBusinessData(MonthlyBusinessData existing, MonthlyBusinessData newData) async {
+    // For guest count and sales, we'll add them together (assuming they're complementary)
+    // In a real app, you might want more sophisticated merging logic
+    return MonthlyBusinessData(
+      month: existing.month,
+      totalGuestCount: existing.totalGuestCount + newData.totalGuestCount,
+      totalSales: existing.totalSales + newData.totalSales,
+      serverSpecificGuests: {
+        ...existing.serverSpecificGuests,
+        ...newData.serverSpecificGuests,
+      },
+      serverSpecificSales: {
+        ...existing.serverSpecificSales,
+        ...newData.serverSpecificSales,
+      },
+      validated: true,
+      entryDate: DateTime.now(), // Update entry date to current time
+    );
+  }
+
+  String _getMonthName(DateTime date) {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return '${months[date.month - 1]} ${date.year}';
+  }
+
+  Future<void> _checkExistingDataWarning() async {
+    // Get comprehensive summary of existing data for the date range
+    final summary = await Storage.getDateRangeDataSummary(_selectedStartDate, _selectedEndDate);
+    final warnings = <String>[];
+    
+    if (summary['monthsWithData'] > 0) {
+      final monthsWithData = summary['monthsWithData'] as int;
+      final totalMonths = summary['monthsInRange'] as int;
+      
+      if (monthsWithData == totalMonths) {
+        warnings.add('All months in selected range already have data');
+      } else {
+        warnings.add('$monthsWithData of $totalMonths months already have data');
+      }
+      
+      // Add specific month details
+      final monthDetails = summary['monthDetails'] as Map<String, Map<String, dynamic>>;
+      for (final entry in monthDetails.entries) {
+        final monthKey = entry.key;
+        final details = entry.value;
+        final guests = details['guests']?.toString() ?? '0';
+        final sales = details['sales']?.toString() ?? '0';
+        warnings.add('$monthKey: $guests guests, \$${double.parse(sales).toStringAsFixed(0)} sales');
+      }
+    }
+    
+    setState(() {
+      _existingDataWarnings = warnings;
+    });
   }
 }

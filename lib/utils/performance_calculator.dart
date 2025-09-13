@@ -13,10 +13,79 @@ class PerformanceCalculator {
     'double': 1.6,      // 60% more complex (full day)
   };
 
-  /// Minimum expected performance thresholds
+  /// Minimum expected performance thresholds (defaults, can be overridden)
   static const double baseExpectedRunsPerShift = 8.0;
   static const double baseExpectedGuestEfficiency = 0.15; // runs per guest
   static const double baseExpectedSalesEfficiency = 12.0; // runs per $1000 sales
+
+  /// Calculate dynamic baselines from historical restaurant data
+  static Future<Map<String, double>> calculateDynamicBaselines({
+    required DateTime startDate,
+    required DateTime endDate,
+    List<ShiftRecord>? shifts, // Optional shifts data
+  }) async {
+    try {
+      // Load business data for the period to calculate realistic baselines
+      final businessDataKeys = await Storage.getAllBusinessDataKeys();
+      
+      if (businessDataKeys.isEmpty) {
+        return {
+          'runsPerShift': baseExpectedRunsPerShift,
+          'guestEfficiency': baseExpectedGuestEfficiency,
+          'salesEfficiency': baseExpectedSalesEfficiency,
+        };
+      }
+
+      double totalGuests = 0;
+      double totalSales = 0;
+      double totalRuns = 0;
+      int totalShifts = 0;
+      int monthsWithData = 0;
+      
+      // Load business data for the period
+      for (final monthKey in businessDataKeys) {
+        final businessData = await Storage.getMonthlyBusinessData(monthKey);
+        if (businessData != null) {
+          monthsWithData++;
+          totalGuests += businessData['totalGuestCount'] as double? ?? 0.0;
+          totalSales += businessData['totalSales'] as double? ?? 0.0;
+        }
+      }
+      
+      // If shifts are provided, calculate total runs and shifts
+      if (shifts != null) {
+        totalShifts = shifts.length;
+        for (final shift in shifts) {
+          for (final serverRuns in shift.counts.values) {
+            totalRuns += serverRuns;
+          }
+        }
+      } else {
+        // Estimate based on typical restaurant patterns if no shift data available
+        totalShifts = monthsWithData * 60; // Estimate ~60 shifts per month
+        totalRuns = totalShifts * baseExpectedRunsPerShift; // Use default for estimation
+      }
+
+      // Calculate baselines from actual data
+      final avgRunsPerShift = totalShifts > 0 ? totalRuns / totalShifts : baseExpectedRunsPerShift;
+      final avgGuestEfficiency = totalGuests > 0 ? totalRuns / totalGuests : baseExpectedGuestEfficiency;
+      final avgSalesEfficiency = totalSales > 0 ? totalRuns / (totalSales / 1000) : baseExpectedSalesEfficiency;
+      
+      // Use historical averages but ensure reasonable minimums
+      return {
+        'runsPerShift': math.max(4.0, math.min(16.0, avgRunsPerShift)), // Cap between 4-16 runs
+        'guestEfficiency': math.max(0.05, math.min(0.50, avgGuestEfficiency)), // Cap between 5%-50%
+        'salesEfficiency': math.max(5.0, math.min(25.0, avgSalesEfficiency)), // Cap between 5-25 per $1000
+      };
+    } catch (e) {
+      // Fall back to default values if there's any error
+      return {
+        'runsPerShift': baseExpectedRunsPerShift,
+        'guestEfficiency': baseExpectedGuestEfficiency,
+        'salesEfficiency': baseExpectedSalesEfficiency,
+      };
+    }
+  }
 
   /// Calculate comprehensive performance data for a server
   static ServerPerformanceData calculateServerPerformance({
@@ -28,6 +97,7 @@ class PerformanceCalculator {
     required DateTime hireDate,
     Map<String, double>? customDifficultyMultipliers,
     List<NPSData>? npsHistory,
+    int? totalServerCount, // Add server count for proper distribution
   }) {
     // Extract server-specific data from shifts
     final serverShifts = _extractServerShifts(serverId, shifts, startDate, endDate);
@@ -35,11 +105,11 @@ class PerformanceCalculator {
     final shiftsWorked = serverShifts.length;
     final daysEmployed = DateTime.now().difference(hireDate).inDays;
 
-    // Get business context data
+    // Get business context data - use server-specific if available, otherwise distribute evenly among servers
     final guestCount = businessData?.serverSpecificGuests[serverId] ?? 
-                      (businessData?.totalGuestCount ?? 0.0) / math.max(1, shifts.length);
+                      (businessData?.totalGuestCount ?? 0.0) / math.max(1, totalServerCount ?? 1);
     final sales = businessData?.serverSpecificSales[serverId] ?? 
-                 (businessData?.totalSales ?? 0.0) / math.max(1, shifts.length);
+                 (businessData?.totalSales ?? 0.0) / math.max(1, totalServerCount ?? 1);
 
     // Calculate shift complexities
     final shiftComplexities = _calculateShiftComplexities(
@@ -63,8 +133,14 @@ class PerformanceCalculator {
       npsHistory: npsHistory,
     );
 
+    // Calculate NPS data availability for fair scoring
+    final npsDataMonths = npsHistory
+        ?.where((nps) => nps.serverId == serverId)
+        .where((nps) => nps.month.isAfter(startDate.subtract(const Duration(days: 90))))
+        .length ?? 0;
+
     // Calculate overall performance score
-    final performanceScore = _calculateOverallScore(metrics);
+    final performanceScore = _calculateOverallScore(metrics, daysEmployed, npsDataMonths);
     
     // Determine rating and flags
     final rating = _getRatingFromScore(performanceScore);
@@ -119,12 +195,15 @@ class PerformanceCalculator {
       final shiftType = shift.shiftType.toLowerCase();
       final multiplier = difficultyMultipliers[shiftType] ?? 1.0;
       
-      // Estimate guest count and sales for this shift
-      // TODO: In future, this could be more sophisticated with actual shift-level data
-      final estimatedGuests = (businessData?.totalGuestCount ?? 0.0) / 
-                             math.max(1, serverShifts.length);
-      final estimatedSales = (businessData?.totalSales ?? 0.0) / 
-                           math.max(1, serverShifts.length);
+      // For monthly data entry, estimate shift-level metrics from monthly totals
+      // This is approximate since actual shift-level data isn't tracked
+      final totalShiftsInData = serverShifts.length;
+      final estimatedGuests = totalShiftsInData > 0 
+          ? (businessData?.totalGuestCount ?? 0.0) / totalShiftsInData
+          : 0.0;
+      final estimatedSales = totalShiftsInData > 0
+          ? (businessData?.totalSales ?? 0.0) / totalShiftsInData  
+          : 0.0;
 
       return ShiftComplexity(
         shiftType: shiftType,
@@ -159,8 +238,8 @@ class PerformanceCalculator {
     // Sales efficiency: food runs per $1000 in sales
     final salesEfficiency = sales > 0 ? totalFoodRuns / (sales / 1000) : 0.0;
 
-    // Experience factor: caps at 90 days (3 months)
-    final experienceFactor = math.min(1.0, daysEmployed / 90.0);
+    // Enhanced experience factor for monthly data context
+    final experienceFactor = _calculateExperienceFactor(daysEmployed, npsHistory?.where((nps) => nps.serverId == serverId).length ?? 0);
 
     // Consistency score: based on variance in daily performance
     final consistencyScore = _calculateConsistencyScore(serverShifts, serverId);
@@ -291,6 +370,40 @@ class PerformanceCalculator {
     };
   }
 
+  /// Calculate enhanced experience factor for monthly data context
+  static double _calculateExperienceFactor(int daysEmployed, int npsDataMonths) {
+    // Progressive experience curve rather than linear
+    // Accounts for both tenure and data availability
+    
+    if (daysEmployed <= 0) return 0.6; // New hire minimum
+    
+    // Base experience curve - slower progression for monthly evaluation
+    double experienceBase;
+    if (daysEmployed < 30) {
+      // First month: 60-75% performance expectation
+      experienceBase = 0.6 + (daysEmployed / 30.0) * 0.15;
+    } else if (daysEmployed < 90) {
+      // Months 2-3: 75-90% performance expectation
+      experienceBase = 0.75 + ((daysEmployed - 30) / 60.0) * 0.15;
+    } else if (daysEmployed < 180) {
+      // Months 4-6: 90-95% performance expectation
+      experienceBase = 0.90 + ((daysEmployed - 90) / 90.0) * 0.05;
+    } else {
+      // 6+ months: 95-100% performance expectation
+      experienceBase = 0.95 + math.min(0.05, (daysEmployed - 180) / 360.0 * 0.05);
+    }
+    
+    // Adjust based on NPS data availability
+    // Servers with more evaluation history get slight adjustment towards full expectation
+    if (npsDataMonths >= 3) {
+      experienceBase = math.min(1.0, experienceBase + 0.02); // 2% bonus for established history
+    } else if (npsDataMonths == 0 && daysEmployed < 60) {
+      experienceBase = math.max(0.6, experienceBase - 0.05); // 5% reduction for very new with no NPS
+    }
+    
+    return math.max(0.6, math.min(1.0, experienceBase));
+  }
+
   /// Calculate complexity-adjusted performance
   static double _calculateComplexityAdjustedPerformance(
     List<ShiftRecord> serverShifts,
@@ -316,13 +429,35 @@ class PerformanceCalculator {
   }
 
   /// Calculate overall performance score (0-100)
-  static double _calculateOverallScore(PerformanceMetrics metrics) {
-    // NEW Weighted scoring algorithm:
-    // - NPS Score: 30% (guest feedback is critical)
-    // - Adjusted Performance: 25% (reduced from 40%)
-    // - Guest Efficiency: 20% (reduced from 25%)
-    // - Sales Efficiency: 15% (reduced from 20%)
-    // - Consistency Score: 10% (reduced from 15%)
+  static double _calculateOverallScore(PerformanceMetrics metrics, int daysEmployed, int npsDataMonths) {
+    // Dynamic weight distribution based on NPS data availability
+    // For servers with limited NPS data, reduce NPS weight and redistribute to performance metrics
+    
+    double npsWeight = 0.30;
+    double performanceWeight = 0.25;
+    double guestWeight = 0.20;
+    double salesWeight = 0.15;
+    double consistencyWeight = 0.10;
+    
+    // Adjust weights for servers with limited NPS data (less than 3 months)
+    if (npsDataMonths < 3) {
+      final npsReduction = (3 - npsDataMonths) * 0.10; // Reduce by 10% per missing month
+      npsWeight = math.max(0.10, npsWeight - npsReduction); // Minimum 10% NPS weight
+      
+      // Redistribute reduced NPS weight to performance metrics proportionally
+      final redistributed = (0.30 - npsWeight);
+      performanceWeight += redistributed * 0.4; // 40% to performance
+      guestWeight += redistributed * 0.3;       // 30% to guest efficiency  
+      salesWeight += redistributed * 0.2;       // 20% to sales
+      consistencyWeight += redistributed * 0.1;  // 10% to consistency
+    }
+    
+    // Additional adjustment for very new servers (less than 30 days)
+    if (daysEmployed < 30) {
+      npsWeight = math.max(0.05, npsWeight - 0.15); // Further reduce NPS impact
+      performanceWeight += 0.10; // Focus more on actual performance
+      guestWeight += 0.05;
+    }
 
     // Normalize metrics to 0-100 scale
     final adjustedPerformanceScore = _normalizeToScore(
@@ -346,13 +481,13 @@ class PerformanceCalculator {
     // NPS score is already normalized to 0-100
     final npsScore = metrics.npsScore;
 
-    // Weighted average with new NPS-focused distribution
+    // Weighted average with dynamic weight distribution
     final weightedScore = (
-      (npsScore * 0.30) +                         // 30% NPS Score
-      (adjustedPerformanceScore * 0.25) +         // 25% Adjusted Performance
-      (guestEfficiencyScore * 0.20) +             // 20% Guest Efficiency
-      (salesEfficiencyScore * 0.15) +             // 15% Sales Efficiency
-      (metrics.consistencyScore * 0.10)           // 10% Consistency
+      (npsScore * npsWeight) +                         
+      (adjustedPerformanceScore * performanceWeight) + 
+      (guestEfficiencyScore * guestWeight) +          
+      (salesEfficiencyScore * salesWeight) +          
+      (metrics.consistencyScore * consistencyWeight)  
     );
 
     // Apply experience factor
