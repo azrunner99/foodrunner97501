@@ -6,6 +6,7 @@ import 'manage_servers_screen.dart';
 import 'server_avatar_settings_screen.dart';
 import 'server_dashboard_screen.dart';
 import 'backup_manager_screen.dart';
+import 'server_performance_screen.dart';
 
 class AdminScreen extends StatefulWidget {
   const AdminScreen({super.key});
@@ -251,6 +252,27 @@ class _AdminScreenState extends State<AdminScreen> {
                         context,
                         MaterialPageRoute(builder: (_) => const ServerDashboardScreen()),
                       );
+                    },
+                  ),
+                  _buildAdminTile(
+                    icon: Icons.analytics,
+                    title: 'Server Performance',
+                    subtitle: 'Analyze server performance metrics and trends',
+                    enabled: true,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ServerPerformanceScreen()),
+                      );
+                    },
+                  ),
+                  _buildAdminTile(
+                    icon: Icons.assessment,
+                    title: 'Business Data Entry',
+                    subtitle: 'Enter monthly business data and NPS scores',
+                    enabled: true,
+                    onTap: () {
+                      Navigator.pushNamed(context, '/business_data_entry');
                     },
                   ),
                   _buildAdminTile(
