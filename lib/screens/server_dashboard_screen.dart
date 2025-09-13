@@ -17,11 +17,10 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
   String selectedPeriod = 'Today';
   bool _systemHealthExpanded = false;
   String _sortBy = 'name'; // 'name', 'integrity', 'alerts'
+  bool _activeShiftOnly = false; // Toggle for filtering active shift servers only
   
   @override
   Widget build(BuildContext context) {
-    final app = context.watch<AppState>();
-    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Server Monitoring Dashboard'),
@@ -546,7 +545,14 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
                 ),
               ),
             })
-        .where((data) => data['runs'] as int > 0)
+        .where((data) {
+          // Filter by active shift if toggle is enabled
+          if (_activeShiftOnly && app.shiftActive) {
+            final server = data['server'] as Server;
+            return app.workingServerIds.contains(server.id);
+          }
+          return true; // Show all servers when toggle is off or no active shift
+        })
         .toList();
     
     // Sort based on selected criteria
@@ -580,6 +586,43 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
                   child: Text(
                     'All Servers - Integrity Scores (Tap any server to view profile)',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Active Shift Only toggle
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: _activeShiftOnly ? Colors.orange[300]! : Colors.grey[300]!),
+                    borderRadius: BorderRadius.circular(8),
+                    color: _activeShiftOnly ? Colors.orange[50] : Colors.transparent,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Active Shift Only',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: _activeShiftOnly ? FontWeight.w600 : FontWeight.normal,
+                          color: _activeShiftOnly ? Colors.orange[800] : Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Transform.scale(
+                        scale: 0.8,
+                        child: Switch(
+                          value: _activeShiftOnly,
+                          onChanged: (bool value) {
+                            setState(() {
+                              _activeShiftOnly = value;
+                            });
+                          },
+                          activeColor: Colors.orange,
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -627,14 +670,23 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
                 ),
               )
             else
-              ...serverData.take(10).map((data) => _buildServerItem(data)).toList(),
+              // Make the server list scrollable and show all servers
+              Container(
+                height: 400, // Fixed height for scrollable area
+                child: ListView.builder(
+                  itemCount: serverData.length,
+                  itemBuilder: (context, index) {
+                    return _buildServerItem(serverData[index], app);
+                  },
+                ),
+              ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildServerItem(Map<String, dynamic> data) {
+  Widget _buildServerItem(Map<String, dynamic> data, AppState app) {
     final server = data['server'] as Server;
     final profile = data['profile'] as ServerProfile?;
     final runs = data['runs'] as int;
@@ -722,10 +774,19 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
                   ),
                   Row(
                     children: [
-                      Text(
-                        '$runs runs',
-                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                      ),
+                      if (_activeShiftOnly && app.shiftActive) ...[
+                        // Show current shift runs when toggle is active
+                        Text(
+                          '${app.currentCounts[server.id] ?? 0} runs (current shift)',
+                          style: TextStyle(color: Colors.orange[600], fontSize: 12, fontWeight: FontWeight.w500),
+                        ),
+                      ] else ...[
+                        // Show all-time runs when toggle is off
+                        Text(
+                          '$runs runs',
+                          style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                        ),
+                      ],
                       if (hasAlerts) ...[
                         Text(
                           ' • ${assessment.alerts.length} alert${assessment.alerts.length > 1 ? 's' : ''}',

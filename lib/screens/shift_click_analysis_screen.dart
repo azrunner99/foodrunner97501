@@ -29,6 +29,22 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
     _loadClickData();
   }
 
+  // Get all dates with shift data for the current server within a date range
+  Set<DateTime> _getDatesWithShiftData(AppState app, DateTime start, DateTime end) {
+    final datesWithData = <DateTime>{};
+    
+    for (final shift in app.history) {
+      final shiftDate = shift.start;
+      if (shiftDate.isAfter(start.subtract(Duration(days: 1))) && 
+          shiftDate.isBefore(end.add(Duration(days: 1))) &&
+          (shift.counts[widget.server.id] ?? 0) > 0) {
+        datesWithData.add(DateTime(shiftDate.year, shiftDate.month, shiftDate.day));
+      }
+    }
+    
+    return datesWithData;
+  }
+
   void _loadClickData() {
     setState(() {
       _isLoading = true;
@@ -130,22 +146,22 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
   }
 
   Future<void> _selectDate() async {
-    final DateTime? picked = await showDatePicker(
+    final app = Provider.of<AppState>(context, listen: false);
+    final now = DateTime.now();
+    final firstDate = now.subtract(Duration(days: 90));
+    final lastDate = now;
+    
+    final datesWithData = _getDatesWithShiftData(app, firstDate, lastDate);
+
+    final DateTime? picked = await showDialog<DateTime>(
       context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime.now().subtract(Duration(days: 90)), // Last 90 days
-      lastDate: DateTime.now(),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: Colors.blue,
-              onPrimary: Colors.white,
-              surface: Colors.white,
-              onSurface: Colors.black,
-            ),
-          ),
-          child: child!,
+      builder: (BuildContext context) {
+        return _CustomCalendarDialog(
+          initialDate: _selectedDate,
+          firstDate: firstDate,
+          lastDate: lastDate,
+          datesWithData: datesWithData,
+          serverName: widget.server.name,
         );
       },
     );
@@ -278,18 +294,50 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
                   // Section Header
                   Padding(
                     padding: EdgeInsets.symmetric(vertical: 16),
-                    child: Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.list, color: Colors.blue[600], size: 24),
-                        SizedBox(width: 8),
-                        Text(
-                          'Individual Clicks (${_individualClicks.length})',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey[700],
-                          ),
+                        Row(
+                          children: [
+                            Icon(Icons.list, color: Colors.blue[600], size: 24),
+                            SizedBox(width: 8),
+                            Text(
+                              'Individual Clicks (${_individualClicks.length})',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                          ],
                         ),
+                        // Show data discrepancy warning if exists
+                        if (_clickData.map((d) => d.clickCount).fold(0, (a, b) => a + b) != _individualClicks.length) ...[
+                          SizedBox(height: 8),
+                          Container(
+                            padding: EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.orange[50],
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.orange[300]!),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.warning, color: Colors.orange[600], size: 20),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Data Discrepancy: Chart shows ${_clickData.map((d) => d.clickCount).fold(0, (a, b) => a + b)} total clicks, but only ${_individualClicks.length} individual timestamps found. This suggests data is stored in different formats.',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.orange[800],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -412,7 +460,7 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
       padding: EdgeInsets.all(16),
       child: Column(
         children: [
-          // Chart Title and Stats
+          // Metrics above the chart
           Container(
             padding: EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -713,4 +761,320 @@ class ClickDataPoint {
     required this.clickCount,
     required this.label,
   });
+}
+
+class _CustomCalendarDialog extends StatefulWidget {
+  final DateTime initialDate;
+  final DateTime firstDate;
+  final DateTime lastDate;
+  final Set<DateTime> datesWithData;
+  final String serverName;
+
+  const _CustomCalendarDialog({
+    Key? key,
+    required this.initialDate,
+    required this.firstDate,
+    required this.lastDate,
+    required this.datesWithData,
+    required this.serverName,
+  }) : super(key: key);
+
+  @override
+  State<_CustomCalendarDialog> createState() => _CustomCalendarDialogState();
+}
+
+class _CustomCalendarDialogState extends State<_CustomCalendarDialog> {
+  late DateTime _selectedDate;
+  late DateTime _currentMonth;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedDate = widget.initialDate;
+    _currentMonth = DateTime(widget.initialDate.year, widget.initialDate.month, 1);
+  }
+
+  void _previousMonth() {
+    setState(() {
+      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1, 1);
+    });
+  }
+
+  void _nextMonth() {
+    setState(() {
+      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 1);
+    });
+  }
+
+  bool _isDateWithData(DateTime date) {
+    return widget.datesWithData.contains(DateTime(date.year, date.month, date.day));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final monthName = [
+      '', 'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ][_currentMonth.month];
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        width: 350,
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Select date',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: Icon(Icons.close),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            
+            // Current selection display
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    '${_selectedDate.day.toString().padLeft(2, '0')} ${monthName.substring(0, 3)}, ${_selectedDate.year}',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue[800],
+                    ),
+                  ),
+                  Spacer(),
+                  Icon(Icons.edit, color: Colors.blue[600], size: 20),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            
+            // Month navigation
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  onPressed: _currentMonth.isAfter(widget.firstDate) ? _previousMonth : null,
+                  icon: Icon(Icons.chevron_left),
+                ),
+                Text(
+                  '$monthName ${_currentMonth.year}',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                ),
+                IconButton(
+                  onPressed: _currentMonth.isBefore(DateTime(widget.lastDate.year, widget.lastDate.month, 1)) ? _nextMonth : null,
+                  icon: Icon(Icons.chevron_right),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            
+            // Day headers
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+                  .map((day) => Container(
+                        width: 35,
+                        height: 35,
+                        alignment: Alignment.center,
+                        child: Text(
+                          day,
+                          style: TextStyle(fontWeight: FontWeight.w500, color: Colors.grey[600]),
+                        ),
+                      ))
+                  .toList(),
+            ),
+            const SizedBox(height: 8),
+            
+            // Calendar grid
+            _buildCalendarGrid(),
+            
+            const SizedBox(height: 20),
+            
+            // Legend
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: Colors.green[400],
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Dates with shift data for ${widget.serverName}',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'No shift data available',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            
+            const SizedBox(height: 20),
+            
+            // Action buttons
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text('Cancel'),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(_selectedDate),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: Text('OK'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCalendarGrid() {
+    final firstDayOfMonth = DateTime(_currentMonth.year, _currentMonth.month, 1);
+    final lastDayOfMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 0);
+    final firstWeekday = firstDayOfMonth.weekday % 7; // Convert to 0=Sunday format
+    
+    final days = <Widget>[];
+    
+    // Add empty cells for days before the first day of the month
+    for (int i = 0; i < firstWeekday; i++) {
+      days.add(Container(width: 35, height: 35));
+    }
+    
+    // Add days of the month
+    for (int day = 1; day <= lastDayOfMonth.day; day++) {
+      final date = DateTime(_currentMonth.year, _currentMonth.month, day);
+      final isSelected = _selectedDate.year == date.year && 
+                        _selectedDate.month == date.month && 
+                        _selectedDate.day == date.day;
+      final hasData = _isDateWithData(date);
+      final isInRange = date.isAfter(widget.firstDate.subtract(Duration(days: 1))) && 
+                       date.isBefore(widget.lastDate.add(Duration(days: 1)));
+      
+      days.add(
+        GestureDetector(
+          onTap: isInRange ? () {
+            setState(() {
+              _selectedDate = date;
+            });
+          } : null,
+          child: Container(
+            width: 35,
+            height: 35,
+            margin: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              color: isSelected 
+                  ? Colors.blue 
+                  : (isInRange ? Colors.transparent : Colors.grey[100]),
+              borderRadius: BorderRadius.circular(18),
+              border: isSelected ? null : Border.all(
+                color: Colors.transparent,
+                width: 1,
+              ),
+            ),
+            child: Stack(
+              children: [
+                Center(
+                  child: Text(
+                    day.toString(),
+                    style: TextStyle(
+                      color: isSelected 
+                          ? Colors.white 
+                          : (isInRange ? Colors.black : Colors.grey[400]),
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  ),
+                ),
+                if (hasData && isInRange)
+                  Positioned(
+                    top: 2,
+                    right: 2,
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: isSelected ? Colors.white : Colors.green[400],
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    
+    // Group days into weeks
+    final weeks = <Widget>[];
+    for (int i = 0; i < days.length; i += 7) {
+      final weekDays = days.skip(i).take(7).toList();
+      while (weekDays.length < 7) {
+        weekDays.add(Container(width: 35, height: 35));
+      }
+      weeks.add(
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: weekDays,
+        ),
+      );
+    }
+    
+    return Column(children: weeks);
+  }
 }

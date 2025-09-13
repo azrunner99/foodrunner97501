@@ -168,10 +168,10 @@ class AppState extends ChangeNotifier {
 
     final now = DateTime.now();
     const delta = 1;
-    const pizookiePoints = 25;
+    const basePizookiePoints = 25;
 
-  _currentCounts[id] = (_currentCounts[id] ?? 0) + delta;
-  lastRunServerId = id;
+    _currentCounts[id] = (_currentCounts[id] ?? 0) + delta;
+    lastRunServerId = id;
     _teamTotalThisShift += delta;
 
     // Increment per-shift pizookie count
@@ -182,11 +182,12 @@ class AppState extends ChangeNotifier {
     final prof = _profiles[id] ?? ServerProfile();
     final serverName = serverById(id)?.name ?? 'Server';
 
-
-    prof.points += pizookiePoints;
+    checkBoostExpiry(); // Check if boost has expired
+    final boostedPizookiePoints = (_boostActive ? (basePizookiePoints * _boostMultiplier).round() : basePizookiePoints);
+    prof.points += boostedPizookiePoints;
     prof.allTimeRuns += delta;
     prof.pizookieRuns += delta;
-    print('[DEBUG] Server $id ran a Pizookie: \\${prof.points} XP, level \\${prof.level}, allTimeRuns: \\${prof.allTimeRuns}, pizookieRuns: \\${prof.pizookieRuns}');
+    print('[DEBUG] Server $id ran a Pizookie: +$boostedPizookiePoints XP (base: $basePizookiePoints, boost: ${_boostActive ? "${_boostMultiplier}x" : "none"}), total now: ${prof.points}');
 
     final prevIso = prof.lastTapIso;
     prof.lastTapIso = now.toIso8601String();
@@ -240,7 +241,9 @@ class AppState extends ChangeNotifier {
     final minuteEpoch = DateTime(now.year, now.month, now.day, now.hour, now.minute).millisecondsSinceEpoch;
     _tapPerMinute.putIfAbsent(id, () => <int, int>{});
     _tapPerMinute[id]![minuteEpoch] = (_tapPerMinute[id]![minuteEpoch] ?? 0) + 1;
+    _tapTimestamps.putIfAbsent(id, () => <int>[]).add(now.millisecondsSinceEpoch);
     _persistTapLog();
+    _persistTapTimestamps();
     _persistProfiles();
     _persistTotals();
 
@@ -278,11 +281,18 @@ class AppState extends ChangeNotifier {
   final Map<String, int> _dinnerCloserCount = {};
 
   final Map<String, Map<int, int>> _tapPerMinute = {};
+  final Map<String, List<int>> _tapTimestamps = {}; // Individual timestamp storage
   String? _recentBadgeBubble;
   Timer? _ticker;
 
   // Roster toggle state: 'auto', 'lunch', 'dinner'
   String _activeRosterView = 'auto';
+
+  // Boost mode for high-volume periods
+  bool _boostActive = false;
+  double _boostMultiplier = 1.0;
+  DateTime? _boostEndTime;
+  String _boostDescription = '';
 
   // expose
   List<Server> get servers =>
@@ -308,6 +318,31 @@ class AppState extends ChangeNotifier {
 
   // Roster toggle logic
   String get activeRosterView => _activeRosterView;
+  
+  // Boost mode getters
+  bool get boostActive => _boostActive;
+  double get boostMultiplier => _boostMultiplier;
+  DateTime? get boostEndTime => _boostEndTime;
+  String get boostDescription => _boostDescription;
+  
+  String get boostTimeRemaining {
+    if (!_boostActive || _boostEndTime == null) return '';
+    
+    final remaining = _boostEndTime!.difference(DateTime.now());
+    if (remaining.isNegative) return '0:00';
+    
+    final hours = remaining.inHours;
+    final minutes = remaining.inMinutes % 60;
+    final seconds = remaining.inSeconds % 60;
+    
+    if (hours > 0) {
+      return '${hours}h ${minutes}m';
+    } else if (minutes > 0) {
+      return '${minutes}m ${seconds}s';
+    } else {
+      return '${seconds}s';
+    }
+  }
   void toggleRosterView() {
     print('[DEBUG] toggleRosterView: Current view = $_activeRosterView');
     final plan = _todayPlan;
@@ -388,6 +423,38 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  // Boost mode methods
+  void activateBoost(double multiplier, int durationMinutes, String description, String pin) {
+    if (pin != adminPin) return;
+    
+    _boostActive = true;
+    _boostMultiplier = multiplier;
+    _boostEndTime = DateTime.now().add(Duration(minutes: durationMinutes));
+    _boostDescription = description;
+    notifyListeners();
+    
+    // Auto-deactivate when time expires
+    Timer(Duration(minutes: durationMinutes), () {
+      if (_boostActive && _boostEndTime != null && DateTime.now().isAfter(_boostEndTime!)) {
+        deactivateBoost();
+      }
+    });
+  }
+
+  void deactivateBoost() {
+    _boostActive = false;
+    _boostMultiplier = 1.0;
+    _boostEndTime = null;
+    _boostDescription = '';
+    notifyListeners();
+  }
+
+  void checkBoostExpiry() {
+    if (_boostActive && _boostEndTime != null && DateTime.now().isAfter(_boostEndTime!)) {
+      deactivateBoost();
+    }
+  }
+
   final List<ShiftRecord> _history = [];
   List<ShiftRecord> get history {
     final raw = (_history..sort((a, b) => b.start.compareTo(a.start)));
@@ -445,6 +512,12 @@ class AppState extends ChangeNotifier {
     _tapPerMinute
       ..clear()
       ..addAll(tapRaw.map((sid, m) => MapEntry(sid as String, Map<int, int>.from((m as Map).map((k, v) => MapEntry(int.parse(k as String), v as int))))));
+
+    // Load individual timestamps
+    final timestamps = (await Storage.tapTimestampsBox.get('timestamps') as Map?) ?? {};
+    _tapTimestamps
+      ..clear()
+      ..addAll(timestamps.map((serverId, timestampList) => MapEntry(serverId as String, List<int>.from(timestampList as List))));
 
     // Reconstruct allTimeRuns from historical tap data if needed
     reconstructAllTimeRuns();
@@ -543,6 +616,12 @@ class AppState extends ChangeNotifier {
       print('[DEBUG] Timer tick: checking shift activation');
       _maybeActivateShiftByClock();
       _pruneOldTapBuckets();
+      
+      // Check boost expiry frequently
+      checkBoostExpiry();
+      
+      // Notify listeners to update any time-dependent UI elements
+      notifyListeners();
 
       // --- CRITICAL TRANSITION LOGIC - DO NOT MODIFY WITHOUT CAREFUL TESTING ---
       // This section handles the complex lunch-to-dinner transition that preserves
@@ -718,6 +797,10 @@ class AppState extends ChangeNotifier {
   Future<void> _persistTapLog() async {
     final map = _tapPerMinute.map((sid, m) => MapEntry(sid, m.map((k, v) => MapEntry(k.toString(), v))));
     await Storage.tapBox.put('per_minute', map);
+  }
+
+  Future<void> _persistTapTimestamps() async {
+    await Storage.tapTimestampsBox.put('timestamps', _tapTimestamps);
   }
 
   Future<void> saveSettings(GamificationSettings s) async {
@@ -1331,10 +1414,17 @@ class AppState extends ChangeNotifier {
     _currentStreaks[id] = (_currentStreaks[id] ?? 0) + 1;
     final sCount = _currentCounts[id]!;
 
-    // Only award 35 XP for Full Hands if gamification is enabled, otherwise always 10 XP
-    if (!awardedFullHands || !settings.gamificationEnabled) {
-  prof.points += 10;
-  print('[DEBUG] +10 points awarded to $id, total now: ${prof.points}');
+    // Always award base XP with boost multiplier applied
+    checkBoostExpiry(); // Check if boost has expired
+    final basePoints = 10;
+    final boostedPoints = (_boostActive ? (basePoints * _boostMultiplier).round() : basePoints);
+    prof.points += boostedPoints;
+    print('[DEBUG] +$boostedPoints points awarded to $id (base: $basePoints, boost: ${_boostActive ? "${_boostMultiplier}x" : "none"}), total now: ${prof.points}');
+
+    // Award additional XP for Full Hands achievement if applicable
+    if (awardedFullHands && settings.gamificationEnabled) {
+      prof.points += 25; // Additional 25 XP for Full Hands (35 total - 10 base = 25 extra)
+      print('[DEBUG] +25 additional XP for Full Hands achievement, total now: ${prof.points}');
     }
     prof.allTimeRuns += delta;
     print('[DEBUG] Server $id now has ${prof.points} XP, level ${prof.level}, allTimeRuns: ${prof.allTimeRuns}');
@@ -1391,7 +1481,9 @@ class AppState extends ChangeNotifier {
   final minuteEpoch = DateTime(now.year, now.month, now.day, now.hour, now.minute).millisecondsSinceEpoch;
   _tapPerMinute.putIfAbsent(id, () => <int, int>{});
   _tapPerMinute[id]![minuteEpoch] = (_tapPerMinute[id]![minuteEpoch] ?? 0) + 1;
+  _tapTimestamps.putIfAbsent(id, () => <int>[]).add(now.millisecondsSinceEpoch);
   _persistTapLog();
+  _persistTapTimestamps();
   _persistProfiles();
   _persistTotals();
 
@@ -1505,10 +1597,76 @@ class AppState extends ChangeNotifier {
     return {'1': s1, '2': s2, '3': s3, '4+': s4};
   }
 
+  /// Get raw tap data for a server within a specific time range
+  /// Returns a map of minute epochs to tap counts for that time window
+  Map<int, int> rawTapDataForTimeRange(String serverId, {
+    required DateTime startTime,
+    required DateTime endTime,
+  }) {
+    final buckets = _tapPerMinute[serverId];
+    if (buckets == null) return {};
+    
+    final startEpoch = startTime.millisecondsSinceEpoch;
+    final endEpoch = endTime.millisecondsSinceEpoch;
+    
+    final result = <int, int>{};
+    
+    buckets.forEach((minuteEpoch, count) {
+      if (minuteEpoch >= startEpoch && minuteEpoch < endEpoch) {
+        result[minuteEpoch] = count;
+      }
+    });
+    
+    return result;
+  }
+
+  /// Get total tap count for a server within a specific time window
+  int getTapCountForTimeWindow(String serverId, DateTime start, DateTime end) {
+    final tapData = rawTapDataForTimeRange(serverId, startTime: start, endTime: end);
+    return tapData.values.fold(0, (sum, count) => sum + count);
+  }
+
+  /// Get raw tap data (DateTime -> count) for a server within a specific time window
+  Map<DateTime, int> getRawTapDataForTimeRange(String serverId, DateTime start, DateTime end) {
+    final rawData = rawTapDataForTimeRange(serverId, startTime: start, endTime: end);
+    final Map<DateTime, int> result = {};
+    
+    for (final entry in rawData.entries) {
+      final timestamp = entry.key;
+      final count = entry.value;
+      final dateTime = DateTime.fromMillisecondsSinceEpoch(timestamp);
+      result[dateTime] = count;
+    }
+    
+    return result;
+  }
+
+  /// Get individual click timestamps for a server within a time range
+  List<DateTime> getIndividualClickTimestamps(String serverId, DateTime start, DateTime end) {
+    final timestamps = _tapTimestamps[serverId] ?? [];
+    final startEpoch = start.millisecondsSinceEpoch;
+    final endEpoch = end.millisecondsSinceEpoch;
+    
+    return timestamps
+        .where((timestamp) => timestamp >= startEpoch && timestamp < endEpoch)
+        .map((timestamp) => DateTime.fromMillisecondsSinceEpoch(timestamp))
+        .toList()
+      ..sort(); // Sort chronologically
+  }
+  
+  /// Get count of individual clicks for a time range (for verification)
+  int getIndividualClickCount(String serverId, DateTime start, DateTime end) {
+    return getIndividualClickTimestamps(serverId, start, end).length;
+  }
+
   void _pruneOldTapBuckets() {
     final cutoff = DateTime.now().subtract(const Duration(days: 180)).millisecondsSinceEpoch;
     for (final m in _tapPerMinute.values) {
       m.removeWhere((k, v) => k < cutoff);
+    }
+    // Also prune old individual timestamps
+    for (final timestamps in _tapTimestamps.values) {
+      timestamps.removeWhere((timestamp) => timestamp < cutoff);
     }
   }
 

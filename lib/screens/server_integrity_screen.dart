@@ -727,8 +727,12 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
       final bins = _getIntegrityBinsForDateRange(app, server.id);
       final runCount = _getRunCountForDateRange(app, server.id);
       
-      // Generate enhanced assessment with advanced pattern recognition
-      final enhancedAssessment = IntegrityAnalyzer.analyzeServerAdvanced(
+      // Get individual timestamps for enhanced analysis
+      final (startDate, endDate) = _getDateRangeForAnalysis();
+      final individualTimestamps = app.getIndividualClickTimestamps(server.id, startDate, endDate);
+      
+      // Generate timestamp-enhanced assessment
+      final assessment = IntegrityAnalyzer.analyzeServer(
         serverId: server.id,
         serverName: server.name,
         clickBins: bins,
@@ -736,10 +740,10 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
         allServers: servers,
         allServerCounts: allServerCounts,
         analysisTime: DateTime.now(),
+        individualTimestamps: individualTimestamps.isNotEmpty ? individualTimestamps : null,
       );
       
-      // Return the enhanced assessment which contains all advanced analytics
-      return enhancedAssessment.toBasicAssessment();
+      return assessment;
     }).toList();
   }
 
@@ -987,6 +991,9 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
                 
                 const SizedBox(height: 16),
                 
+                // Timestamp Analysis (if available)
+                _buildTimestampAnalysisSection(assessment),
+                
                 // Risk Factors
                 if (assessment.riskFactors.isNotEmpty) ...[
                   Text(
@@ -1159,5 +1166,196 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildTimestampAnalysisSection(IntegrityAssessment assessment) {
+    // Check if we have timestamp-based risk factors or alerts
+    final timestampRiskFactors = assessment.riskFactors.where((factor) => 
+      factor.contains('multi-clicking') || 
+      factor.contains('velocity') || 
+      factor.contains('mechanical') ||
+      factor.contains('burst') ||
+      factor.contains('proportional') ||
+      factor.toLowerCase().contains('timing')
+    ).toList();
+    
+    final timestampAlerts = assessment.alerts.where((alert) => 
+      alert.title.contains('Multi-Click') ||
+      alert.title.contains('Velocity') ||
+      alert.title.contains('Mechanical') ||
+      alert.title.contains('Burst') ||
+      alert.title.contains('Pattern') ||
+      alert.title.contains('Automation')
+    ).toList();
+
+    // Only show section if we have timestamp-based analysis
+    if (timestampRiskFactors.isEmpty && timestampAlerts.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.access_time, color: Colors.blue, size: 18),
+            const SizedBox(width: 8),
+            Text(
+              'Timing Analysis',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade700,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                'Enhanced',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue.shade700,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        
+        // Timestamp-based alerts
+        if (timestampAlerts.isNotEmpty) ...[
+          ...timestampAlerts.map((alert) => Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: _getAlertLevelColor(alert.level).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: _getAlertLevelColor(alert.level).withOpacity(0.3),
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  _getAlertLevelIcon(alert.level),
+                  color: _getAlertLevelColor(alert.level),
+                  size: 18,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        alert.title,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: _getAlertLevelColor(alert.level),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        alert.message,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          )),
+        ],
+        
+        // Timestamp-based risk factors
+        if (timestampRiskFactors.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          ...timestampRiskFactors.map((factor) => Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.insights, color: Colors.blue, size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    factor,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey.shade600,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )),
+        ],
+        
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  Color _getAlertLevelColor(AlertLevel level) {
+    switch (level) {
+      case AlertLevel.low:
+        return Colors.blue;
+      case AlertLevel.medium:
+        return Colors.orange;
+      case AlertLevel.high:
+        return Colors.red.shade600;
+      case AlertLevel.critical:
+        return Colors.red.shade800;
+    }
+  }
+
+  IconData _getAlertLevelIcon(AlertLevel level) {
+    switch (level) {
+      case AlertLevel.low:
+        return Icons.info_outline;
+      case AlertLevel.medium:
+        return Icons.warning_amber_outlined;
+      case AlertLevel.high:
+        return Icons.error_outline;
+      case AlertLevel.critical:
+        return Icons.dangerous_outlined;
+    }
+  }
+
+  /// Get date range for timestamp analysis based on current selection
+  (DateTime, DateTime) _getDateRangeForAnalysis() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    
+    switch (_dateRange) {
+      case 'today':
+        return (today, now);
+      case 'week':
+        final weekStart = today.subtract(Duration(days: 6));
+        return (weekStart, now);
+      case '2weeks':
+        final twoWeeksStart = today.subtract(Duration(days: 13));
+        return (twoWeeksStart, now);
+      case 'month':
+        final monthStart = today.subtract(Duration(days: 29));
+        return (monthStart, now);
+      case 'custom':
+        final startDate = _customStartDate ?? today;
+        final endDate = _customEndDate ?? now;
+        return (startDate, endDate);
+      default:
+        return (today, now);
+    }
   }
 }

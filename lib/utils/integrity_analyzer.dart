@@ -25,33 +25,44 @@ class IntegrityAnalyzer {
     required List<Server> allServers,
     required Map<String, int> allServerCounts,
     required DateTime analysisTime,
+    List<DateTime>? individualTimestamps, // NEW: Optional timestamp data for enhanced analysis
   }) {
     double riskScore = 0.0;
     List<String> riskFactors = [];
     List<Alert> alerts = [];
 
-    // 1. TEMPORAL ANOMALY ANALYSIS (25% weight)
+    // 1. TEMPORAL ANOMALY ANALYSIS (20% weight - reduced to make room for timestamp analysis)
     final temporalScore = _analyzeTemporalPatterns(clickBins, riskFactors);
-    riskScore += temporalScore * 0.25;
+    riskScore += temporalScore * 0.20;
 
-    // 2. VOLUME ANOMALY ANALYSIS (30% weight)
+    // 2. VOLUME ANOMALY ANALYSIS (25% weight)
     final volumeScore = _analyzeVolumeAnomalies(
       clickBins, totalRuns, allServerCounts.values.toList(), riskFactors
     );
-    riskScore += volumeScore * 0.30;
+    riskScore += volumeScore * 0.25;
 
-    // 3. PATTERN IRREGULARITY ANALYSIS (25% weight)
+    // 3. PATTERN IRREGULARITY ANALYSIS (20% weight)
     final patternScore = _analyzePatternIrregularities(clickBins, riskFactors);
-    riskScore += patternScore * 0.25;
+    riskScore += patternScore * 0.20;
 
-    // 4. PEER COMPARISON ANALYSIS (20% weight)
+    // 4. PEER COMPARISON ANALYSIS (15% weight)
     final peerScore = _analyzePeerComparison(
       totalRuns, allServerCounts, serverId, riskFactors
     );
-    riskScore += peerScore * 0.20;
+    riskScore += peerScore * 0.15;
 
-    // Generate alerts based on findings
-    alerts.addAll(_generateAlerts(serverId, serverName, clickBins, totalRuns, riskScore));
+    // 5. TIMESTAMP-BASED ANALYSIS (20% weight) - NEW ENHANCED ANALYSIS
+    if (individualTimestamps != null && individualTimestamps.isNotEmpty) {
+      final timestampScore = TimestampIntegrityAnalyzer.calculateTimestampRiskScore(individualTimestamps);
+      riskScore += timestampScore * 0.20;
+      
+      // Add timestamp-based risk factors
+      final timestampRiskFactors = TimestampIntegrityAnalyzer.generateTimestampRiskFactors(individualTimestamps);
+      riskFactors.addAll(timestampRiskFactors);
+    }
+
+    // Generate alerts based on findings (including timestamp alerts)
+    alerts.addAll(_generateAlerts(serverId, serverName, clickBins, totalRuns, riskScore, individualTimestamps));
 
     return IntegrityAssessment(
       serverId: serverId,
@@ -286,9 +297,100 @@ class IntegrityAnalyzer {
     String serverName,
     Map<String, int> clickBins,
     int totalRuns,
-    double riskScore
+    double riskScore,
+    List<DateTime>? individualTimestamps
   ) {
     List<Alert> alerts = [];
+    
+    // Timestamp-based analysis (when available)
+    if (individualTimestamps != null && individualTimestamps.isNotEmpty) {
+      // Analyze timing patterns
+      final velocityRisk = TimestampIntegrityAnalyzer.analyzeClickVelocity(individualTimestamps);
+      final microBursts = TimestampIntegrityAnalyzer.detectMicroBursts(individualTimestamps);
+      final mechanicalSignature = TimestampIntegrityAnalyzer.analyzeMechanicalConsistency(individualTimestamps);
+      final proportionalAnalysis = TimestampIntegrityAnalyzer.analyzeClickProportions(individualTimestamps);
+      
+      // Proportional abuse detection (CRITICAL - catches dishonest multi-clicking)
+      if (proportionalAnalysis.suspiciousProportions) {
+        if (proportionalAnalysis.riskScore > 75.0) {
+          alerts.add(Alert(
+            level: AlertLevel.critical,
+            title: 'Excessive Multi-Click Abuse',
+            message: '$serverName shows disproportionate multi-clicking: ${proportionalAnalysis.description} (${proportionalAnalysis.riskAssessment})',
+            serverId: serverId,
+            timestamp: DateTime.now(),
+          ));
+        } else if (proportionalAnalysis.riskScore > 50.0) {
+          alerts.add(Alert(
+            level: AlertLevel.high,
+            title: 'Suspicious Multi-Click Frequency',
+            message: '$serverName has abnormal multi-click patterns: ${proportionalAnalysis.description}',
+            serverId: serverId,
+            timestamp: DateTime.now(),
+          ));
+        } else {
+          alerts.add(Alert(
+            level: AlertLevel.medium,
+            title: 'Elevated Multi-Click Activity',
+            message: '$serverName shows higher than normal multi-click frequency: ${proportionalAnalysis.description}',
+            serverId: serverId,
+            timestamp: DateTime.now(),
+          ));
+        }
+      }
+      
+      // Mechanical pattern alerts
+      final mechanicalRisk = mechanicalSignature.isMechanical ? 95.0 : 
+                            mechanicalSignature.isSuspicious ? 70.0 : 20.0;
+      if (mechanicalRisk > 80.0) {
+        alerts.add(Alert(
+          level: AlertLevel.critical,
+          title: 'Mechanical Click Pattern Detected',
+          message: '$serverName shows highly regular timing (CV: ${(mechanicalSignature.coefficientOfVariation * 100).toStringAsFixed(1)}%)',
+          serverId: serverId,
+          timestamp: DateTime.now(),
+        ));
+      }
+      
+      // Micro-burst alerts with context awareness
+      if (microBursts.isNotEmpty) {
+        final extremeBursts = microBursts.where((b) => b.isExtreme).length;
+        final impossibleSpeedBursts = microBursts.where((b) => b.isImpossibleSpeed).length;
+        final suspiciousBursts = microBursts.where((b) => b.isSuspicious && !b.isExtreme).length;
+        
+        // Critical: Impossible speed or 5+ click bursts
+        if (impossibleSpeedBursts > 0 || extremeBursts > 1) { // Multiple extreme bursts = clear abuse
+          alerts.add(Alert(
+            level: AlertLevel.critical,
+            title: 'Automation/Script Detection',
+            message: '$serverName shows patterns impossible for human users (${extremeBursts} extreme bursts, ${impossibleSpeedBursts} impossible speeds)',
+            serverId: serverId,
+            timestamp: DateTime.now(),
+          ));
+        }
+        // High: Repeated 4-click patterns (suspicious but not impossible)
+        else if (suspiciousBursts > 3) { // Allow some 4-click incidents
+          alerts.add(Alert(
+            level: AlertLevel.high,
+            title: 'Repeated Rapid Click Patterns',
+            message: '$serverName has $suspiciousBursts instances of 4+ rapid clicks (beyond normal 2-3 item runs)',
+            serverId: serverId,
+            timestamp: DateTime.now(),
+          ));
+        }
+      }
+      
+      // Velocity alerts - only for significant abuse patterns
+      if (velocityRisk > 50.0) { // Raised threshold since we're more context-aware
+        alerts.add(Alert(
+          level: AlertLevel.medium,
+          title: 'Sustained Abuse Pattern',
+          message: '$serverName shows repeated patterns exceeding normal 2-3 item runs (${velocityRisk.toStringAsFixed(1)}% pattern risk)',
+          serverId: serverId,
+          timestamp: DateTime.now(),
+        ));
+      }
+    }
     
     // Critical alerts
     if ((clickBins['4+'] ?? 0) > 0) {
@@ -713,5 +815,522 @@ class Alert {
       case AlertLevel.critical:
         return Icons.dangerous_outlined;
     }
+  }
+}
+
+// Enhanced timestamp-based analysis data structures
+class MicroBurst {
+  final DateTime startTime;
+  final int clickCount;
+  final int durationMs;
+  final double velocity; // clicks per second
+
+  MicroBurst({
+    required this.startTime,
+    required this.clickCount,
+    required this.durationMs,
+  }) : velocity = durationMs > 0 ? (clickCount * 1000.0) / durationMs : 0.0;
+
+  // Context-aware detection based on legitimate vs suspicious patterns
+  bool get isLegitimate => clickCount <= 3; // 2-3 clicks is normal multi-item run
+  bool get isSuspicious => clickCount >= 4 && clickCount < 5; // 4 clicks starts being suspicious
+  bool get isExtreme => clickCount >= 5; // 5+ clicks is highly suspicious
+  bool get isImpossibleSpeed => velocity > 20.0; // Beyond human capability
+}
+
+class TimingSignature {
+  final double meanInterval;
+  final double stdDeviation;
+  final double coefficientOfVariation;
+  final List<int> intervals;
+
+  TimingSignature({
+    required this.meanInterval,
+    required this.stdDeviation,
+    required this.coefficientOfVariation,
+    required this.intervals,
+  });
+
+  bool get isMechanical => coefficientOfVariation < 0.05; // <5% variation is mechanical
+  bool get isSuspicious => coefficientOfVariation < 0.10; // <10% variation is suspicious
+  bool get isHuman => coefficientOfVariation > 0.15; // >15% variation is typical human
+}
+
+class ClickSession {
+  final DateTime startTime;
+  final DateTime endTime;
+  final int clickCount;
+  final Duration duration;
+
+  ClickSession({
+    required this.startTime,
+    required this.endTime,
+    required this.clickCount,
+  }) : duration = endTime.difference(startTime);
+
+  double get averageClickRate => duration.inSeconds > 0 ? clickCount / duration.inSeconds : 0.0;
+  bool get isSuspiciouslyLong => duration > Duration(hours: 2);
+  bool get isSuspiciouslyIntense => averageClickRate > 8.0; // >8 clicks/second sustained
+}
+
+class ClickEvent {
+  final DateTime startTime;
+  final int clickCount;
+
+  ClickEvent({
+    required this.startTime,
+    required this.clickCount,
+  });
+
+  bool get isLegitimate => clickCount <= 3; // 1-3 clicks per event is legitimate
+  bool get isSuspicious => clickCount >= 4; // 4+ clicks per event is suspicious
+}
+
+class ProportionalAnalysis {
+  final int singleClickEvents;
+  final int multiClickEvents;
+  final int totalEvents;
+  final double multiClickRatio;
+  final double averageClicksPerEvent;
+  final bool suspiciousProportions;
+  final double riskScore;
+
+  ProportionalAnalysis({
+    required this.singleClickEvents,
+    required this.multiClickEvents,
+    required this.totalEvents,
+    required this.multiClickRatio,
+    required this.averageClicksPerEvent,
+    required this.suspiciousProportions,
+    required this.riskScore,
+  });
+
+  String get description {
+    return '${multiClickEvents}/${totalEvents} events are multi-click (${(multiClickRatio * 100).toStringAsFixed(1)}%)';
+  }
+
+  String get riskAssessment {
+    if (riskScore > 75) return 'Extreme abuse pattern';
+    if (riskScore > 50) return 'Highly suspicious proportions';
+    if (riskScore > 25) return 'Concerning frequency';
+    return 'Normal patterns';
+  }
+}
+
+/// Enhanced integrity analyzer using individual click timestamps
+class TimestampIntegrityAnalyzer {
+  // Legitimate multi-item run thresholds (2-3 items is normal)
+  static const double LEGITIMATE_MULTI_CLICK_VELOCITY = 5.0; // 2-3 clicks in ~500ms is normal
+  static const double SUSPICIOUS_VELOCITY = 8.0; // 4+ rapid clicks starts being suspicious
+  static const double EXTREME_VELOCITY = 12.0; // 5+ extremely rapid clicks is a red flag
+  
+  // Pattern analysis constants
+  static const double HUMAN_MIN_VARIATION = 0.15; // 15% coefficient of variation
+  static const double SUSPICIOUS_VARIATION = 0.08; // 8% (tightened from 10%)
+  static const double MECHANICAL_VARIATION = 0.04; // 4% (tightened from 5%)
+  
+  // Context thresholds for legitimate behavior
+  static const int LEGITIMATE_BURST_SIZE = 3; // 2-3 clicks is normal
+  static const int SUSPICIOUS_BURST_SIZE = 4; // 4+ clicks starts being suspicious
+  static const int EXTREME_BURST_SIZE = 5; // 5+ clicks is highly suspicious
+
+  /// Analyze click velocity patterns with context for legitimate multi-item runs
+  static double analyzeClickVelocity(List<DateTime> timestamps) {
+    if (timestamps.length < 4) return 0.0; // Need 4+ clicks to be suspicious
+    
+    double maxVelocity = 0.0;
+    int suspiciousBurstCount = 0;
+    int extremeBurstCount = 0;
+    List<double> allVelocities = [];
+    
+    // Analyze intervals between consecutive clicks
+    for (int i = 1; i < timestamps.length; i++) {
+      final intervalMs = timestamps[i].difference(timestamps[i-1]).inMilliseconds;
+      if (intervalMs > 0) {
+        final velocity = 1000.0 / intervalMs; // clicks per second
+        maxVelocity = math.max(maxVelocity, velocity);
+        allVelocities.add(velocity);
+      }
+    }
+    
+    // Analyze patterns in context - look for sustained abuse, not isolated multi-item runs
+    for (int i = 0; i < allVelocities.length - 2; i++) {
+      // Check for sequences of 3+ rapid clicks
+      bool isSustainedRapid = true;
+      for (int j = i; j < math.min(i + 3, allVelocities.length); j++) {
+        if (allVelocities[j] < SUSPICIOUS_VELOCITY) {
+          isSustainedRapid = false;
+          break;
+        }
+      }
+      
+      if (isSustainedRapid) {
+        // Check if it's extreme (5+ clicks) vs just suspicious (4 clicks)
+        bool isExtreme = true;
+        for (int j = i; j < math.min(i + 4, allVelocities.length); j++) {
+          if (allVelocities[j] < EXTREME_VELOCITY) {
+            isExtreme = false;
+            break;
+          }
+        }
+        
+        if (isExtreme) {
+          extremeBurstCount++;
+        } else {
+          suspiciousBurstCount++;
+        }
+      }
+    }
+    
+    // Risk scoring focuses on patterns, not isolated incidents
+    double riskScore = 0.0;
+    
+    // Extreme patterns (5+ rapid clicks sustained) = major red flag
+    if (extremeBurstCount > 0) {
+      riskScore += extremeBurstCount * 40.0; // Heavy penalty for clear abuse
+    }
+    
+    // Suspicious patterns (4 rapid clicks) = moderate concern
+    if (suspiciousBurstCount > 2) { // Only flag if it happens repeatedly
+      riskScore += (suspiciousBurstCount - 2) * 15.0; // Allow some legitimate incidents
+    }
+    
+    // Single max velocity check for truly extreme speeds (automation)
+    if (maxVelocity > 20.0) { // Impossible human speed
+      riskScore += 60.0;
+    }
+    
+    return math.min(100.0, riskScore);
+  }
+
+  /// Detect micro-bursts of rapid successive clicks with context awareness
+  static List<MicroBurst> detectMicroBursts(List<DateTime> timestamps) {
+    if (timestamps.length < SUSPICIOUS_BURST_SIZE) return []; // Need 4+ clicks to be suspicious
+    
+    List<MicroBurst> bursts = [];
+    
+    // Look for clusters of 4+ clicks within 1 second (suspicious)
+    // or 5+ clicks within 2 seconds (extreme)
+    for (int i = 0; i < timestamps.length - (SUSPICIOUS_BURST_SIZE - 1); i++) {
+      int burstCount = 1;
+      DateTime burstStart = timestamps[i];
+      int lastIndex = i;
+      
+      for (int j = i + 1; j < timestamps.length; j++) {
+        final duration = timestamps[j].difference(burstStart).inMilliseconds;
+        
+        // Different time windows based on burst size
+        int maxDuration = burstCount >= EXTREME_BURST_SIZE ? 2000 : 1000; // 2s for 5+, 1s for 4
+        
+        if (duration <= maxDuration) {
+          burstCount++;
+          lastIndex = j;
+        } else {
+          break;
+        }
+      }
+      
+      // Only flag bursts of 4+ clicks (suspicious) or 5+ clicks (extreme)
+      if (burstCount >= SUSPICIOUS_BURST_SIZE) {
+        final burstDuration = timestamps[lastIndex].difference(burstStart).inMilliseconds;
+        bursts.add(MicroBurst(
+          startTime: burstStart,
+          clickCount: burstCount,
+          durationMs: burstDuration,
+        ));
+        
+        // Skip ahead to avoid overlapping bursts
+        i = lastIndex;
+      }
+    }
+    
+    return bursts;
+  }
+
+  /// Analyze mechanical consistency in timing patterns
+  static TimingSignature analyzeMechanicalConsistency(List<DateTime> timestamps) {
+    if (timestamps.length < 3) {
+      return TimingSignature(
+        meanInterval: 0.0,
+        stdDeviation: 0.0,
+        coefficientOfVariation: 1.0, // High variation = human-like
+        intervals: [],
+      );
+    }
+    
+    // Calculate intervals between consecutive clicks
+    List<int> intervals = [];
+    for (int i = 1; i < timestamps.length; i++) {
+      final interval = timestamps[i].difference(timestamps[i-1]).inMilliseconds;
+      if (interval > 0 && interval < 10000) { // Ignore intervals >10 seconds
+        intervals.add(interval);
+      }
+    }
+    
+    if (intervals.isEmpty) {
+      return TimingSignature(
+        meanInterval: 0.0,
+        stdDeviation: 0.0,
+        coefficientOfVariation: 1.0,
+        intervals: [],
+      );
+    }
+    
+    // Calculate statistical measures
+    final mean = intervals.reduce((a, b) => a + b) / intervals.length;
+    final variance = intervals.map((x) => math.pow(x - mean, 2)).reduce((a, b) => a + b) / intervals.length;
+    final stdDev = math.sqrt(variance);
+    final coeffVar = mean > 0 ? stdDev / mean : 1.0;
+    
+    return TimingSignature(
+      meanInterval: mean,
+      stdDeviation: stdDev,
+      coefficientOfVariation: coeffVar,
+      intervals: intervals,
+    );
+  }
+
+  /// Detect click sessions with precise timing boundaries
+  static List<ClickSession> detectClickSessions(List<DateTime> timestamps, {Duration sessionGap = const Duration(minutes: 5)}) {
+    if (timestamps.isEmpty) return [];
+    
+    List<ClickSession> sessions = [];
+    DateTime sessionStart = timestamps.first;
+    DateTime sessionEnd = timestamps.first;
+    int clickCount = 1;
+    
+    for (int i = 1; i < timestamps.length; i++) {
+      final gap = timestamps[i].difference(sessionEnd);
+      
+      if (gap <= sessionGap) {
+        // Continue current session
+        sessionEnd = timestamps[i];
+        clickCount++;
+      } else {
+        // End current session and start new one
+        sessions.add(ClickSession(
+          startTime: sessionStart,
+          endTime: sessionEnd,
+          clickCount: clickCount,
+        ));
+        
+        sessionStart = timestamps[i];
+        sessionEnd = timestamps[i];
+        clickCount = 1;
+      }
+    }
+    
+    // Add final session
+    sessions.add(ClickSession(
+      startTime: sessionStart,
+      endTime: sessionEnd,
+      clickCount: clickCount,
+    ));
+    
+    return sessions;
+  }
+
+  /// Calculate comprehensive timestamp-based risk score
+  static double calculateTimestampRiskScore(List<DateTime> timestamps) {
+    if (timestamps.length < 2) return 0.0;
+    
+    double totalRisk = 0.0;
+    
+    // 1. Velocity analysis (30% weight)
+    final velocityRisk = analyzeClickVelocity(timestamps);
+    totalRisk += velocityRisk * 0.30;
+    
+    // 2. Mechanical consistency analysis (25% weight)
+    final timingSignature = analyzeMechanicalConsistency(timestamps);
+    double mechanicalRisk = 0.0;
+    if (timingSignature.isMechanical) {
+      mechanicalRisk = 80.0;
+    } else if (timingSignature.isSuspicious) {
+      mechanicalRisk = 40.0;
+    }
+    totalRisk += mechanicalRisk * 0.25;
+    
+    // 3. Micro-burst analysis (25% weight)
+    final microBursts = detectMicroBursts(timestamps);
+    double burstRisk = 0.0;
+    for (final burst in microBursts) {
+      if (burst.isExtreme) {
+        burstRisk += 30.0;
+      } else if (burst.isSuspicious) {
+        burstRisk += 15.0;
+      }
+    }
+    totalRisk += math.min(100.0, burstRisk) * 0.25;
+    
+    // 4. Session analysis (15% weight)
+    final sessions = detectClickSessions(timestamps);
+    double sessionRisk = 0.0;
+    for (final session in sessions) {
+      if (session.isSuspiciouslyIntense) {
+        sessionRisk += 20.0;
+      }
+      if (session.isSuspiciouslyLong) {
+        sessionRisk += 15.0;
+      }
+    }
+    totalRisk += math.min(100.0, sessionRisk) * 0.15;
+    
+    // 5. Proportional analysis (20% weight) - CRITICAL for dishonest patterns
+    final proportionalAnalysis = analyzeClickProportions(timestamps);
+    totalRisk += proportionalAnalysis.riskScore * 0.20;
+    
+    return math.min(100.0, totalRisk);
+  }
+
+  /// Generate enhanced risk factors based on timestamp analysis
+  static List<String> generateTimestampRiskFactors(List<DateTime> timestamps) {
+    List<String> riskFactors = [];
+    
+    if (timestamps.length < 2) return riskFactors;
+    
+    // Velocity analysis
+    final velocityRisk = analyzeClickVelocity(timestamps);
+    if (velocityRisk > 60) {
+      // Calculate max velocity for specific message
+      double maxVelocity = 0.0;
+      for (int i = 1; i < timestamps.length; i++) {
+        final intervalMs = timestamps[i].difference(timestamps[i-1]).inMilliseconds;
+        if (intervalMs > 0) {
+          final velocity = 1000.0 / intervalMs;
+          maxVelocity = math.max(maxVelocity, velocity);
+        }
+      }
+      riskFactors.add("Inhuman click velocity detected: ${maxVelocity.toStringAsFixed(1)} clicks/second");
+    }
+    
+    // Mechanical consistency analysis
+    final timingSignature = analyzeMechanicalConsistency(timestamps);
+    if (timingSignature.isMechanical) {
+      riskFactors.add("Mechanical timing patterns: ${(timingSignature.coefficientOfVariation * 100).toStringAsFixed(1)}% variation coefficient");
+    } else if (timingSignature.isSuspicious) {
+      riskFactors.add("Suspiciously consistent timing: ${(timingSignature.coefficientOfVariation * 100).toStringAsFixed(1)}% variation");
+    }
+    
+    // Micro-burst analysis
+    final microBursts = detectMicroBursts(timestamps);
+    final suspiciousBursts = microBursts.where((b) => b.isSuspicious).toList();
+    if (suspiciousBursts.isNotEmpty) {
+      final worstBurst = suspiciousBursts.reduce((a, b) => a.velocity > b.velocity ? a : b);
+      riskFactors.add("Micro-burst detected: ${worstBurst.clickCount} clicks in ${worstBurst.durationMs}ms (${worstBurst.velocity.toStringAsFixed(1)} clicks/sec)");
+    }
+    
+    // Session analysis
+    final sessions = detectClickSessions(timestamps);
+    final intenseSessions = sessions.where((s) => s.isSuspiciouslyIntense).toList();
+    if (intenseSessions.isNotEmpty) {
+      final mostIntense = intenseSessions.reduce((a, b) => a.averageClickRate > b.averageClickRate ? a : b);
+      riskFactors.add("Sustained high-intensity clicking: ${mostIntense.averageClickRate.toStringAsFixed(1)} clicks/sec for ${mostIntense.duration.inMinutes} minutes");
+    }
+    
+    // Proportional analysis - KEY for detecting dishonest multi-clicking
+    final proportionalAnalysis = analyzeClickProportions(timestamps);
+    if (proportionalAnalysis.suspiciousProportions) {
+      riskFactors.add("Disproportionate multi-clicking: ${proportionalAnalysis.description} - ${proportionalAnalysis.riskAssessment}");
+    }
+    
+    return riskFactors;
+  }
+
+  /// Analyze proportional patterns to detect disproportionate multi-clicking
+  static ProportionalAnalysis analyzeClickProportions(List<DateTime> timestamps) {
+    if (timestamps.length < 10) {
+      return ProportionalAnalysis(
+        singleClickEvents: 0,
+        multiClickEvents: 0,
+        totalEvents: 0,
+        multiClickRatio: 0.0,
+        averageClicksPerEvent: 0.0,
+        suspiciousProportions: false,
+        riskScore: 0.0,
+      );
+    }
+
+    // Group clicks into events (clicks within 2 seconds = same event)
+    List<ClickEvent> events = [];
+    DateTime? currentEventStart;
+    int currentEventClicks = 0;
+    
+    for (int i = 0; i < timestamps.length; i++) {
+      if (currentEventStart == null) {
+        // Start new event
+        currentEventStart = timestamps[i];
+        currentEventClicks = 1;
+      } else {
+        final timeSinceEventStart = timestamps[i].difference(currentEventStart).inMilliseconds;
+        
+        if (timeSinceEventStart <= 2000) { // Within 2 seconds = same event
+          currentEventClicks++;
+        } else {
+          // End current event, start new one
+          events.add(ClickEvent(
+            startTime: currentEventStart,
+            clickCount: currentEventClicks,
+          ));
+          currentEventStart = timestamps[i];
+          currentEventClicks = 1;
+        }
+      }
+    }
+    
+    // Add final event
+    if (currentEventStart != null) {
+      events.add(ClickEvent(
+        startTime: currentEventStart,
+        clickCount: currentEventClicks,
+      ));
+    }
+    
+    // Analyze proportions
+    final singleClickEvents = events.where((e) => e.clickCount == 1).length;
+    final multiClickEvents = events.where((e) => e.clickCount >= 2).length;
+    final totalEvents = events.length;
+    final multiClickRatio = totalEvents > 0 ? multiClickEvents / totalEvents : 0.0;
+    final averageClicksPerEvent = totalEvents > 0 ? timestamps.length / totalEvents : 0.0;
+    
+    // Determine if proportions are suspicious
+    double riskScore = 0.0;
+    bool suspiciousProportions = false;
+    
+    // Normal expectation: Most events should be single clicks
+    // Suspicious thresholds:
+    if (multiClickRatio > 0.60) { // >60% multi-click events is very suspicious
+      riskScore += 80.0;
+      suspiciousProportions = true;
+    } else if (multiClickRatio > 0.40) { // >40% multi-click events is suspicious
+      riskScore += 50.0;
+      suspiciousProportions = true;
+    } else if (multiClickRatio > 0.25) { // >25% multi-click events is concerning
+      riskScore += 25.0;
+    }
+    
+    // Check for excessive average clicks per event
+    if (averageClicksPerEvent > 2.5) { // Average >2.5 clicks per event
+      riskScore += 40.0;
+      suspiciousProportions = true;
+    } else if (averageClicksPerEvent > 2.0) { // Average >2.0 clicks per event
+      riskScore += 20.0;
+    }
+    
+    // Additional red flags for abuse patterns
+    final veryHighMultiClicks = events.where((e) => e.clickCount >= 4).length;
+    if (veryHighMultiClicks > totalEvents * 0.10) { // >10% of events are 4+ clicks
+      riskScore += 60.0;
+      suspiciousProportions = true;
+    }
+    
+    return ProportionalAnalysis(
+      singleClickEvents: singleClickEvents,
+      multiClickEvents: multiClickEvents,
+      totalEvents: totalEvents,
+      multiClickRatio: multiClickRatio,
+      averageClicksPerEvent: averageClicksPerEvent,
+      suspiciousProportions: suspiciousProportions,
+      riskScore: math.min(100.0, riskScore),
+    );
   }
 }
