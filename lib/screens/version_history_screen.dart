@@ -29,10 +29,33 @@ class VersionHistoryScreen extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           children: [
             _buildVersionCard(
-              version: "3.3.0+330",
+              version: "3.4.0+340",
               date: "September 12, 2025",
               status: "Latest Version",
               color: Colors.green,
+              changes: [
+                "📊 MAJOR: Enhanced Bulk Data Entry System with comprehensive date handling and conflict resolution",
+                "🎯 Advanced Date Range Processing: Fixed critical bug where user-selected dates were ignored, now respects _selectedStartDate/_selectedEndDate",
+                "🔄 Comprehensive Duplicate Prevention: Cancel/Merge/Overwrite options for overlapping date ranges with proactive conflict detection",
+                "⚠️ Real-Time Data Conflict Warnings: Proactive UI alerts when users attempt to enter potentially duplicate data",
+                "🌟 NPS Integration: Net Promoter Score (NPS) weighted at 30% in server performance calculations for customer satisfaction metrics",
+                "🕐 Timestamp-Enhanced Integrity Analysis: Individual click timestamps with detailed interval analysis and pattern recognition",
+                "⚡ Enhanced Click Pattern Detection: Advanced burst analysis, mechanical pattern detection, and coefficient of variation calculations",
+                "🎮 Boost System Improvements: Live countdown timers, enhanced UI feedback, and improved calculation display logic",
+                "🔧 Enhanced Storage Infrastructure: Improved date range utilities, overlap detection, and comprehensive data summary functions",
+                "📱 Modernized Birthday Picker: Removed year requirement and optimized layout for better user experience",
+                "🎯 Enhanced Shift Click Analysis: Detailed forensic analysis screen with individual click timestamps and performance metrics",
+                "🔒 Advanced Admin Security: Enhanced admin access through easter egg system with improved monitoring capabilities",
+                "🎨 UI/UX Refinements: Consistent styling improvements, better visual hierarchy, and enhanced accessibility throughout",
+                "📈 Release Production Ready: APK optimized for restaurant deployment with 76.1MB release build and 99% font optimization",
+                "🛡️ Enterprise-Grade Data Integrity: Comprehensive validation and protection against data corruption or manipulation",
+              ],
+            ),
+            _buildVersionCard(
+              version: "3.3.0+330",
+              date: "September 12, 2025",
+              status: "Archive Enhancement",
+              color: Colors.blue,
               changes: [
                 "🛡️ MAJOR: Complete Server Integrity & Monitoring System implementation with advanced pattern recognition",
                 "🔍 Advanced click analysis with 4-tier weighted risk scoring (Temporal 25%, Volume 30%, Pattern 25%, Peer 20%)",
@@ -248,29 +271,34 @@ class VersionHistoryScreen extends StatelessWidget {
         ],
         border: Border.all(color: color.withOpacity(0.3), width: 2),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [color.withOpacity(0.1), color.withOpacity(0.05)],
-              ),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(14),
-                topRight: Radius.circular(14),
-              ),
+      child: ExpansionTile(
+        tilePadding: EdgeInsets.zero,
+        childrenPadding: EdgeInsets.zero,
+        backgroundColor: Colors.transparent,
+        collapsedBackgroundColor: Colors.transparent,
+        iconColor: color,
+        collapsedIconColor: color.withOpacity(0.7),
+        initiallyExpanded: version.contains("3.4.0"), // Only expand the latest version by default
+        title: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [color.withOpacity(0.1), color.withOpacity(0.05)],
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(14),
+              topRight: Radius.circular(14),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
                       version,
                       style: TextStyle(
                         fontSize: 24,
@@ -278,35 +306,37 @@ class VersionHistoryScreen extends StatelessWidget {
                         color: color,
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: color,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        status,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      status,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  date,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey.shade600,
-                    fontWeight: FontWeight.w500,
                   ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                date,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey.shade600,
+                  fontWeight: FontWeight.w500,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
+        ),
+        children: [
           // Changes
           Padding(
             padding: const EdgeInsets.all(20),

@@ -1,7 +1,7 @@
 name: food_runs_counter
 description: BJ's food run tracker with day planning, gamification, and admin controls
 publish_to: "none"
-version: 1.3.0+130
+version: 3.4.0+340
 
 environment:
   sdk: ">=3.3.0 <4.0.0"

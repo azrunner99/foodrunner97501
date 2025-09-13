@@ -177,12 +177,19 @@ class AppFeaturesScreen extends StatelessWidget {
                 'Comprehensive Server Management: Add, edit, delete servers with profile data, statistics, and configuration management.',
                 'Server Archiving System: Archive/restore servers with dedicated archived servers screen and visual archive indicators.',
                 'Archive Management: Safely archive inactive servers while preserving all historical data and statistics.',
-                'Data Import/Export: Complete data backup and restore capabilities with JSON-based data structures and comprehensive ZIP file export functionality including photos.',
+                'Advanced Bulk Data Entry: Monthly business data entry system with comprehensive date range handling and conflict resolution.',
+                'Smart Date Range Processing: Intelligent handling of user-selected date ranges with proactive duplicate detection and prevention.',
+                'Data Conflict Resolution: Cancel/Merge/Overwrite options for overlapping date ranges with real-time conflict warnings.',
+                'Enhanced Backup System: Complete data backup and restore capabilities with JSON-based data structures and comprehensive ZIP file export functionality including photos.',
+                'Backup Export Functionality: File sharing and external storage export with both quick JSON and full ZIP backup options.',
+                'Enhanced Storage Infrastructure: Advanced date range utilities, overlap detection, and comprehensive data summary functions.',
                 'Settings Management: Granular control over all app features, timings, and behavioral configurations.',
                 'Shift Control Panel: Manual shift start/stop, pause/resume functionality with administrative override capabilities.',
                 'Server Integrity Monitoring: Built-in data validation and integrity checking with automated repair suggestions.',
                 'Bulk Operations: Mass server management, roster updates, and configuration changes for efficiency.',
                 'Administrative Logging: Detailed logging of administrative actions for audit trails and troubleshooting.',
+                'Birthday Management System: Modernized birthday picker with optimized layout and improved user experience.',
+                'Enhanced Admin Security: Improved admin access through easter egg system with advanced monitoring capabilities.',
               ],
             ),
 
@@ -244,17 +251,22 @@ class AppFeaturesScreen extends StatelessWidget {
                 'Advanced Pattern Recognition: AI-powered detection of suspicious clicking patterns with machine learning adaptation over time.',
                 'Multi-Dimensional Risk Assessment: 4-tier weighted scoring system analyzing temporal patterns (25%), volume metrics (30%), behavioral patterns (25%), and peer comparisons (20%).',
                 'Real-Time Integrity Dashboard: Live monitoring of all servers with risk scores, alerts, and detailed audit trails.',
+                'Timestamp-Enhanced Analysis: Individual click timestamp tracking with detailed interval analysis and forensic-level pattern recognition.',
                 'High-Speed Click Analysis: Detailed forensic analysis of rapid clicking instances with individual timestamp tracking and pattern visualization.',
                 'Statistical Outlier Detection: Z-score analysis for peer comparison and sophisticated anomaly detection with contextual intelligence.',
                 'Click Clustering Detection: Advanced burst analysis identifying mechanical patterns and coefficient of variation calculations.',
                 'Session Duration Analysis: Extended activity monitoring with trend analysis and predictive integrity analytics.',
                 'Volume Spike Detection: Sudden activity increase identification with historical context and baseline comparisons.',
+                'NPS-Weighted Performance Integration: Net Promoter Score influence (30% weight) in server performance calculations for customer satisfaction metrics.',
+                'Enhanced Click Pattern Detection: Advanced burst analysis, mechanical pattern detection, and coefficient of variation calculations with real-time processing.',
                 'Comprehensive Alert System: Pattern-specific alerts with customizable thresholds and automated notification management.',
                 'Audit Server Profiles: Professional integrity assessment reports with detailed analysis and risk factor breakdown.',
                 'Expandable Click Details: Forensic-level click analysis showing individual timestamps, intervals, and behavioral patterns.',
                 'Server Sorting & Filtering: Advanced dashboard with sorting by name, integrity score, or alert count for efficient monitoring.',
                 'Adaptive Intelligence: System becomes more accurate over time, learning individual server patterns and reducing false positives.',
                 'Data-Driven Baselines: Personalized integrity profiles that adapt to each server\'s unique operating style and efficiency patterns.',
+                'Interactive Alert Review: Expandable alert cards with detailed analysis and pattern-specific recommendations.',
+                'Bulk Data Integrity Protection: Advanced validation preventing duplicate data entry and ensuring historical data accuracy.',
               ],
             ),
 
@@ -291,7 +303,7 @@ class AppFeaturesScreen extends StatelessWidget {
                           );
                         },
                         child: Text(
-                          'Version: 3.2.0+320',
+                          'Version: 3.4.0+340',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -339,52 +351,57 @@ class AppFeaturesScreen extends StatelessWidget {
         ],
         border: Border.all(color: color.withOpacity(0.3), width: 2),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Category Header
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [color.withOpacity(0.1), color.withOpacity(0.05)],
-              ),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(14),
-                topRight: Radius.circular(14),
-              ),
+      child: ExpansionTile(
+        tilePadding: EdgeInsets.zero,
+        childrenPadding: EdgeInsets.zero,
+        backgroundColor: Colors.transparent,
+        collapsedBackgroundColor: Colors.transparent,
+        iconColor: color,
+        collapsedIconColor: color.withOpacity(0.7),
+        initiallyExpanded: title.contains("Core Shift Management"), // Only expand the first category by default
+        title: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [color.withOpacity(0.1), color.withOpacity(0.05)],
             ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: color,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    icon,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: color,
-                      height: 1.2,
-                    ),
-                    textAlign: TextAlign.left,
-                  ),
-                ),
-              ],
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(14),
+              topRight: Radius.circular(14),
             ),
           ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  icon,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                    height: 1.2,
+                  ),
+                  textAlign: TextAlign.left,
+                ),
+              ),
+            ],
+          ),
+        ),
+        children: [
           // Features List
           Padding(
             padding: const EdgeInsets.all(20),
