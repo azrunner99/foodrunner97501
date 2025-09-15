@@ -2,6 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'storage.dart';
 import 'app_state.dart';
+import 'providers/nps_provider.dart';
+import 'services/nps_filter_service.dart';
+import 'services/nps_notification_service.dart';
+import 'services/nps_benchmarking_service.dart';
+import 'services/nps_security_service.dart';
+import 'services/nps_encryption_service.dart';
+import 'services/nps_audit_service.dart';
+import 'services/nps_gdpr_compliance_service.dart';
 import 'screens/home_screen.dart';
 import 'screens/assign_servers_screen.dart';
 import 'screens/settings_screen.dart';
@@ -21,8 +29,37 @@ void main() async {
   await Storage.init();
   final appState = AppState();
   await appState.load();
-  runApp(ChangeNotifierProvider(
-    create: (_) => appState,
+  
+  // Initialize NPS services
+  final npsProvider = NPSProvider();
+  final npsFilterService = NPSFilterService();
+  final npsBenchmarkingService = NPSBenchmarkingService();
+  
+  // Initialize security services
+  final npsSecurityService = NPSSecurityService();
+  final npsEncryptionService = NPSEncryptionService();
+  final npsAuditService = NPSAuditService();
+  final npsGDPRService = NPSGDPRComplianceService();
+  
+  // Initialize all services
+  await npsBenchmarkingService.initialize();
+  npsSecurityService.initialize();
+  npsEncryptionService.initialize();
+  npsAuditService.initialize();
+  npsGDPRService.initialize();
+  
+  runApp(MultiProvider(
+    providers: [
+      ChangeNotifierProvider(create: (_) => appState),
+      ChangeNotifierProvider(create: (_) => npsProvider),
+      ChangeNotifierProvider(create: (_) => npsFilterService),
+      ChangeNotifierProvider(create: (_) => npsBenchmarkingService),
+      ChangeNotifierProvider(create: (_) => npsSecurityService),
+      ChangeNotifierProvider(create: (_) => npsEncryptionService),
+      ChangeNotifierProvider(create: (_) => npsAuditService),
+      ChangeNotifierProvider(create: (_) => npsGDPRService),
+      Provider<NPSNotificationService>(create: (_) => NPSNotificationService()),
+    ],
     child: const FoodRunsApp(),
   ));
 }
@@ -43,7 +80,7 @@ class FoodRunsApp extends StatelessWidget {
       routes: {
         '/': (_) => const HomeScreen(), // Restored: Normal home screen as default
         '/home': (_) => const HomeScreen(), // Actual home screen for back navigation
-        '/admin': (_) => CleanAdminScreen(),
+        '/admin': (_) => const CleanAdminScreen(),
         '/assign': (_) => AssignServersScreen(),
         '/settings': (_) => const SettingsScreen(),
         '/profiles': (_) => const ProfilesScreen(),

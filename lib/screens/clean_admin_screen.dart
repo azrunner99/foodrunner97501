@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../app_state.dart';
 import '../widgets/wallpaper_background.dart';
+import '../services/nps_security_service.dart';
 import 'manage_servers_screen.dart';
 import 'server_avatar_settings_screen.dart';
 import 'server_dashboard_screen.dart';
@@ -17,7 +18,7 @@ class CleanAdminScreen extends StatefulWidget {
 }
 
 class _CleanAdminScreenState extends State<CleanAdminScreen> {
-  bool _unlocked = true; // AUTO-UNLOCK FOR TESTING
+  bool _unlocked = false; // Require PIN entry
   final _pinCtrl = TextEditingController();
 
   @override
@@ -311,9 +312,28 @@ class _CleanAdminScreenState extends State<CleanAdminScreen> {
     );
   }
 
-  void _tryUnlock(AppState app) {
+  void _tryUnlock(AppState app) async {
     if (_pinCtrl.text == AppState.adminPin) {
-      setState(() => _unlocked = true);
+      // Authenticate with security service as admin
+      final securityService = context.read<NPSSecurityService>();
+      final success = await securityService.authenticateUser('admin', 'admin123');
+      
+      if (success) {
+        setState(() => _unlocked = true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Admin access granted'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Security authentication failed'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Wrong PIN')));
     }
