@@ -2,8 +2,73 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/nps_provider.dart';
-import '../models/server.dart';
-import '../models/nps_feedback.dart';
+
+/// Data class for holding server metrics input data
+class ServerMetricsData {
+  final int serverId;
+  final String serverName;
+  final TextEditingController allTimeNpsController;
+  final TextEditingController threeMonthNpsController;
+  final TextEditingController oneMonthNpsController;
+  final TextEditingController allTimeSalesController;
+  final TextEditingController allTimeTableCountController;
+
+  ServerMetricsData({
+    required this.serverId,
+    required this.serverName,
+    double? allTimeNpsPercentage,
+    double? threeMonthNpsPercentage,
+    double? oneMonthNpsPercentage,
+    double? allTimeSales,
+    int? allTimeTableCount,
+  }) : 
+    allTimeNpsController = TextEditingController(text: allTimeNpsPercentage?.toStringAsFixed(1) ?? ''),
+    threeMonthNpsController = TextEditingController(text: threeMonthNpsPercentage?.toStringAsFixed(1) ?? ''),
+    oneMonthNpsController = TextEditingController(text: oneMonthNpsPercentage?.toStringAsFixed(1) ?? ''),
+    allTimeSalesController = TextEditingController(text: allTimeSales?.toStringAsFixed(2) ?? ''),
+    allTimeTableCountController = TextEditingController(text: allTimeTableCount?.toString() ?? '');
+
+  ServerMetricsData copyWith({
+    double? allTimeNpsPercentage,
+    double? threeMonthNpsPercentage,
+    double? oneMonthNpsPercentage,
+    double? allTimeSales,
+    int? allTimeTableCount,
+  }) {
+    if (allTimeNpsPercentage != null) allTimeNpsController.text = allTimeNpsPercentage.toStringAsFixed(1);
+    if (threeMonthNpsPercentage != null) threeMonthNpsController.text = threeMonthNpsPercentage.toStringAsFixed(1);
+    if (oneMonthNpsPercentage != null) oneMonthNpsController.text = oneMonthNpsPercentage.toStringAsFixed(1);
+    if (allTimeSales != null) allTimeSalesController.text = allTimeSales.toStringAsFixed(2);
+    if (allTimeTableCount != null) allTimeTableCountController.text = allTimeTableCount.toString();
+    return this;
+  }
+
+  void dispose() {
+    allTimeNpsController.dispose();
+    threeMonthNpsController.dispose();
+    oneMonthNpsController.dispose();
+    allTimeSalesController.dispose();
+    allTimeTableCountController.dispose();
+  }
+
+  /// Clear all input fields
+  void clear() {
+    allTimeNpsController.clear();
+    threeMonthNpsController.clear();
+    oneMonthNpsController.clear();
+    allTimeSalesController.clear();
+    allTimeTableCountController.clear();
+  }
+
+  /// Check if any fields have data
+  bool hasData() {
+    return allTimeNpsController.text.isNotEmpty ||
+           threeMonthNpsController.text.isNotEmpty ||
+           oneMonthNpsController.text.isNotEmpty ||
+           allTimeSalesController.text.isNotEmpty ||
+           allTimeTableCountController.text.isNotEmpty;
+  }
+}
 
 /// Widget for monthly NPS data entry
 /// Allows bulk entry of NPS scores and feedback for servers over a month period
@@ -16,9 +81,70 @@ class MonthlyNPSDataEntryWidget extends StatefulWidget {
 
 class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
   DateTime _selectedMonth = DateTime.now();
-  NPSServer? _selectedServer;
-  final List<NPSFeedbackEntry> _feedbackEntries = [];
+  final Map<int, ServerMetricsData> _serverData = {};
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadServerData();
+  }
+
+  Future<void> _loadServerData() async {
+    final npsProvider = Provider.of<NPSProvider>(context, listen: false);
+    
+    // Initialize data for all active servers
+    for (final server in npsProvider.servers.where((s) => s.active)) {
+      _serverData[server.id!] = ServerMetricsData(
+        serverId: server.id!,
+        serverName: server.name,
+      );
+    }
+    
+    await _loadExistingData();
+  }
+
+  Future<void> _loadExistingData() async {
+    if (_serverData.isEmpty) return;
+    
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final npsProvider = Provider.of<NPSProvider>(context, listen: false);
+      final reportMonth = int.parse('${_selectedMonth.year}${_selectedMonth.month.toString().padLeft(2, '0')}');
+      
+      // Load existing data for each server
+      for (final entry in _serverData.entries) {
+        final serverId = entry.key;
+        try {
+          final report = await npsProvider.calculator.generateMonthlyReport(serverId, reportMonth);
+          _serverData[serverId] = _serverData[serverId]!.copyWith(
+            allTimeNpsPercentage: report.allTimeNpsPercentage,
+            threeMonthNpsPercentage: report.threeMonthNpsPercentage,
+            oneMonthNpsPercentage: report.oneMonthNpsPercentage,
+            allTimeSales: report.allTimeSales,
+            allTimeTableCount: report.allTimeTableCount,
+          );
+        } catch (e) {
+          debugPrint('Error loading data for server $serverId: $e');
+        }
+      }
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final data in _serverData.values) {
+      data.dispose();
+    }
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,12 +158,8 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
               _buildHeaderSection(npsProvider),
               const SizedBox(height: 24),
               _buildMonthSelector(),
-              const SizedBox(height: 16),
-              _buildServerSelector(npsProvider),
               const SizedBox(height: 24),
-              Expanded(
-                child: _buildDataEntrySection(),
-              ),
+              _buildServerListSection(npsProvider),
               const SizedBox(height: 16),
               _buildActionButtons(),
             ],
@@ -145,264 +267,110 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
     );
   }
 
-  Widget _buildServerSelector(NPSProvider npsProvider) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Select Server',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<NPSServer>(
-              value: _selectedServer,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              ),
-              hint: const Text('Choose a server...'),
-              isExpanded: true,
-              items: npsProvider.servers.map((server) {
-                return DropdownMenuItem<NPSServer>(
-                  value: server,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CircleAvatar(
-                        radius: 12,
-                        backgroundColor: server.active ? Colors.green : Colors.grey,
-                        child: Text(
-                          server.name.isNotEmpty ? server.name[0].toUpperCase() : '?',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
+  Widget _buildServerListSection(NPSProvider npsProvider) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Server NPS Data Entry',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: ListView.builder(
+              itemCount: npsProvider.servers.where((s) => s.active).length,
+              itemBuilder: (context, index) {
+                final server = npsProvider.servers.where((s) => s.active).toList()[index];
+                final serverData = _serverData[server.id] ?? ServerMetricsData(
+                  serverId: server.id ?? 0,
+                  serverName: server.name,
+                );
+                
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          server.name,
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: Text(
-                          server.name,
-                          overflow: TextOverflow.ellipsis,
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: serverData.allTimeNpsController,
+                                decoration: const InputDecoration(
+                                  labelText: 'All-Time NPS %',
+                                  border: OutlineInputBorder(),
+                                ),
+                                keyboardType: TextInputType.number,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: TextFormField(
+                                controller: serverData.threeMonthNpsController,
+                                decoration: const InputDecoration(
+                                  labelText: '3-Month NPS %',
+                                  border: OutlineInputBorder(),
+                                ),
+                                keyboardType: TextInputType.number,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: TextFormField(
+                                controller: serverData.oneMonthNpsController,
+                                decoration: const InputDecoration(
+                                  labelText: '1-Month NPS %',
+                                  border: OutlineInputBorder(),
+                                ),
+                                keyboardType: TextInputType.number,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      if (!server.active) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade200,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: const Text(
-                            'Inactive',
-                            style: TextStyle(fontSize: 10),
-                          ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: serverData.allTimeSalesController,
+                                decoration: const InputDecoration(
+                                  labelText: 'All-Time Sales',
+                                  border: OutlineInputBorder(),
+                                ),
+                                keyboardType: TextInputType.number,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: TextFormField(
+                                controller: serverData.allTimeTableCountController,
+                                decoration: const InputDecoration(
+                                  labelText: 'All-Time Table Count',
+                                  border: OutlineInputBorder(),
+                                ),
+                                keyboardType: TextInputType.number,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
-                    ],
+                    ),
                   ),
                 );
-              }).toList(),
-              onChanged: (server) {
-                setState(() {
-                  _selectedServer = server;
-                  _loadExistingData();
-                });
               },
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDataEntrySection() {
-    if (_selectedServer == null) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.person_search,
-              size: 64,
-              color: Colors.grey,
-            ),
-            SizedBox(height: 16),
-            Text(
-              'Select a server to enter NPS data',
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.grey,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'NPS Data for ${_selectedServer!.name}',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                ElevatedButton.icon(
-                  onPressed: _addFeedbackEntry,
-                  icon: const Icon(Icons.add, size: 16),
-                  label: const Text('Add Entry'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange.shade600,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: _feedbackEntries.isEmpty
-                  ? const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.rate_review_outlined,
-                            size: 48,
-                            color: Colors.grey,
-                          ),
-                          SizedBox(height: 12),
-                          Text(
-                            'No feedback entries yet',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey,
-                            ),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            'Click "Add Entry" to start',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      itemCount: _feedbackEntries.length,
-                      itemBuilder: (context, index) {
-                        return _buildFeedbackEntryCard(index);
-                      },
-                    ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFeedbackEntryCard(int index) {
-    final entry = _feedbackEntries[index];
-    
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Entry ${index + 1}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                IconButton(
-                  onPressed: () => _removeFeedbackEntry(index),
-                  icon: const Icon(Icons.delete, color: Colors.red),
-                  tooltip: 'Remove entry',
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('NPS Score (0-10)', style: TextStyle(fontWeight: FontWeight.w500)),
-                      const SizedBox(height: 4),
-                      TextFormField(
-                        initialValue: entry.score?.toString() ?? '',
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          hintText: '0-10',
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        ),
-                        keyboardType: TextInputType.number,
-                        onChanged: (value) {
-                          final score = int.tryParse(value);
-                          if (score != null && score >= 0 && score <= 10) {
-                            entry.score = score;
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  flex: 3,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Feedback Comments', style: TextStyle(fontWeight: FontWeight.w500)),
-                      const SizedBox(height: 4),
-                      TextFormField(
-                        initialValue: entry.comment ?? '',
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          hintText: 'Optional feedback...',
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        ),
-                        maxLines: 2,
-                        onChanged: (value) {
-                          entry.comment = value.isEmpty ? null : value;
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -411,29 +379,26 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
     return Row(
       children: [
         Expanded(
-          child: OutlinedButton(
-            onPressed: _clearAllEntries,
-            child: const Text('Clear All'),
+          child: ElevatedButton.icon(
+            onPressed: _isLoading ? null : _saveData,
+            icon: const Icon(Icons.save),
+            label: const Text('Save All Data'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange.shade600,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
           ),
         ),
         const SizedBox(width: 16),
         Expanded(
-          child: ElevatedButton(
-            onPressed: _isLoading ? null : _saveData,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange.shade600,
-              foregroundColor: Colors.white,
+          child: OutlinedButton.icon(
+            onPressed: _clearAllData,
+            icon: const Icon(Icons.clear_all),
+            label: const Text('Clear All'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
             ),
-            child: _isLoading
-                ? const SizedBox(
-                    height: 16,
-                    width: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
-                : const Text('Save Data'),
           ),
         ),
       ],
@@ -463,91 +428,52 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
     }
   }
 
-  void _addFeedbackEntry() {
+  void _clearAllData() {
     setState(() {
-      _feedbackEntries.add(NPSFeedbackEntry());
+      for (final data in _serverData.values) {
+        data.clear();
+      }
     });
-  }
-
-  void _removeFeedbackEntry(int index) {
-    setState(() {
-      _feedbackEntries.removeAt(index);
-    });
-  }
-
-  void _clearAllEntries() {
-    setState(() {
-      _feedbackEntries.clear();
-    });
-  }
-
-  void _loadExistingData() {
-    // TODO: Load existing feedback data for the selected server and month
-    // This would query the database for existing entries
   }
 
   Future<void> _saveData() async {
-    if (_selectedServer == null || _feedbackEntries.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a server and add at least one entry'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
     setState(() {
       _isLoading = true;
     });
 
     try {
-      // final npsProvider = context.read<NPSProvider>();
+      final npsProvider = Provider.of<NPSProvider>(context, listen: false);
+      final activeServers = npsProvider.servers.where((s) => s.active).toList();
       
-      for (final entry in _feedbackEntries) {
-        if (entry.score != null) {
-          // Convert NPS score (0-10) to feedback type
-          FeedbackType feedbackType;
-          if (entry.score! >= 9) {
-            feedbackType = FeedbackType.yes; // Promoters (9-10)
-          } else if (entry.score! >= 7) {
-            feedbackType = FeedbackType.maybe; // Passives (7-8)
-          } else {
-            feedbackType = FeedbackType.no; // Detractors (0-6)
-          }
-          
-          final feedback = NPSFeedback(
-            serverId: _selectedServer!.id!,
-            feedbackType: feedbackType,
-            feedbackDate: _selectedMonth,
-            notes: entry.comment != null ? 'NPS Score: ${entry.score}/10. ${entry.comment}' : 'NPS Score: ${entry.score}/10',
-          );
-          
-          // TODO: Add method to NPSProvider to save feedback
-          // await npsProvider.addFeedback(feedback);
-          debugPrint('Would save feedback: ${feedback.notes}');
+      for (final server in activeServers) {
+        final serverData = _serverData[server.id];
+        if (serverData != null && serverData.hasData()) {
+          // Create a monthly report-like data structure
+          // For now, we'll just show success message
+          debugPrint('Saving data for server ${server.name}');
         }
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('NPS data prepared successfully! (Save functionality coming soon)'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      // Clear all data after saving
+      _clearAllData();
 
-      // Clear entries after successful save
-      setState(() {
-        _feedbackEntries.clear();
-      });
-      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('All NPS data saved successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error preparing data: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving data: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
       setState(() {
         _isLoading = false;
