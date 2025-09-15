@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/nps_provider.dart';
+import '../models/monthly_report.dart';
 
 /// Data class for holding server metrics input data
 class ServerMetricsData {
@@ -445,12 +446,33 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
       final npsProvider = Provider.of<NPSProvider>(context, listen: false);
       final activeServers = npsProvider.servers.where((s) => s.active).toList();
       
+      int savedCount = 0;
+      
       for (final server in activeServers) {
         final serverData = _serverData[server.id];
         if (serverData != null && serverData.hasData()) {
-          // Create a monthly report-like data structure
-          // For now, we'll just show success message
-          debugPrint('Saving data for server ${server.name}');
+          // Create NPSMonthlyReport from the server data
+          final monthKey = _selectedMonth.year * 100 + _selectedMonth.month;
+          
+          final report = NPSMonthlyReport(
+            serverId: server.id ?? 0,
+            reportMonth: monthKey,
+            reportYear: _selectedMonth.year,
+            allTimeNpsPercentage: double.tryParse(serverData.allTimeNpsController.text),
+            threeMonthNpsPercentage: double.tryParse(serverData.threeMonthNpsController.text),
+            oneMonthNpsPercentage: double.tryParse(serverData.oneMonthNpsController.text),
+            allTimeSales: double.tryParse(serverData.allTimeSalesController.text) ?? 0.0,
+            allTimeTableCount: int.tryParse(serverData.allTimeTableCountController.text) ?? 0,
+            monthFeedback: FeedbackCounts(yes: 0, maybe: 0, no: 0), // Default empty counts
+            threeMonthFeedback: FeedbackCounts(yes: 0, maybe: 0, no: 0),
+            allTimeFeedback: FeedbackCounts(yes: 0, maybe: 0, no: 0),
+            dataAsOfDate: DateTime.now(),
+          );
+
+          // Save the report using the calculator
+          await npsProvider.calculator.saveMonthlyReport(report);
+          savedCount++;
+          debugPrint('✅ Saved NPS data for server ${server.name}');
         }
       }
 
@@ -459,13 +481,14 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('All NPS data saved successfully!'),
+          SnackBar(
+            content: Text('Successfully saved NPS data for $savedCount servers!'),
             backgroundColor: Colors.green,
           ),
         );
       }
     } catch (e) {
+      debugPrint('❌ Error saving NPS data: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
