@@ -5,7 +5,7 @@ import '../models.dart';
 import '../widgets/wallpaper_background.dart';
 import 'encouragement_options_screen.dart';
 import 'wallpaper_gallery_screen.dart';
-import 'admin_screen.dart';
+import 'clean_admin_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -230,7 +230,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => AdminScreen()),
+                    MaterialPageRoute(builder: (_) => const CleanAdminScreen()),
                   );
                 },
               ),
