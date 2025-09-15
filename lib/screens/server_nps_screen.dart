@@ -4,6 +4,8 @@ import '../providers/nps_provider.dart';
 import '../widgets/server_management_widget.dart';
 import '../widgets/feedback_entry_widget.dart';
 import '../widgets/enhanced_nps_analytics_widget.dart';
+import '../widgets/monthly_nps_data_entry_widget.dart';
+import '../app_state.dart';
 
 class ServerNPSScreen extends StatefulWidget {
   const ServerNPSScreen({super.key});
@@ -18,14 +20,15 @@ class _ServerNPSScreenState extends State<ServerNPSScreen> {
     super.initState();
     // Initialize the NPS Provider when the screen loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<NPSProvider>().initialize();
+      final appState = context.read<AppState>();
+      context.read<NPSProvider>().initialize(appState: appState);
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 4, // Changed from 3 to 4 tabs
       child: Scaffold(
         appBar: AppBar(
           title: Text(
@@ -50,17 +53,19 @@ class _ServerNPSScreenState extends State<ServerNPSScreen> {
               Tab(icon: Icon(Icons.dashboard), text: 'Analytics'),
               Tab(icon: Icon(Icons.dns), text: 'Servers'),
               Tab(icon: Icon(Icons.feedback), text: 'Feedback'),
+              Tab(icon: Icon(Icons.calendar_month), text: 'Monthly NPS Data Entry'),
             ],
             labelColor: Colors.orange.shade800,
             unselectedLabelColor: Colors.orange.shade400,
             indicatorColor: Colors.orange.shade600,
           ),
         ),
-        body: const TabBarView(
+        body: TabBarView(
           children: [
-            EnhancedNPSAnalyticsWidget(),
-            ServerManagementWidget(),
-            FeedbackEntryWidget(),
+            const EnhancedNPSAnalyticsWidget(),
+            const ServerManagementWidget(),
+            const FeedbackEntryWidget(),
+            MonthlyNPSDataEntryWidget(),
           ],
         ),
       ),

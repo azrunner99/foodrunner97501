@@ -4,6 +4,8 @@ import '../models/nps_feedback.dart';
 import '../models/monthly_report.dart';
 import '../storage/nps_database.dart';
 import '../utils/nps_calculator.dart';
+import '../app_state.dart';
+import '../models.dart' as main_models;
 
 /// Centralized state management for the NPS system
 /// Handles all server data, feedback processing, and report generation
@@ -33,9 +35,15 @@ class NPSProvider with ChangeNotifier {
   bool get hasError => _errorMessage != null;
   
   /// Initialize the provider and load initial data
-  Future<void> initialize() async {
+  /// Optionally sync servers from the main app's AppState
+  Future<void> initialize({AppState? appState}) async {
     _setLoading(true);
     try {
+      // Sync servers from main app if provided
+      if (appState != null) {
+        await _syncServersFromAppState(appState);
+      }
+      
       await _loadServers();
       await _loadRecentFeedback();
       await _generateCurrentReport();
@@ -45,6 +53,46 @@ class NPSProvider with ChangeNotifier {
       _setError('Failed to initialize NPS system: $e');
     } finally {
       _setLoading(false);
+    }
+  }
+
+  /// Sync servers from the main app's AppState to the NPS system
+  Future<void> _syncServersFromAppState(AppState appState) async {
+    try {
+      debugPrint('[NPSProvider] Starting server sync from AppState...');
+      debugPrint('[NPSProvider] Main app has ${appState.servers.length} servers');
+      
+      for (final mainServer in appState.servers) {
+        debugPrint('[NPSProvider] Processing server: ${mainServer.name}');
+        
+        // Check if server already exists in NPS system
+        final existingServerMaps = await _database.getAllServers();
+        debugPrint('[NPSProvider] NPS system has ${existingServerMaps.length} servers');
+        
+        final existingServer = existingServerMaps.firstWhere(
+          (serverMap) => serverMap['name'] == mainServer.name,
+          orElse: () => <String, dynamic>{},
+        );
+
+        if (existingServer.isEmpty) {
+          // Server doesn't exist in NPS system, add it
+          final serverMap = {
+            'name': mainServer.name,
+            'hire_date': (mainServer.hireDate ?? DateTime.now()).toIso8601String(),
+            'active': 1,
+            'created_at': DateTime.now().toIso8601String(),
+            'updated_at': DateTime.now().toIso8601String(),
+          };
+          
+          await _database.insertServer(serverMap);
+          debugPrint('[NPSProvider] ✅ Synced server: ${mainServer.name}');
+        } else {
+          debugPrint('[NPSProvider] ⏭️ Server already exists: ${mainServer.name}');
+        }
+      }
+      debugPrint('[NPSProvider] Server sync completed!');
+    } catch (e) {
+      debugPrint('[NPSProvider] ❌ Error syncing servers: $e');
     }
   }
   
