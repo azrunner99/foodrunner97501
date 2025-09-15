@@ -147,9 +147,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           if (open == null) return;
                           final close = await _pickTime(context, 'Set close time for ${d.label}', _hours.closeMinutes[d.weekday]!);
                           if (close == null) return;
+                          
+                          // Temporarily update hours to check transition conflicts
+                          final oldOpen = _hours.openMinutes[d.weekday]!;
+                          final oldClose = _hours.closeMinutes[d.weekday]!;
+                          _hours.openMinutes[d.weekday] = open;
+                          _hours.closeMinutes[d.weekday] = close;
+                          
+                          // Check if current transition times are still valid with new hours
+                          final conflicts = _validateTransitionTimes(_transitionStart, _transitionEnd);
+                          if (conflicts.isNotEmpty) {
+                            // Restore old values
+                            _hours.openMinutes[d.weekday] = oldOpen;
+                            _hours.closeMinutes[d.weekday] = oldClose;
+                            
+                            await _showTransitionConflictDialog([
+                              'Changing ${d.label} hours would create conflicts with current transition times:',
+                              ...conflicts,
+                            ]);
+                            return;
+                          }
+                          
                           setState(() {
-                            _hours.openMinutes[d.weekday] = open;
-                            _hours.closeMinutes[d.weekday] = close;
+                            // Hours already updated above for validation
                           });
                           app.setWeeklyHours(_hours);
                         },
@@ -174,13 +194,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _buildSettingsTile(
                       icon: Icons.swap_horiz,
                       title: 'Lunch to Dinner Transition',
-                      subtitle: 'Start ${_fmtMin(_transitionStart)} • End ${_fmtMin(_transitionEnd)}',
+                      subtitle: 'Start ${_fmtMin(_transitionStart)} • End ${_fmtMin(_transitionEnd)}${_getTransitionValidationStatus()}',
                       trailing: const Icon(Icons.edit, color: Colors.lightBlue),
                       onTap: () async {
                         final start = await _pickTime(context, 'Set transition start time', _transitionStart);
                         if (start == null) return;
                         final end = await _pickTime(context, 'Set transition end time', _transitionEnd);
                         if (end == null) return;
+                        
+                        // Validate that transition times are within business hours
+                        final conflicts = _validateTransitionTimes(start, end);
+                        if (conflicts.isNotEmpty) {
+                          await _showTransitionConflictDialog(conflicts);
+                          return; // Don't save the invalid times
+                        }
+                        
                         setState(() {
                           _transitionStart = start;
                           _transitionEnd = end;
@@ -218,17 +246,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final h = minutes ~/ 60;
     final m = minutes % 60;
     final tod = TimeOfDay(hour: h % 24, minute: m);
-    final picked = await showTimePicker(context: context, helpText: title, initialTime: tod);
+    
+    if (title.toLowerCase().contains('close')) {
+      return await _pickClosingTimeSimple(context, title, minutes);
+    } else {
+      // For opening times, use standard time picker
+      final picked = await showTimePicker(context: context, helpText: title, initialTime: tod);
+      if (picked == null) return null;
+      return picked.hour * 60 + picked.minute;
+    }
+  }
+
+  Future<int?> _pickClosingTimeSimple(BuildContext context, String title, int currentMinutes) async {
+    // Convert current minutes to display format
+    final h = currentMinutes ~/ 60;
+    final m = currentMinutes % 60;
+    final displayHour = h % 24;
+    final initialTime = TimeOfDay(hour: displayHour, minute: m);
+    
+    final picked = await showTimePicker(
+      context: context, 
+      helpText: title,
+      initialTime: initialTime,
+    );
+    
     if (picked == null) return null;
-    return picked.hour * 60 + picked.minute;
+    
+    final pickedMinutes = picked.hour * 60 + picked.minute;
+    
+    // Smart overnight detection: if closing time is earlier in the day than typical opening time,
+    // assume it's overnight (next day). Typical restaurant opens around 11 AM (660 minutes).
+    final isLikelyOvernight = pickedMinutes < 660; // Before 11 AM = likely overnight
+    
+    return isLikelyOvernight ? pickedMinutes + 1440 : pickedMinutes;
   }
 
   String _fmtMin(int m) {
-    final h = (m ~/ 60) % 24;
+    final h = m ~/ 60;
     final mm = m % 60;
-    final ampm = h >= 12 ? 'PM' : 'AM';
-    final h12 = h == 0 ? 12 : (h > 12 ? h - 12 : h);
-    return '${h12.toString()}:${mm.toString().padLeft(2, '0')} $ampm';
+    final h24 = h % 24;
+    final ampm = h24 >= 12 ? 'PM' : 'AM';
+    final h12 = h24 == 0 ? 12 : (h24 > 12 ? h24 - 12 : h24);
+    final timeStr = '${h12.toString()}:${mm.toString().padLeft(2, '0')} $ampm';
+    return timeStr; // No (+1) indicator - users understand overnight setup during configuration
   }
 
   Widget _buildExpandableCard(
@@ -499,6 +559,92 @@ class _SettingsScreenState extends State<SettingsScreen> {
           activeColor: Colors.lightBlue,
           activeTrackColor: Colors.lightBlue.withOpacity(0.3),
         ),
+      ),
+    );
+  }
+
+  /// Validates that transition times fall within business hours for all days
+  List<String> _validateTransitionTimes(int transitionStart, int transitionEnd) {
+    final conflicts = <String>[];
+    
+    for (final day in _days) {
+      final openMinutes = _hours.openMinutes[day.weekday] ?? 11 * 60;
+      final closeRaw = _hours.closeMinutes[day.weekday] ?? 23 * 60;
+      
+      // Handle overnight closing times
+      bool isValidTransition;
+      if (closeRaw >= 1440) {
+        // Overnight shift - transition must be after open and before end of calendar day
+        // (The overnight portion is typically just cleanup, not service)
+        final effectiveClose = 1439; // End of calendar day
+        isValidTransition = transitionStart >= openMinutes && 
+                           transitionEnd >= openMinutes && 
+                           transitionStart <= effectiveClose && 
+                           transitionEnd <= effectiveClose &&
+                           transitionStart < transitionEnd;
+      } else {
+        // Same-day closing - transition must be within open and close
+        isValidTransition = transitionStart >= openMinutes && 
+                           transitionEnd >= openMinutes && 
+                           transitionStart < closeRaw && 
+                           transitionEnd < closeRaw &&
+                           transitionStart < transitionEnd;
+      }
+      
+      if (!isValidTransition) {
+        final openStr = _fmtMin(openMinutes);
+        final closeStr = _fmtMin(closeRaw);
+        conflicts.add('${day.label}: Open $openStr - Close $closeStr');
+      }
+    }
+    
+    return conflicts;
+  }
+
+  /// Returns a status indicator for current transition validation state
+  String _getTransitionValidationStatus() {
+    final conflicts = _validateTransitionTimes(_transitionStart, _transitionEnd);
+    if (conflicts.isEmpty) {
+      return ' ✅'; // Valid
+    } else {
+      return ' ⚠️ (${conflicts.length} conflicts)'; // Invalid with count
+    }
+  }
+
+  /// Shows a dialog with transition validation conflicts
+  Future<void> _showTransitionConflictDialog(List<String> conflicts) async {
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Transition Time Conflict'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'The transition period must fall within business hours for all days.',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            const Text('Conflicts found on:'),
+            const SizedBox(height: 8),
+            ...conflicts.map((conflict) => Padding(
+              padding: const EdgeInsets.only(left: 16, bottom: 4),
+              child: Text('• $conflict', style: const TextStyle(fontSize: 14)),
+            )),
+            const SizedBox(height: 16),
+            const Text(
+              'Please either:\n• Adjust the transition times, or\n• Update the business hours for the conflicting days',
+              style: TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
       ),
     );
   }

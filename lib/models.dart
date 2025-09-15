@@ -119,10 +119,10 @@ class WeeklyHours {
 
   static WeeklyHours defaults() {
     // Mon-Thu 11:00–23:00, Fri-Sat 11:00–24:00, Sun 11:00–22:00
-    final open = <int, int>{for (var d = 1; d <= 7; d++) d: d == 6 ? 84 : 11 * 60}; // TESTING: Saturday opens at 1:24 AM
+    final open = <int, int>{for (var d = 1; d <= 7; d++) d: 11 * 60}; // All days open at 11:00 AM
     final close = <int, int>{
-      1: 23 * 60, 2: 23 * 60, 3: 23 * 60, 4: 23 * 60,
-      5: 24 * 60, 6: 87, 7: 22 * 60,  // TESTING: Saturday closes at 1:27 AM
+      1: 23 * 60, 2: 23 * 60, 3: 23 * 60, 4: 23 * 60,  // Mon-Thu: 11 PM
+      5: 24 * 60, 6: 1455, 7: 22 * 60,  // Fri: 12 AM, Sat: 12:15 AM next day, Sun: 10 PM
     };
     return WeeklyHours(openMinutes: open, closeMinutes: close);
   }

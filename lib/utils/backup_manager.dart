@@ -1033,16 +1033,25 @@ class BackupManager {
       final weekday = now.weekday; // 1=Monday, 7=Sunday
       final closeMinutes = hours.closeMinutes[weekday] ?? 23 * 60; // Default to 11 PM
       
-      // Handle midnight close (1440 minutes = 24:00)
-      final closeMinutesNormalized = closeMinutes >= 1440 ? 1439 : closeMinutes;
-      
       final nowMinutes = now.hour * 60 + now.minute;
       
-      // Consider it closing time in the hour before close time
-      // For example, if close is 11 PM (1380 minutes), closing time is 10-11 PM
-      final closingWindowStart = (closeMinutesNormalized - 60).clamp(0, 1439);
-      
-      return nowMinutes >= closingWindowStart && nowMinutes < closeMinutesNormalized;
+      // Handle overnight closing times properly
+      if (closeMinutes >= 1440) {
+        // Overnight shift - check if we're in the closing window before next-day close
+        final closeNextDay = closeMinutes - 1440;
+        // Consider it closing time in the hour before close time (next day)
+        final closingWindowStart = closeNextDay >= 60 ? closeNextDay - 60 : 0;
+        
+        // We're in closing time if we're in early morning before close OR late evening before midnight
+        final inEarlyMorningClosing = nowMinutes < closeNextDay && nowMinutes >= closingWindowStart;
+        final inLateEveningClosing = nowMinutes >= (1440 - 60); // Last hour of current day
+        
+        return inEarlyMorningClosing || inLateEveningClosing;
+      } else {
+        // Same-day closing
+        final closingWindowStart = (closeMinutes - 60).clamp(0, 1439);
+        return nowMinutes >= closingWindowStart && nowMinutes < closeMinutes;
+      }
     } catch (e) {
       print('[AutoBackup] Error reading close time settings: $e');
       // Fallback to default

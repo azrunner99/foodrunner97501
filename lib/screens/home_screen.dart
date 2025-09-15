@@ -182,6 +182,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     print('HomeScreen.build called');
     final app = Provider.of<AppState>(context);
+    
       return Scaffold(
         appBar: AppBar(
           title: GestureDetector(
@@ -329,19 +330,55 @@ class _HomeScreenState extends State<HomeScreen> {
                 print('[DEBUG] HomeScreen: lunchIds=$lunchIds, dinnerIds=$dinnerIds');
                 print('[DEBUG] HomeScreen: activeRosterView=${app.activeRosterView}');
                 
+                // Check if we're in an overnight period
+                final todayWeekday = now.weekday;
+                final yesterdayWeekday = todayWeekday == 1 ? 7 : todayWeekday - 1;
+                final closeTime = app.hours.closeMinutes[todayWeekday] ?? 23 * 60;
+                final yesterdayCloseTime = app.hours.closeMinutes[yesterdayWeekday] ?? 23 * 60;
+                
+                // Check if we're in yesterday's overnight period
+                final isYesterdayOvernight = yesterdayCloseTime >= 1440;
+                final effectiveYesterdayClose = isYesterdayOvernight ? yesterdayCloseTime - 1440 : yesterdayCloseTime;
+                final inYesterdayOvernight = isYesterdayOvernight && m < effectiveYesterdayClose;
+                
+                // Check today's overnight status
+                final isOvernight = closeTime >= 1440;
+                final effectiveCloseTime = isOvernight ? closeTime - 1440 : closeTime;
+                
+                print('[DEBUG] HomeScreen: todayWeekday=$todayWeekday, yesterdayWeekday=$yesterdayWeekday');
+                print('[DEBUG] HomeScreen: closeTime=$closeTime, yesterdayCloseTime=$yesterdayCloseTime');
+                print('[DEBUG] HomeScreen: isOvernight=$isOvernight, isYesterdayOvernight=$isYesterdayOvernight');
+                print('[DEBUG] HomeScreen: effectiveCloseTime=$effectiveCloseTime, effectiveYesterdayClose=$effectiveYesterdayClose');
+                print('[DEBUG] HomeScreen: inYesterdayOvernight=$inYesterdayOvernight');
+                
                 List<String> ids = [];
                 final showToggle = m >= start && m < end;
                 print('[DEBUG] HomeScreen: showToggle=$showToggle (transition period)');
                 
-                if (m < start) {
-                  ids = lunchIds;
+                // Handle overnight operations properly
+                bool shouldShowDinner = false;
+                if (inYesterdayOvernight) {
+                  // We're past midnight during yesterday's overnight shift
+                  shouldShowDinner = true;
+                  print('[DEBUG] HomeScreen: In yesterday\'s overnight period - showing dinner roster');
+                } else if (isOvernight && m < effectiveCloseTime) {
+                  // We're past midnight during today's overnight shift
+                  shouldShowDinner = true;
+                  print('[DEBUG] HomeScreen: In today\'s overnight period - showing dinner roster');
+                } else if (m < start) {
+                  shouldShowDinner = false;
                   print('[DEBUG] HomeScreen: Before transition, using lunch roster');
                 } else if (m >= end) {
-                  ids = dinnerIds;
+                  shouldShowDinner = true;
                   print('[DEBUG] HomeScreen: After transition, using dinner roster');
                 } else {
                   // During transition: show correct servers for each view
-                  if (app.activeRosterView == 'dinner') {
+                  shouldShowDinner = (app.activeRosterView == 'dinner');
+                  print('[DEBUG] HomeScreen: During transition, activeRosterView=${app.activeRosterView}');
+                }
+                
+                if (shouldShowDinner) {
+                  if (m >= start && m < end && app.activeRosterView == 'dinner') {
                     // Dinner view during transition: show only dinner-only servers
                     final lunchSet = lunchIds.toSet();
                     final dinnerSet = dinnerIds.toSet();
@@ -349,10 +386,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     ids = dinnerOnly.toList();
                     print('[DEBUG] HomeScreen: During transition, dinner view selected - showing dinner-only servers: $ids');
                   } else {
-                    // Lunch view during transition: show only lunch servers
-                    ids = lunchIds;
-                    print('[DEBUG] HomeScreen: During transition, lunch view selected - showing lunch servers: $ids');
+                    ids = dinnerIds;
+                    print('[DEBUG] HomeScreen: Showing dinner roster: $ids');
                   }
+                } else {
+                  ids = lunchIds;
+                  print('[DEBUG] HomeScreen: Showing lunch roster: $ids');
                 }
                 ids = ids.toSet().toList();
                 print('[DEBUG] HomeScreen: Final ids to display: $ids');
@@ -2791,7 +2830,7 @@ class _BoostModeDialogState extends State<BoostModeDialog> {
       appState.deactivateBoost();
     } else {
       // Activate new boost
-      appState.activateBoost(_multiplier, _duration, _description.isEmpty ? 'Manager Boost' : _description, '5520');
+      appState.activateBoost(_multiplier, _duration, _description.isEmpty ? 'Manager Boost' : _description);
     }
     
     Navigator.of(context).pop();
