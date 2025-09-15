@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:collection/collection.dart';
 import 'models.dart';
 import 'storage.dart';
@@ -893,15 +894,30 @@ class AppState extends ChangeNotifier {
 
   bool get isOpenNow {
     final now = DateTime.now();
-  final wd = AppState.weekday(now);
-    final open = _hours.openMinutes[wd] ?? 11 * 60;
-    final closeRaw = _hours.closeMinutes[wd] ?? 23 * 60;
-    // Handle midnight (24:00) close time - treat as end of day (1439 minutes)
-    final close = closeRaw >= 1440 ? 1439 : closeRaw;
-    final m = now.hour * 60 + now.minute;
-    final isOpen = m >= open && m < close;
-    print('[DEBUG] isOpenNow: m=$m, open=$open, close=$close, isOpen=$isOpen');
-    return isOpen;
+    final businessDate = AppState.businessDate(now);
+    final weekday = businessDate.weekday;
+    
+    // Get business day interval for today's business date
+    final todayInterval = businessDayInterval(businessDate, weekday);
+    
+    // Check if current time falls within today's business hours
+    if (now.isAfter(todayInterval.start) && now.isBefore(todayInterval.end)) {
+      print('[DEBUG] isOpenNow: In today\'s business hours, businessDate=$businessDate, weekday=$weekday, isOpen=true');
+      return true;
+    }
+    
+    // Check yesterday's business day (for early morning hours before 4 AM)
+    final yesterdayBusinessDate = businessDate.subtract(const Duration(days: 1));
+    final yesterdayWeekday = yesterdayBusinessDate.weekday;
+    final yesterdayInterval = businessDayInterval(yesterdayBusinessDate, yesterdayWeekday);
+    
+    if (now.isAfter(yesterdayInterval.start) && now.isBefore(yesterdayInterval.end)) {
+      print('[DEBUG] isOpenNow: In yesterday\'s business hours, businessDate=$yesterdayBusinessDate, weekday=$yesterdayWeekday, isOpen=true');
+      return true;
+    }
+    
+    print('[DEBUG] isOpenNow: Not in business hours, businessDate=$businessDate, isOpen=false');
+    return false;
   }
 
   String currentIntendedShiftType(DateTime now) {
@@ -1748,6 +1764,49 @@ class AppState extends ChangeNotifier {
   static String _ymd(DateTime d) =>
       '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
   static int weekday(DateTime d) => d.weekday;
+
+  /// Business Day Model: Returns the business date for a given DateTime
+  /// If time < 4:00 AM, you're still in yesterday's business day
+  static DateTime businessDate(DateTime dateTime) {
+    return (dateTime.hour < 4) 
+      ? DateTime(dateTime.year, dateTime.month, dateTime.day - 1)
+      : DateTime(dateTime.year, dateTime.month, dateTime.day);
+  }
+
+  /// Returns the start and end DateTime for a business day's operating hours
+  DateTimeRange businessDayInterval(DateTime businessDate, int weekday) {
+    final openMinutes = _hours.openMinutes[weekday] ?? 11 * 60;
+    final closeMinutes = _hours.closeMinutes[weekday] ?? 23 * 60;
+    final closeDayOffset = _hours.closeDayOffset[weekday] ?? 0;
+    
+    // Business day starts at opening time on the business date
+    final start = DateTime(
+      businessDate.year, 
+      businessDate.month, 
+      businessDate.day,
+      openMinutes ~/ 60,        // hours
+      openMinutes % 60,         // minutes
+    );
+    
+    // Business day ends based on closeDayOffset
+    final endDate = closeDayOffset == 1 
+      ? businessDate.add(const Duration(days: 1))  // Next calendar day
+      : businessDate;                              // Same calendar day
+    
+    final actualCloseMinutes = closeDayOffset == 1 
+      ? closeMinutes - 1440  // Convert back to same-day minutes
+      : closeMinutes;
+    
+    final end = DateTime(
+      endDate.year,
+      endDate.month, 
+      endDate.day,
+      actualCloseMinutes ~/ 60,   // hours
+      actualCloseMinutes % 60,    // minutes
+    );
+    
+    return DateTimeRange(start: start, end: end);
+  }
 
   // --- Add these methods to fix your missing method errors ---
   bool isLunchPeak(DateTime now) {

@@ -330,41 +330,26 @@ class _HomeScreenState extends State<HomeScreen> {
                 print('[DEBUG] HomeScreen: lunchIds=$lunchIds, dinnerIds=$dinnerIds');
                 print('[DEBUG] HomeScreen: activeRosterView=${app.activeRosterView}');
                 
-                // Check if we're in an overnight period
-                final todayWeekday = now.weekday;
-                final yesterdayWeekday = todayWeekday == 1 ? 7 : todayWeekday - 1;
-                final closeTime = app.hours.closeMinutes[todayWeekday] ?? 23 * 60;
-                final yesterdayCloseTime = app.hours.closeMinutes[yesterdayWeekday] ?? 23 * 60;
+                // Use business day model for clean overnight handling
+                final businessDate = AppState.businessDate(now);
+                final businessWeekday = businessDate.weekday;
+                final businessInterval = app.businessDayInterval(businessDate, businessWeekday);
+                final inBusinessHours = now.isAfter(businessInterval.start) && now.isBefore(businessInterval.end);
                 
-                // Check if we're in yesterday's overnight period
-                final isYesterdayOvernight = yesterdayCloseTime >= 1440;
-                final effectiveYesterdayClose = isYesterdayOvernight ? yesterdayCloseTime - 1440 : yesterdayCloseTime;
-                final inYesterdayOvernight = isYesterdayOvernight && m < effectiveYesterdayClose;
-                
-                // Check today's overnight status
-                final isOvernight = closeTime >= 1440;
-                final effectiveCloseTime = isOvernight ? closeTime - 1440 : closeTime;
-                
-                print('[DEBUG] HomeScreen: todayWeekday=$todayWeekday, yesterdayWeekday=$yesterdayWeekday');
-                print('[DEBUG] HomeScreen: closeTime=$closeTime, yesterdayCloseTime=$yesterdayCloseTime');
-                print('[DEBUG] HomeScreen: isOvernight=$isOvernight, isYesterdayOvernight=$isYesterdayOvernight');
-                print('[DEBUG] HomeScreen: effectiveCloseTime=$effectiveCloseTime, effectiveYesterdayClose=$effectiveYesterdayClose');
-                print('[DEBUG] HomeScreen: inYesterdayOvernight=$inYesterdayOvernight');
+                print('[DEBUG] HomeScreen: businessDate=$businessDate, businessWeekday=$businessWeekday');
+                print('[DEBUG] HomeScreen: businessInterval=${businessInterval.start} to ${businessInterval.end}');
+                print('[DEBUG] HomeScreen: inBusinessHours=$inBusinessHours');
                 
                 List<String> ids = [];
                 final showToggle = m >= start && m < end;
                 print('[DEBUG] HomeScreen: showToggle=$showToggle (transition period)');
                 
-                // Handle overnight operations properly
+                // Determine which roster to show based on business day logic
                 bool shouldShowDinner = false;
-                if (inYesterdayOvernight) {
-                  // We're past midnight during yesterday's overnight shift
-                  shouldShowDinner = true;
-                  print('[DEBUG] HomeScreen: In yesterday\'s overnight period - showing dinner roster');
-                } else if (isOvernight && m < effectiveCloseTime) {
-                  // We're past midnight during today's overnight shift
-                  shouldShowDinner = true;
-                  print('[DEBUG] HomeScreen: In today\'s overnight period - showing dinner roster');
+                if (!inBusinessHours) {
+                  // Outside business hours - default to lunch roster
+                  shouldShowDinner = false;
+                  print('[DEBUG] HomeScreen: Outside business hours - showing lunch roster');
                 } else if (m < start) {
                   shouldShowDinner = false;
                   print('[DEBUG] HomeScreen: Before transition, using lunch roster');
@@ -2830,7 +2815,7 @@ class _BoostModeDialogState extends State<BoostModeDialog> {
       appState.deactivateBoost();
     } else {
       // Activate new boost
-      appState.activateBoost(_multiplier, _duration, _description.isEmpty ? 'Manager Boost' : _description);
+      appState.activateBoost(_multiplier, _duration, _description.isEmpty ? 'Manager Boost' : _description, AppState.adminPin);
     }
     
     Navigator.of(context).pop();

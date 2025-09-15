@@ -107,14 +107,47 @@ class DayPlan {
 class WeeklyHours {
   final Map<int, int> openMinutes;  // weekday -> minutes since midnight
   final Map<int, int> closeMinutes; // weekday -> minutes since midnight
-  WeeklyHours({required this.openMinutes, required this.closeMinutes});
+  final Map<int, int> closeDayOffset; // weekday -> 0 (same day) or 1 (next day)
+  
+  WeeklyHours({
+    required this.openMinutes, 
+    required this.closeMinutes,
+    Map<int, int>? closeDayOffset,
+  }) : closeDayOffset = closeDayOffset ?? _computeCloseDayOffset(openMinutes, closeMinutes);
+  
+  /// Automatically compute closeDayOffset based on close time logic
+  static Map<int, int> _computeCloseDayOffset(Map<int, int> openMinutes, Map<int, int> closeMinutes) {
+    final result = <int, int>{};
+    for (final weekday in [1, 2, 3, 4, 5, 6, 7]) {
+      final close = closeMinutes[weekday] ?? 23 * 60;
+      // If close time >= 1440 (midnight or later), it's next day
+      result[weekday] = (close >= 1440) ? 1 : 0;
+    }
+    return result;
+  }
+  
   Map<String, dynamic> toMap() => {
     'open': openMinutes.map((k, v) => MapEntry(k.toString(), v)),
     'close': closeMinutes.map((k, v) => MapEntry(k.toString(), v)),
+    'closeDayOffset': closeDayOffset.map((k, v) => MapEntry(k.toString(), v)),
   };
+  
   static WeeklyHours fromMap(Map<String, dynamic> m) {
     Map<int, int> parse(Map src) => src.map((k, v) => MapEntry(int.parse(k as String), v as int));
-    return WeeklyHours(openMinutes: parse(m['open']), closeMinutes: parse(m['close']));
+    final openMinutes = parse(m['open']);
+    final closeMinutes = parse(m['close']);
+    
+    // Handle migration: if closeDayOffset doesn't exist, compute it
+    final closeDayOffsetRaw = m['closeDayOffset'] as Map?;
+    final closeDayOffset = closeDayOffsetRaw != null 
+      ? parse(closeDayOffsetRaw)
+      : _computeCloseDayOffset(openMinutes, closeMinutes);
+    
+    return WeeklyHours(
+      openMinutes: openMinutes, 
+      closeMinutes: closeMinutes,
+      closeDayOffset: closeDayOffset,
+    );
   }
 
   static WeeklyHours defaults() {
