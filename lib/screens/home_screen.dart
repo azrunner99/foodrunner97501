@@ -17,6 +17,7 @@ import '../widgets/birthday_anniversary_banner.dart';
 import '../widgets/live_countdown_timer.dart';
 import 'app_features_screen.dart';
 import 'level_color_demo_screen.dart';
+import 'server_nps_screen.dart';
 
 // Screens
 import 'update_roster_screen.dart';

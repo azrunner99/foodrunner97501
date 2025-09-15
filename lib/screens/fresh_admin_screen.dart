@@ -2,27 +2,29 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../app_state.dart';
 import '../widgets/wallpaper_background.dart';
-import 'manage_servers_screen.dart';
+import 'manage_ser      appBar: AppBar(
+        title: const Text('Admin Tools'),
+        backgroundColor: Colors.green,s_screen.dart';
 import 'server_avatar_settings_screen.dart';
 import 'server_dashboard_screen.dart';
 import 'backup_manager_screen.dart';
 import 'server_performance_screen.dart';
 import 'server_nps_screen.dart';
 
-class AdminScreen extends StatefulWidget {
-  const AdminScreen({super.key});
+class FreshAdminScreen extends StatefulWidget {
+  const FreshAdminScreen({super.key});
 
   @override
-  State<AdminScreen> createState() => _AdminScreenState();
+  State<FreshAdminScreen> createState() => _FreshAdminScreenState();
 }
 
-class _AdminScreenState extends State<AdminScreen> {
+class _FreshAdminScreenState extends State<FreshAdminScreen> {
   bool _unlocked = true; // AUTO-UNLOCK FOR TESTING
   final _pinCtrl = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
-    print("🚨 DEBUG: AdminScreen.build() called - NEW VERSION ACTIVE!");
+    print("🚨 DEBUG: FreshAdminScreen.build() called - NEW VERSION ACTIVE!");
     
     final app = context.watch<AppState>();
     if (!_unlocked) {
@@ -177,7 +179,7 @@ class _AdminScreenState extends State<AdminScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('😊 NEW Admin Tools'),
+        title: const Text('😊 FRESH Admin Tools'),
         backgroundColor: Colors.green,
         elevation: 0,
         flexibleSpace: Container(

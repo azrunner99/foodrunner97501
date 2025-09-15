@@ -8,12 +8,13 @@ import 'screens/settings_screen.dart';
 import 'screens/profiles_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/mvp_screen.dart';
-import 'screens/admin_screen.dart';
+import 'screens/clean_admin_screen.dart';
 import 'screens/manage_servers_screen.dart';
 import 'screens/station_types_screen.dart';
 import 'screens/gamification_options_screen.dart';
 import 'screens/server_performance_screen.dart';
 import 'screens/business_data_entry_screen.dart';
+import 'screens/server_nps_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,18 +41,20 @@ class FoodRunsApp extends StatelessWidget {
         snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
       ),
       routes: {
-        '/': (_) => const HomeScreen(),
+        '/': (_) => const HomeScreen(), // Restored: Normal home screen as default
+        '/home': (_) => const HomeScreen(), // Actual home screen for back navigation
+        '/admin': (_) => CleanAdminScreen(),
         '/assign': (_) => AssignServersScreen(),
         '/settings': (_) => const SettingsScreen(),
         '/profiles': (_) => const ProfilesScreen(),
         '/history': (_) => const HistoryScreen(),
         '/mvp': (_) => const MvpScreen(),
-        '/admin': (_) => const AdminScreen(),
         '/manage': (_) => const ManageServersScreen(),
         '/stations': (_) => const StationTypesScreen(),
         '/gamification_options': (_) => const GamificationOptionsScreen(),
         '/performance': (_) => const ServerPerformanceScreen(),
         '/business_data_entry': (_) => const BusinessDataEntryScreen(),
+        '/server_nps': (_) => const ServerNPSScreen(),
       },
     );
   }

@@ -9,20 +9,20 @@ import 'backup_manager_screen.dart';
 import 'server_performance_screen.dart';
 import 'server_nps_screen.dart';
 
-class AdminScreen extends StatefulWidget {
-  const AdminScreen({super.key});
+class CleanAdminScreen extends StatefulWidget {
+  const CleanAdminScreen({super.key});
 
   @override
-  State<AdminScreen> createState() => _AdminScreenState();
+  State<CleanAdminScreen> createState() => _CleanAdminScreenState();
 }
 
-class _AdminScreenState extends State<AdminScreen> {
+class _CleanAdminScreenState extends State<CleanAdminScreen> {
   bool _unlocked = true; // AUTO-UNLOCK FOR TESTING
   final _pinCtrl = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
-    print("🚨 DEBUG: AdminScreen.build() called - NEW VERSION ACTIVE!");
+    print("🚨 DEBUG: CleanAdminScreen.build() called - NEW VERSION ACTIVE!");
     
     final app = context.watch<AppState>();
     if (!_unlocked) {
@@ -177,9 +177,16 @@ class _AdminScreenState extends State<AdminScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('😊 NEW Admin Tools'),
-        backgroundColor: Colors.green,
+        title: const Text('Admin Tools'),
+        backgroundColor: Colors.transparent,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            print("🚨 DEBUG: Back button pressed, navigating to home");
+            Navigator.pushReplacementNamed(context, '/home');
+          },
+        ),
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(

@@ -7,7 +7,6 @@ import 'server_avatar_settings_screen.dart';
 import 'server_dashboard_screen.dart';
 import 'backup_manager_screen.dart';
 import 'server_performance_screen.dart';
-import 'server_nps_screen.dart';
 
 class AdminScreen extends StatefulWidget {
   const AdminScreen({super.key});
@@ -17,13 +16,11 @@ class AdminScreen extends StatefulWidget {
 }
 
 class _AdminScreenState extends State<AdminScreen> {
-  bool _unlocked = true; // AUTO-UNLOCK FOR TESTING
+  bool _unlocked = false;
   final _pinCtrl = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
-    print("🚨 DEBUG: AdminScreen.build() called - NEW VERSION ACTIVE!");
-    
     final app = context.watch<AppState>();
     if (!_unlocked) {
       return Scaffold(
@@ -177,8 +174,8 @@ class _AdminScreenState extends State<AdminScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('😊 NEW Admin Tools'),
-        backgroundColor: Colors.green,
+        title: const Text('Admin Tools'),
+        backgroundColor: Colors.transparent,
         elevation: 0,
         flexibleSpace: Container(
           decoration: BoxDecoration(
@@ -270,16 +267,12 @@ class _AdminScreenState extends State<AdminScreen> {
                     },
                   ),
                   _buildAdminTile(
-                    icon: Icons.sentiment_satisfied,
-                    title: 'Server NPS',
-                    subtitle: 'Manage server Net Promoter Score tracking',
+                    icon: Icons.assessment,
+                    title: 'Business Data Entry',
+                    subtitle: 'Enter monthly business data and NPS scores',
                     enabled: true,
                     onTap: () {
-                      print("🚨 DEBUG: Navigating to Server NPS screen!");
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const ServerNPSScreen()),
-                      );
+                      Navigator.pushNamed(context, '/business_data_entry');
                     },
                   ),
                   _buildAdminTile(
