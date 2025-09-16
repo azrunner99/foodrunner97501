@@ -378,6 +378,59 @@ class NPSDatabase {
     }
   }
 
+  /// Get all available months that have saved reports
+  Future<List<Map<String, dynamic>>> getAvailableReportMonths() async {
+    try {
+      final db = await database;
+      final months = await db.rawQuery('''
+        SELECT DISTINCT report_month, report_year, 
+               COUNT(*) as server_count
+        FROM nps_monthly_reports 
+        GROUP BY report_year, report_month
+        ORDER BY report_year DESC, report_month DESC
+      ''');
+      print('[NPSDatabase] Retrieved ${months.length} available report months');
+      return months;
+    } catch (e) {
+      print('[NPSDatabase] Error getting available report months: $e');
+      rethrow;
+    }
+  }
+
+  /// Get server NPS data for a specific month
+  Future<List<Map<String, dynamic>>> getServerNPSDataForMonth(int reportMonth, int reportYear) async {
+    try {
+      final db = await database;
+      final serverData = await db.rawQuery('''
+        SELECT 
+          s.name as server_name,
+          s.id as server_id,
+          nmr.all_time_nps_percentage,
+          nmr.three_month_nps_percentage,
+          nmr.one_month_nps_percentage,
+          nmr.month_feedback_yes,
+          nmr.month_feedback_maybe,
+          nmr.month_feedback_no,
+          nmr.three_month_feedback_yes,
+          nmr.three_month_feedback_maybe,
+          nmr.three_month_feedback_no,
+          nmr.all_time_feedback_yes,
+          nmr.all_time_feedback_maybe,
+          nmr.all_time_feedback_no
+        FROM nps_monthly_reports nmr
+        JOIN servers s ON nmr.server_id = s.id
+        WHERE nmr.report_month = ? AND nmr.report_year = ?
+        ORDER BY s.name ASC
+      ''', [reportMonth, reportYear]);
+      
+      print('[NPSDatabase] Retrieved NPS data for ${serverData.length} servers for $reportMonth/$reportYear');
+      return serverData;
+    } catch (e) {
+      print('[NPSDatabase] Error getting server NPS data for month: $e');
+      rethrow;
+    }
+  }
+
   // Utility methods
 
   /// Close the database connection

@@ -18,6 +18,7 @@ import '../widgets/live_countdown_timer.dart';
 import 'app_features_screen.dart';
 import 'level_color_demo_screen.dart';
 import 'server_nps_screen.dart';
+import 'server_nps_scorecard_screen.dart';
 
 // Screens
 import 'update_roster_screen.dart';
@@ -212,6 +213,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const HistoryScreen()),
+                );
+              },
+            ),
+            IconButton(
+              tooltip: 'NPS Scorecard',
+              icon: const Icon(Icons.leaderboard),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ServerNPSScorecardScreen()),
                 );
               },
             ),

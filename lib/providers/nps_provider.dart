@@ -429,6 +429,16 @@ class NPSProvider with ChangeNotifier {
     await initialize();
   }
   
+  /// Get server NPS data for a specific month
+  Future<List<Map<String, dynamic>>> getServerNPSDataForMonth(int reportMonth, int reportYear) async {
+    try {
+      return await _database.getServerNPSDataForMonth(reportMonth, reportYear);
+    } catch (e) {
+      _setError('Failed to load server NPS data for month: $e');
+      return [];
+    }
+  }
+  
   // Private helper methods
   
   void _setLoading(bool loading) {
