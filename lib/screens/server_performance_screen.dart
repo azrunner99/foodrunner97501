@@ -10,6 +10,7 @@ import '../utils/trend_analyzer.dart';
 import '../widgets/performance_charts.dart';
 import '../storage.dart';
 import 'bulk_data_entry_screen.dart';
+import 'server_performance_profile_screen.dart';
 
 class ServerPerformanceScreen extends StatefulWidget {
   const ServerPerformanceScreen({super.key});
@@ -997,43 +998,14 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
   }
 
   void _showPerformanceDetails(Server server, ServerPerformanceData performance) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('${server.name} - Performance Details'),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Overall Score: ${performance.formattedScore}'),
-              Text('Rating: ${performance.rating.emoji} ${performance.rating.displayName}'),
-              const SizedBox(height: 16),
-              const Text('Metrics:', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text('Raw Efficiency: ${performance.metrics.rawEfficiency.toStringAsFixed(2)} runs/shift'),
-              Text('Guest Efficiency: ${performance.metrics.guestEfficiency.toStringAsFixed(3)} runs/guest'),
-              Text('Sales Efficiency: ${performance.metrics.salesEfficiency.toStringAsFixed(2)} runs/\$1K'),
-              Text('Consistency: ${performance.metrics.consistencyScore.toStringAsFixed(1)}%'),
-              const SizedBox(height: 16),
-              const Text('Insights:', style: TextStyle(fontWeight: FontWeight.bold)),
-              if (performance.insights.isNotEmpty)
-                ...performance.insights.take(2).map((insight) => 
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text('• ${insight.title}: ${insight.description}'),
-                  ),
-                )
-              else
-                const Text('No specific insights available.'),
-            ],
-          ),
+    // Navigate to the dedicated Server Performance Profile Screen
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ServerPerformanceProfileScreen(
+          server: server,
+          performance: performance,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
-          ),
-        ],
       ),
     );
   }

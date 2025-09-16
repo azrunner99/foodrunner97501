@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import '../models/performance_models.dart';
 import '../models.dart';
 import '../storage.dart';
+import '../providers/nps_provider.dart';
 
 /// Core performance calculation engine with mathematical algorithms
 class PerformanceCalculator {
@@ -496,49 +497,59 @@ class PerformanceCalculator {
     return math.max(0.0, math.min(100.0, finalScore));
   }
 
-  /// Load historical NPS data for performance calculations
+  /// Load historical NPS data for performance calculations using NPSProvider
   static Future<List<NPSData>> loadNPSHistory({
     required DateTime startDate,
     required DateTime endDate,
+    NPSProvider? npsProvider,
   }) async {
     final npsHistory = <NPSData>[];
     
     try {
-      // Load last 6 months of enhanced business data to ensure we have enough NPS history
-      final loadDate = startDate.subtract(const Duration(days: 180));
+      if (npsProvider == null) {
+        // Return empty list if no provider is available
+        return [];
+      }
+
+      // Get all servers and generate monthly reports for the evaluation period
+      final servers = npsProvider.servers;
       
-      // Get all available enhanced business data keys
-      final keys = await Storage.getAllEnhancedBusinessDataKeys();
-      
-      for (final monthKey in keys) {
-        // Parse the month from the key
-        final keyParts = monthKey.split('-');
-        if (keyParts.length >= 2) {
-          final year = int.tryParse(keyParts[0]);
-          final month = int.tryParse(keyParts[1]);
-          
-          if (year != null && month != null) {
-            final monthDate = DateTime(year, month);
+      // Generate reports for the last 6 months to ensure sufficient data
+      final now = DateTime.now();
+      for (int monthsBack = 0; monthsBack < 6; monthsBack++) {
+        final targetDate = DateTime(now.year, now.month - monthsBack, 1);
+        
+        // Skip if this month is outside our evaluation window
+        if (targetDate.isBefore(startDate.subtract(const Duration(days: 30)))) {
+          continue;
+        }
+
+        final monthKey = int.parse('${targetDate.year}${targetDate.month.toString().padLeft(2, '0')}');
+        
+        // Generate monthly reports for each server
+        for (final server in servers) {
+          try {
+            final report = await npsProvider.calculator.generateMonthlyReport(server.id!, monthKey);
             
-            // Only load data that's relevant to our evaluation period
-            if (monthDate.isAfter(loadDate) && monthDate.isBefore(endDate.add(const Duration(days: 31)))) {
-              final enhancedData = await Storage.getEnhancedMonthlyBusinessData(monthKey);
-              
-              if (enhancedData != null && enhancedData['serverNPSData'] != null) {
-                final serverNPSData = enhancedData['serverNPSData'] as Map;
-                
-                // Convert each server's NPS data to NPSData objects
-                for (final entry in serverNPSData.entries) {
-                  try {
-                    final npsData = NPSData.fromMap(entry.value as Map<String, dynamic>);
-                    npsHistory.add(npsData);
-                  } catch (e) {
-                    // Skip invalid NPS data entries
-                    continue;
-                  }
-                }
-              }
-            }
+            // Convert NPSMonthlyReport to NPSData format expected by performance calculator
+            final npsData = NPSData(
+              serverId: server.id.toString(),
+              month: targetDate,
+              monthlyScore: report.oneMonthNpsPercentage ?? report.allTimeNpsPercentage ?? 0.0,
+              threeMonthAverage: report.allTimeNpsPercentage ?? 0.0,
+              responseCount: report.allTimeFeedback.total,
+              categoryBreakdown: {
+                'service': report.allTimeNpsPercentage ?? 0.0,
+                'overall': report.oneMonthNpsPercentage ?? 0.0,
+              },
+              guestComments: [],
+              lastUpdated: DateTime.now(),
+            );
+            
+            npsHistory.add(npsData);
+          } catch (e) {
+            // Skip servers with no NPS data for this month
+            continue;
           }
         }
       }
@@ -587,7 +598,7 @@ class PerformanceCalculator {
     }
 
     // Low efficiency flag
-    if (metrics.rawEfficiency < baseExpectedRunsPerShift * 0.7) {
+    if (metrics.rawEfficiency < PerformanceCalculator.baseExpectedRunsPerShift * 0.7) {
       flags.add(PerformanceFlag.lowEfficiency);
     }
 

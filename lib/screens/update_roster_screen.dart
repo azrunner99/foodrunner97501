@@ -1064,215 +1064,228 @@ class _RosterBodyState extends State<_RosterBody> {
                                       InkWell(
                                         borderRadius: BorderRadius.circular(18),
                                         onTap: () async {
-                                    final selectedTypeName = await _showStationTypeDialog(context);
-                                    if (selectedTypeName != null) {
-                                      final selectedType = stationTypes.firstWhere((t) => t.name == selectedTypeName);
-                                      final selectedSection = await showDialog<String>(
-                                        context: context,
-                                        barrierDismissible: true,
-                                        builder: (sectionContext) {
-                                          return Dialog(
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                                            backgroundColor: Colors.transparent,
-                                            child: Container(
-                                              decoration: BoxDecoration(
-                                                gradient: const LinearGradient(
-                                                  begin: Alignment.topLeft,
-                                                  end: Alignment.bottomRight,
-                                                  colors: [
-                                                    Color(0xFFF8FAFF),
-                                                    Color(0xFFFFFFFF),
-                                                    Color(0xFFF5F3FF),
-                                                  ],
-                                                  stops: [0.0, 0.5, 1.0],
-                                                ),
-                                                borderRadius: BorderRadius.circular(24),
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: Colors.blue.withOpacity(0.08),
-                                                    blurRadius: 25,
-                                                    offset: const Offset(0, 10),
-                                                  ),
-                                                  BoxShadow(
-                                                    color: Colors.black.withOpacity(0.04),
-                                                    blurRadius: 10,
-                                                    offset: const Offset(0, 2),
-                                                  ),
-                                                ],
-                                                border: Border.all(
-                                                  color: Colors.white.withOpacity(0.2),
-                                                  width: 1.5,
-                                                ),
-                                              ),
-                                              child: Padding(
-                                                padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 24),
-                                                child: Column(
-                                                  mainAxisSize: MainAxisSize.min,
-                                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                                  children: [
-                                                  Wrap(
-                                                    spacing: 16,
-                                                    runSpacing: 16,
-                                                    alignment: WrapAlignment.center,
-                                                    children: List.generate(selectedType.sections, (i) {
-                                                      final sectionLabel = '${selectedType.abbreviation} ${i + 1}';
-                                                      return Container(
-                                                        width: 140,
-                                                        height: 54,
-                                                        decoration: BoxDecoration(
-                                                          gradient: const LinearGradient(
-                                                            begin: Alignment.topLeft,
-                                                            end: Alignment.bottomRight,
-                                                            colors: [
-                                                              Color(0xFF4FC3F7),
-                                                              Color(0xFF29B6F6),
-                                                            ],
-                                                          ),
-                                                          borderRadius: BorderRadius.circular(18),
-                                                          boxShadow: [
-                                                            BoxShadow(
-                                                              color: Colors.blue.withOpacity(0.15),
-                                                              blurRadius: 8,
-                                                              offset: const Offset(0, 4),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                        child: Material(
-                                                          color: Colors.transparent,
-                                                          child: InkWell(
-                                                            borderRadius: BorderRadius.circular(18),
-                                                            onTap: () => Navigator.pop(sectionContext, sectionLabel),
-                                                            child: Center(
-                                                              child: Text(
-                                                                sectionLabel,
-                                                                style: const TextStyle(
-                                                                  color: Colors.white,
-                                                                  fontSize: 16,
-                                                                  fontWeight: FontWeight.w600,
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      );
-                                                    }),
-                                                  ),
-                                                  const SizedBox(height: 12),
-                                                  Container(
-                                                    width: double.infinity,
-                                                    height: 54,
+                                          // First, assign the server to the roster
+                                          setState(() {
+                                            if (isLunch) {
+                                              lunchRoster.add(s.id);
+                                            } else {
+                                              dinnerRoster.add(s.id);
+                                            }
+                                          });
+                                          
+                                          // Then show station type dialog
+                                          final selectedTypeName = await _showStationTypeDialog(context);
+                                          if (selectedTypeName != null) {
+                                            final selectedType = stationTypes.firstWhere((t) => t.name == selectedTypeName);
+                                            final selectedSection = await showDialog<String>(
+                                              context: context,
+                                              barrierDismissible: true,
+                                              builder: (sectionContext) {
+                                                return Dialog(
+                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                                                  backgroundColor: Colors.transparent,
+                                                  child: Container(
                                                     decoration: BoxDecoration(
-                                                      color: Colors.grey[100],
-                                                      borderRadius: BorderRadius.circular(18),
+                                                      gradient: const LinearGradient(
+                                                        begin: Alignment.topLeft,
+                                                        end: Alignment.bottomRight,
+                                                        colors: [
+                                                          Color(0xFFF8FAFF),
+                                                          Color(0xFFFFFFFF),
+                                                          Color(0xFFF5F3FF),
+                                                        ],
+                                                        stops: [0.0, 0.5, 1.0],
+                                                      ),
+                                                      borderRadius: BorderRadius.circular(24),
+                                                      boxShadow: [
+                                                        BoxShadow(
+                                                          color: Colors.blue.withOpacity(0.08),
+                                                          blurRadius: 25,
+                                                          offset: const Offset(0, 10),
+                                                        ),
+                                                        BoxShadow(
+                                                          color: Colors.black.withOpacity(0.04),
+                                                          blurRadius: 10,
+                                                          offset: const Offset(0, 2),
+                                                        ),
+                                                      ],
                                                       border: Border.all(
-                                                        color: Colors.grey[300]!,
+                                                        color: Colors.white.withOpacity(0.2),
                                                         width: 1.5,
                                                       ),
                                                     ),
-                                                    child: Material(
-                                                      color: Colors.transparent,
-                                                      child: InkWell(
-                                                        borderRadius: BorderRadius.circular(18),
-                                                        onTap: () => Navigator.pop(sectionContext),
-                                                        child: const Center(
-                                                          child: Text(
-                                                            'Cancel',
-                                                            style: TextStyle(
-                                                              color: Colors.black54,
-                                                              fontSize: 16,
-                                                              fontWeight: FontWeight.w500,
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ));
-                                        },
-                                      );
-                                      if (selectedSection != null) {
-                                        setState(() {
-                                          serverStationType[s.id] = selectedTypeName;
-                                          serverStationSection[s.id] = selectedSection;
-                                          final currentRoster = isLunch ? lunchRoster : dinnerRoster;
-                                          if (!currentRoster.contains(s.id)) {
-                                            currentRoster.add(s.id);
-                                          }
-                                        });
-                                        if (showTeams) {
-                                          WidgetsBinding.instance.addPostFrameCallback((_) async {
-                                            final selectedColor = await showDialog<String?>(
-                                              context: context,
-                                              barrierDismissible: true,
-                                              builder: (colorContext) {
-                                                return Dialog(
-                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                                                  backgroundColor: Theme.of(context).colorScheme.surface,
-                                                  child: Padding(
-                                                    padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 24),
-                                                    child: Column(
-                                                      mainAxisSize: MainAxisSize.min,
-                                                      crossAxisAlignment: CrossAxisAlignment.center,
-                                                      children: [
-                                                        const Text('Select Team Color', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                                                        const SizedBox(height: 24),
-                                                        Wrap(
-                                                          spacing: 16,
-                                                          runSpacing: 16,
-                                                          alignment: WrapAlignment.center,
-                                                          children: teamColorOptions.map((color) {
-                                                            final isSelected = color == teamColors[s.id];
-                                                            return GestureDetector(
-                                                              onTap: () => Navigator.pop(colorContext, color),
-                                                              child: Container(
-                                                                width: 80,
-                                                                height: 80,
+                                                    child: Padding(
+                                                      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 24),
+                                                      child: Column(
+                                                        mainAxisSize: MainAxisSize.min,
+                                                        crossAxisAlignment: CrossAxisAlignment.center,
+                                                        children: [
+                                                          Wrap(
+                                                            spacing: 16,
+                                                            runSpacing: 16,
+                                                            alignment: WrapAlignment.center,
+                                                            children: List.generate(selectedType.sections, (i) {
+                                                              final sectionLabel = '${selectedType.abbreviation} ${i + 1}';
+                                                              return Container(
+                                                                width: 140,
+                                                                height: 54,
                                                                 decoration: BoxDecoration(
-                                                                  color: color == null ? Colors.grey.shade200 : null,
-                                                                  borderRadius: BorderRadius.circular(12),
-                                                                  border: Border.all(
-                                                                    color: isSelected ? Colors.blue : Colors.transparent,
-                                                                    width: 2,
+                                                                  gradient: const LinearGradient(
+                                                                    begin: Alignment.topLeft,
+                                                                    end: Alignment.bottomRight,
+                                                                    colors: [
+                                                                      Color(0xFF4FC3F7),
+                                                                      Color(0xFF29B6F6),
+                                                                    ],
+                                                                  ),
+                                                                  borderRadius: BorderRadius.circular(18),
+                                                                  boxShadow: [
+                                                                    BoxShadow(
+                                                                      color: Colors.blue.withOpacity(0.15),
+                                                                      blurRadius: 8,
+                                                                      offset: const Offset(0, 4),
+                                                                    ),
+                                                                  ],
+                                                                ),
+                                                                child: Material(
+                                                                  color: Colors.transparent,
+                                                                  child: InkWell(
+                                                                    borderRadius: BorderRadius.circular(18),
+                                                                    onTap: () => Navigator.pop(sectionContext, sectionLabel),
+                                                                    child: Center(
+                                                                      child: Text(
+                                                                        sectionLabel,
+                                                                        style: const TextStyle(
+                                                                          color: Colors.white,
+                                                                          fontSize: 16,
+                                                                          fontWeight: FontWeight.w600,
+                                                                        ),
+                                                                      ),
+                                                                    ),
                                                                   ),
                                                                 ),
-                                                                child: Center(
+                                                              );
+                                                            }),
+                                                          ),
+                                                          const SizedBox(height: 12),
+                                                          Container(
+                                                            width: double.infinity,
+                                                            height: 54,
+                                                            decoration: BoxDecoration(
+                                                              color: Colors.grey[100],
+                                                              borderRadius: BorderRadius.circular(18),
+                                                              border: Border.all(
+                                                                color: Colors.grey[300]!,
+                                                                width: 1.5,
+                                                              ),
+                                                            ),
+                                                            child: Material(
+                                                              color: Colors.transparent,
+                                                              child: InkWell(
+                                                                borderRadius: BorderRadius.circular(18),
+                                                                onTap: () => Navigator.pop(sectionContext),
+                                                                child: const Center(
                                                                   child: Text(
-                                                                    color == null ? 'None' : color,
+                                                                    'Cancel',
                                                                     style: TextStyle(
+                                                                      color: Colors.black54,
                                                                       fontSize: 16,
                                                                       fontWeight: FontWeight.w500,
-                                                                      color: isSelected ? Colors.blue : Colors.black87,
                                                                     ),
                                                                   ),
                                                                 ),
                                                               ),
-                                                            );
-                                                          }).toList(),
-                                                        ),
-                                                        const SizedBox(height: 12),
-                                                        TextButton(
-                                                          onPressed: () => Navigator.pop(colorContext),
-                                                          child: const Text('Cancel'),
-                                                        ),
-                                                      ],
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
                                                     ),
                                                   ),
                                                 );
                                               },
                                             );
-                                            if (selectedColor != null) {
+                                            
+                                            if (selectedSection != null) {
                                               setState(() {
-                                                teamColors[s.id] = selectedColor;
+                                                final serverStationType = isLunch ? lunchStationType : dinnerStationType;
+                                                final serverStationSection = isLunch ? lunchStationSection : dinnerStationSection;
+                                                serverStationType[s.id] = selectedTypeName;
+                                                serverStationSection[s.id] = selectedSection;
                                               });
+                                              
+                                              if (showTeams) {
+                                                WidgetsBinding.instance.addPostFrameCallback((_) async {
+                                                  final selectedColor = await showDialog<String?>(
+                                                    context: context,
+                                                    barrierDismissible: true,
+                                                    builder: (colorContext) {
+                                                      return Dialog(
+                                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                                                        backgroundColor: Theme.of(context).colorScheme.surface,
+                                                        child: Padding(
+                                                          padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 24),
+                                                          child: Column(
+                                                            mainAxisSize: MainAxisSize.min,
+                                                            crossAxisAlignment: CrossAxisAlignment.center,
+                                                            children: [
+                                                              const Text('Select Team Color', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                                                              const SizedBox(height: 24),
+                                                              Wrap(
+                                                                spacing: 16,
+                                                                runSpacing: 16,
+                                                                alignment: WrapAlignment.center,
+                                                                children: teamColorOptions.map((color) {
+                                                                  final teamColors = isLunch ? lunchTeamColors : dinnerTeamColors;
+                                                                  final isSelected = color == teamColors[s.id];
+                                                                  return GestureDetector(
+                                                                    onTap: () => Navigator.pop(colorContext, color),
+                                                                    child: Container(
+                                                                      width: 80,
+                                                                      height: 80,
+                                                                      decoration: BoxDecoration(
+                                                                        color: color == null ? Colors.grey.shade200 : _getTeamColorValue(color),
+                                                                        borderRadius: BorderRadius.circular(12),
+                                                                        border: Border.all(
+                                                                          color: isSelected ? Colors.blue : Colors.transparent,
+                                                                          width: 2,
+                                                                        ),
+                                                                      ),
+                                                                      child: Center(
+                                                                        child: Text(
+                                                                          color == null ? 'None' : color,
+                                                                          style: TextStyle(
+                                                                            fontSize: 16,
+                                                                            fontWeight: FontWeight.w500,
+                                                                            color: isSelected ? Colors.blue : Colors.white,
+                                                                          ),
+                                                                        ),
+                                                                      ),
+                                                                    ),
+                                                                  );
+                                                                }).toList(),
+                                                              ),
+                                                              const SizedBox(height: 12),
+                                                              TextButton(
+                                                                onPressed: () => Navigator.pop(colorContext),
+                                                                child: const Text('Cancel'),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                      );
+                                                    },
+                                                  );
+                                                  if (selectedColor != null) {
+                                                    setState(() {
+                                                      final teamColors = isLunch ? lunchTeamColors : dinnerTeamColors;
+                                                      teamColors[s.id] = selectedColor;
+                                                    });
+                                                  }
+                                                });
+                                              }
                                             }
-                                          });
-                                        }
-                                      }
-                                    }
-                                  },
+                                          }
+                                        },
                                         child: Padding(
                                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                           child: Row(

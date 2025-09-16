@@ -1163,26 +1163,36 @@ class AppState extends ChangeNotifier {
     
     final keysToSave = roster != null ? roster.where((id) => _currentCounts.containsKey(id)) : _currentCounts.keys;
     
-    print('[DEBUG] Finalizing shift: type=$type');
-    print('[DEBUG] Roster filter: ${roster ?? 'none (all servers)'}');
-    print('[DEBUG] Available _currentCounts: $_currentCounts');
-    print('[DEBUG] Keys to check for saving: ${keysToSave.toList()}');
+    print('[SHIFT SAVE DEBUG] ================================');
+    print('[SHIFT SAVE DEBUG] Finalizing shift: type=$type at ${DateTime.now()}');
+    print('[SHIFT SAVE DEBUG] Roster filter: ${roster ?? 'none (all servers)'}');
+    print('[SHIFT SAVE DEBUG] Available _currentCounts: $_currentCounts');
+    print('[SHIFT SAVE DEBUG] Keys to check for saving: ${keysToSave.toList()}');
     
     for (final id in keysToSave) {
       final count = _currentCounts[id] ?? 0;
-      print('[DEBUG] Server $id: count=$count');
+      print('[SHIFT SAVE DEBUG] Server $id: count=$count');
       if (count > 0) {  // Only save servers with actual runs
         filteredCounts[id] = count;
         pizookieCounts[id] = _currentPizookieCounts[id] ?? 0;
-        print('[DEBUG] Server $id SAVED to $type history with $count runs');
+        print('[SHIFT SAVE DEBUG] Server $id SAVED to $type history with $count runs');
       } else {
-        print('[DEBUG] Server $id SKIPPED (count=$count)');
+        print('[SHIFT SAVE DEBUG] Server $id SKIPPED (count=$count)');
       }
     }
     
-    print('[DEBUG] Final saving counts: $filteredCounts');
-    print('[DEBUG] Final saving pizookieCounts: $pizookieCounts');
-    print('[DEBUG] Saving pizookieCounts: $pizookieCounts');
+    print('[SHIFT SAVE DEBUG] Final saving counts: $filteredCounts');
+    print('[SHIFT SAVE DEBUG] Final saving pizookieCounts: $pizookieCounts');
+    
+    // CRITICAL: Don't save empty shifts to history - they pollute the historical data
+    if (filteredCounts.isEmpty) {
+      print('[SHIFT SAVE DEBUG] ⚠️ SKIPPING SAVE: No servers with runs > 0, not saving empty shift');
+      print('[SHIFT SAVE DEBUG] ================================');
+      return;
+    }
+    
+    print('[SHIFT SAVE DEBUG] ✅ SAVING SHIFT: ${filteredCounts.length} servers with data');
+    print('[SHIFT SAVE DEBUG] Saving pizookieCounts: $pizookieCounts');
     final rec = ShiftRecord(
       id: _randId(),
       label: type,
@@ -1192,6 +1202,8 @@ class AppState extends ChangeNotifier {
       pizookieCounts: pizookieCounts,
     );
     _history.add(rec);
+    print('[SHIFT SAVE DEBUG] ✅ Shift saved to history with ${filteredCounts.length} servers');
+    print('[SHIFT SAVE DEBUG] ================================');
 
     String? mvpId;
     int mvpScore = -1;
