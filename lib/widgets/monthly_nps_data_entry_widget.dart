@@ -410,9 +410,9 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
                               child: TextFormField(
                                 controller: serverData.allTimeTableCountController,
                                 decoration: const InputDecoration(
-                                  labelText: 'All-Time Table Count',
+                                  labelText: 'All-Time Check Count',
                                   border: OutlineInputBorder(),
-                                  hintText: 'Number of tables',
+                                  hintText: 'Number of checks',
                                 ),
                                 keyboardType: TextInputType.number,
                               ),
