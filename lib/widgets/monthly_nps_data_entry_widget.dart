@@ -39,8 +39,18 @@ class ServerMetricsData {
     if (allTimeNpsPercentage != null) allTimeNpsController.text = allTimeNpsPercentage.toStringAsFixed(1);
     if (threeMonthNpsPercentage != null) threeMonthNpsController.text = threeMonthNpsPercentage.toStringAsFixed(1);
     if (oneMonthNpsPercentage != null) oneMonthNpsController.text = oneMonthNpsPercentage.toStringAsFixed(1);
-    if (allTimeSales != null) allTimeSalesController.text = allTimeSales.toStringAsFixed(2);
-    if (allTimeTableCount != null) allTimeTableCountController.text = allTimeTableCount.toString();
+    
+    // Only set sales if it's a meaningful value (greater than 0)
+    if (allTimeSales != null && allTimeSales > 0) {
+      // Format as currency without the dollar sign (since prefixText handles it)
+      allTimeSalesController.text = allTimeSales.toStringAsFixed(2);
+    }
+    
+    // Only set table count if it's a meaningful value (greater than 0)
+    if (allTimeTableCount != null && allTimeTableCount > 0) {
+      allTimeTableCountController.text = allTimeTableCount.toString();
+    }
+    
     return this;
   }
 
@@ -120,14 +130,32 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
       for (final entry in _serverData.entries) {
         final serverId = entry.key;
         try {
-          final report = await npsProvider.calculator.generateMonthlyReport(serverId, reportMonth);
-          _serverData[serverId] = _serverData[serverId]!.copyWith(
-            allTimeNpsPercentage: report.allTimeNpsPercentage,
-            threeMonthNpsPercentage: report.threeMonthNpsPercentage,
-            oneMonthNpsPercentage: report.oneMonthNpsPercentage,
-            allTimeSales: report.allTimeSales,
-            allTimeTableCount: report.allTimeTableCount,
-          );
+          // First try to load saved data from database
+          final existingReportMap = await npsProvider.database.getMonthlyReport(serverId, reportMonth);
+          
+          if (existingReportMap != null) {
+            // Load saved data from database
+            final report = NPSMonthlyReport.fromMap(existingReportMap);
+            _serverData[serverId] = _serverData[serverId]!.copyWith(
+              allTimeNpsPercentage: report.allTimeNpsPercentage,
+              threeMonthNpsPercentage: report.threeMonthNpsPercentage,
+              oneMonthNpsPercentage: report.oneMonthNpsPercentage,
+              allTimeSales: report.allTimeSales,
+              allTimeTableCount: report.allTimeTableCount,
+            );
+            debugPrint('✅ Loaded saved data for server $serverId');
+          } else {
+            // No saved data found, generate fresh report for reference
+            final report = await npsProvider.calculator.generateMonthlyReport(serverId, reportMonth);
+            _serverData[serverId] = _serverData[serverId]!.copyWith(
+              allTimeNpsPercentage: report.allTimeNpsPercentage,
+              threeMonthNpsPercentage: report.threeMonthNpsPercentage,
+              oneMonthNpsPercentage: report.oneMonthNpsPercentage,
+              allTimeSales: report.allTimeSales,
+              allTimeTableCount: report.allTimeTableCount,
+            );
+            debugPrint('📊 Generated fresh data for server $serverId');
+          }
         } catch (e) {
           debugPrint('Error loading data for server $serverId: $e');
         }
@@ -185,42 +213,57 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.orange.shade200),
       ),
-      child: Row(
+      child: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.orange.shade600,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(
-              Icons.calendar_month,
-              color: Colors.white,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Monthly NPS Data Entry',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade600,
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Enter NPS scores and feedback for servers by month',
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontSize: 14,
-                  ),
+                child: const Icon(
+                  Icons.calendar_month,
+                  color: Colors.white,
+                  size: 24,
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Monthly NPS Data Entry',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Enter NPS scores and feedback for servers by month',
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Clear All button moved to header
+              OutlinedButton.icon(
+                onPressed: _clearAllDataWithConfirmation,
+                icon: const Icon(Icons.clear_all, size: 18),
+                label: const Text('Clear All'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.red.shade700,
+                  side: BorderSide(color: Colors.red.shade300),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -347,8 +390,19 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
                                 decoration: const InputDecoration(
                                   labelText: 'All-Time Sales',
                                   border: OutlineInputBorder(),
+                                  prefixText: '\$',
+                                  hintText: '0.00',
                                 ),
-                                keyboardType: TextInputType.number,
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                onChanged: (value) {
+                                  // Format currency as user types
+                                  if (value.isNotEmpty) {
+                                    final numericValue = double.tryParse(value);
+                                    if (numericValue != null) {
+                                      // Remove cursor position issues by formatting on focus loss instead
+                                    }
+                                  }
+                                },
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -358,6 +412,7 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
                                 decoration: const InputDecoration(
                                   labelText: 'All-Time Table Count',
                                   border: OutlineInputBorder(),
+                                  hintText: 'Number of tables',
                                 ),
                                 keyboardType: TextInputType.number,
                               ),
@@ -377,32 +432,18 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
   }
 
   Widget _buildActionButtons() {
-    return Row(
-      children: [
-        Expanded(
-          child: ElevatedButton.icon(
-            onPressed: _isLoading ? null : _saveData,
-            icon: const Icon(Icons.save),
-            label: const Text('Save All Data'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange.shade600,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-            ),
-          ),
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: _isLoading ? null : _saveData,
+        icon: const Icon(Icons.save),
+        label: const Text('Save All Data'),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.orange.shade600,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 16),
         ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: _clearAllData,
-            icon: const Icon(Icons.clear_all),
-            label: const Text('Clear All'),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
@@ -429,12 +470,48 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
     }
   }
 
+  void _clearAllDataWithConfirmation() async {
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Clear All Data'),
+          content: const Text('Are you sure you want to clear all entered data? This action cannot be undone.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red,
+              ),
+              child: const Text('Clear All'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      _clearAllData();
+    }
+  }
+
   void _clearAllData() {
     setState(() {
       for (final data in _serverData.values) {
         data.clear();
       }
     });
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('All data cleared successfully'),
+        backgroundColor: Colors.orange,
+      ),
+    );
   }
 
   Future<void> _saveData() async {
@@ -476,8 +553,8 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
         }
       }
 
-      // Clear all data after saving
-      _clearAllData();
+      // Reload data after saving to show persisted values
+      await _loadExistingData();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

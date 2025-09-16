@@ -29,6 +29,7 @@ class NPSProvider with ChangeNotifier {
   List<NPSFeedback> get recentFeedback => List.unmodifiable(_recentFeedback);
   NPSMonthlyReport? get currentReport => _currentReport;
   NPSCalculator get calculator => _calculator;
+  NPSDatabase get database => _database;
   bool get isLoading => _isLoading;
   bool get isInitialized => _isInitialized;
   String? get errorMessage => _errorMessage;
