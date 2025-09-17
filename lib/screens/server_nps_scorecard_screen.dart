@@ -187,9 +187,76 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
   Color _getNPSColor(dynamic value) {
     if (value == null) return Colors.grey;
     final percentage = value as double;
-    if (percentage >= 70) return Colors.green;
-    if (percentage >= 50) return Colors.orange;
-    return Colors.red;
+    
+    // Enhanced 8-tier color system with distinct visual differences
+    if (percentage >= 95.0) return const Color(0xFF0F7B0F); // Rich emerald green - Outstanding (95-100%)
+    if (percentage >= 90.0) return const Color(0xFF228B22); // Forest green - Excellent (90-94.9%)
+    if (percentage >= 85.0) return const Color(0xFF32CD32); // Lime green - Very Good (85-89.9%)
+    if (percentage >= 80.0) return const Color(0xFF7CFC00); // Lawn green - Good (80-84.9%)
+    if (percentage >= 75.0) return const Color(0xFFFFA500); // Orange - Developing (75-79.9%)
+    if (percentage >= 70.0) return const Color(0xFFFF4500); // Orange red - Growing (70-74.9%)
+    if (percentage >= 60.0) return const Color(0xFFDC143C); // Crimson - Learning (60-69.9%)
+    return const Color(0xFF8B0000); // Dark red - Building (below 60%)
+  }
+
+  bool _isTopPerformer(dynamic value) {
+    if (value == null) return false;
+    final percentage = value as double;
+    return percentage >= 95.0;
+  }
+
+  Widget _buildColorLegendItem(Color color, String label, {bool showTrophy = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color, width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.3),
+            blurRadius: 2,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+                shadows: [
+                  Shadow(
+                    offset: const Offset(1.0, 1.0),
+                    blurRadius: 2.0,
+                    color: color.withOpacity(0.9),
+                  ),
+                  Shadow(
+                    offset: const Offset(-0.5, -0.5),
+                    blurRadius: 1.0,
+                    color: Colors.black.withOpacity(0.5),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (showTrophy)
+            Positioned(
+              top: 4,
+              left: 4,
+              child: Icon(
+                Icons.emoji_events,
+                size: 16,
+                color: Colors.amber.shade400,
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -435,6 +502,55 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
                               },
                             ),
                             const SizedBox(height: 12),
+                            
+                            // Color Coding Legend
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade50,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.grey.shade200),
+                              ),
+                              child: Column(
+                                children: [
+                                  // Green tiers (positive performance)
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      _buildColorLegendItem(const Color(0xFF0F7B0F), '95%+ Outstanding'),
+                                      const SizedBox(width: 4),
+                                      _buildColorLegendItem(const Color(0xFF228B22), '90%+ Excellent'),
+                                      const SizedBox(width: 4),
+                                      _buildColorLegendItem(const Color(0xFF32CD32), '85%+ Very Good'),
+                                      const SizedBox(width: 4),
+                                      _buildColorLegendItem(const Color(0xFF7CFC00), '80%+ Good'),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  // Orange tiers (developmental)
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      _buildColorLegendItem(const Color(0xFFFFA500), '75%+ Developing'),
+                                      const SizedBox(width: 4),
+                                      _buildColorLegendItem(const Color(0xFFFF4500), '70%+ Growing'),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  // Red tiers (building phase)
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      _buildColorLegendItem(const Color(0xFFDC143C), '60%+ Learning'),
+                                      const SizedBox(width: 4),
+                                      _buildColorLegendItem(const Color(0xFF8B0000), '<60% Building'),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            
                             if (_isLoadingServerData)
                               const Center(
                                 child: Padding(
@@ -457,177 +573,298 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
                               )
                             else
                               Expanded(
-                                child: SingleChildScrollView(
-                                  child: Card(
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(8.0),
-                                      child: Column(
-                                        children: [
-                                          // Header Row
-                                          Container(
-                                            decoration: BoxDecoration(
-                                              color: Colors.grey.shade100,
-                                              borderRadius: BorderRadius.circular(8),
+                                child: Card(
+                                  child: Column(
+                                    children: [
+                                      // Fixed Header Row (this stays visible)
+                                      Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey.shade100,
+                                          borderRadius: const BorderRadius.only(
+                                            topLeft: Radius.circular(12),
+                                            topRight: Radius.circular(12),
+                                          ),
+                                          border: Border.all(color: Colors.grey.shade300, width: 2),
+                                        ),
+                                        padding: const EdgeInsets.all(12),
+                                        child: const Row(
+                                          children: [
+                                            Expanded(
+                                              flex: 3,
+                                              child: Text(
+                                                'Server Name',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 14,
+                                                ),
+                                              ),
                                             ),
-                                            padding: const EdgeInsets.all(12),
-                                            child: const Row(
-                                              children: [
-                                                Expanded(
-                                                  flex: 3,
-                                                  child: Text(
-                                                    'Server Name',
-                                                    style: TextStyle(
-                                                      fontWeight: FontWeight.bold,
-                                                      fontSize: 14,
-                                                    ),
-                                                  ),
+                                            Expanded(
+                                              flex: 2,
+                                              child: Text(
+                                                'All Time NPS',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 14,
                                                 ),
-                                                Expanded(
-                                                  flex: 2,
-                                                  child: Text(
-                                                    'All Time NPS',
-                                                    style: TextStyle(
-                                                      fontWeight: FontWeight.bold,
-                                                      fontSize: 14,
-                                                    ),
-                                                    textAlign: TextAlign.center,
-                                                  ),
+                                                textAlign: TextAlign.center,
+                                              ),
+                                            ),
+                                            Expanded(
+                                              flex: 2,
+                                              child: Text(
+                                                '3 Month NPS',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 14,
                                                 ),
-                                                Expanded(
-                                                  flex: 2,
-                                                  child: Text(
-                                                    '3 Month NPS',
-                                                    style: TextStyle(
-                                                      fontWeight: FontWeight.bold,
-                                                      fontSize: 14,
-                                                    ),
-                                                    textAlign: TextAlign.center,
-                                                  ),
+                                                textAlign: TextAlign.center,
+                                              ),
+                                            ),
+                                            Expanded(
+                                              flex: 2,
+                                              child: Text(
+                                                '1 Month NPS',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 14,
                                                 ),
-                                                Expanded(
-                                                  flex: 2,
-                                                  child: Text(
-                                                    '1 Month NPS',
-                                                    style: TextStyle(
-                                                      fontWeight: FontWeight.bold,
-                                                      fontSize: 14,
-                                                    ),
-                                                    textAlign: TextAlign.center,
-                                                  ),
-                                                ),
-                                              ],
+                                                textAlign: TextAlign.center,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      // Scrollable Content Area
+                                      Expanded(
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            border: Border.all(color: Colors.grey.shade300, width: 2),
+                                            borderRadius: const BorderRadius.only(
+                                              bottomLeft: Radius.circular(12),
+                                              bottomRight: Radius.circular(12),
                                             ),
                                           ),
-                                          const SizedBox(height: 8),
-                                          // Server Data Rows
-                                          ..._getSortedServerData().map((serverData) {
-                                            return Container(
-                                              margin: const EdgeInsets.only(bottom: 8),
-                                              decoration: BoxDecoration(
-                                                border: Border.all(color: Colors.grey.shade200),
-                                                borderRadius: BorderRadius.circular(8),
-                                              ),
-                                              padding: const EdgeInsets.all(12),
-                                              child: Row(
-                                                children: [
-                                                  Expanded(
-                                                    flex: 3,
-                                                    child: Text(
-                                                      serverData['server_name'] ?? 'Unknown',
-                                                      style: const TextStyle(
-                                                        fontWeight: FontWeight.w500,
-                                                        fontSize: 14,
-                                                      ),
-                                                    ),
+                                          child: SingleChildScrollView(
+                                            padding: const EdgeInsets.all(8),
+                                            child: Column(
+                                              children: _getSortedServerData().map((serverData) {
+                                                return Container(
+                                                  margin: const EdgeInsets.only(bottom: 12),
+                                                  decoration: BoxDecoration(
+                                                    border: Border.all(color: Colors.grey.shade200),
+                                                    borderRadius: BorderRadius.circular(8),
                                                   ),
-                                                  Expanded(
-                                                    flex: 2,
-                                                    child: Container(
-                                                      padding: const EdgeInsets.symmetric(
-                                                        horizontal: 8,
-                                                        vertical: 4,
-                                                      ),
-                                                      decoration: BoxDecoration(
-                                                        color: _getNPSColor(serverData['all_time_nps_percentage'])
-                                                            .withOpacity(0.1),
-                                                        borderRadius: BorderRadius.circular(12),
-                                                        border: Border.all(
-                                                          color: _getNPSColor(serverData['all_time_nps_percentage']),
-                                                          width: 1,
+                                                  padding: const EdgeInsets.all(16),
+                                                  child: Row(
+                                                    children: [
+                                                      Expanded(
+                                                        flex: 3,
+                                                        child: Text(
+                                                          serverData['server_name'] ?? 'Unknown',
+                                                          style: const TextStyle(
+                                                            fontWeight: FontWeight.w800,
+                                                            fontSize: 18,
+                                                            color: Color(0xFF2C3E50),
+                                                            letterSpacing: 0.5,
+                                                          ),
                                                         ),
                                                       ),
-                                                      child: Text(
-                                                        _formatNPSPercentage(serverData['all_time_nps_percentage']),
-                                                        style: TextStyle(
-                                                          color: _getNPSColor(serverData['all_time_nps_percentage']),
-                                                          fontWeight: FontWeight.bold,
-                                                          fontSize: 13,
+                                                      Expanded(
+                                                        flex: 2,
+                                                        child: Container(
+                                                          padding: const EdgeInsets.symmetric(
+                                                            horizontal: 10,
+                                                            vertical: 8,
+                                                          ),
+                                                          decoration: BoxDecoration(
+                                                            color: _getNPSColor(serverData['all_time_nps_percentage'])
+                                                                .withOpacity(0.15),
+                                                            borderRadius: BorderRadius.circular(12),
+                                                            border: Border.all(
+                                                              color: _getNPSColor(serverData['all_time_nps_percentage']),
+                                                              width: 2,
+                                                            ),
+                                                            boxShadow: [
+                                                              BoxShadow(
+                                                                color: _getNPSColor(serverData['all_time_nps_percentage']).withOpacity(0.3),
+                                                                blurRadius: 2,
+                                                                offset: const Offset(0, 1),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                          child: Stack(
+                                                            children: [
+                                                              Center(
+                                                                child: Text(
+                                                                  _formatNPSPercentage(serverData['all_time_nps_percentage']),
+                                                                  style: TextStyle(
+                                                                    color: Colors.white,
+                                                                    fontWeight: FontWeight.w900,
+                                                                    fontSize: 16,
+                                                                    shadows: [
+                                                                      Shadow(
+                                                                        offset: const Offset(1.0, 1.0),
+                                                                        blurRadius: 2.0,
+                                                                        color: _getNPSColor(serverData['all_time_nps_percentage']).withOpacity(0.9),
+                                                                      ),
+                                                                      Shadow(
+                                                                        offset: const Offset(-0.5, -0.5),
+                                                                        blurRadius: 1.0,
+                                                                        color: Colors.black.withOpacity(0.5),
+                                                                      ),
+                                                                    ],
+                                                                  ),
+                                                                  textAlign: TextAlign.center,
+                                                                ),
+                                                              ),
+                                                              if (_isTopPerformer(serverData['all_time_nps_percentage']))
+                                                                Positioned(
+                                                                  top: 2,
+                                                                  left: 2,
+                                                                  child: Icon(
+                                                                    Icons.emoji_events,
+                                                                    size: 14,
+                                                                    color: Colors.amber.shade400,
+                                                                  ),
+                                                                ),
+                                                            ],
+                                                          ),
                                                         ),
-                                                        textAlign: TextAlign.center,
                                                       ),
-                                                    ),
+                                                      Expanded(
+                                                        flex: 2,
+                                                        child: Container(
+                                                          padding: const EdgeInsets.symmetric(
+                                                            horizontal: 10,
+                                                            vertical: 8,
+                                                          ),
+                                                          decoration: BoxDecoration(
+                                                            color: _getNPSColor(serverData['three_month_nps_percentage'])
+                                                                .withOpacity(0.15),
+                                                            borderRadius: BorderRadius.circular(12),
+                                                            border: Border.all(
+                                                              color: _getNPSColor(serverData['three_month_nps_percentage']),
+                                                              width: 2,
+                                                            ),
+                                                            boxShadow: [
+                                                              BoxShadow(
+                                                                color: _getNPSColor(serverData['three_month_nps_percentage']).withOpacity(0.3),
+                                                                blurRadius: 2,
+                                                                offset: const Offset(0, 1),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                          child: Stack(
+                                                            children: [
+                                                              Center(
+                                                                child: Text(
+                                                                  _formatNPSPercentage(serverData['three_month_nps_percentage']),
+                                                                  style: TextStyle(
+                                                                    color: Colors.white,
+                                                                    fontWeight: FontWeight.w900,
+                                                                    fontSize: 16,
+                                                                    shadows: [
+                                                                      Shadow(
+                                                                        offset: const Offset(1.0, 1.0),
+                                                                        blurRadius: 2.0,
+                                                                        color: _getNPSColor(serverData['three_month_nps_percentage']).withOpacity(0.9),
+                                                                      ),
+                                                                      Shadow(
+                                                                        offset: const Offset(-0.5, -0.5),
+                                                                        blurRadius: 1.0,
+                                                                        color: Colors.black.withOpacity(0.5),
+                                                                      ),
+                                                                    ],
+                                                                  ),
+                                                                  textAlign: TextAlign.center,
+                                                                ),
+                                                              ),
+                                                              if (_isTopPerformer(serverData['three_month_nps_percentage']))
+                                                                Positioned(
+                                                                  top: 2,
+                                                                  left: 2,
+                                                                  child: Icon(
+                                                                    Icons.emoji_events,
+                                                                    size: 14,
+                                                                    color: Colors.amber.shade400,
+                                                                  ),
+                                                                ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      Expanded(
+                                                        flex: 2,
+                                                        child: Container(
+                                                          padding: const EdgeInsets.symmetric(
+                                                            horizontal: 10,
+                                                            vertical: 8,
+                                                          ),
+                                                          decoration: BoxDecoration(
+                                                            color: _getNPSColor(serverData['one_month_nps_percentage'])
+                                                                .withOpacity(0.15),
+                                                            borderRadius: BorderRadius.circular(12),
+                                                            border: Border.all(
+                                                              color: _getNPSColor(serverData['one_month_nps_percentage']),
+                                                              width: 2,
+                                                            ),
+                                                            boxShadow: [
+                                                              BoxShadow(
+                                                                color: _getNPSColor(serverData['one_month_nps_percentage']).withOpacity(0.3),
+                                                                blurRadius: 2,
+                                                                offset: const Offset(0, 1),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                          child: Stack(
+                                                            children: [
+                                                              Center(
+                                                                child: Text(
+                                                                  _formatNPSPercentage(serverData['one_month_nps_percentage']),
+                                                                  style: TextStyle(
+                                                                    color: Colors.white,
+                                                                    fontWeight: FontWeight.w900,
+                                                                    fontSize: 16,
+                                                                    shadows: [
+                                                                      Shadow(
+                                                                        offset: const Offset(1.0, 1.0),
+                                                                        blurRadius: 2.0,
+                                                                        color: _getNPSColor(serverData['one_month_nps_percentage']).withOpacity(0.9),
+                                                                      ),
+                                                                      Shadow(
+                                                                        offset: const Offset(-0.5, -0.5),
+                                                                        blurRadius: 1.0,
+                                                                        color: Colors.black.withOpacity(0.5),
+                                                                      ),
+                                                                    ],
+                                                                  ),
+                                                                  textAlign: TextAlign.center,
+                                                                ),
+                                                              ),
+                                                              if (_isTopPerformer(serverData['one_month_nps_percentage']))
+                                                                Positioned(
+                                                                  top: 2,
+                                                                  left: 2,
+                                                                  child: Icon(
+                                                                    Icons.emoji_events,
+                                                                    size: 14,
+                                                                    color: Colors.amber.shade400,
+                                                                  ),
+                                                                ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
                                                   ),
-                                                  Expanded(
-                                                    flex: 2,
-                                                    child: Container(
-                                                      padding: const EdgeInsets.symmetric(
-                                                        horizontal: 8,
-                                                        vertical: 4,
-                                                      ),
-                                                      decoration: BoxDecoration(
-                                                        color: _getNPSColor(serverData['three_month_nps_percentage'])
-                                                            .withOpacity(0.1),
-                                                        borderRadius: BorderRadius.circular(12),
-                                                        border: Border.all(
-                                                          color: _getNPSColor(serverData['three_month_nps_percentage']),
-                                                          width: 1,
-                                                        ),
-                                                      ),
-                                                      child: Text(
-                                                        _formatNPSPercentage(serverData['three_month_nps_percentage']),
-                                                        style: TextStyle(
-                                                          color: _getNPSColor(serverData['three_month_nps_percentage']),
-                                                          fontWeight: FontWeight.bold,
-                                                          fontSize: 13,
-                                                        ),
-                                                        textAlign: TextAlign.center,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  Expanded(
-                                                    flex: 2,
-                                                    child: Container(
-                                                      padding: const EdgeInsets.symmetric(
-                                                        horizontal: 8,
-                                                        vertical: 4,
-                                                      ),
-                                                      decoration: BoxDecoration(
-                                                        color: _getNPSColor(serverData['one_month_nps_percentage'])
-                                                            .withOpacity(0.1),
-                                                        borderRadius: BorderRadius.circular(12),
-                                                        border: Border.all(
-                                                          color: _getNPSColor(serverData['one_month_nps_percentage']),
-                                                          width: 1,
-                                                        ),
-                                                      ),
-                                                      child: Text(
-                                                        _formatNPSPercentage(serverData['one_month_nps_percentage']),
-                                                        style: TextStyle(
-                                                          color: _getNPSColor(serverData['one_month_nps_percentage']),
-                                                          fontWeight: FontWeight.bold,
-                                                          fontSize: 13,
-                                                        ),
-                                                        textAlign: TextAlign.center,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            );
-                                          }).toList(),
-                                        ],
+                                                );
+                                              }).toList(),
+                                            ),
+                                          ),
+                                        ),
                                       ),
-                                    ),
+                                    ],
                                   ),
                                 ),
                               ),
