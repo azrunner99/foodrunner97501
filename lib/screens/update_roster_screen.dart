@@ -14,6 +14,7 @@ class UpdateRosterScreen extends StatefulWidget {
 class _UpdateRosterScreenState extends State<UpdateRosterScreen> {
   bool _unlocked = false;
   final _pinCtrl = TextEditingController();
+  final GlobalKey<_RosterBodyState> _rosterBodyKey = GlobalKey<_RosterBodyState>();
 
   @override
   void dispose() {
@@ -218,6 +219,21 @@ class _UpdateRosterScreenState extends State<UpdateRosterScreen> {
         elevation: 0,
         shadowColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.save),
+            onPressed: () async {
+              // Call saveRoster from the _RosterBodyState
+              await _rosterBodyKey.currentState?.saveRoster();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Roster saved successfully!')),
+                );
+              }
+            },
+            tooltip: 'Save Roster',
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
           child: Container(
@@ -226,7 +242,7 @@ class _UpdateRosterScreenState extends State<UpdateRosterScreen> {
           ),
         ),
       ),
-      body: _RosterBody(app: app),
+      body: _RosterBody(key: _rosterBodyKey, app: app),
     );
   }
 
@@ -339,7 +355,7 @@ class _UpdateRosterScreenState extends State<UpdateRosterScreen> {
 
 class _RosterBody extends StatefulWidget {
   final AppState app;
-  const _RosterBody({required this.app});
+  const _RosterBody({super.key, required this.app});
 
   @override
   State<_RosterBody> createState() => _RosterBodyState();
@@ -410,33 +426,38 @@ class _RosterBodyState extends State<_RosterBody> {
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    void saveRoster() async {
-      widget.app.setTodayPlan(lunchRoster, dinnerRoster);
+  Future<void> saveRoster() async {
+    widget.app.setTodayPlan(lunchRoster, dinnerRoster);
 
-      // Persist station assignments to SharedPreferences
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('lunchStationType', json.encode(lunchStationType));
-      await prefs.setString('dinnerStationType', json.encode(dinnerStationType));
-      await prefs.setString('lunchStationSection', json.encode(lunchStationSection));
-      await prefs.setString('dinnerStationSection', json.encode(dinnerStationSection));
+    // Persist station assignments to SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('lunchStationType', json.encode(lunchStationType));
+    await prefs.setString('dinnerStationType', json.encode(dinnerStationType));
+    await prefs.setString('lunchStationSection', json.encode(lunchStationSection));
+    await prefs.setString('dinnerStationSection', json.encode(dinnerStationSection));
 
-      // Sync teamColor assignments to AppState servers
-      for (final s in widget.app.servers) {
-        s.teamColor = isLunch ? lunchTeamColors[s.id] : dinnerTeamColors[s.id];
-      }
-
-      // Update the active roster immediately
-      final now = DateTime.now();
-      final intended = widget.app.currentIntendedShiftType(now);
-      if (intended == 'Lunch') {
-        widget.app.updateActiveRoster(lunchRoster);
-      } else {
-        widget.app.updateActiveRoster(dinnerRoster);
-      }
+    // Sync teamColor assignments to AppState servers
+    for (final s in widget.app.servers) {
+      s.teamColor = isLunch ? lunchTeamColors[s.id] : dinnerTeamColors[s.id];
     }
 
+    // Update the active roster immediately
+    // CRITICAL FIX: Preserve existing counts if a shift is currently active
+    // This prevents server totals from being reset to zero during live roster updates
+    final shouldPreserveCounts = widget.app.shiftActive;
+    
+    // Use CURRENT shift type, not intended shift type, for updating active roster
+    final currentShift = widget.app.shiftType;
+    
+    if (currentShift == 'Lunch') {
+      widget.app.updateActiveRoster(lunchRoster, preserveExistingCounts: shouldPreserveCounts);
+    } else {
+      widget.app.updateActiveRoster(dinnerRoster, preserveExistingCounts: shouldPreserveCounts);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     // Sync teamColor on server objects when switching between lunch/dinner
     void _syncServerTeamColors() {
       for (final s in widget.app.servers) {

@@ -149,24 +149,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           if (close == null) return;
                           
                           // Temporarily update hours to check transition conflicts
-                          final oldOpen = _hours.openMinutes[d.weekday]!;
-                          final oldClose = _hours.closeMinutes[d.weekday]!;
+                          // TEMPORARILY DISABLED: final oldOpen = _hours.openMinutes[d.weekday]!;
+                          // TEMPORARILY DISABLED: final oldClose = _hours.closeMinutes[d.weekday]!;
                           _hours.openMinutes[d.weekday] = open;
                           _hours.closeMinutes[d.weekday] = close;
                           
-                          // Check if current transition times are still valid with new hours
-                          final conflicts = _validateTransitionTimes(_transitionStart, _transitionEnd);
-                          if (conflicts.isNotEmpty) {
-                            // Restore old values
-                            _hours.openMinutes[d.weekday] = oldOpen;
-                            _hours.closeMinutes[d.weekday] = oldClose;
-                            
-                            await _showTransitionConflictDialog([
-                              'Changing ${d.label} hours would create conflicts with current transition times:',
-                              ...conflicts,
-                            ]);
-                            return;
-                          }
+                          // TEMPORARILY DISABLED: Check if current transition times are still valid with new hours
+                          // final conflicts = _validateTransitionTimes(_transitionStart, _transitionEnd);
+                          // if (conflicts.isNotEmpty) {
+                          //   // Restore old values
+                          //   _hours.openMinutes[d.weekday] = oldOpen;
+                          //   _hours.closeMinutes[d.weekday] = oldClose;
+                          //   
+                          //   await _showTransitionConflictDialog([
+                          //     'Changing ${d.label} hours would create conflicts with current transition times:',
+                          //     ...conflicts,
+                          //   ]);
+                          //   return;
+                          // }
                           
                           setState(() {
                             // Hours already updated above for validation
@@ -202,12 +202,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         final end = await _pickTime(context, 'Set transition end time', _transitionEnd);
                         if (end == null) return;
                         
-                        // Validate that transition times are within business hours
-                        final conflicts = _validateTransitionTimes(start, end);
-                        if (conflicts.isNotEmpty) {
-                          await _showTransitionConflictDialog(conflicts);
-                          return; // Don't save the invalid times
-                        }
+                        // TEMPORARILY DISABLED: Validate that transition times are within business hours
+                        // final conflicts = _validateTransitionTimes(start, end);
+                        // if (conflicts.isNotEmpty) {
+                        //   await _showTransitionConflictDialog(conflicts);
+                        //   return; // Don't save the invalid times
+                        // }
                         
                         setState(() {
                           _transitionStart = start;
@@ -563,7 +563,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  /// Validates that transition times fall within business hours for all days
+  /// TEMPORARILY DISABLED: Validates that transition times fall within business hours for all days
+  /*
   List<String> _validateTransitionTimes(int transitionStart, int transitionEnd) {
     final conflicts = <String>[];
     
@@ -600,18 +601,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
     
     return conflicts;
   }
+  */
 
   /// Returns a status indicator for current transition validation state
   String _getTransitionValidationStatus() {
-    final conflicts = _validateTransitionTimes(_transitionStart, _transitionEnd);
-    if (conflicts.isEmpty) {
-      return ' ✅'; // Valid
-    } else {
-      return ' ⚠️ (${conflicts.length} conflicts)'; // Invalid with count
-    }
+    // TEMPORARILY DISABLED: transition validation
+    // final conflicts = _validateTransitionTimes(_transitionStart, _transitionEnd);
+    // if (conflicts.isEmpty) {
+    //   return ' ✅'; // Valid
+    // } else {
+    //   return ' ⚠️ (${conflicts.length} conflicts)'; // Invalid with count
+    // }
+    return ''; // No validation status shown
   }
 
-  /// Shows a dialog with transition validation conflicts
+  /// TEMPORARILY DISABLED: Shows a dialog with transition validation conflicts
+  /*
   Future<void> _showTransitionConflictDialog(List<String> conflicts) async {
     await showDialog(
       context: context,
@@ -648,6 +653,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
+  */
 }
 
 class _DayRow { final int weekday; final String label; const _DayRow(this.weekday, this.label); }

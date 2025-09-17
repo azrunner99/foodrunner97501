@@ -1710,49 +1710,60 @@ class AppState extends ChangeNotifier {
     setTodayPlan(lunch, dinner);
     final now = DateTime.now();
     final intended = currentIntendedShiftType(now);
+    
+    // CRITICAL FIX: Preserve existing counts if a shift is currently active
+    // This prevents server totals from being reset to zero during live roster updates
+    final shouldPreserveCounts = shiftActive;
+    
     if (intended == 'Lunch') {
-      updateActiveRoster(lunch);
+      updateActiveRoster(lunch, preserveExistingCounts: shouldPreserveCounts);
     } else {
-      updateActiveRoster(dinner);
+      updateActiveRoster(dinner, preserveExistingCounts: shouldPreserveCounts);
     }
   }
 
   void updateActiveRoster(List<String> newRoster, {bool preserveExistingCounts = false}) {
     final newSet = Set<String>.from(newRoster);
-    for (final id in _workingServerIds.toList()) {
-      if (!newSet.contains(id)) {
-        if (preserveExistingCounts) {
-          // Do not clear counts for servers not in the new roster
-          _workingServerIds.remove(id);
-          continue;
-        }
-        _currentCounts.remove(id);
-        _currentStreaks.remove(id);
-        _lunchPeakCount.remove(id);
-        _dinnerPeakCount.remove(id);
-        _lunchCloserCount.remove(id);
-        _dinnerCloserCount.remove(id);
-        _workingServerIds.remove(id);
+    
+    if (preserveExistingCounts) {
+      // COMPLETE FIX: When preserving counts during active shifts,
+      // sync working set to match new roster while keeping all existing data
+      _workingServerIds.clear();
+      _workingServerIds.addAll(newSet);
+      
+      // Ensure all new servers have initialized counts (without overwriting existing)
+      for (final id in newSet) {
+        _currentCounts.putIfAbsent(id, () => 0);
+        _currentStreaks.putIfAbsent(id, () => 0);
+        _lunchPeakCount.putIfAbsent(id, () => 0);
+        _dinnerPeakCount.putIfAbsent(id, () => 0);
+        _lunchCloserCount.putIfAbsent(id, () => 0);
+        _dinnerCloserCount.putIfAbsent(id, () => 0);
       }
-    }
-    for (final id in newSet) {
-      if (!_workingServerIds.contains(id)) {
-        _workingServerIds.add(id);
-        if (!preserveExistingCounts) {
+    } else {
+      // Original logic: Remove departed servers and clean up their data
+      for (final id in _workingServerIds.toList()) {
+        if (!newSet.contains(id)) {
+          _currentCounts.remove(id);
+          _currentStreaks.remove(id);
+          _lunchPeakCount.remove(id);
+          _dinnerPeakCount.remove(id);
+          _lunchCloserCount.remove(id);
+          _dinnerCloserCount.remove(id);
+          _workingServerIds.remove(id);
+        }
+      }
+      
+      // Add new servers with fresh data
+      for (final id in newSet) {
+        if (!_workingServerIds.contains(id)) {
+          _workingServerIds.add(id);
           _currentCounts[id] = 0;
           _currentStreaks[id] = 0;
           _lunchPeakCount[id] = 0;
           _dinnerPeakCount[id] = 0;
           _lunchCloserCount[id] = 0;
           _dinnerCloserCount[id] = 0;
-        } else {
-          // If preserving, only initialize to 0 if not present
-          _currentCounts.putIfAbsent(id, () => 0);
-          _currentStreaks.putIfAbsent(id, () => 0);
-          _lunchPeakCount.putIfAbsent(id, () => 0);
-          _dinnerPeakCount.putIfAbsent(id, () => 0);
-          _lunchCloserCount.putIfAbsent(id, () => 0);
-          _dinnerCloserCount.putIfAbsent(id, () => 0);
         }
       }
     }
