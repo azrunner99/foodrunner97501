@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../app_state.dart';
 
 class ServerAvatarGalleryScreen extends StatelessWidget {
   final String serverId;

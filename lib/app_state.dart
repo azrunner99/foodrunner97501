@@ -623,100 +623,6 @@ class AppState extends ChangeNotifier {
       
       // Notify listeners to update any time-dependent UI elements
       notifyListeners();
-
-      // --- CRITICAL TRANSITION LOGIC - DO NOT MODIFY WITHOUT CAREFUL TESTING ---
-      // This section handles the complex lunch-to-dinner transition that preserves
-      // dinner-only server counts while resetting both-shift servers to 0.
-      // 
-      // EXPECTED BEHAVIOR:
-      // - Lunch-only servers: Work until transition end, then removed
-      // - Both-shift servers: Work both shifts, reset to 0 at dinner start  
-      // - Dinner-only servers: Start during transition, preserve counts into dinner
-      //
-      // ROSTER LOGIC:
-      // - dinnerOnly = servers in dinner roster but NOT in lunch roster
-      // - bothShifts = servers in BOTH lunch AND dinner rosters
-      // - lunchOnly = servers in lunch roster but NOT in dinner roster (auto-removed)
-      //
-      // ⚠️ CRITICAL: Order of operations matters for count preservation!
-      // ⚠️ See commit a7fa1ef for working implementation details
-      // --- Auto-switch from lunch to dinner at end of transition ---
-      final now = DateTime.now();
-      final m = now.hour * 60 + now.minute;
-      final plan = _todayPlan;
-      if (plan != null) {
-        final end = plan.transitionEndMinutes;
-        // Only at the END of transition, finalize and clear lunch server counts
-        if (m >= end && _activeRosterView != 'dinner' && _shiftType == 'Lunch') {
-          final lunchIds = plan.lunchRoster;
-          final dinnerIds = plan.dinnerRoster;
-          
-          // FIRST: Preserve dinner-only server counts BEFORE any clearing
-          final lunchSet = lunchIds.toSet();
-          final dinnerSet = dinnerIds.toSet();
-          final dinnerOnly = dinnerSet.difference(lunchSet);
-          final bothShifts = dinnerSet.intersection(lunchSet);
-          final preservedCounts = <String, int>{};
-          final preservedStreaks = <String, int>{};
-          final preservedPizookies = <String, int>{};
-          
-          print('[DEBUG] Lunch roster: $lunchIds');
-          print('[DEBUG] Dinner roster: $dinnerIds');
-          print('[DEBUG] Dinner-only servers: $dinnerOnly');
-          print('[DEBUG] Both-shift servers: $bothShifts');
-          print('[DEBUG] Preserving dinner-only servers: $dinnerOnly');
-          print('[DEBUG] Current _currentCounts state: $_currentCounts');
-          
-          for (final id in dinnerOnly) {
-            preservedCounts[id] = _currentCounts[id] ?? 0;
-            preservedStreaks[id] = _currentStreaks[id] ?? 0;
-            preservedPizookies[id] = _currentPizookieCounts[id] ?? 0;
-            print('[DEBUG] Backing up server $id: ${preservedCounts[id]} counts (from _currentCounts[${id}] = ${_currentCounts[id]})');
-          }
-          
-          // SECOND: Save lunch shift data
-          final lunchCounts = Map<String, int>.fromEntries(
-            _currentCounts.entries.where((e) => lunchIds.contains(e.key)));
-          final lunchPizookieCounts = Map<String, int>.fromEntries(
-            _currentPizookieCounts.entries.where((e) => lunchIds.contains(e.key)));
-          _savePartialShift('Lunch', lunchCounts, lunchPizookieCounts);
-          
-          // THIRD: Remove lunch-only servers from all maps
-          _currentCounts.removeWhere((id, _) => lunchIds.contains(id) && !dinnerIds.contains(id));
-          _currentStreaks.removeWhere((id, _) => lunchIds.contains(id) && !dinnerIds.contains(id));
-          _lunchPeakCount.removeWhere((id, _) => lunchIds.contains(id) && !dinnerIds.contains(id));
-          _dinnerPeakCount.removeWhere((id, _) => lunchIds.contains(id) && !dinnerIds.contains(id));
-          _lunchCloserCount.removeWhere((id, _) => lunchIds.contains(id) && !dinnerIds.contains(id));
-          _dinnerCloserCount.removeWhere((id, _) => lunchIds.contains(id) && !dinnerIds.contains(id));
-          _currentPizookieCounts.removeWhere((id, _) => lunchIds.contains(id) && !dinnerIds.contains(id));
-          
-          // FOURTH: Start dinner shift WITHOUT preserveCounts to properly clear both-shift servers
-          _beginShift('Dinner', plan.dinnerRoster, preserveCounts: false);
-          
-          // FIFTH: Manually restore ONLY dinner-only server counts after the clear
-          print('[DEBUG] Restoring dinner-only servers after clear: $dinnerOnly');
-          for (final id in dinnerOnly) {
-            _currentCounts[id] = preservedCounts[id] ?? 0;
-            _currentStreaks[id] = preservedStreaks[id] ?? 0;
-            _currentPizookieCounts[id] = preservedPizookies[id] ?? 0;
-            print('[DEBUG] Restored server $id: ${_currentCounts[id]} counts');
-          }
-          _shiftActive = true;
-          
-          // REMOVED: Duplicate restoration logic that was overwriting preserved counts
-          // The restoration already happened in step FIFTH above
-          
-          // SEVENTH: Update active roster to ensure all dinner servers are in working IDs
-          _workingServerIds.clear();
-          _workingServerIds.addAll(plan.dinnerRoster);
-          
-          _activeRosterView = 'dinner';
-          print('[DEBUG] Dinner shift active: $_shiftActive');
-          print('[DEBUG] Working servers: $_workingServerIds');
-          print('[DEBUG] Current counts: $_currentCounts');
-          notifyListeners();
-        }
-      }
     });
   }
 
@@ -937,6 +843,9 @@ class AppState extends ChangeNotifier {
     return 'Dinner';
   }
 
+  /// Intended shift timings are heuristics based on static values like dinnerSwitchMinutes.
+  /// Plan-based timings are dynamic and respect todayPlan.transitionEndMinutes for live operations.
+  /// Use intended timings for manual/forced starts and plan-based timings for live behavior.
   void _maybeActivateShiftByClock() {
     final now = DateTime.now();
     final ymd = _ymd(now);
@@ -959,7 +868,6 @@ class AppState extends ChangeNotifier {
       }
     }
 
-    final intended = currentIntendedShiftType(now);
     final lunchRoster = _todayPlan!.lunchRoster;
     final dinnerRoster = _todayPlan!.dinnerRoster;
 
@@ -986,7 +894,7 @@ class AppState extends ChangeNotifier {
     final shouldBeClosed = m >= close;
 
     print('[DEBUG] _maybeActivateShiftByClock: m=$m, open=$open, close=$close, transitionEnd=$transitionEnd');
-    print('[DEBUG] _maybeActivateShiftByClock: intended=$intended, _shiftType=$_shiftType, _shiftActive=$_shiftActive');
+    print('[DEBUG] _maybeActivateShiftByClock: shiftType=$_shiftType, _shiftActive=$_shiftActive');
     print('[DEBUG] _maybeActivateShiftByClock: shouldBeActiveLunch=$shouldBeActiveLunch, shouldBeActiveDinner=$shouldBeActiveDinner, shouldBeClosed=$shouldBeClosed');
     print('[DEBUG] _maybeActivateShiftByClock: _workingServerIds=$_workingServerIds');
 
@@ -1128,7 +1036,7 @@ class AppState extends ChangeNotifier {
       }
       
       // DO NOT remove any existing counts when preserving - this was the bug!
-      // The manual restoration logic will handle preserving dinner-only server counts
+      // The manual restoration logic will handle preserving dinner-only counts
       print('[DEBUG] _beginShift: Preserved existing counts, no data removed');
     } else {
       // Normal shift start: clear and reset all per-shift data
@@ -1709,16 +1617,12 @@ class AppState extends ChangeNotifier {
   void updateBothRosters({required List<String> lunch, required List<String> dinner}) {
     setTodayPlan(lunch, dinner);
     final now = DateTime.now();
-    final intended = currentIntendedShiftType(now);
-    
-    // CRITICAL FIX: Preserve existing counts if a shift is currently active
-    // This prevents server totals from being reset to zero during live roster updates
-    final shouldPreserveCounts = shiftActive;
-    
-    if (intended == 'Lunch') {
-      updateActiveRoster(lunch, preserveExistingCounts: shouldPreserveCounts);
+    final currentShift = shiftType;
+
+    if (currentShift == 'Lunch') {
+      updateActiveRoster(lunch, preserveExistingCounts: true);
     } else {
-      updateActiveRoster(dinner, preserveExistingCounts: shouldPreserveCounts);
+      updateActiveRoster(dinner, preserveExistingCounts: true);
     }
   }
 

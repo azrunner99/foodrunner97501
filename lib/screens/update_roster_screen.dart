@@ -454,6 +454,9 @@ class _RosterBodyState extends State<_RosterBody> {
     } else {
       widget.app.updateActiveRoster(dinnerRoster, preserveExistingCounts: shouldPreserveCounts);
     }
+
+    // Persist servers and plan changes (ensures team colors survive restarts)
+    await widget.app.save();
   }
 
   @override

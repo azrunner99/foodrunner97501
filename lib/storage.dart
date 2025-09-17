@@ -207,4 +207,11 @@ class Storage {
         .map((key) => key.substring('enhancedBusinessData::'.length))
         .toList();
   }
+
+  /// Persist station keys to settings box
+  static Future<void> persistStationKeys(Map<String, dynamic> stationKeys) async {
+    for (final key in stationKeys.keys) {
+      await settingsBox.put(key, stationKeys[key]);
+    }
+  }
 }
