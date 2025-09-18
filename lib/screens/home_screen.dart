@@ -9,6 +9,8 @@ import 'dart:io';
 import '../app_state.dart';
 import '../models.dart';
 import '../theme/app_theme.dart';
+import '../services/instant_feedback_service.dart';
+import '../services/milestone_detection_service.dart';
 import 'shift_leaderboard_screen.dart';
 import '../gamification.dart';
 import '../section_assignments.dart';
@@ -817,7 +819,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     Expanded(
                       child: Padding(
-                        padding: const EdgeInsets.only(bottom: 120.0), // Add bottom padding to prevent overlap with "last run" area
+                        padding: const EdgeInsets.only(bottom: 140.0), // Add bottom padding to prevent overlap with "last run" area
                         child: _ActiveGrid(ids: ids, shiftActive: app.shiftActive, app: app),
                       ),
                     ),
@@ -951,27 +953,66 @@ class _HomeScreenState extends State<HomeScreen> {
                                             final appState = Provider.of<AppState>(context, listen: false);
                                             final runCount = appState.currentCounts[lastId] ?? 0;
                                             final pizookieCount = appState.currentPizookieCounts[lastId] ?? 0;
+                                            final bonusXp = appState.currentBonusXP[lastId] ?? 0;
                                             final boost = appState.boostActive ? appState.boostMultiplier : 1.0;
                                             // Correct calculation: Pizookies are 25 XP total, not 10+25
                                             final regularRuns = runCount - pizookieCount;
-                                            final shiftXp = (((regularRuns * 10) + (pizookieCount * 25)) * boost).round();
-                                            print('[DEBUG] HOME DISPLAY: server=$lastId, runs=$runCount, pizookies=$pizookieCount, regularRuns=$regularRuns, boost=${appState.boostActive ? "${appState.boostMultiplier}x" : "none"}, shiftXp=$shiftXp');
-                                            return Text(
-                                              'Shift XP Earned: $shiftXp',
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.w600,
-                                                shadows: [
-                                                  Shadow(
-                                                    blurRadius: 3,
-                                                    color: Colors.black,
-                                                    offset: Offset(1, 1),
+                                            final baseXp = ((regularRuns * 10) + (pizookieCount * 25)) * boost;
+                                            final shiftXp = (baseXp + bonusXp).round();
+                                            print('[DEBUG] HOME DISPLAY: server=$lastId, runs=$runCount, pizookies=$pizookieCount, regularRuns=$regularRuns, boost=${appState.boostActive ? "${appState.boostMultiplier}x" : "none"}, baseXp=$baseXp, bonusXp=$bonusXp, totalShiftXp=$shiftXp');
+                                            return RichText(
+                                              textAlign: TextAlign.right,
+                                              text: TextSpan(
+                                                children: [
+                                                  TextSpan(
+                                                    text: 'Shift XP Earned: ',
+                                                    style: TextStyle(
+                                                      fontSize: 16,
+                                                      color: Colors.white70,
+                                                      fontWeight: FontWeight.w600,
+                                                      letterSpacing: 0.3,
+                                                      shadows: [
+                                                        Shadow(
+                                                          blurRadius: 3,
+                                                          color: Colors.black87,
+                                                          offset: Offset(1, 1),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  TextSpan(
+                                                    text: '$shiftXp',
+                                                    style: TextStyle(
+                                                      fontSize: 32,
+                                                      color: Colors.red[600],
+                                                      fontWeight: FontWeight.w900,
+                                                      letterSpacing: 1.5,
+                                                      shadows: [
+                                                        Shadow(
+                                                          blurRadius: 0,
+                                                          color: Colors.white,
+                                                          offset: Offset(1, 1),
+                                                        ),
+                                                        Shadow(
+                                                          blurRadius: 0,
+                                                          color: Colors.white,
+                                                          offset: Offset(-1, -1),
+                                                        ),
+                                                        Shadow(
+                                                          blurRadius: 0,
+                                                          color: Colors.white,
+                                                          offset: Offset(1, -1),
+                                                        ),
+                                                        Shadow(
+                                                          blurRadius: 0,
+                                                          color: Colors.white,
+                                                          offset: Offset(-1, 1),
+                                                        ),
+                                                      ],
+                                                    ),
                                                   ),
                                                 ],
                                               ),
-                                              textAlign: TextAlign.right,
-                                              overflow: TextOverflow.ellipsis,
                                             );
                                           },
                                         ),
@@ -1437,8 +1478,14 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
   AnimationController? _achievementController;
   String? _flashText;
   String? _flashSubText;
+  FeedbackPriority _flashPriority = FeedbackPriority.low;
   AnimationController? _xpController;
   AnimationController? _subController;
+
+  // Speed tracking for instant gratification
+  final Map<String, DateTime> _lastTapTime = {};
+  final Map<String, int> _consecutiveTaps = {};
+  final Map<String, int> _previousRanks = {};
 
   @override
   void initState() {
@@ -1480,16 +1527,75 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
     super.dispose();
   }
 
-  void _showFlash(String text, String subText, {bool forAchievement = false}) {
+  /// Track consecutive rapid taps for speed feedback
+  void _trackSpeedMomentum(String serverId) {
+    final now = DateTime.now();
+    final lastTap = _lastTapTime[serverId];
+    
+    if (lastTap != null && now.difference(lastTap) < const Duration(seconds: 3)) {
+      _consecutiveTaps[serverId] = (_consecutiveTaps[serverId] ?? 0) + 1;
+    } else {
+      _consecutiveTaps[serverId] = 1;
+    }
+    
+    _lastTapTime[serverId] = now;
+  }
+
+  /// Determine appropriate feedback type based on context
+  FeedbackType _determineFeedbackType(String serverId, int runCount) {
+    // Priority 1: Milestones (every 5 runs)
+    if (runCount % 5 == 0) return FeedbackType.milestone;
+    
+    // Priority 2: Speed moments (2+ rapid taps)
+    if ((_consecutiveTaps[serverId] ?? 0) >= 2) return FeedbackType.speed;
+    
+    // Priority 3: Rank changes (implement later)
+    // if (_rankChanged(serverId)) return FeedbackType.competitive;
+    
+    // Default: Basic encouragement
+    return FeedbackType.basic;
+  }
+
+  /// Get SnackBar color based on feedback priority
+  Color _getSnackBarColor(FeedbackPriority priority) {
+    switch (priority) {
+      case FeedbackPriority.low:
+        return Colors.amber.shade600;
+      case FeedbackPriority.medium:
+        return Colors.orange.shade600;
+      case FeedbackPriority.high:
+        return Colors.red.shade600;
+      case FeedbackPriority.epic:
+        return Colors.purple.shade600;
+    }
+  }
+
+  void _showFlash(String text, String subText, {bool forAchievement = false, FeedbackPriority? priority}) {
     final app = widget.app;
     // If this is for an achievement, only show if gamification is enabled
     if (forAchievement && !app.settings.gamificationEnabled) return;
     setState(() {
       _flashText = text;
       _flashSubText = subText;
+      _flashPriority = priority ?? FeedbackPriority.low;
     });
     _xpController?.forward(from: 0);
     _subController?.forward(from: 0);
+  }
+
+  void _showEnhancedFlash(String message, FeedbackPriority priority, {String? subText}) {
+    setState(() {
+      _flashText = message;
+      _flashSubText = subText ?? '';
+      _flashPriority = priority;
+    });
+    
+    // Use priority-based animation duration
+    final duration = InstantFeedbackService.getAnimationDuration(priority);
+    _xpController?.reset();
+    _xpController?.forward();
+    _subController?.reset();
+    _subController?.forward();
   }
 
   void _showAchievement(String text) {
@@ -1659,56 +1765,74 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                             
                             // Only increment normal run on tap, not on long press
                             if (!this._isLongPress) {
-                              // Check if restaurant is open before allowing increments
-                              if (app.isOpenNow) {
-                                final achievement = app.increment(id);
+                              // Check if shift is active and server is working
+                              if (app.shiftActive && app.workingServerIds.contains(id)) {
+                                final milestone = app.increment(id);
                                 
                                 // Calculate base XP and apply boost if active
                                 int baseXP = 10;
                                 int xpEarned = baseXP;
-                                bool isAchievement = false;
                                 bool isBoostActive = app.boostActive;
                                 
-                                if (achievement == 'full_hands') {
-                                  isAchievement = true;
-                                  _showAchievement('Full Hands!');
-                                  // Full Hands = base boosted XP + 25 bonus
-                                  if (isBoostActive) {
-                                    xpEarned = (baseXP * app.boostMultiplier).round() + 25;
-                                  } else {
-                                    xpEarned = 35; // 10 base + 25 bonus
-                                  }
-                                } else if (achievement == 'five_streak') {
-                                  xpEarned = 30;
-                                  isAchievement = true;
-                                } else if (achievement == 'ten_in_shift') {
-                                  xpEarned = 20;
-                                  isAchievement = true;
-                                } else if (achievement == 'twenty_in_shift') {
-                                  xpEarned = 30;
-                                  isAchievement = true;
-                                } else {
-                                  // Regular run - apply boost if active
-                                  if (isBoostActive) {
-                                    xpEarned = (baseXP * app.boostMultiplier).round();
-                                  }
+                                // Apply boost for base XP
+                                if (isBoostActive) {
+                                  xpEarned = (baseXP * app.boostMultiplier).round();
                                 }
                                 
                                 String flashText = '+$xpEarned XP';
-                                if (isBoostActive && !isAchievement) {
+                                if (isBoostActive) {
                                   flashText = '🚀 +$xpEarned XP\nBOOST ${app.boostMultiplier}x!';
                                 }
-                                
-                                _showFlash(
-                                  flashText,
-                                  'Next level: $pointsToNext XP',
-                                );
-                                if (app.settings.encouragementFlashEnabled) {
-                                  final msg = encouragements[Random().nextInt(encouragements.length)];
-                                  ScaffoldMessenger.of(ctx).clearSnackBars();
-                                  ScaffoldMessenger.of(ctx).showSnackBar(
-                                    SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),
+
+                                // ✨ REAL MILESTONE SYSTEM ✨
+                                if (milestone != null) {
+                                  // Show the real milestone achievement
+                                  _showEnhancedFlash(
+                                    milestone.message,
+                                    milestone.priority,
+                                    subText: milestone.subMessage,
                                   );
+                                  
+                                  // Enhanced SnackBar for milestone
+                                  if (app.settings.encouragementFlashEnabled) {
+                                    ScaffoldMessenger.of(ctx).clearSnackBars();
+                                    ScaffoldMessenger.of(ctx).showSnackBar(
+                                      SnackBar(
+                                        content: Text('${milestone.message}\n${milestone.subMessage}'),
+                                        duration: InstantFeedbackService.getAnimationDuration(milestone.priority),
+                                        backgroundColor: _getSnackBarColor(milestone.priority),
+                                      ),
+                                    );
+                                  }
+                                } else {
+                                  // Regular run - use instant gratification for variety
+                                  _trackSpeedMomentum(id);
+                                  final newRunCount = app.currentCounts[id] ?? 0;
+                                  final feedbackType = _determineFeedbackType(id, newRunCount);
+                                  final feedbackPriority = InstantFeedbackService.getPriority(feedbackType, runCount: newRunCount);
+                                  
+                                  // Get smart contextual message for regular runs
+                                  final contextMessage = InstantFeedbackService.getInstantMessage(feedbackType, runCount: newRunCount);
+                                  final smartMessage = '$contextMessage\n$flashText';
+                                  
+                                  _showEnhancedFlash(
+                                    smartMessage,
+                                    feedbackPriority,
+                                    subText: 'Next level: $pointsToNext XP',
+                                  );
+
+                                  // Enhanced SnackBar with contextual message
+                                  if (app.settings.encouragementFlashEnabled) {
+                                    final contextualMsg = InstantFeedbackService.getInstantMessage(feedbackType, runCount: newRunCount);
+                                    ScaffoldMessenger.of(ctx).clearSnackBars();
+                                    ScaffoldMessenger.of(ctx).showSnackBar(
+                                      SnackBar(
+                                        content: Text(contextualMsg),
+                                        duration: InstantFeedbackService.getAnimationDuration(feedbackPriority),
+                                        backgroundColor: _getSnackBarColor(feedbackPriority),
+                                      ),
+                                    );
+                                  }
                                 }
 
                                 final bubble = app.recentBadgeBubble;
@@ -1722,12 +1846,12 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                                 // Set lastRunServerId so avatar appears in bottom grey area
                                 app.lastRunServerId = id;
                               } else {
-                                // Restaurant is closed - show message
-                                print('[DEBUG] Click blocked: Restaurant is closed');
+                                // Shift not active or server not working - show message
+                                print('[DEBUG] Click blocked: Shift not active or server not scheduled');
                                 ScaffoldMessenger.of(ctx).clearSnackBars();
                                 ScaffoldMessenger.of(ctx).showSnackBar(
                                   const SnackBar(
-                                    content: Text('Restaurant is closed!'),
+                                    content: Text('Shift not active or server not scheduled!'),
                                     duration: Duration(seconds: 2),
                                   ),
                                 );
@@ -1736,7 +1860,7 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                           },
                           onLongPress: () {
                             this._isLongPress = true;
-                            app.incrementPizookie(id);
+                            final milestone = app.incrementPizookie(id);
                             
                             // Calculate boosted Pizookie XP
                             const basePizookieXP = 25;
@@ -1745,19 +1869,34 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                                 ? (basePizookieXP * app.boostMultiplier).round()
                                 : basePizookieXP;
                             
-                            String flashText = '+$xpEarned XP\nPizookie!';
-                            String subText = 'Sweet!  Ran a Pizookie';
-                            
-                            if (isBoostActive) {
-                              flashText = '🚀 +$xpEarned XP\nBOOST Pizookie!';
-                              subText = 'BOOST ${app.boostMultiplier}x • Sweet!';
+                            // ✨ REAL PIZOOKIE MILESTONE SYSTEM ✨
+                            if (milestone != null) {
+                              // Show the real pizookie milestone achievement
+                              _showEnhancedFlash(
+                                milestone.message,
+                                milestone.priority,
+                                subText: milestone.subMessage,
+                              );
+                            } else {
+                              // Regular pizookie - use instant gratification
+                              final pizookieMessage = InstantFeedbackService.getInstantMessage(FeedbackType.pizookie);
+                              final pizookiePriority = InstantFeedbackService.getPriority(FeedbackType.pizookie);
+                              
+                              String flashText = '$pizookieMessage\n+$xpEarned XP';
+                              String subText = 'Sweet! Ran a Pizookie';
+                              
+                              if (isBoostActive) {
+                                flashText = '🚀 $pizookieMessage\n+$xpEarned XP BOOST!';
+                                subText = 'BOOST ${app.boostMultiplier}x • Sweet!';
+                              }
+                              
+                              _showEnhancedFlash(
+                                flashText,
+                                pizookiePriority,
+                                subText: subText,
+                              );
                             }
                             
-                            _showFlash(
-                              flashText,
-                              subText,
-                            );
-                            // Removed Pizookie run SnackBar
                             Future.delayed(const Duration(milliseconds: 100), () {
                               this._isLongPress = false;
                             });
@@ -1938,51 +2077,43 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                         padding: const EdgeInsets.all(8),
                       ),
                       onPressed: () {
-                        final achievement = app.increment(id);
+                        final milestone = app.increment(id);
                         
                         // Calculate base XP and apply boost if active
                         int baseXP = 10;
                         int xpEarned = baseXP;
-                        bool isAchievement = false;
                         bool isBoostActive = app.boostActive;
                         
-                        if (achievement == 'full_hands') {
-                          isAchievement = true;
-                          _showAchievement('Full Hands!');
-                          // Full Hands = base boosted XP + 25 bonus
-                          if (isBoostActive) {
-                            xpEarned = (baseXP * app.boostMultiplier).round() + 25;
-                          } else {
-                            xpEarned = 35; // 10 base + 25 bonus
-                          }
-                        } else if (achievement == 'five_streak') {
-                          xpEarned = 30;
-                          isAchievement = true;
-                        } else if (achievement == 'ten_in_shift') {
-                          xpEarned = 20;
-                          isAchievement = true;
-                        } else if (achievement == 'twenty_in_shift') {
-                          xpEarned = 30;
-                          isAchievement = true;
-                        } else {
-                          // Regular run - apply boost if active
-                          if (isBoostActive) {
-                            xpEarned = (baseXP * app.boostMultiplier).round();
-                          }
+                        // Apply boost for base XP
+                        if (isBoostActive) {
+                          xpEarned = (baseXP * app.boostMultiplier).round();
                         }
                         
-                        // Only show XP flash for achievements if gamification is enabled
-                        if (!isAchievement || app.settings.gamificationEnabled) {
-                          String flashText = '+$xpEarned XP';
-                          if (isBoostActive && !isAchievement) {
-                            flashText = '🚀 +$xpEarned XP\nBOOST ${app.boostMultiplier}x!';
+                        // ✨ REAL MILESTONE SYSTEM ✨
+                        if (milestone != null) {
+                          // Show the real milestone achievement
+                          if (app.settings.gamificationEnabled) {
+                            _showFlash(
+                              milestone.message,
+                              milestone.subMessage,
+                              forAchievement: true,
+                              priority: milestone.priority,
+                            );
                           }
-                          _showFlash(
-                            flashText,
-                            'Next level: $pointsToNext XP',
-                            forAchievement: isAchievement,
-                          );
+                        } else {
+                          // Regular run - show boost if enabled
+                          if (app.settings.gamificationEnabled) {
+                            String flashText = '+$xpEarned XP';
+                            if (isBoostActive) {
+                              flashText = '🚀 +$xpEarned XP\nBOOST ${app.boostMultiplier}x!';
+                            }
+                            _showFlash(
+                              flashText,
+                              'Great job!',
+                            );
+                          }
                         }
+
                         final msg = encouragements[Random().nextInt(encouragements.length)];
                         ScaffoldMessenger.of(ctx).clearSnackBars();
                         ScaffoldMessenger.of(ctx).showSnackBar(
@@ -1998,7 +2129,7 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                         }
                       },
                       onLongPress: () {
-                        app.incrementPizookie(id);
+                        final milestone = app.incrementPizookie(id);
                         
                         // Calculate boosted Pizookie XP
                         const basePizookieXP = 25;
@@ -2007,19 +2138,30 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                             ? (basePizookieXP * app.boostMultiplier).round()
                             : basePizookieXP;
                         
-                        String flashText = '+$xpEarned XP\nPizookie!';
-                        String subText = 'Sweet!  Ran a Pizookie';
-                        
-                        if (isBoostActive) {
-                          flashText = '🚀 +$xpEarned XP\nBOOST Pizookie!';
-                          subText = 'BOOST ${app.boostMultiplier}x • Sweet!';
+                        // ✨ REAL PIZOOKIE MILESTONE SYSTEM ✨
+                        if (milestone != null) {
+                          // Show the real pizookie milestone achievement
+                          _showFlash(
+                            milestone.message,
+                            milestone.subMessage,
+                            forAchievement: true,
+                            priority: milestone.priority,
+                          );
+                        } else {
+                          // Regular pizookie
+                          String flashText = '+$xpEarned XP\nPizookie!';
+                          String subText = 'Sweet!  Ran a Pizookie';
+                          
+                          if (isBoostActive) {
+                            flashText = '🚀 +$xpEarned XP\nBOOST Pizookie!';
+                            subText = 'BOOST ${app.boostMultiplier}x • Sweet!';
+                          }
+                          
+                          _showFlash(
+                            flashText,
+                            subText,
+                          );
                         }
-                        
-                        _showFlash(
-                          flashText,
-                          subText,
-                        );
-                        // Removed Pizookie run SnackBar
                       },
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2182,15 +2324,8 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                                     scale: scale,
                                     child: Text(
                                       _flashText ?? '',
-                                      style: const TextStyle(
-                                        fontSize: 48,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.amber,
-                                        shadows: [
-                                          Shadow(blurRadius: 8, color: Colors.black45, offset: Offset(2, 2)),
-                                          Shadow(blurRadius: 12, color: Colors.black, offset: Offset(0, 0)),
-                                        ],
-                                      ),
+                                      style: InstantFeedbackService.getTextStyle(_flashPriority),
+                                      textAlign: TextAlign.center,
                                     ),
                                   ),
                                 );

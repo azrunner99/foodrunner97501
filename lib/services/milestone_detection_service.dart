@@ -6,30 +6,30 @@ import 'message_variety_engine.dart';
 
 /// Milestone types with base XP rewards
 enum MilestoneType {
-  // Daily Firsts (+25-50 XP)
-  firstRunOfShift(25),
-  firstPizookieOfDay(35), 
-  firstSpeedBurst(30),
-  firstTimeTakingLead(50),
+  // Daily Firsts (+5-15 XP) - Small bonuses for first achievements
+  firstRunOfShift(5),
+  firstPizookieOfDay(10), 
+  firstSpeedBurst(8),
+  firstTimeTakingLead(15),
   
-  // Performance Milestones (+50-100 XP)
-  everyFifthRun(50),        // 5, 10, 15, 20, 25...
-  everyThirdPizookie(75),   // 3, 6, 9, 12...
-  doubleTap(12),            // 2+ items in 10 seconds
-  tripleThreat(25),         // 3+ items in 30 seconds
-  speedDemon(40),           // 5+ items in 60 seconds
+  // Performance Milestones (+3-20 XP) - Regular milestone bonuses
+  everyFifthRun(8),         // 5, 10, 15, 20, 25...
+  everyThirdPizookie(12),   // 3, 6, 9, 12...
+  doubleTap(3),             // 2+ items in 10 seconds
+  tripleThreat(5),          // 3+ items in 30 seconds
+  speedDemon(10),           // 5+ items in 60 seconds
   
-  // Competitive Achievements (+100-200 XP)
-  takingTheLead(100),
-  wideningGap(150),         // 3+ ahead of 2nd place
-  comeback(200),            // From 3+ behind to 1st
-  perfectShift(300),        // No breaks >2 minutes
+  // Competitive Achievements (+15-35 XP) - Competitive bonuses
+  takingTheLead(25),
+  wideningGap(30),          // 3+ ahead of 2nd place
+  comeback(35),             // From 3+ behind to 1st
+  perfectShift(50),         // No breaks >2 minutes
   
-  // Legendary Moments (+200-500 XP)
-  personalRecord(250),      // Beat personal best shift
-  teamGoal(400),           // Team hits collective target
-  levelBreakthrough(500),   // Level up achievement
-  serverOfWeek(1000);       // Top performer recognition
+  // Legendary Moments (+50-150 XP) - Rare special achievements
+  personalRecord(75),       // Beat personal best shift
+  teamGoal(100),           // Team hits collective target
+  levelBreakthrough(125),   // Level up achievement
+  serverOfWeek(150);        // Top performer recognition
   
   const MilestoneType(this.baseXP);
   final int baseXP;
@@ -200,7 +200,8 @@ class MilestoneDetectionService {
     // Every 5th run milestone
     if (!isPizookie && currentRuns % 5 == 0 && currentRuns > 0) {
       final multiplier = (currentRuns / 5).floor();
-      final bonusXP = MilestoneType.everyFifthRun.baseXP + (multiplier * 10); // Scaling bonus
+      // Much more reasonable scaling: +1 XP per milestone achieved
+      final bonusXP = MilestoneType.everyFifthRun.baseXP + (multiplier - 1); // Start at base, +1 per milestone
       
       return MilestoneAchievement(
         type: MilestoneType.everyFifthRun,
@@ -215,7 +216,8 @@ class MilestoneDetectionService {
     // Every 3rd pizookie milestone
     if (isPizookie && currentPizookies % 3 == 0 && currentPizookies > 0) {
       final multiplier = (currentPizookies / 3).floor();
-      final bonusXP = MilestoneType.everyThirdPizookie.baseXP + (multiplier * 15);
+      // More reasonable scaling: +2 XP per milestone for pizookies (they're rarer)
+      final bonusXP = MilestoneType.everyThirdPizookie.baseXP + ((multiplier - 1) * 2);
       
       return MilestoneAchievement(
         type: MilestoneType.everyThirdPizookie,
