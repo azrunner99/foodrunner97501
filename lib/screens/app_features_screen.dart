@@ -97,7 +97,7 @@ class AppFeaturesScreen extends StatelessWidget {
               features: [
                 'Real-Time Shift Tracking: Track server runs for Lunch and Dinner shifts with live count updates and automatic timing.',
                 'Smart Transition System: Intelligent lunch-to-dinner transitions that preserve counts for cross-shift servers while resetting lunch-only servers.',
-                'Click & Long-Press Actions: Standard runs (10 XP) via tap, Pizookie runs (25 XP) via long-press with distinct tracking.',
+                'Click & Long-Press Actions: Standard runs (10 XP) via tap, Pizookie runs (35 XP) via long-press with distinct tracking.',
                 'Automatic Shift Activation: Time-based shift activation with configurable transition periods and manual override capabilities.',
                 'Working Server Management: Dynamic roster management ensuring only assigned servers can receive clicks during their shifts.',
                 'Shift History & Records: Complete historical tracking of all shifts with detailed server performance and timing data.',
@@ -149,6 +149,12 @@ class AppFeaturesScreen extends StatelessWidget {
                 'Performance Bonuses: Peak hour bonuses, closer bonuses, and special circumstance multipliers.',
                 'Progress Visualization: Real-time XP progress bars, level indicators, and achievement status displays with consistent theming.',
                 'Level Bubble Integration: Seamless level display integration across profiles, leaderboards, and all server displays.',
+                'Advanced Milestone Detection: Real-time milestone achievements with progressive XP scaling based on performance.',
+                'Instant Gratification System: 500+ unique dynamic flash messages with priority-based styling and psychological reward timing.',
+                'Enhanced Pizookie Incentives: Increased base XP (35) and frequent milestone rewards to promote difficult item preparation.',
+                'Progressive XP Scaling: Higher milestone bonuses for sustained performance (every 5th run, every 2nd pizookie).',
+                'Psychological XP Rounding: Smart XP values rounded to appealing numbers ending in 0, 1, or 5 for enhanced reward perception.',
+                'Dynamic Message Variety Engine: Anti-repetition system ensuring fresh motivational messages throughout shifts.',
               ],
             ),
 
@@ -208,6 +214,12 @@ class AppFeaturesScreen extends StatelessWidget {
                 'Real-Time Statistics: Live updating statistics during shifts with immediate feedback and performance indicators.',
                 'Export Capabilities: Data export functionality for external analysis and reporting requirements.',
                 'Visual Performance Indicators: Charts, graphs, and visual elements showing performance trends and achievements.',
+                'Net Promoter Score (NPS) Integration: Customer satisfaction tracking with 30% weighting in server performance calculations.',
+                'Monthly NPS Data Entry: Comprehensive customer feedback collection system with persistent database storage.',
+                'Server NPS Scorecards: Individual server customer satisfaction reports with month selection and detailed analytics.',
+                'NPS Trend Analysis: Historical customer satisfaction tracking with performance correlation analysis.',
+                'Business Day Model: Advanced overnight operations support with accurate shift boundary management.',
+                'Dynamic Transition System: Intelligent business-hours-aware shift transitions with automated roster management.',
               ],
             ),
 
@@ -303,7 +315,7 @@ class AppFeaturesScreen extends StatelessWidget {
                           );
                         },
                         child: Text(
-                          'Version: 3.4.0+340',
+                          'Version: 3.5.0+350',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,

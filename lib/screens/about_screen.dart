@@ -73,7 +73,7 @@ class AboutScreen extends StatelessWidget {
                         );
                       },
                       child: Text(
-                        'Version 3.0.0+300',
+                        'Version 3.5.0+350',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.blue.shade600,
