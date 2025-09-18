@@ -165,7 +165,17 @@ class AppState extends ChangeNotifier {
   // Tracks per-shift pizookie runs for each server
   final Map<String, int> _currentPizookieCounts = {};
   String? incrementPizookie(String id) {
-    if (!_shiftActive || !_workingServerIds.contains(id)) return null;
+    print('[DEBUG] incrementPizookie called for server $id');
+    print('[DEBUG] _shiftActive=$_shiftActive');
+    print('[DEBUG] _workingServerIds=$_workingServerIds');
+    print('[DEBUG] _workingServerIds.contains($id)=${_workingServerIds.contains(id)}');
+    print('[DEBUG] _todayPlan?.lunchRoster=${_todayPlan?.lunchRoster}');
+    print('[DEBUG] _todayPlan?.dinnerRoster=${_todayPlan?.dinnerRoster}');
+    
+    if (!_shiftActive || !_workingServerIds.contains(id)) {
+      print('[DEBUG] incrementPizookie blocked for $id: _shiftActive=$_shiftActive, contains=${ _workingServerIds.contains(id)}');
+      return null;
+    }
 
     final now = DateTime.now();
     const delta = 1;
@@ -254,8 +264,8 @@ class AppState extends ChangeNotifier {
   // For Full Hands! achievement: not persisted, just for session
   final Map<String, List<DateTime>> _recentTapTimes = {};
   static const adminPin = '5520';
-  static const dinnerSwitchMinutes = 15 * 60 + 30; // 3:30 PM
-  static const dinnerFullSwitchMinutes = 16 * 60; // 4:00 PM
+  static const dinnerSwitchMinutes = 15 * 60 + 30; // 3:30 PM (LEGACY - to be removed)
+  static const dinnerFullSwitchMinutes = 16 * 60; // 4:00 PM (LEGACY - to be removed)
 
   final List<Server> _servers = [];
   final Map<String, int> _totals = {};
@@ -343,6 +353,17 @@ class AppState extends ChangeNotifier {
     } else {
       return '${seconds}s';
     }
+  }
+
+  /// Get effective transition times - uses plan values if set, otherwise calculates dynamic defaults
+  Map<String, int> getEffectiveTransitionTimes([DateTime? forTime]) {
+    final now = forTime ?? DateTime.now();
+    final dynamicTransitions = _calculateDynamicTransitions(now);
+    
+    return {
+      'start': _todayPlan?.transitionStartMinutes ?? dynamicTransitions['lunchEnd']!,
+      'end': _todayPlan?.transitionEndMinutes ?? dynamicTransitions['dinnerStart']!,
+    };
   }
   void toggleRosterView() {
     print('[DEBUG] toggleRosterView: Current view = $_activeRosterView');
@@ -504,6 +525,19 @@ class AppState extends ChangeNotifier {
 
     final hm = (await Storage.settingsBox.get('weekly_hours') as Map?) ?? {};
     _hours = hm.isEmpty ? WeeklyHours.defaults() : WeeklyHours.fromMap(Map<String, dynamic>.from(hm));
+  // Debug: print loaded weekly hours so we can verify persisted settings
+  print('[DEBUG] Loaded weekly_hours from storage: ${_hours.toMap()}');
+
+    // Temporary debug override: if settingsBox contains 'debug_force_test_hours' = true,
+    // force hours to 01:10–04:00 for all weekdays so we can test opening-time behavior.
+    final force = (await Storage.settingsBox.get('debug_force_test_hours') as bool?) ?? false;
+    if (force) {
+      final open = <int, int>{for (var d = 1; d <= 7; d++) d: 1 * 60 + 10};
+      final close = <int, int>{for (var d = 1; d <= 7; d++) d: 4 * 60};
+      final closeDayOffset = {for (var d = 1; d <= 7; d++) d: 1};
+      _hours = WeeklyHours(openMinutes: open, closeMinutes: close, closeDayOffset: closeDayOffset);
+      print('[DEBUG] Forced test weekly_hours applied: ${_hours.toMap()}');
+    }
 
     final ymd = _ymd(DateTime.now());
     final dp = (await Storage.dayPlanBox.get(ymd) as Map?) ?? {};
@@ -803,12 +837,21 @@ class AppState extends ChangeNotifier {
     final businessDate = AppState.businessDate(now);
     final weekday = businessDate.weekday;
     
+    print('DEBUG isOpenNow: now=$now');
+    print('DEBUG isOpenNow: businessDate=$businessDate, weekday=$weekday');
+    print('DEBUG isOpenNow: configured openMinutes[weekday]=${_hours.openMinutes[weekday]}');
+    print('DEBUG isOpenNow: configured closeMinutes[weekday]=${_hours.closeMinutes[weekday]}');
+    print('DEBUG isOpenNow: configured closeDayOffset[weekday]=${_hours.closeDayOffset[weekday]}');
+    
     // Get business day interval for today's business date
     final todayInterval = businessDayInterval(businessDate, weekday);
     
-    // Check if current time falls within today's business hours
-    if (now.isAfter(todayInterval.start) && now.isBefore(todayInterval.end)) {
-      print('[DEBUG] isOpenNow: In today\'s business hours, businessDate=$businessDate, weekday=$weekday, isOpen=true');
+    print('DEBUG isOpenNow: todayInterval start=${todayInterval.start}, end=${todayInterval.end}');
+    print('DEBUG isOpenNow: !now.isBefore(start)=${!now.isBefore(todayInterval.start)}, now.isBefore(end)=${now.isBefore(todayInterval.end)}');
+    
+    // Check if current time falls within today's business hours (INCLUSIVE of start time)
+    if (!now.isBefore(todayInterval.start) && now.isBefore(todayInterval.end)) {
+      print('DEBUG isOpenNow: In todays business hours, returning true');
       return true;
     }
     
@@ -817,30 +860,140 @@ class AppState extends ChangeNotifier {
     final yesterdayWeekday = yesterdayBusinessDate.weekday;
     final yesterdayInterval = businessDayInterval(yesterdayBusinessDate, yesterdayWeekday);
     
-    if (now.isAfter(yesterdayInterval.start) && now.isBefore(yesterdayInterval.end)) {
-      print('[DEBUG] isOpenNow: In yesterday\'s business hours, businessDate=$yesterdayBusinessDate, weekday=$yesterdayWeekday, isOpen=true');
+    print('DEBUG isOpenNow: yesterdayInterval start=${yesterdayInterval.start}, end=${yesterdayInterval.end}');
+    print('DEBUG isOpenNow: !now.isBefore(ystart)=${!now.isBefore(yesterdayInterval.start)}, now.isBefore(yend)=${now.isBefore(yesterdayInterval.end)}');
+    
+    if (!now.isBefore(yesterdayInterval.start) && now.isBefore(yesterdayInterval.end)) {
+      print('DEBUG isOpenNow: In yesterdays business hours, returning true');
       return true;
     }
     
-    print('[DEBUG] isOpenNow: Not in business hours, businessDate=$businessDate, isOpen=false');
+    print('DEBUG isOpenNow: Not in business hours, returning false');
     return false;
   }
 
+  /// Helper to test business hours logic at an arbitrary DateTime (used in tests)
+  bool isOpenAt(DateTime t) {
+    final businessDate = AppState.businessDate(t);
+    final weekday = businessDate.weekday;
+
+    final todayInterval = businessDayInterval(businessDate, weekday);
+    if (!t.isBefore(todayInterval.start) && t.isBefore(todayInterval.end)) return true;
+
+    final yesterdayBusinessDate = businessDate.subtract(const Duration(days: 1));
+    final yesterdayWeekday = yesterdayBusinessDate.weekday;
+    final yesterdayInterval = businessDayInterval(yesterdayBusinessDate, yesterdayWeekday);
+    if (!t.isBefore(yesterdayInterval.start) && t.isBefore(yesterdayInterval.end)) return true;
+
+    return false;
+  }
+
+/// Standalone helper: determine open state for a given WeeklyHours and DateTime
+bool isOpenAtFor(WeeklyHours hours, DateTime t) {
+  // local version of businessDayInterval using specified hours
+  DateTimeRange businessDayIntervalFor(DateTime businessDate, int weekday) {
+    final openMinutes = hours.openMinutes[weekday] ?? 11 * 60;
+    final closeMinutes = hours.closeMinutes[weekday] ?? 23 * 60;
+    final closeDayOffset = hours.closeDayOffset[weekday] ?? 0;
+
+    final start = DateTime(
+      businessDate.year,
+      businessDate.month,
+      businessDate.day,
+      openMinutes ~/ 60,
+      openMinutes % 60,
+    );
+
+    final endDate = closeDayOffset == 1 ? businessDate.add(const Duration(days: 1)) : businessDate;
+    final end = DateTime(
+      endDate.year,
+      endDate.month,
+      endDate.day,
+      closeMinutes ~/ 60,
+      closeMinutes % 60,
+    );
+    return DateTimeRange(start: start, end: end);
+  }
+
+  final businessDate = AppState.businessDate(t);
+  final weekday = businessDate.weekday;
+
+  final todayInterval = businessDayIntervalFor(businessDate, weekday);
+  if (!t.isBefore(todayInterval.start) && t.isBefore(todayInterval.end)) return true;
+
+  final yesterdayBusinessDate = businessDate.subtract(const Duration(days: 1));
+  final yesterdayWeekday = yesterdayBusinessDate.weekday;
+  final yesterdayInterval = businessDayIntervalFor(yesterdayBusinessDate, yesterdayWeekday);
+  if (!t.isBefore(yesterdayInterval.start) && t.isBefore(yesterdayInterval.end)) return true;
+
+  return false;
+}
+
   String currentIntendedShiftType(DateTime now) {
-  final wd = AppState.weekday(now);
+    final wd = AppState.weekday(now);
     final m = now.hour * 60 + now.minute;
     final open = _hours.openMinutes[wd]!;
-    print('[DEBUG] currentIntendedShiftType: m=$m, open=$open, dinnerSwitch=$dinnerSwitchMinutes');
+    
+    // Use dynamic transition times based on actual business hours
+    final transitions = _calculateDynamicTransitions(now);
+    final lunchEnd = transitions['lunchEnd']!;
+    final dinnerStart = transitions['dinnerStart']!;
+    
+    print('[DEBUG] currentIntendedShiftType: m=$m, open=$open, lunchEnd=$lunchEnd, dinnerStart=$dinnerStart');
+    
     if (m < open) {
       print('[DEBUG] currentIntendedShiftType: Before open, returning Lunch');
       return 'Lunch';
     }
-    if (m < dinnerSwitchMinutes) {
-      print('[DEBUG] currentIntendedShiftType: Before dinnerSwitch, returning Lunch');
+    if (m < lunchEnd) {
+      print('[DEBUG] currentIntendedShiftType: Before lunch end, returning Lunch');
       return 'Lunch';
     }
-    print('[DEBUG] currentIntendedShiftType: After dinnerSwitch, returning Dinner');
+    print('[DEBUG] currentIntendedShiftType: After lunch end, returning Dinner');
     return 'Dinner';
+  }
+
+  /// Calculate dynamic transition times based on business hours
+  /// Returns minutes-since-midnight for transition points
+  Map<String, int> _calculateDynamicTransitions(DateTime now) {
+    final wd = AppState.weekday(now);
+    final open = _hours.openMinutes[wd]!;
+    final close = _hours.closeMinutes[wd] ?? 23 * 60;
+    final closeDayOffset = _hours.closeDayOffset[wd] ?? 0;
+    
+    // Calculate total business duration in minutes
+    int totalMinutes;
+    if (closeDayOffset == 1) {
+      // Overnight close: close time is on next day
+      totalMinutes = (24 * 60 - open) + close; // Minutes until midnight + minutes after midnight
+    } else {
+      // Same-day close
+      totalMinutes = close - open;
+    }
+    
+    // Default transition point: 70% through the business day
+    // This ensures adequate lunch period and transition to dinner
+    final transitionPoint = (totalMinutes * 0.7).round();
+    final transitionMinutes = open + transitionPoint;
+    
+    // Handle overnight business hours
+    int lunchEnd, dinnerStart;
+    if (transitionMinutes >= 24 * 60) {
+      // Transition point crosses midnight
+      lunchEnd = transitionMinutes - (24 * 60);
+      dinnerStart = lunchEnd;
+    } else {
+      lunchEnd = transitionMinutes;
+      dinnerStart = transitionMinutes;
+    }
+    
+    print('[DEBUG] _calculateDynamicTransitions: open=$open, close=$close, totalMinutes=$totalMinutes');
+    print('[DEBUG] _calculateDynamicTransitions: lunchEnd=$lunchEnd, dinnerStart=$dinnerStart');
+    
+    return {
+      'lunchEnd': lunchEnd,
+      'dinnerStart': dinnerStart,
+    };
   }
 
   /// Intended shift timings are heuristics based on static values like dinnerSwitchMinutes.
@@ -878,10 +1031,16 @@ class AppState extends ChangeNotifier {
     final close = closeRaw >= 1440 ? 1439 : closeRaw;
     final m = now.hour * 60 + now.minute;
 
-    final transitionEnd = _todayPlan?.transitionEndMinutes ?? close;
+    // Use dynamic transitions instead of static dinnerSwitchMinutes
+    final transitions = _calculateDynamicTransitions(now);
+    final lunchEnd = transitions['lunchEnd']!;
+    final dinnerStart = transitions['dinnerStart']!;
+    
+    final transitionEnd = _todayPlan?.transitionEndMinutes ?? dinnerStart;
     print('[DEBUG] _maybeActivateShiftByClock: Plan details:');
     print('[DEBUG]   transitionStart=${_todayPlan?.transitionStartMinutes}');
     print('[DEBUG]   transitionEnd=${_todayPlan?.transitionEndMinutes}');
+    print('[DEBUG]   calculated lunchEnd=$lunchEnd, dinnerStart=$dinnerStart');
     print('[DEBUG]   lunchRoster=${_todayPlan?.lunchRoster}');
     print('[DEBUG]   dinnerRoster=${_todayPlan?.dinnerRoster}');
     
@@ -1706,11 +1865,19 @@ class AppState extends ChangeNotifier {
     final closeMinutes = _hours.closeMinutes[weekday] ?? 23 * 60;
     final closeDayOffset = _hours.closeDayOffset[weekday] ?? 0;
     
-    // Business day starts at opening time on the business date
+    // Business day starts at opening time on the business date.
+    // NOTE: If the configured open time is before the 4:00 anchor (early morning),
+    // then that opening actually occurs on the next calendar day relative to
+    // the businessDate (because businessDate shifts to the previous day for
+    // clock times < 4:00). Adjust the start date accordingly.
+    final startDate = (openMinutes < 4 * 60)
+      ? businessDate.add(const Duration(days: 1))
+      : businessDate;
+
     final start = DateTime(
-      businessDate.year, 
-      businessDate.month, 
-      businessDate.day,
+      startDate.year,
+      startDate.month,
+      startDate.day,
       openMinutes ~/ 60,        // hours
       openMinutes % 60,         // minutes
     );
@@ -1720,16 +1887,12 @@ class AppState extends ChangeNotifier {
       ? businessDate.add(const Duration(days: 1))  // Next calendar day
       : businessDate;                              // Same calendar day
     
-    final actualCloseMinutes = closeDayOffset == 1 
-      ? closeMinutes - 1440  // Convert back to same-day minutes
-      : closeMinutes;
-    
     final end = DateTime(
       endDate.year,
       endDate.month, 
       endDate.day,
-      actualCloseMinutes ~/ 60,   // hours
-      actualCloseMinutes % 60,    // minutes
+      closeMinutes ~/ 60,   // hours (use original closeMinutes, not adjusted)
+      closeMinutes % 60,    // minutes
     );
     
     return DateTimeRange(start: start, end: end);

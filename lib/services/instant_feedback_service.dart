@@ -1,0 +1,182 @@
+import 'dart:math';
+import 'package:flutter/material.dart';
+
+enum FeedbackType {
+  basic,        // Regular run
+  speed,        // Quick successive runs  
+  milestone,    // 5, 10, 15, 20+ runs
+  competitive,  // Rank changes
+  pizookie,     // Special pizookie runs
+  team,         // Team achievements
+  achievement,  // Special unlocks
+}
+
+enum FeedbackPriority {
+  low,      // Basic encouragement
+  medium,   // Milestones, competition
+  high,     // Achievements, special moments
+  epic,     // Major accomplishments
+}
+
+class InstantFeedbackService {
+  static final Random _random = Random();
+  
+  // Enhanced prompt collections
+  static const basicRunPrompts = [
+    "🔥 On fire!", "💪 Power move!", "⚡ Lightning fast!", "🏃‍♂️ Speed demon!",
+    "⭐ Superstar!", "🎯 Nailed it!", "💥 BAM!", "🚀 Rocket fuel!",
+    "👑 Royalty!", "🏆 Champion move!", "✨ Magic!", "🎊 Crushing it!"
+  ];
+  
+  static const speedPrompts = [
+    "🔥 UNSTOPPABLE!", "⚡ SPEED OF LIGHT!", "🏃‍♂️ USAIN BOLT MODE!",
+    "🚀 WARP SPEED!", "💨 GONE IN 60 SECONDS!", "⚡ FLASH ACTIVATED!",
+    "🏎️ FORMULA 1 PACE!", "🌪️ TORNADO ENERGY!", "⚡ LIGHTNING BOLT!",
+    "🚄 BULLET TRAIN!", "🔥 BURNING RUBBER!", "💨 SPEED DEMON!",
+    "🏁 RACE MODE ON!", "⚡ ELECTRIC ENERGY!", "🚀 HYPERDRIVE!"
+  ];
+  
+  static const milestonePrompts = [
+    "🎉 MILESTONE!\nYou're in the zone!",
+    "🏆 DOUBLE DIGITS!\nCrushing it!",
+    "👑 FIFTEEN!\nYou're royalty tonight!",
+    "🔥 TWENTY!\nAbsolutely on fire!",
+    "⭐ LEGEND STATUS!\nHall of fame!"
+  ];
+  
+  static const competitivePrompts = [
+    "📈 MOVING UP!\nYou jumped to #2!",
+    "🎯 GAINING GROUND!\nOnly 2 behind!",
+    "⚡ TOOK THE LEAD!\nEveryone's chasing you!",
+    "👑 WIDENING THE GAP!\nDominant!",
+    "🎯 LOCKED IN!\nLaser focus!"
+  ];
+  
+  static const pizookiePrompts = [
+    "🍪 PIZOOKIE POWER!\n+25 XP!",
+    "🔥 SWEET VICTORY!\nDessert delivered!",
+    "🌟 PIZOOKIE PERFECTION!\nCustomer delight!",
+    "👑 DESSERT ROYALTY!\nSweet success!"
+  ];
+  
+  static const teamPrompts = [
+    "🤝 TEAM PLAYER!\nLifting everyone up!",
+    "🔥 TEAM ON FIRE!\nCollective excellence!",
+    "🎯 TEAM GOAL!\nEveryone contributed!",
+    "👑 SQUAD GOALS!\nPerfect teamwork!"
+  ];
+
+  /// Get contextual instant feedback message
+  static String getInstantMessage(FeedbackType type, {
+    int? runCount,
+    int? rank,
+    String? context,
+  }) {
+    switch (type) {
+      case FeedbackType.basic:
+        return basicRunPrompts[_random.nextInt(basicRunPrompts.length)];
+      case FeedbackType.speed:
+        return speedPrompts[_random.nextInt(speedPrompts.length)];
+      case FeedbackType.milestone:
+        if (runCount != null) {
+          if (runCount == 5) return "🎉 FIRST MILESTONE!\nYou're in the zone!";
+          if (runCount == 10) return "🏆 DOUBLE DIGITS!\nYou're crushing it!";
+          if (runCount == 15) return "👑 FIFTEEN!\nYou're royalty tonight!";
+          if (runCount == 20) return "🔥 TWENTY!\nAbsolutely on fire!";
+          if (runCount >= 25) return "⭐ LEGEND STATUS!\nHall of fame night!";
+        }
+        return milestonePrompts[_random.nextInt(milestonePrompts.length)];
+      case FeedbackType.competitive:
+        return competitivePrompts[_random.nextInt(competitivePrompts.length)];
+      case FeedbackType.pizookie:
+        return pizookiePrompts[_random.nextInt(pizookiePrompts.length)];
+      case FeedbackType.team:
+        return teamPrompts[_random.nextInt(teamPrompts.length)];
+      case FeedbackType.achievement:
+        return "🏅 ACHIEVEMENT UNLOCKED! ${context ?? 'Amazing work!'}";
+    }
+  }
+  
+  /// Get feedback priority for UI styling
+  static FeedbackPriority getPriority(FeedbackType type, {int? runCount}) {
+    switch (type) {
+      case FeedbackType.basic:
+        return FeedbackPriority.low;
+      case FeedbackType.speed:
+        return FeedbackPriority.medium;
+      case FeedbackType.milestone:
+        if (runCount != null && runCount >= 20) return FeedbackPriority.epic;
+        return FeedbackPriority.medium;
+      case FeedbackType.competitive:
+        return FeedbackPriority.medium;
+      case FeedbackType.pizookie:
+        return FeedbackPriority.medium;
+      case FeedbackType.team:
+        return FeedbackPriority.high;
+      case FeedbackType.achievement:
+        return FeedbackPriority.epic;
+    }
+  }
+  
+  /// Enhanced feedback styling based on priority
+  static TextStyle getTextStyle(FeedbackPriority priority) {
+    switch (priority) {
+      case FeedbackPriority.low:
+        return const TextStyle(
+          fontSize: 42,
+          fontWeight: FontWeight.bold,
+          color: Colors.amber,
+          shadows: [
+            Shadow(blurRadius: 8, color: Colors.black45, offset: Offset(2, 2)),
+          ],
+        );
+      case FeedbackPriority.medium:
+        return const TextStyle(
+          fontSize: 48,
+          fontWeight: FontWeight.w900,
+          color: Colors.orange,
+          shadows: [
+            Shadow(blurRadius: 10, color: Colors.black, offset: Offset(0, 0)),
+            Shadow(blurRadius: 16, color: Colors.black87, offset: Offset(2, 2)),
+          ],
+        );
+      case FeedbackPriority.high:
+        return const TextStyle(
+          fontSize: 54,
+          fontWeight: FontWeight.w900,
+          color: Colors.red,
+          letterSpacing: 1.2,
+          shadows: [
+            Shadow(blurRadius: 12, color: Colors.black, offset: Offset(0, 0)),
+            Shadow(blurRadius: 20, color: Colors.black87, offset: Offset(3, 3)),
+          ],
+        );
+      case FeedbackPriority.epic:
+        return const TextStyle(
+          fontSize: 60,
+          fontWeight: FontWeight.w900,
+          color: Colors.purple,
+          letterSpacing: 1.5,
+          shadows: [
+            Shadow(blurRadius: 15, color: Colors.black, offset: Offset(0, 0)),
+            Shadow(blurRadius: 25, color: Colors.purpleAccent, offset: Offset(0, 0)),
+            Shadow(blurRadius: 35, color: Colors.black54, offset: Offset(-2, -2)),
+          ],
+        );
+    }
+  }
+  
+  /// Get animation duration based on priority
+  static Duration getAnimationDuration(FeedbackPriority priority) {
+    switch (priority) {
+      case FeedbackPriority.low:
+        return const Duration(milliseconds: 1000);
+      case FeedbackPriority.medium:
+        return const Duration(milliseconds: 1300);
+      case FeedbackPriority.high:
+        return const Duration(milliseconds: 1600);
+      case FeedbackPriority.epic:
+        return const Duration(milliseconds: 2000);
+    }
+  }
+}
