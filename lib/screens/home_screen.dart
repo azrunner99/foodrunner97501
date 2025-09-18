@@ -831,6 +831,216 @@ class _HomeScreenState extends State<HomeScreen> {
               alignment: Alignment.bottomCenter,
               child: Stack(
                 children: [
+                  // Dynamic Achievement Notification Box
+                  Consumer<AppState>(
+                    builder: (context, app, _) {
+                      final lastId = app.lastRunServerId;
+                      if (lastId == null) return SizedBox.shrink();
+                      
+                      final serverName = app.serverById(lastId)?.name ?? 'Server';
+                      final currentRuns = app.currentCounts[lastId] ?? 0;
+                      final currentPizookies = app.currentPizookieCounts[lastId] ?? 0;
+                      final totalEarnedXp = app.currentEarnedXP[lastId] ?? 0;
+                      final lastFlashMessage = app.lastFlashMessages[lastId];
+                      final lastActionXp = app.lastActionXP[lastId] ?? 0;
+                      
+                      // Use the actual last flash message if available, otherwise generate based on stats
+                      String notificationTitle = '';
+                      String notificationMessage = '';
+                      String emoji = '';
+                      FeedbackPriority priority = FeedbackPriority.low;
+                      
+                      if (lastFlashMessage != null && lastFlashMessage.isNotEmpty) {
+                        // Parse the flash message to extract meaningful content and always show XP
+                        final lines = lastFlashMessage.split('\n');
+                        if (lines.isNotEmpty) {
+                          // Clean up the title from flash message
+                          notificationTitle = lines.first
+                              .replaceAll(RegExp(r'[🔥⚡🎉🍪🚀💪🏆👑⭐🎯🎊💫]'), '')
+                              .replaceAll(RegExp(r'\+\d+\s*XP'), '') // Remove XP from title
+                              .trim();
+                          
+                          // Always show a clear, consistent message format with XP prominently displayed
+                          if (currentRuns > 0 || currentPizookies > 0) {
+                            if (lastActionXp > 0) {
+                              notificationMessage = '$serverName: $currentRuns runs, $currentPizookies pizookies\n+$lastActionXp XP earned from this action!';
+                            } else {
+                              notificationMessage = '$serverName: $currentRuns runs, $currentPizookies pizookies\nKeep up the great work!';
+                            }
+                          } else {
+                            if (lastActionXp > 0) {
+                              notificationMessage = '$serverName earned +$lastActionXp XP!';
+                            } else {
+                              notificationMessage = '$serverName is ready to earn XP!';
+                            }
+                          }
+                        }
+                        
+                        // Determine priority and emoji from flash content
+                        if (lastFlashMessage.contains('LEGEND') || lastFlashMessage.contains('HALL OF FAME')) {
+                          priority = FeedbackPriority.epic;
+                          emoji = '👑';
+                        } else if (lastFlashMessage.contains('MILESTONE') || lastFlashMessage.contains('ACHIEVEMENT')) {
+                          priority = FeedbackPriority.high;
+                          emoji = '🎯';
+                        } else if (lastFlashMessage.contains('PIZOOKIE')) {
+                          priority = FeedbackPriority.medium;
+                          emoji = '🍪';
+                        } else if (lastFlashMessage.contains('BOOST') || lastFlashMessage.contains('🚀')) {
+                          priority = FeedbackPriority.medium;
+                          emoji = '🚀';
+                        } else {
+                          priority = FeedbackPriority.low;
+                          emoji = '⚡';
+                        }
+                      } else {
+                        // Fallback to generating message based on current stats (original logic)
+                        if (currentRuns >= 25) {
+                          priority = FeedbackPriority.epic;
+                          emoji = '👑';
+                          notificationTitle = 'LEGEND STATUS!';
+                          notificationMessage = '$serverName: $currentRuns runs - HALL OF FAME!\n$totalEarnedXp XP earned this shift!';
+                        } else if (currentRuns >= 20) {
+                          priority = FeedbackPriority.epic;
+                          emoji = '🔥';
+                          notificationTitle = 'ON FIRE!';
+                          notificationMessage = '$serverName: $currentRuns runs - BLAZING HOT!\n$totalEarnedXp XP earned this shift!';
+                        } else if (currentRuns >= 10) {
+                          priority = FeedbackPriority.high;
+                          emoji = '💪';
+                          notificationTitle = 'DOUBLE DIGITS!';
+                          notificationMessage = '$serverName: $currentRuns runs - POWER MOVE!\n$totalEarnedXp XP earned this shift!';
+                        } else if (currentRuns > 0) {
+                          priority = FeedbackPriority.medium;
+                          emoji = '⚡';
+                          notificationTitle = 'GREAT WORK!';
+                          notificationMessage = '$serverName: $currentRuns runs, $currentPizookies pizookies\n$totalEarnedXp XP earned this shift!';
+                        } else {
+                          priority = FeedbackPriority.low;
+                          emoji = '💫';
+                          notificationTitle = 'READY TO ROCK!';
+                          notificationMessage = '$serverName is geared up\nfor an amazing shift!';
+                        }
+                      }
+                      
+                      // Dynamic styling based on priority level
+                      Color backgroundColor;
+                      Color borderColor;
+                      Color textColor;
+                      List<BoxShadow> shadows;
+                      double titleSize;
+                      double messageSize;
+                      
+                      switch (priority) {
+                        case FeedbackPriority.epic:
+                          backgroundColor = Colors.purple.shade900.withOpacity(0.95);
+                          borderColor = Colors.purple.shade200;
+                          textColor = Colors.white;
+                          titleSize = 22;
+                          messageSize = 16;
+                          shadows = [
+                            BoxShadow(color: Colors.purple.shade300, blurRadius: 15, spreadRadius: 2),
+                            BoxShadow(color: Colors.black87, blurRadius: 10, offset: Offset(0, 6)),
+                            BoxShadow(color: Colors.purple.shade600, blurRadius: 25, spreadRadius: -5),
+                          ];
+                          break;
+                        case FeedbackPriority.high:
+                          backgroundColor = Colors.red.shade800.withOpacity(0.92);
+                          borderColor = Colors.red.shade200;
+                          textColor = Colors.white;
+                          titleSize = 20;
+                          messageSize = 15;
+                          shadows = [
+                            BoxShadow(color: Colors.red.shade400, blurRadius: 12, spreadRadius: 1),
+                            BoxShadow(color: Colors.black87, blurRadius: 8, offset: Offset(0, 4)),
+                          ];
+                          break;
+                        case FeedbackPriority.medium:
+                          backgroundColor = Colors.orange.shade800.withOpacity(0.90);
+                          borderColor = Colors.orange.shade200;
+                          textColor = Colors.white;
+                          titleSize = 18;
+                          messageSize = 14;
+                          shadows = [
+                            BoxShadow(color: Colors.orange.shade400, blurRadius: 10, spreadRadius: 1),
+                            BoxShadow(color: Colors.black54, blurRadius: 6, offset: Offset(0, 3)),
+                          ];
+                          break;
+                        case FeedbackPriority.low:
+                          backgroundColor = Colors.blue.shade800.withOpacity(0.88);
+                          borderColor = Colors.blue.shade300;
+                          textColor = Colors.white;
+                          titleSize = 16;
+                          messageSize = 13;
+                          shadows = [
+                            BoxShadow(color: Colors.blue.shade400, blurRadius: 8),
+                            BoxShadow(color: Colors.black45, blurRadius: 4, offset: Offset(0, 2)),
+                          ];
+                          break;
+                      }
+                      
+                      return Positioned(
+                        bottom: 110,
+                        left: 8,
+                        right: 8,
+                        child: Container(
+                          height: priority == FeedbackPriority.epic ? 130 : 110,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: backgroundColor,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: borderColor, width: priority == FeedbackPriority.epic ? 3 : 2),
+                            boxShadow: shadows,
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              RichText(
+                                textAlign: TextAlign.center,
+                                text: TextSpan(
+                                  children: [
+                                    TextSpan(
+                                      text: '$emoji ',
+                                      style: TextStyle(fontSize: titleSize + 4),
+                                    ),
+                                    TextSpan(
+                                      text: notificationTitle,
+                                      style: TextStyle(
+                                        fontSize: titleSize,
+                                        color: textColor,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: priority == FeedbackPriority.epic ? 1.2 : 0.8,
+                                        shadows: [
+                                          Shadow(blurRadius: 0, color: Colors.black, offset: Offset(1, 1)),
+                                          Shadow(blurRadius: 0, color: Colors.black, offset: Offset(-1, -1)),
+                                          Shadow(blurRadius: 0, color: Colors.black, offset: Offset(1, -1)),
+                                          Shadow(blurRadius: 0, color: Colors.black, offset: Offset(-1, 1)),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(height: 6),
+                              Text(
+                                notificationMessage,
+                                style: TextStyle(
+                                  fontSize: messageSize,
+                                  color: textColor.withOpacity(0.95),
+                                  fontWeight: FontWeight.w600,
+                                  height: 1.3,
+                                  shadows: [
+                                    Shadow(blurRadius: 0, color: Colors.black54, offset: Offset(1, 1)),
+                                  ],
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                   // Server name now inside the grey area, top right
                   // Grey area and avatar row
                   Positioned(
@@ -954,12 +1164,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                             final runCount = appState.currentCounts[lastId] ?? 0;
                                             final pizookieCount = appState.currentPizookieCounts[lastId] ?? 0;
                                             final bonusXp = appState.currentBonusXP[lastId] ?? 0;
-                                            final boost = appState.boostActive ? appState.boostMultiplier : 1.0;
-                                            // Correct calculation: Pizookies are 25 XP total, not 10+25
-                                            final regularRuns = runCount - pizookieCount;
-                                            final baseXp = ((regularRuns * 10) + (pizookieCount * 25)) * boost;
-                                            final shiftXp = (baseXp + bonusXp).round();
-                                            print('[DEBUG] HOME DISPLAY: server=$lastId, runs=$runCount, pizookies=$pizookieCount, regularRuns=$regularRuns, boost=${appState.boostActive ? "${appState.boostMultiplier}x" : "none"}, baseXp=$baseXp, bonusXp=$bonusXp, totalShiftXp=$shiftXp');
+                                            final totalShiftXp = appState.currentEarnedXP[lastId] ?? 0;
+                                            
+                                            print('[DEBUG] HOME DISPLAY FIXED: server=$lastId, runs=$runCount, pizookies=$pizookieCount, bonusXp=$bonusXp, actualEarnedXp=$totalShiftXp');
                                             return RichText(
                                               textAlign: TextAlign.right,
                                               text: TextSpan(
@@ -981,7 +1188,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                     ),
                                                   ),
                                                   TextSpan(
-                                                    text: '$shiftXp',
+                                                    text: '$totalShiftXp',
                                                     style: TextStyle(
                                                       fontSize: 32,
                                                       color: Colors.red[600],
@@ -1579,6 +1786,13 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
       _flashSubText = subText;
       _flashPriority = priority ?? FeedbackPriority.low;
     });
+    
+    // Track this flash message in AppState for the last run server
+    final lastServerId = app.lastRunServerId;
+    if (lastServerId != null) {
+      app.setLastFlashMessage(lastServerId, text);
+    }
+    
     _xpController?.forward(from: 0);
     _subController?.forward(from: 0);
   }
@@ -1589,6 +1803,13 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
       _flashSubText = subText ?? '';
       _flashPriority = priority;
     });
+    
+    // Track this flash message in AppState for the last run server
+    final app = Provider.of<AppState>(context, listen: false);
+    final lastServerId = app.lastRunServerId;
+    if (lastServerId != null) {
+      app.setLastFlashMessage(lastServerId, message);
+    }
     
     // Use priority-based animation duration
     final duration = InstantFeedbackService.getAnimationDuration(priority);
@@ -1779,9 +2000,10 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                                   xpEarned = (baseXP * app.boostMultiplier).round();
                                 }
                                 
-                                String flashText = '+$xpEarned XP';
+                                // For boost display notification (but variety messages already include XP)
+                                String boostDisplayText = '';
                                 if (isBoostActive) {
-                                  flashText = '🚀 +$xpEarned XP\nBOOST ${app.boostMultiplier}x!';
+                                  boostDisplayText = '\n🚀 BOOST ${app.boostMultiplier}x!';
                                 }
 
                                 // ✨ REAL MILESTONE SYSTEM ✨
@@ -1811,9 +2033,9 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                                   final feedbackType = _determineFeedbackType(id, newRunCount);
                                   final feedbackPriority = InstantFeedbackService.getPriority(feedbackType, runCount: newRunCount);
                                   
-                                  // Get smart contextual message for regular runs
-                                  final contextMessage = InstantFeedbackService.getInstantMessage(feedbackType, runCount: newRunCount);
-                                  final smartMessage = '$contextMessage\n$flashText';
+                                  // Get smart contextual message for regular runs with XP (already includes XP display)
+                                  final contextMessage = InstantFeedbackService.getInstantMessage(feedbackType, runCount: newRunCount, xpAmount: xpEarned);
+                                  final smartMessage = contextMessage + boostDisplayText; // Add boost indicator if active
                                   
                                   _showEnhancedFlash(
                                     smartMessage,
@@ -1821,9 +2043,9 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                                     subText: 'Next level: $pointsToNext XP',
                                   );
 
-                                  // Enhanced SnackBar with contextual message
+                                  // Enhanced SnackBar with contextual message including XP
                                   if (app.settings.encouragementFlashEnabled) {
-                                    final contextualMsg = InstantFeedbackService.getInstantMessage(feedbackType, runCount: newRunCount);
+                                    final contextualMsg = InstantFeedbackService.getInstantMessage(feedbackType, runCount: newRunCount, xpAmount: xpEarned);
                                     ScaffoldMessenger.of(ctx).clearSnackBars();
                                     ScaffoldMessenger.of(ctx).showSnackBar(
                                       SnackBar(
@@ -1878,15 +2100,15 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                                 subText: milestone.subMessage,
                               );
                             } else {
-                              // Regular pizookie - use instant gratification
-                              final pizookieMessage = InstantFeedbackService.getInstantMessage(FeedbackType.pizookie);
+                              // Regular pizookie - use instant gratification with XP (already includes XP display)
+                              final pizookieMessage = InstantFeedbackService.getInstantMessage(FeedbackType.pizookie, xpAmount: xpEarned);
                               final pizookiePriority = InstantFeedbackService.getPriority(FeedbackType.pizookie);
                               
-                              String flashText = '$pizookieMessage\n+$xpEarned XP';
+                              String flashText = pizookieMessage; // Message already includes XP
                               String subText = 'Sweet! Ran a Pizookie';
                               
                               if (isBoostActive) {
-                                flashText = '🚀 $pizookieMessage\n+$xpEarned XP BOOST!';
+                                flashText = pizookieMessage + '\n🚀 BOOST ${app.boostMultiplier}x!';
                                 subText = 'BOOST ${app.boostMultiplier}x • Sweet!';
                               }
                               

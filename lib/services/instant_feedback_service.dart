@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'message_variety_engine.dart';
 
 enum FeedbackType {
   basic,        // Regular run
@@ -66,34 +67,41 @@ class InstantFeedbackService {
     "👑 SQUAD GOALS!\nPerfect teamwork!"
   ];
 
-  /// Get contextual instant feedback message
+  /// Get contextual instant feedback message with XP amount
   static String getInstantMessage(FeedbackType type, {
     int? runCount,
     int? rank,
     String? context,
+    int? xpAmount,
   }) {
+    // Use the MessageVarietyEngine for massive variety (500+ unique messages)
+    final xp = xpAmount ?? 10; // Default XP if not provided
+    
     switch (type) {
       case FeedbackType.basic:
-        return basicRunPrompts[_random.nextInt(basicRunPrompts.length)];
+        // Mix of all message types for maximum variety in basic runs
+        return MessageVarietyEngine.getSimpleVarietyMessage('mixed', xp);
       case FeedbackType.speed:
-        return speedPrompts[_random.nextInt(speedPrompts.length)];
+        return MessageVarietyEngine.getSimpleVarietyMessage('speed', xp);
       case FeedbackType.milestone:
         if (runCount != null) {
-          if (runCount == 5) return "🎉 FIRST MILESTONE!\nYou're in the zone!";
-          if (runCount == 10) return "🏆 DOUBLE DIGITS!\nYou're crushing it!";
-          if (runCount == 15) return "👑 FIFTEEN!\nYou're royalty tonight!";
-          if (runCount == 20) return "🔥 TWENTY!\nAbsolutely on fire!";
-          if (runCount >= 25) return "⭐ LEGEND STATUS!\nHall of fame night!";
+          // Special milestone messages with XP
+          if (runCount == 5) return "🎉 FIRST MILESTONE!\nYou're in the zone! +$xp XP!";
+          if (runCount == 10) return "🏆 DOUBLE DIGITS!\nYou're crushing it! +$xp XP!";
+          if (runCount == 15) return "👑 FIFTEEN!\nYou're royalty tonight! +$xp XP!";
+          if (runCount == 20) return "🔥 TWENTY!\nAbsolutely on fire! +$xp XP!";
+          if (runCount >= 25) return "⭐ LEGEND STATUS!\nHall of fame night! +$xp XP!";
         }
-        return milestonePrompts[_random.nextInt(milestonePrompts.length)];
+        return MessageVarietyEngine.getSimpleVarietyMessage('achievement', xp);
       case FeedbackType.competitive:
-        return competitivePrompts[_random.nextInt(competitivePrompts.length)];
+        return MessageVarietyEngine.getSimpleVarietyMessage('competitive', xp);
       case FeedbackType.pizookie:
-        return pizookiePrompts[_random.nextInt(pizookiePrompts.length)];
+        // Pizookies get achievement-style messages
+        return MessageVarietyEngine.getSimpleVarietyMessage('achievement', xp);
       case FeedbackType.team:
-        return teamPrompts[_random.nextInt(teamPrompts.length)];
+        return MessageVarietyEngine.getSimpleVarietyMessage('achievement', xp);
       case FeedbackType.achievement:
-        return "🏅 ACHIEVEMENT UNLOCKED! ${context ?? 'Amazing work!'}";
+        return MessageVarietyEngine.getSimpleVarietyMessage('achievement', xp);
     }
   }
   

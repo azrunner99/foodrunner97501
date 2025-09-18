@@ -646,4 +646,47 @@ class MessageVarietyEngine {
     
     return weightedMessages[math.Random().nextInt(weightedMessages.length)];
   }
+  
+  /// Simple method for basic flash messages without full personalization
+  /// Returns one of 500+ unique messages with XP placeholders replaced
+  static String getSimpleVarietyMessage(String messageType, int xpAmount) {
+    List<String> messagePool;
+    
+    switch (messageType.toLowerCase()) {
+      case 'speed':
+      case 'fast':
+      case 'quick':
+        messagePool = _speedMessages;
+        break;
+      case 'competitive':
+      case 'competition':
+      case 'rank':
+        messagePool = _competitiveMessages;
+        break;
+      case 'achievement':
+      case 'milestone':
+        messagePool = _achievementMessages;
+        break;
+      case 'perfectionist':
+      case 'precision':
+      case 'quality':
+        messagePool = _perfectionistMessages;
+        break;
+      default:
+        // Mix all message types for maximum variety
+        messagePool = [
+          ..._speedMessages,
+          ..._competitiveMessages,
+          ..._achievementMessages,
+          ..._perfectionistMessages,
+        ];
+    }
+    
+    if (messagePool.isEmpty) {
+      return "🎯 Amazing! +$xpAmount XP!";
+    }
+    
+    final selectedMessage = messagePool[math.Random().nextInt(messagePool.length)];
+    return selectedMessage.replaceAll('{xp}', xpAmount.toString());
+  }
 }
