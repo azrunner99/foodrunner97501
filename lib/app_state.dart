@@ -331,7 +331,7 @@ class AppState extends ChangeNotifier {
 
     final now = DateTime.now();
     const delta = 1;
-    const basePizookiePoints = 25;
+    const basePizookiePoints = 35; // Increased from 25 to promote pizookie running
 
     _currentCounts[id] = (_currentCounts[id] ?? 0) + delta;
     lastRunServerId = id;
@@ -433,6 +433,18 @@ class AppState extends ChangeNotifier {
       // Add milestone XP to this action's total
       actionXP += roundedMilestoneXP;
       
+      // Store milestone details for notification display
+      _lastMilestoneDetails[id] = {
+        'type': milestone.type.name,
+        'xpReward': roundedMilestoneXP,
+        'message': milestone.message,
+        'subMessage': milestone.subMessage,
+        'priority': milestone.priority.name,
+        'context': milestone.context,
+        'timestamp': DateTime.now().toIso8601String(),
+        'actionType': 'pizookie',
+      };
+      
       // Add milestone to history
       updatedProf.milestoneHistory.add({
         'type': milestone.type.name,
@@ -479,6 +491,7 @@ class AppState extends ChangeNotifier {
   final Map<String, int> _currentEarnedXP = {}; // Track actual XP earned this shift (including boosts)
   final Map<String, String> _lastFlashMessages = {}; // Track last flash message for each server
   final Map<String, int> _lastActionXP = {}; // Track XP gained from most recent action
+  final Map<String, Map<String, dynamic>> _lastMilestoneDetails = {}; // Track details of last milestone/achievement
   final Set<String> _workingServerIds = {};
   int _teamGoal = 0;
   int _teamTotalThisShift = 0;
@@ -518,6 +531,7 @@ class AppState extends ChangeNotifier {
   Map<String, int> get currentEarnedXP => Map.unmodifiable(_currentEarnedXP);
   Map<String, String> get lastFlashMessages => Map.unmodifiable(_lastFlashMessages);
   Map<String, int> get lastActionXP => Map.unmodifiable(_lastActionXP);
+  Map<String, Map<String, dynamic>> get lastMilestoneDetails => Map.unmodifiable(_lastMilestoneDetails);
   Set<String> get workingServerIds => Set.unmodifiable(_workingServerIds);
   int get teamGoal => _teamGoal;
   int get teamTotalThisShift => _teamTotalThisShift;
@@ -1226,6 +1240,7 @@ bool isOpenAtFor(WeeklyHours hours, DateTime t) {
         _currentEarnedXP.clear();
         _lastFlashMessages.clear();
         _lastActionXP.clear();
+        _lastMilestoneDetails.clear();
         _currentStreaks.clear();
         resetRosterView();
         return;
@@ -1332,6 +1347,7 @@ bool isOpenAtFor(WeeklyHours hours, DateTime t) {
       _currentEarnedXP.clear();
       _lastFlashMessages.clear();
       _lastActionXP.clear();
+      _lastMilestoneDetails.clear();
       _currentStreaks.clear();
       _todayPlan = null;
       resetRosterView();
@@ -1544,6 +1560,7 @@ bool isOpenAtFor(WeeklyHours hours, DateTime t) {
   _currentEarnedXP.clear();
   _lastFlashMessages.clear();
   _lastActionXP.clear();
+  _lastMilestoneDetails.clear();
   _currentStreaks.clear();
   _lunchPeakCount.clear();
   _dinnerPeakCount.clear();
@@ -1668,11 +1685,43 @@ bool isOpenAtFor(WeeklyHours hours, DateTime t) {
       final roundedPoints = _roundXP(def.points);
       p.points += roundedPoints;
       _recentBadgeBubble = '$serverName earned the ${def.title} badge!';
+      
+      // Store achievement details for notification display
+      final serverId = _profiles.entries.firstWhere((entry) => entry.value == p).key;
+      _lastMilestoneDetails[serverId] = {
+        'type': 'traditional_achievement',
+        'achievementId': id,
+        'xpReward': roundedPoints,
+        'title': def.title,
+        'description': def.description,
+        'message': '🏆 ${def.title.toUpperCase()}!\n${def.description}',
+        'subMessage': '+$roundedPoints XP Achievement Bonus!',
+        'priority': 'medium',
+        'context': {'repeatable': def.repeatable},
+        'timestamp': DateTime.now().toIso8601String(),
+        'actionType': 'achievement',
+      };
     } else {
       p.achievements.add(id);
       final roundedPoints = _roundXP(def.points);
       p.points += roundedPoints;
       _recentBadgeBubble = '$serverName earned the ${def.title} badge!';
+      
+      // Store achievement details for notification display
+      final serverId = _profiles.entries.firstWhere((entry) => entry.value == p).key;
+      _lastMilestoneDetails[serverId] = {
+        'type': 'traditional_achievement',
+        'achievementId': id,
+        'xpReward': roundedPoints,
+        'title': def.title,
+        'description': def.description,
+        'message': '🏆 ${def.title.toUpperCase()}!\n${def.description}',
+        'subMessage': '+$roundedPoints XP Achievement Bonus!',
+        'priority': 'medium',
+        'context': {'repeatable': def.repeatable},
+        'timestamp': DateTime.now().toIso8601String(),
+        'actionType': 'achievement',
+      };
     }
   }
 
@@ -1825,6 +1874,18 @@ bool isOpenAtFor(WeeklyHours hours, DateTime t) {
     
     // Add milestone XP to this action's total
     actionXP += roundedMilestoneXP;
+    
+    // Store milestone details for notification display
+    _lastMilestoneDetails[id] = {
+      'type': milestone.type.name,
+      'xpReward': roundedMilestoneXP,
+      'message': milestone.message,
+      'subMessage': milestone.subMessage,
+      'priority': milestone.priority.name,
+      'context': milestone.context,
+      'timestamp': DateTime.now().toIso8601String(),
+      'actionType': 'regular',
+    };
     
     // Add milestone to history
     updatedProf.milestoneHistory.add({

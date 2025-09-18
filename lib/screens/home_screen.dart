@@ -843,10 +843,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       final totalEarnedXp = app.currentEarnedXP[lastId] ?? 0;
                       final lastFlashMessage = app.lastFlashMessages[lastId];
                       final lastActionXp = app.lastActionXP[lastId] ?? 0;
+                      final milestoneDetails = app.lastMilestoneDetails[lastId];
                       
                       // Use the actual last flash message if available, otherwise generate based on stats
                       String notificationTitle = '';
                       String notificationMessage = '';
+                      String bonusExplanation = '';
                       String emoji = '';
                       FeedbackPriority priority = FeedbackPriority.low;
                       
@@ -873,6 +875,67 @@ class _HomeScreenState extends State<HomeScreen> {
                             } else {
                               notificationMessage = '$serverName is ready to earn XP!';
                             }
+                          }
+                        }
+                        
+                        // Generate bonus explanation from milestone details
+                        if (milestoneDetails != null) {
+                          final type = milestoneDetails['type'] as String?;
+                          final xpReward = milestoneDetails['xpReward'] as int?;
+                          final context = milestoneDetails['context'] as Map<String, dynamic>?;
+                          
+                          if (type != null && xpReward != null) {
+                            switch (type) {
+                              case 'everyFifthRun':
+                                final runCount = context?['runCount'] as int? ?? 0;
+                                bonusExplanation = 'Milestone Bonus:\n• Reached $runCount runs\n• Every 5th run earns bonus XP\n• Base reward: +$xpReward XP';
+                                break;
+                              case 'everySecondPizookie':
+                                final pizookieCount = context?['pizookieCount'] as int? ?? 0;
+                                bonusExplanation = 'Pizookie Milestone:\n• Reached $pizookieCount pizookies\n• Every 2nd pizookie earns bonus\n• Sweet reward: +$xpReward XP';
+                                break;
+                              case 'hotStreak':
+                                bonusExplanation = 'Hot Streak Achievement:\n• 5+ runs in 5 minutes\n• Excellent busy period handling\n• Pace bonus: +$xpReward XP';
+                                break;
+                              case 'steadyPace':
+                                bonusExplanation = 'Steady Pace Achievement:\n• 3+ runs in 5 minutes\n• Consistent performance\n• Pace bonus: +$xpReward XP';
+                                break;
+                              case 'takingTheLead':
+                                bonusExplanation = 'Leadership Bonus:\n• Moved to 1st place\n• Competitive excellence\n• Leader reward: +$xpReward XP';
+                                break;
+                              case 'firstRunOfShift':
+                                bonusExplanation = 'Daily First Bonus:\n• First run of the shift\n• Great way to start\n• Early bird: +$xpReward XP';
+                                break;
+                              case 'firstPizookieOfDay':
+                                bonusExplanation = 'Pizookie First:\n• First pizookie of day\n• Sweet beginning\n• Daily bonus: +$xpReward XP';
+                                break;
+                              case 'traditional_achievement':
+                                final title = milestoneDetails['title'] as String? ?? 'Achievement';
+                                final description = milestoneDetails['description'] as String? ?? '';
+                                bonusExplanation = 'Achievement Unlocked:\n• $title\n• $description\n• Badge bonus: +$xpReward XP';
+                                break;
+                              case 'pizookieMaster':
+                                bonusExplanation = 'Pizookie Master:\n• 5 pizookies in one shift\n• Dessert expertise achieved\n• Mastery bonus: +$xpReward XP';
+                                break;
+                              case 'sweetTooth':
+                                bonusExplanation = 'Sweet Tooth Legend:\n• 8 pizookies in one shift\n• Dessert domination complete\n• Sweet bonus: +$xpReward XP';
+                                break;
+                              case 'dessertDominator':
+                                bonusExplanation = 'Dessert Dominator:\n• 12 pizookies in one shift\n• Absolute pizookie supremacy\n• Legendary bonus: +$xpReward XP';
+                                break;
+                              default:
+                                bonusExplanation = 'Bonus Earned:\n• $type achieved\n• Special performance\n• Bonus reward: +$xpReward XP';
+                            }
+                          }
+                        }
+                        
+                        // If no milestone details but we have bonus XP, show generic explanation
+                        if (bonusExplanation.isEmpty && lastActionXp > 10) {
+                          final actionType = milestoneDetails?['actionType'] as String? ?? 'regular';
+                          final baseXp = actionType == 'pizookie' ? 35 : 10; // Updated base pizookie XP
+                          final bonusXp = lastActionXp - baseXp;
+                          if (bonusXp > 0) {
+                            bonusExplanation = 'Bonus Breakdown:\n• Base action: +$baseXp XP\n• Performance bonus: +$bonusXp XP\n• Total earned: +$lastActionXp XP';
                           }
                         }
                         
@@ -984,7 +1047,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         left: 8,
                         right: 8,
                         child: Container(
-                          height: priority == FeedbackPriority.epic ? 130 : 110,
+                          height: priority == FeedbackPriority.epic ? 140 : 120,
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
                             color: backgroundColor,
@@ -992,49 +1055,93 @@ class _HomeScreenState extends State<HomeScreen> {
                             border: Border.all(color: borderColor, width: priority == FeedbackPriority.epic ? 3 : 2),
                             boxShadow: shadows,
                           ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              RichText(
-                                textAlign: TextAlign.center,
-                                text: TextSpan(
+                              // Left side - Title and main message
+                              Expanded(
+                                flex: 3,
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    TextSpan(
-                                      text: '$emoji ',
-                                      style: TextStyle(fontSize: titleSize + 4),
-                                    ),
-                                    TextSpan(
-                                      text: notificationTitle,
-                                      style: TextStyle(
-                                        fontSize: titleSize,
-                                        color: textColor,
-                                        fontWeight: FontWeight.w900,
-                                        letterSpacing: priority == FeedbackPriority.epic ? 1.2 : 0.8,
-                                        shadows: [
-                                          Shadow(blurRadius: 0, color: Colors.black, offset: Offset(1, 1)),
-                                          Shadow(blurRadius: 0, color: Colors.black, offset: Offset(-1, -1)),
-                                          Shadow(blurRadius: 0, color: Colors.black, offset: Offset(1, -1)),
-                                          Shadow(blurRadius: 0, color: Colors.black, offset: Offset(-1, 1)),
+                                    RichText(
+                                      textAlign: TextAlign.left,
+                                      text: TextSpan(
+                                        children: [
+                                          TextSpan(
+                                            text: '$emoji ',
+                                            style: TextStyle(fontSize: titleSize + 4),
+                                          ),
+                                          TextSpan(
+                                            text: notificationTitle,
+                                            style: TextStyle(
+                                              fontSize: titleSize,
+                                              color: textColor,
+                                              fontWeight: FontWeight.w900,
+                                              letterSpacing: priority == FeedbackPriority.epic ? 1.2 : 0.8,
+                                              shadows: [
+                                                Shadow(blurRadius: 0, color: Colors.black, offset: Offset(1, 1)),
+                                                Shadow(blurRadius: 0, color: Colors.black, offset: Offset(-1, -1)),
+                                                Shadow(blurRadius: 0, color: Colors.black, offset: Offset(1, -1)),
+                                                Shadow(blurRadius: 0, color: Colors.black, offset: Offset(-1, 1)),
+                                              ],
+                                            ),
+                                          ),
                                         ],
                                       ),
                                     ),
+                                    SizedBox(height: 6),
+                                    Text(
+                                      notificationMessage,
+                                      style: TextStyle(
+                                        fontSize: messageSize,
+                                        color: textColor.withOpacity(0.95),
+                                        fontWeight: FontWeight.w600,
+                                        height: 1.3,
+                                        shadows: [
+                                          Shadow(blurRadius: 0, color: Colors.black54, offset: Offset(1, 1)),
+                                        ],
+                                      ),
+                                      textAlign: TextAlign.left,
+                                    ),
                                   ],
                                 ),
                               ),
-                              SizedBox(height: 6),
-                              Text(
-                                notificationMessage,
-                                style: TextStyle(
-                                  fontSize: messageSize,
-                                  color: textColor.withOpacity(0.95),
-                                  fontWeight: FontWeight.w600,
-                                  height: 1.3,
-                                  shadows: [
-                                    Shadow(blurRadius: 0, color: Colors.black54, offset: Offset(1, 1)),
-                                  ],
+                              // Vertical divider
+                              if (bonusExplanation.isNotEmpty)
+                                Container(
+                                  width: 2,
+                                  margin: EdgeInsets.symmetric(horizontal: 8),
+                                  decoration: BoxDecoration(
+                                    color: textColor.withOpacity(0.3),
+                                    borderRadius: BorderRadius.circular(1),
+                                  ),
                                 ),
-                                textAlign: TextAlign.center,
-                              ),
+                              // Right side - Bonus explanation
+                              if (bonusExplanation.isNotEmpty)
+                                Expanded(
+                                  flex: 2,
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        bonusExplanation,
+                                        style: TextStyle(
+                                          fontSize: messageSize - 1,
+                                          color: textColor.withOpacity(0.9),
+                                          fontWeight: FontWeight.w500,
+                                          height: 1.25,
+                                          shadows: [
+                                            Shadow(blurRadius: 0, color: Colors.black54, offset: Offset(1, 1)),
+                                          ],
+                                        ),
+                                        textAlign: TextAlign.left,
+                                      ),
+                                    ],
+                                  ),
+                                ),
                             ],
                           ),
                         ),
@@ -1281,7 +1388,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                               bottom: 8,
                                               right: 0,
                                               child: Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                                padding: EdgeInsets.symmetric(
+                                                  horizontal: profile.level >= 100 ? 10 : (profile.level >= 10 ? 9 : 7), 
+                                                  vertical: 2
+                                                ),
                                                 decoration: BoxDecoration(
                                                   gradient: AppTheme.getLevelBubbleGradient(profile.level),
                                                   borderRadius: BorderRadius.circular(12),
@@ -2085,7 +2195,7 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                             final milestone = app.incrementPizookie(id);
                             
                             // Calculate boosted Pizookie XP
-                            const basePizookieXP = 25;
+                            const basePizookieXP = 35; // Increased from 25 to promote pizookie running
                             final isBoostActive = app.boostActive;
                             final xpEarned = isBoostActive 
                                 ? (basePizookieXP * app.boostMultiplier).round()
@@ -2151,7 +2261,7 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                                         });
                                       },
                                       child: Container(
-                                        width: 44,
+                                        width: level >= 100 ? 56 : (level >= 10 ? 50 : 44),
                                         height: 32,
                                         decoration: BoxDecoration(
                                           gradient: AppTheme.getLevelBubbleGradient(level),
@@ -2354,7 +2464,7 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                         final milestone = app.incrementPizookie(id);
                         
                         // Calculate boosted Pizookie XP
-                        const basePizookieXP = 25;
+                        const basePizookieXP = 35; // Increased from 25 to promote pizookie running
                         final isBoostActive = app.boostActive;
                         final xpEarned = isBoostActive 
                             ? (basePizookieXP * app.boostMultiplier).round()
@@ -2413,7 +2523,7 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                                     });
                                   },
                                   child: Container(
-                                    width: 44,
+                                    width: level >= 100 ? 56 : (level >= 10 ? 50 : 44),
                                     height: 32,
                                     decoration: BoxDecoration(
                                       gradient: AppTheme.getLevelBubbleGradient(level),

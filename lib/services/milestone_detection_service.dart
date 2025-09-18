@@ -14,10 +14,11 @@ enum MilestoneType {
   
   // Performance Milestones (+3-20 XP) - Regular milestone bonuses
   everyFifthRun(8),         // 5, 10, 15, 20, 25...
-  everyThirdPizookie(12),   // 3, 6, 9, 12...
+  everySecondPizookie(15),  // 2, 4, 6, 8... (changed from 3rd to 2nd for more frequent rewards)
+  pizookieStreak(8),        // Consecutive pizookies bonus
   doubleTap(3),             // 2+ items in 10 seconds
-  tripleThreat(5),          // 3+ items in 30 seconds
-  speedDemon(10),           // 5+ items in 60 seconds
+  steadyPace(5),            // 3+ items in 5 minutes
+  hotStreak(10),            // 5+ items in 5 minutes
   
   // Competitive Achievements (+15-35 XP) - Competitive bonuses
   takingTheLead(25),
@@ -26,6 +27,9 @@ enum MilestoneType {
   perfectShift(50),         // No breaks >2 minutes
   
   // Legendary Moments (+50-150 XP) - Rare special achievements
+  pizookieMaster(75),       // 5 pizookies in one shift
+  sweetTooth(100),          // 8 pizookies in one shift  
+  dessertDominator(150),    // 12 pizookies in one shift
   personalRecord(75),       // Beat personal best shift
   teamGoal(100),           // Team hits collective target
   levelBreakthrough(125),   // Level up achievement
@@ -213,20 +217,59 @@ class MilestoneDetectionService {
       );
     }
     
-    // Every 3rd pizookie milestone
-    if (isPizookie && currentPizookies % 3 == 0 && currentPizookies > 0) {
-      final multiplier = (currentPizookies / 3).floor();
-      // More reasonable scaling: +2 XP per milestone for pizookies (they're rarer)
-      final bonusXP = MilestoneType.everyThirdPizookie.baseXP + ((multiplier - 1) * 2);
+    // Every 2nd pizookie milestone (changed from 3rd for more frequent rewards)
+    if (isPizookie && currentPizookies % 2 == 0 && currentPizookies > 0) {
+      final multiplier = (currentPizookies / 2).floor();
+      // Enhanced scaling for more frequent milestones: +3 XP per milestone
+      final bonusXP = MilestoneType.everySecondPizookie.baseXP + ((multiplier - 1) * 3);
       
       return MilestoneAchievement(
-        type: MilestoneType.everyThirdPizookie,
+        type: MilestoneType.everySecondPizookie,
         xpReward: bonusXP,
         message: _getPizookieMilestoneMessage(currentPizookies),
         subMessage: '+$bonusXP XP Sweet Bonus!',
-        priority: currentPizookies >= 9 ? FeedbackPriority.epic : FeedbackPriority.high,
+        priority: currentPizookies >= 6 ? FeedbackPriority.epic : FeedbackPriority.high,
         context: {'pizookieCount': currentPizookies, 'multiplier': multiplier},
       );
+    }
+    
+    // Special Pizookie Achievements for high counts
+    if (isPizookie) {
+      // Pizookie Master - 5 pizookies in shift
+      if (currentPizookies == 5) {
+        return MilestoneAchievement(
+          type: MilestoneType.pizookieMaster,
+          xpReward: MilestoneType.pizookieMaster.baseXP,
+          message: "🏆 PIZOOKIE MASTER!\nDessert expertise achieved!",
+          subMessage: "+${MilestoneType.pizookieMaster.baseXP} XP Mastery Bonus!",
+          priority: FeedbackPriority.epic,
+          context: {'pizookieCount': currentPizookies},
+        );
+      }
+      
+      // Sweet Tooth - 8 pizookies in shift  
+      if (currentPizookies == 8) {
+        return MilestoneAchievement(
+          type: MilestoneType.sweetTooth,
+          xpReward: MilestoneType.sweetTooth.baseXP,
+          message: "🍭 SWEET TOOTH LEGEND!\nDessert domination complete!",
+          subMessage: "+${MilestoneType.sweetTooth.baseXP} XP Sweet Bonus!",
+          priority: FeedbackPriority.epic,
+          context: {'pizookieCount': currentPizookies},
+        );
+      }
+      
+      // Dessert Dominator - 12 pizookies in shift
+      if (currentPizookies == 12) {
+        return MilestoneAchievement(
+          type: MilestoneType.dessertDominator,
+          xpReward: MilestoneType.dessertDominator.baseXP,
+          message: "👑 DESSERT DOMINATOR!\nAbsolute pizookie supremacy!",
+          subMessage: "+${MilestoneType.dessertDominator.baseXP} XP Legendary Bonus!",
+          priority: FeedbackPriority.epic,
+          context: {'pizookieCount': currentPizookies},
+        );
+      }
     }
     
     return null;
@@ -237,33 +280,33 @@ class MilestoneDetectionService {
     final profile = app.profiles[serverId]!;
     final now = DateTime.now();
     
-    // Update recent tap times (keep last 60 seconds)
+    // Update recent tap times (keep last 5 minutes for realistic speed tracking)
     profile.recentTapTimes.add(now);
-    profile.recentTapTimes.removeWhere((time) => now.difference(time).inSeconds > 60);
+    profile.recentTapTimes.removeWhere((time) => now.difference(time).inMinutes > 5);
     
-    // Speed Demon: 5+ taps in 60 seconds
+    // Hot Streak: 5+ runs in 5 minutes (realistic busy period)
     if (profile.recentTapTimes.length >= 5) {
       // Reset to prevent immediate re-triggering
       profile.recentTapTimes.clear();
       
       return MilestoneAchievement(
-        type: MilestoneType.speedDemon,
-        xpReward: MilestoneType.speedDemon.baseXP,
-        message: "⚡ SPEED DEMON!\nLightning fast!",
-        subMessage: "+${MilestoneType.speedDemon.baseXP} XP Speed Bonus!",
+        type: MilestoneType.hotStreak,
+        xpReward: MilestoneType.hotStreak.baseXP,
+        message: "🔥 HOT STREAK!\nBusy period mastery!",
+        subMessage: "+${MilestoneType.hotStreak.baseXP} XP Pace Bonus!",
         priority: FeedbackPriority.high,
       );
     }
     
-    // Triple Threat: 3+ taps in 30 seconds
+    // Steady Pace: 3+ runs in 5 minutes (good consistent work)
     if (profile.recentTapTimes.length >= 3) {
       final firstTapTime = profile.recentTapTimes.first;
-      if (now.difference(firstTapTime).inSeconds <= 30) {
+      if (now.difference(firstTapTime).inMinutes <= 5) {
         return MilestoneAchievement(
-          type: MilestoneType.tripleThreat,
-          xpReward: MilestoneType.tripleThreat.baseXP,
-          message: "🔥 TRIPLE THREAT!\nUnstoppable!",
-          subMessage: "+${MilestoneType.tripleThreat.baseXP} XP Speed Bonus!",
+          type: MilestoneType.steadyPace,
+          xpReward: MilestoneType.steadyPace.baseXP,
+          message: "⚡ STEADY PACE!\nConsistent performance!",
+          subMessage: "+${MilestoneType.steadyPace.baseXP} XP Pace Bonus!",
           priority: FeedbackPriority.medium,
         );
       }
@@ -380,20 +423,40 @@ class MilestoneDetectionService {
   /// Generate dynamic messages for pizookie milestones
   static String _getPizookieMilestoneMessage(int pizookieCount) {
     final messages = {
+      2: [
+        "🍪 DOUBLE DELIGHT!\nSweet momentum!",
+        "🔥 PIZOOKIE PAIR!\nOn a roll!",
+        "✨ SWEET START!\nKeep building!",
+      ],
       3: [
-        "🍪 TRIPLE TREAT!\nSweet momentum!",
-        "🔥 PIZOOKIE POWER!\nOn a roll!",
-        "✨ SWEET STREAK!\nKeep it going!",
+        "🍪 TRIPLE TREAT!\nAmazing streak!",
+        "🔥 PIZOOKIE POWER!\nDominating desserts!",
+        "✨ SWEET TRIO!\nUnstoppable!",
+      ],
+      4: [
+        "🍪 FANTASTIC FOUR!\nPizookie mastery!",
+        "💎 QUAD SQUAD!\nPerfect precision!",
+        "🌟 SWEET SUCCESS!\nIncredible!",
+      ],
+      5: [
+        "🍪 HIGH FIVE!\nPizookie champion!",
+        "👑 SWEET ROYALTY!\nRuling desserts!",
+        "🔥 BLAZING BAKER!\nLegendary status!",
       ],
       6: [
         "🍪 HALF DOZEN!\nSweet mastery!",
         "💎 DIAMOND DOZEN!\nPerfect precision!",
         "🌟 SWEET SIXTEEN!\nWait, that's six!",
       ],
-      9: [
-        "🍪 NINE AND DIVINE!\nPizookie perfection!",
-        "👑 SWEET ROYALTY!\nRuling the kitchen!",
-        "🔥 BLAZING BAKER!\nUnstoppable force!",
+      8: [
+        "🍪 OCTO-LICIOUS!\nPizookie perfection!",
+        "👑 SWEET EMPEROR!\nRuling the kitchen!",
+        "🔥 DESSERT DEITY!\nUnstoppable force!",
+      ],
+      10: [
+        "🍪 PERFECT TEN!\nPizookie legend!",
+        "👑 DESSERT OVERLORD!\nTotal domination!",
+        "🔥 SWEET SUPREMACY!\nUnbeatable!",
       ],
     };
     

@@ -54,10 +54,14 @@ class InstantFeedbackService {
   ];
   
   static const pizookiePrompts = [
-    "🍪 PIZOOKIE POWER!\n+25 XP!",
-    "🔥 SWEET VICTORY!\nDessert delivered!",
-    "🌟 PIZOOKIE PERFECTION!\nCustomer delight!",
-    "👑 DESSERT ROYALTY!\nSweet success!"
+    "🍪 PIZOOKIE POWER!\n+35 XP! Worth the effort!",
+    "🔥 SWEET VICTORY!\nDessert mastery!",
+    "🌟 PIZOOKIE PERFECTION!\nExtra work, extra reward!",
+    "👑 DESSERT ROYALTY!\nBuilding pays off!",
+    "🍦 ICE CREAM CHAMPION!\nScooping success!",
+    "🏆 PIZOOKIE MASTER!\nExtra effort rewarded!",
+    "💎 SWEET PREMIUM!\n3.5x regular points!",
+    "🎯 DESSERT HERO!\nGoing above and beyond!"
   ];
   
   static const teamPrompts = [
@@ -96,8 +100,10 @@ class InstantFeedbackService {
       case FeedbackType.competitive:
         return MessageVarietyEngine.getSimpleVarietyMessage('competitive', xp);
       case FeedbackType.pizookie:
-        // Pizookies get achievement-style messages
-        return MessageVarietyEngine.getSimpleVarietyMessage('achievement', xp);
+        // Use specific pizookie prompts with XP amount
+        final prompt = pizookiePrompts[_random.nextInt(pizookiePrompts.length)];
+        // Replace the XP amount in the message with actual amount
+        return prompt.replaceAll('+35 XP', '+$xp XP').replaceAll('3.5x', '${(xp/10).toStringAsFixed(1)}x');
       case FeedbackType.team:
         return MessageVarietyEngine.getSimpleVarietyMessage('achievement', xp);
       case FeedbackType.achievement:
