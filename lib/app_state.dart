@@ -7,11 +7,34 @@ import 'package:collection/collection.dart';
 import 'models.dart';
 import 'storage.dart';
 import 'gamification.dart';
+import 'services/milestone_detection_service.dart';
 
 String _randId() {
   final r = Random();
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
   return List.generate(16, (_) => chars[r.nextInt(chars.length)]).join();
+}
+
+/// Rounds XP to "nice" round numbers that end in 0, 1, or 5
+/// Examples: 12 -> 10, 16 -> 15, 23 -> 25, 47 -> 50
+int _roundXP(int xp) {
+  if (xp <= 1) return xp; // Keep small values as-is
+  
+  final lastDigit = xp % 10;
+  
+  // If already ends in 0, 1, or 5, keep it
+  if (lastDigit == 0 || lastDigit == 1 || lastDigit == 5) {
+    return xp;
+  }
+  
+  // Round to nearest "nice" number
+  if (lastDigit <= 3) {
+    return xp - lastDigit + 1; // Round down to X1
+  } else if (lastDigit <= 7) {
+    return xp - lastDigit + 5; // Round to X5
+  } else {
+    return xp - lastDigit + 10; // Round up to (X+1)0
+  }
 }
 
 class ServerProfile {
@@ -37,6 +60,29 @@ class ServerProfile {
   String birthday;
   bool isArchived;
   String archiveNotes;
+  
+  // Milestone tracking fields
+  Map<String, DateTime> dailyFirsts;       // Track daily achievement firsts
+  List<DateTime> recentTapTimes;           // Track recent taps for speed detection
+  int? lastKnownRank;                      // Track rank changes for competitive milestones
+  List<Map<String, dynamic>> milestoneHistory; // Track earned milestones
+  
+  // Personality tracking fields
+  Map<String, double> behaviorPatterns;    // Pattern name -> confidence score (0.0-1.0)
+  Map<String, double> personalityTraits;  // Trait name -> intensity score (0.0-1.0)
+  List<Map<String, dynamic>> performanceHistory; // Historical performance data
+  List<String> preferredShifts;           // ['lunch', 'dinner', 'late']
+  double competitiveLevel;                 // 0.0-1.0 competitive intensity
+  double socialLevel;                      // 0.0-1.0 social engagement
+  double achievementDrive;                 // 0.0-1.0 achievement motivation
+  DateTime? lastPersonalityAnalysis;       // Last analysis timestamp
+  int personalityAnalysisVersion;          // Analysis version for migrations
+  
+  // Message variety tracking fields
+  List<String> recentMessages;             // Last 50 messages shown (anti-repetition)
+  Map<String, DateTime> messageLastUsed;   // Message -> last used timestamp
+  Map<String, int> messageUsageCount;      // Message -> total usage count
+  Map<String, double> messageEngagement;   // Message -> engagement score (0.0-1.0)
 
   ServerProfile({
     this.allTimeRuns = 0,
@@ -57,8 +103,36 @@ class ServerProfile {
     this.birthday = '',
     this.isArchived = false,
     this.archiveNotes = '',
+    Map<String, DateTime>? dailyFirsts,
+    List<DateTime>? recentTapTimes,
+    this.lastKnownRank,
+    List<Map<String, dynamic>>? milestoneHistory,
+    Map<String, double>? behaviorPatterns,
+    Map<String, double>? personalityTraits,
+    List<Map<String, dynamic>>? performanceHistory,
+    List<String>? preferredShifts,
+    this.competitiveLevel = 0.5,
+    this.socialLevel = 0.5,
+    this.achievementDrive = 0.5,
+    this.lastPersonalityAnalysis,
+    this.personalityAnalysisVersion = 1,
+    List<String>? recentMessages,
+    Map<String, DateTime>? messageLastUsed,
+    Map<String, int>? messageUsageCount,
+    Map<String, double>? messageEngagement,
   })  : achievements = achievements ?? [],
-        repeatEarnedDates = repeatEarnedDates ?? [];
+        repeatEarnedDates = repeatEarnedDates ?? [],
+        dailyFirsts = dailyFirsts ?? {},
+        recentTapTimes = recentTapTimes ?? [],
+        milestoneHistory = milestoneHistory ?? [],
+        behaviorPatterns = behaviorPatterns ?? {},
+        personalityTraits = personalityTraits ?? {},
+        performanceHistory = performanceHistory ?? [],
+        preferredShifts = preferredShifts ?? ['lunch', 'dinner'],
+        recentMessages = recentMessages ?? [],
+        messageLastUsed = messageLastUsed ?? {},
+        messageUsageCount = messageUsageCount ?? {},
+        messageEngagement = messageEngagement ?? {};
 
   ServerProfile copyWith({
     int? allTimeRuns,
@@ -79,6 +153,23 @@ class ServerProfile {
     String? birthday,
     bool? isArchived,
     String? archiveNotes,
+    Map<String, DateTime>? dailyFirsts,
+    List<DateTime>? recentTapTimes,
+    int? lastKnownRank,
+    List<Map<String, dynamic>>? milestoneHistory,
+    Map<String, double>? behaviorPatterns,
+    Map<String, double>? personalityTraits,
+    List<Map<String, dynamic>>? performanceHistory,
+    List<String>? preferredShifts,
+    double? competitiveLevel,
+    double? socialLevel,
+    double? achievementDrive,
+    DateTime? lastPersonalityAnalysis,
+    int? personalityAnalysisVersion,
+    List<String>? recentMessages,
+    Map<String, DateTime>? messageLastUsed,
+    Map<String, int>? messageUsageCount,
+    Map<String, double>? messageEngagement,
   }) {
     return ServerProfile(
       allTimeRuns: allTimeRuns ?? this.allTimeRuns,
@@ -99,6 +190,23 @@ class ServerProfile {
       birthday: birthday ?? this.birthday,
       isArchived: isArchived ?? this.isArchived,
       archiveNotes: archiveNotes ?? this.archiveNotes,
+      dailyFirsts: dailyFirsts ?? this.dailyFirsts,
+      recentTapTimes: recentTapTimes ?? this.recentTapTimes,
+      lastKnownRank: lastKnownRank ?? this.lastKnownRank,
+      milestoneHistory: milestoneHistory ?? this.milestoneHistory,
+      behaviorPatterns: behaviorPatterns ?? this.behaviorPatterns,
+      personalityTraits: personalityTraits ?? this.personalityTraits,
+      performanceHistory: performanceHistory ?? this.performanceHistory,
+      preferredShifts: preferredShifts ?? this.preferredShifts,
+      competitiveLevel: competitiveLevel ?? this.competitiveLevel,
+      socialLevel: socialLevel ?? this.socialLevel,
+      achievementDrive: achievementDrive ?? this.achievementDrive,
+      lastPersonalityAnalysis: lastPersonalityAnalysis ?? this.lastPersonalityAnalysis,
+      personalityAnalysisVersion: personalityAnalysisVersion ?? this.personalityAnalysisVersion,
+      recentMessages: recentMessages ?? this.recentMessages,
+      messageLastUsed: messageLastUsed ?? this.messageLastUsed,
+      messageUsageCount: messageUsageCount ?? this.messageUsageCount,
+      messageEngagement: messageEngagement ?? this.messageEngagement,
     );
   }
 
@@ -129,6 +237,33 @@ class ServerProfile {
     birthday: (m['birthday'] ?? '') as String,
     isArchived: (m['isArchived'] ?? false) as bool,
     archiveNotes: (m['archiveNotes'] ?? '') as String,
+    dailyFirsts: (m['dailyFirsts'] as Map?)?.map((key, value) => 
+      MapEntry(key.toString(), DateTime.parse(value.toString()))) ?? <String, DateTime>{},
+    recentTapTimes: (m['recentTapTimes'] as List?)?.map((e) => 
+      DateTime.parse(e.toString())).toList() ?? <DateTime>[],
+    lastKnownRank: m['lastKnownRank'] as int?,
+    milestoneHistory: (m['milestoneHistory'] as List?)?.map((e) =>
+      Map<String, dynamic>.from(e as Map)).toList() ?? <Map<String, dynamic>>[],
+    behaviorPatterns: (m['behaviorPatterns'] as Map?)?.map((key, value) => 
+      MapEntry(key.toString(), (value as num).toDouble())) ?? <String, double>{},
+    personalityTraits: (m['personalityTraits'] as Map?)?.map((key, value) => 
+      MapEntry(key.toString(), (value as num).toDouble())) ?? <String, double>{},
+    performanceHistory: (m['performanceHistory'] as List?)?.map((e) =>
+      Map<String, dynamic>.from(e as Map)).toList() ?? <Map<String, dynamic>>[],
+    preferredShifts: (m['preferredShifts'] as List?)?.cast<String>() ?? ['lunch', 'dinner'],
+    competitiveLevel: (m['competitiveLevel'] as num?)?.toDouble() ?? 0.5,
+    socialLevel: (m['socialLevel'] as num?)?.toDouble() ?? 0.5,
+    achievementDrive: (m['achievementDrive'] as num?)?.toDouble() ?? 0.5,
+    lastPersonalityAnalysis: m['lastPersonalityAnalysis'] != null ? 
+      DateTime.parse(m['lastPersonalityAnalysis'].toString()) : null,
+    personalityAnalysisVersion: (m['personalityAnalysisVersion'] ?? 1) as int,
+    recentMessages: (m['recentMessages'] as List?)?.cast<String>() ?? <String>[],
+    messageLastUsed: (m['messageLastUsed'] as Map?)?.map((key, value) => 
+      MapEntry(key.toString(), DateTime.parse(value.toString()))) ?? <String, DateTime>{},
+    messageUsageCount: (m['messageUsageCount'] as Map?)?.map((key, value) => 
+      MapEntry(key.toString(), (value as num).toInt())) ?? <String, int>{},
+    messageEngagement: (m['messageEngagement'] as Map?)?.map((key, value) => 
+      MapEntry(key.toString(), (value as num).toDouble())) ?? <String, double>{},
   );
 
   Map<String, dynamic> toMap() => {
@@ -150,6 +285,23 @@ class ServerProfile {
     'birthday': birthday,
     'isArchived': isArchived,
     'archiveNotes': archiveNotes,
+    'dailyFirsts': dailyFirsts.map((key, value) => MapEntry(key, value.toIso8601String())),
+    'recentTapTimes': recentTapTimes.map((time) => time.toIso8601String()).toList(),
+    'lastKnownRank': lastKnownRank,
+    'milestoneHistory': milestoneHistory,
+    'behaviorPatterns': behaviorPatterns,
+    'personalityTraits': personalityTraits,
+    'performanceHistory': performanceHistory,
+    'preferredShifts': preferredShifts,
+    'competitiveLevel': competitiveLevel,
+    'socialLevel': socialLevel,
+    'achievementDrive': achievementDrive,
+    'lastPersonalityAnalysis': lastPersonalityAnalysis?.toIso8601String(),
+    'personalityAnalysisVersion': personalityAnalysisVersion,
+    'recentMessages': recentMessages,
+    'messageLastUsed': messageLastUsed.map((key, value) => MapEntry(key, value.toIso8601String())),
+    'messageUsageCount': messageUsageCount,
+    'messageEngagement': messageEngagement,
   };
 }
 class AppState extends ChangeNotifier {
@@ -164,7 +316,7 @@ class AppState extends ChangeNotifier {
   /// Register a Pizookie run: counts as a run, +2 points, +1 pizookieRuns
   // Tracks per-shift pizookie runs for each server
   final Map<String, int> _currentPizookieCounts = {};
-  String? incrementPizookie(String id) {
+  MilestoneAchievement? incrementPizookie(String id) {
     print('[DEBUG] incrementPizookie called for server $id');
     print('[DEBUG] _shiftActive=$_shiftActive');
     print('[DEBUG] _workingServerIds=$_workingServerIds');
@@ -194,8 +346,16 @@ class AppState extends ChangeNotifier {
     final serverName = serverById(id)?.name ?? 'Server';
 
     checkBoostExpiry(); // Check if boost has expired
-    final boostedPizookiePoints = (_boostActive ? (basePizookiePoints * _boostMultiplier).round() : basePizookiePoints);
+    final rawBoostedPoints = (_boostActive ? (basePizookiePoints * _boostMultiplier).round() : basePizookiePoints);
+    final boostedPizookiePoints = _roundXP(rawBoostedPoints);
     prof.points += boostedPizookiePoints;
+    
+    // Track actual XP earned this shift
+    _currentEarnedXP[id] = (_currentEarnedXP[id] ?? 0) + boostedPizookiePoints;
+    
+    // Track XP from this specific pizookie action
+    int actionXP = boostedPizookiePoints;
+    
     prof.allTimeRuns += delta;
     prof.pizookieRuns += delta;
     print('[DEBUG] Server $id ran a Pizookie: +$boostedPizookiePoints XP (base: $basePizookiePoints, boost: ${_boostActive ? "${_boostMultiplier}x" : "none"}), total now: ${prof.points}');
@@ -258,8 +418,41 @@ class AppState extends ChangeNotifier {
     _persistProfiles();
     _persistTotals();
 
+    // Check for milestone achievements and award XP
+    final milestone = MilestoneDetectionService.checkForMilestones(id, this, isPizookie: true);
+    if (milestone != null) {
+      // Award the milestone XP to the profile
+      final updatedProf = _profiles[id] ?? ServerProfile();
+      final roundedMilestoneXP = _roundXP(milestone.xpReward);
+      updatedProf.points += roundedMilestoneXP;
+      
+      // Add milestone bonus XP to current shift tracking
+      _currentBonusXP[id] = (_currentBonusXP[id] ?? 0) + roundedMilestoneXP;
+      _currentEarnedXP[id] = (_currentEarnedXP[id] ?? 0) + roundedMilestoneXP;
+      
+      // Add milestone XP to this action's total
+      actionXP += roundedMilestoneXP;
+      
+      // Add milestone to history
+      updatedProf.milestoneHistory.add({
+        'type': milestone.type.name,
+        'xpReward': roundedMilestoneXP,
+        'timestamp': DateTime.now().toIso8601String(),
+        'message': milestone.message,
+      });
+      
+      _profiles[id] = updatedProf;
+      _persistProfiles(); // Persist immediately
+      
+      print('[DEBUG] Pizookie milestone earned by $id: ${milestone.type.name} (+${milestone.xpReward} XP)');
+      print('[DEBUG] Current shift bonus XP for $id: ${_currentBonusXP[id]}');
+    }
+
+    // Store the total XP gained from this specific pizookie action
+    _lastActionXP[id] = actionXP;
+
     notifyListeners();
-    return null;
+    return milestone;
   }
   // For Full Hands! achievement: not persisted, just for session
   final Map<String, List<DateTime>> _recentTapTimes = {};
@@ -282,6 +475,10 @@ class AppState extends ChangeNotifier {
   DateTime? _shiftStart;
   final Map<String, int> _currentCounts = {};
   final Map<String, int> _currentStreaks = {};
+  final Map<String, int> _currentBonusXP = {}; // Track milestone bonus XP for current shift
+  final Map<String, int> _currentEarnedXP = {}; // Track actual XP earned this shift (including boosts)
+  final Map<String, String> _lastFlashMessages = {}; // Track last flash message for each server
+  final Map<String, int> _lastActionXP = {}; // Track XP gained from most recent action
   final Set<String> _workingServerIds = {};
   int _teamGoal = 0;
   int _teamTotalThisShift = 0;
@@ -317,6 +514,10 @@ class AppState extends ChangeNotifier {
   String get shiftType => _shiftType;
   DateTime? get shiftStart => _shiftStart;
   Map<String, int> get currentCounts => Map.unmodifiable(_currentCounts);
+  Map<String, int> get currentBonusXP => Map.unmodifiable(_currentBonusXP);
+  Map<String, int> get currentEarnedXP => Map.unmodifiable(_currentEarnedXP);
+  Map<String, String> get lastFlashMessages => Map.unmodifiable(_lastFlashMessages);
+  Map<String, int> get lastActionXP => Map.unmodifiable(_lastActionXP);
   Set<String> get workingServerIds => Set.unmodifiable(_workingServerIds);
   int get teamGoal => _teamGoal;
   int get teamTotalThisShift => _teamTotalThisShift;
@@ -353,6 +554,12 @@ class AppState extends ChangeNotifier {
     } else {
       return '${seconds}s';
     }
+  }
+
+  /// Track the last flash message for a server
+  void setLastFlashMessage(String serverId, String message) {
+    _lastFlashMessages[serverId] = message;
+    notifyListeners();
   }
 
   /// Get effective transition times - uses plan values if set, otherwise calculates dynamic defaults
@@ -1015,6 +1222,10 @@ bool isOpenAtFor(WeeklyHours hours, DateTime t) {
         _shiftPaused = false;
         _workingServerIds.clear();
         _currentCounts.clear();
+        _currentBonusXP.clear();
+        _currentEarnedXP.clear();
+        _lastFlashMessages.clear();
+        _lastActionXP.clear();
         _currentStreaks.clear();
         resetRosterView();
         return;
@@ -1117,6 +1328,10 @@ bool isOpenAtFor(WeeklyHours hours, DateTime t) {
       _shiftPaused = false;
       _workingServerIds.clear();
       _currentCounts.clear();
+      _currentBonusXP.clear();
+      _currentEarnedXP.clear();
+      _lastFlashMessages.clear();
+      _lastActionXP.clear();
       _currentStreaks.clear();
       _todayPlan = null;
       resetRosterView();
@@ -1325,6 +1540,10 @@ bool isOpenAtFor(WeeklyHours hours, DateTime t) {
     _persistProfiles();
 
   _currentCounts.clear();
+  _currentBonusXP.clear();
+  _currentEarnedXP.clear();
+  _lastFlashMessages.clear();
+  _lastActionXP.clear();
   _currentStreaks.clear();
   _lunchPeakCount.clear();
   _dinnerPeakCount.clear();
@@ -1446,16 +1665,18 @@ bool isOpenAtFor(WeeklyHours hours, DateTime t) {
       final key = '${id}_$ymd';
       if (p.repeatEarnedDates.contains(key)) return;
       p.repeatEarnedDates.add(key);
-      p.points += def.points;
+      final roundedPoints = _roundXP(def.points);
+      p.points += roundedPoints;
       _recentBadgeBubble = '$serverName earned the ${def.title} badge!';
     } else {
       p.achievements.add(id);
-      p.points += def.points;
+      final roundedPoints = _roundXP(def.points);
+      p.points += roundedPoints;
       _recentBadgeBubble = '$serverName earned the ${def.title} badge!';
     }
   }
 
-  String? increment(String id) {
+  MilestoneAchievement? increment(String id) {
   final now = DateTime.now();
   final m = now.hour * 60 + now.minute;
   final plan = _todayPlan;
@@ -1481,7 +1702,6 @@ bool isOpenAtFor(WeeklyHours hours, DateTime t) {
 
 
     // --- Full Hands! achievement logic (now 2 rapid taps) ---
-    String? justAwarded;
     final tapList = _recentTapTimes.putIfAbsent(id, () => <DateTime>[]);
     tapList.add(now);
     if (tapList.length > 2) tapList.removeAt(0);
@@ -1496,7 +1716,6 @@ bool isOpenAtFor(WeeklyHours hours, DateTime t) {
         if (t1.difference(t0).inMilliseconds <= 3000) {
           _awardOnce(prof, 'full_hands', serverName);
           _profiles[id] = prof;
-          justAwarded = 'full_hands';
           awardedFullHands = true;
         }
       }
@@ -1512,13 +1731,23 @@ bool isOpenAtFor(WeeklyHours hours, DateTime t) {
     // Always award base XP with boost multiplier applied
     checkBoostExpiry(); // Check if boost has expired
     final basePoints = 10;
-    final boostedPoints = (_boostActive ? (basePoints * _boostMultiplier).round() : basePoints);
+    final rawBoostedPoints = (_boostActive ? (basePoints * _boostMultiplier).round() : basePoints);
+    final boostedPoints = _roundXP(rawBoostedPoints);
     prof.points += boostedPoints;
+    
+    // Track actual XP earned this shift
+    _currentEarnedXP[id] = (_currentEarnedXP[id] ?? 0) + boostedPoints;
+    
+    // Track XP from this specific action
+    int actionXP = boostedPoints;
+    
     print('[DEBUG] +$boostedPoints points awarded to $id (base: $basePoints, boost: ${_boostActive ? "${_boostMultiplier}x" : "none"}), total now: ${prof.points}');
 
     // Award additional XP for Full Hands achievement if applicable
     if (awardedFullHands && settings.gamificationEnabled) {
       prof.points += 25; // Additional 25 XP for Full Hands (35 total - 10 base = 25 extra)
+      _currentEarnedXP[id] = (_currentEarnedXP[id] ?? 0) + 25;
+      actionXP += 25; // Add to this action's total
       print('[DEBUG] +25 additional XP for Full Hands achievement, total now: ${prof.points}');
     }
     prof.allTimeRuns += delta;
@@ -1582,8 +1811,41 @@ bool isOpenAtFor(WeeklyHours hours, DateTime t) {
   _persistProfiles();
   _persistTotals();
 
+  // Check for milestone achievements and award XP
+  final milestone = MilestoneDetectionService.checkForMilestones(id, this, isPizookie: false);
+  if (milestone != null) {
+    // Award the milestone XP to the profile
+    final updatedProf = _profiles[id] ?? ServerProfile();
+    final roundedMilestoneXP = _roundXP(milestone.xpReward);
+    updatedProf.points += roundedMilestoneXP;
+    
+    // Add milestone bonus XP to current shift tracking
+    _currentBonusXP[id] = (_currentBonusXP[id] ?? 0) + roundedMilestoneXP;
+    _currentEarnedXP[id] = (_currentEarnedXP[id] ?? 0) + roundedMilestoneXP;
+    
+    // Add milestone XP to this action's total
+    actionXP += roundedMilestoneXP;
+    
+    // Add milestone to history
+    updatedProf.milestoneHistory.add({
+      'type': milestone.type.name,
+      'xpReward': roundedMilestoneXP,
+      'timestamp': DateTime.now().toIso8601String(),
+      'message': milestone.message,
+    });
+    
+    _profiles[id] = updatedProf;
+    _persistProfiles(); // Persist immediately
+    
+    print('[DEBUG] Milestone earned by $id: ${milestone.type.name} (+$roundedMilestoneXP XP)');
+    print('[DEBUG] Current shift bonus XP for $id: ${_currentBonusXP[id]}');
+  }
+
+  // Store the total XP gained from this specific action
+  _lastActionXP[id] = actionXP;
+
   notifyListeners();
-  return justAwarded;
+  return milestone;
   }
 
   void decrement(String id) {
