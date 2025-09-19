@@ -1,4 +1,6 @@
 /// Helper to load section assignments from SharedPreferences
+library;
+
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 

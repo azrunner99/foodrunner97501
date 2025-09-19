@@ -28,7 +28,9 @@ class ServerAvatarSettingsScreen extends StatelessWidget {
                 final server = app.serverById(entry.key);
                 final displayName = server?.name ?? entry.key;
                 return ListTile(
-                  leading: CircleAvatar(backgroundImage: FileImage(File(entry.value.avatarPath!))),
+                  leading: CircleAvatar(
+                      backgroundImage:
+                          FileImage(File(entry.value.avatarPath!))),
                   title: Text(displayName),
                   onTap: () {
                     Navigator.push(

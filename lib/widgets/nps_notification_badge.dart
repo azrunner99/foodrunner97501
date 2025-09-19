@@ -146,7 +146,8 @@ class _NPSNotificationSummaryState extends State<NPSNotificationSummary> {
 
   @override
   Widget build(BuildContext context) {
-    final recentNotifications = _notificationService.notifications.take(3).toList();
+    final recentNotifications =
+        _notificationService.notifications.take(3).toList();
     final unreadCount = _notificationService.unreadCount;
     final criticalCount = _notificationService
         .getNotificationsByPriority(NotificationPriority.critical)
@@ -163,7 +164,9 @@ class _NPSNotificationSummaryState extends State<NPSNotificationSummary> {
               children: [
                 Icon(
                   Icons.notifications_active,
-                  color: criticalCount > 0 ? Colors.red.shade600 : Colors.blue.shade600,
+                  color: criticalCount > 0
+                      ? Colors.red.shade600
+                      : Colors.blue.shade600,
                   size: 24,
                 ),
                 const SizedBox(width: 8),
@@ -177,9 +180,12 @@ class _NPSNotificationSummaryState extends State<NPSNotificationSummary> {
                 const Spacer(),
                 if (unreadCount > 0)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     decoration: BoxDecoration(
-                      color: criticalCount > 0 ? Colors.red.shade600 : Colors.blue.shade600,
+                      color: criticalCount > 0
+                          ? Colors.red.shade600
+                          : Colors.blue.shade600,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -208,11 +214,9 @@ class _NPSNotificationSummaryState extends State<NPSNotificationSummary> {
                 ),
               )
             else
-              ...recentNotifications.map((notification) => 
-                _buildNotificationSummaryTile(notification)
-              ),
-            if (recentNotifications.isNotEmpty)
-              const SizedBox(height: 8),
+              ...recentNotifications.map((notification) =>
+                  _buildNotificationSummaryTile(notification)),
+            if (recentNotifications.isNotEmpty) const SizedBox(height: 8),
             Center(
               child: TextButton.icon(
                 onPressed: () {
@@ -233,7 +237,9 @@ class _NPSNotificationSummaryState extends State<NPSNotificationSummary> {
       margin: const EdgeInsets.symmetric(vertical: 4),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: notification.isRead ? Colors.grey.shade50 : notification.color.withOpacity(0.1),
+        color: notification.isRead
+            ? Colors.grey.shade50
+            : notification.color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: notification.color.withOpacity(0.3),
@@ -254,7 +260,9 @@ class _NPSNotificationSummaryState extends State<NPSNotificationSummary> {
                 Text(
                   notification.title,
                   style: TextStyle(
-                    fontWeight: notification.isRead ? FontWeight.normal : FontWeight.bold,
+                    fontWeight: notification.isRead
+                        ? FontWeight.normal
+                        : FontWeight.bold,
                     fontSize: 14,
                   ),
                 ),
@@ -286,7 +294,7 @@ class _NPSNotificationSummaryState extends State<NPSNotificationSummary> {
   String _formatTime(DateTime timestamp) {
     final now = DateTime.now();
     final difference = now.difference(timestamp);
-    
+
     if (difference.inMinutes < 1) {
       return 'now';
     } else if (difference.inHours < 1) {

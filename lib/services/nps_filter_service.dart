@@ -15,8 +15,8 @@ enum FilterType {
 enum ScoreCategory {
   all,
   detractors, // 0-6
-  passives,   // 7-8
-  promoters   // 9-10
+  passives, // 7-8
+  promoters // 9-10
 }
 
 /// Enum for predefined date ranges
@@ -36,26 +36,26 @@ class NPSFilterCriteria {
   DateTime? startDate;
   DateTime? endDate;
   DateRangePreset? datePreset;
-  
+
   // Score filtering
   ScoreCategory scoreCategory;
   int? minScore;
   int? maxScore;
-  
+
   // Server filtering
   List<String> selectedServerIds;
   List<String> selectedServerGroups;
-  
+
   // Feedback filtering
   bool? hasFeedback;
   List<String> feedbackKeywords;
-  
+
   // Location filtering
   List<String> selectedLocations;
-  
+
   // Custom filters
   Map<String, dynamic> customFilters;
-  
+
   NPSFilterCriteria({
     this.startDate,
     this.endDate,
@@ -105,16 +105,16 @@ class NPSFilterCriteria {
   /// Check if any filters are active
   bool get hasActiveFilters {
     return startDate != null ||
-           endDate != null ||
-           scoreCategory != ScoreCategory.all ||
-           minScore != null ||
-           maxScore != null ||
-           selectedServerIds.isNotEmpty ||
-           selectedServerGroups.isNotEmpty ||
-           hasFeedback != null ||
-           feedbackKeywords.isNotEmpty ||
-           selectedLocations.isNotEmpty ||
-           customFilters.isNotEmpty;
+        endDate != null ||
+        scoreCategory != ScoreCategory.all ||
+        minScore != null ||
+        maxScore != null ||
+        selectedServerIds.isNotEmpty ||
+        selectedServerGroups.isNotEmpty ||
+        hasFeedback != null ||
+        feedbackKeywords.isNotEmpty ||
+        selectedLocations.isNotEmpty ||
+        customFilters.isNotEmpty;
   }
 
   /// Get count of active filters
@@ -169,8 +169,8 @@ class FilterPreset {
 /// Service for managing NPS data filtering
 class NPSFilterService extends ChangeNotifier {
   NPSFilterCriteria _currentCriteria = NPSFilterCriteria();
-  List<FilterPreset> _savedPresets = [];
-  
+  final List<FilterPreset> _savedPresets = [];
+
   // Getters
   NPSFilterCriteria get currentCriteria => _currentCriteria;
   List<FilterPreset> get savedPresets => List.unmodifiable(_savedPresets);
@@ -228,7 +228,8 @@ class NPSFilterService extends ChangeNotifier {
       case DateRangePreset.yesterday:
         final yesterday = now.subtract(const Duration(days: 1));
         start = DateTime(yesterday.year, yesterday.month, yesterday.day);
-        end = DateTime(yesterday.year, yesterday.month, yesterday.day, 23, 59, 59);
+        end = DateTime(
+            yesterday.year, yesterday.month, yesterday.day, 23, 59, 59);
         break;
       case DateRangePreset.lastWeek:
         start = now.subtract(Duration(days: now.weekday - 1 + 7));
@@ -287,7 +288,7 @@ class NPSFilterService extends ChangeNotifier {
         customFilters: Map.from(_currentCriteria.customFilters),
       ),
     );
-    
+
     _savedPresets.add(preset);
     notifyListeners();
   }
@@ -346,7 +347,8 @@ class NPSFilterService extends ChangeNotifier {
 
       // Server filtering
       if (_currentCriteria.selectedServerIds.isNotEmpty) {
-        if (!_currentCriteria.selectedServerIds.contains(feedback.serverId.toString())) {
+        if (!_currentCriteria.selectedServerIds
+            .contains(feedback.serverId.toString())) {
           return false;
         }
       }
@@ -365,9 +367,8 @@ class NPSFilterService extends ChangeNotifier {
           return false;
         }
         final feedbackLower = feedback.comment!.toLowerCase();
-        final hasKeyword = _currentCriteria.feedbackKeywords.any(
-          (keyword) => feedbackLower.contains(keyword.toLowerCase())
-        );
+        final hasKeyword = _currentCriteria.feedbackKeywords
+            .any((keyword) => feedbackLower.contains(keyword.toLowerCase()));
         if (!hasKeyword) return false;
       }
 

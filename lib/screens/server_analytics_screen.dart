@@ -40,11 +40,11 @@ class _ServerAnalyticsScreenState extends State<ServerAnalyticsScreen> {
 
   void _generateAnalyticsData(AppState app) {
     final servers = app.servers;
-    
+
     // Get integrity data for the timeframe
     final bins = _getServerIntegrityBins(app);
     final runCount = _getServerRunCount(app);
-    
+
     // Get all server counts for peer comparison
     final allServerCounts = <String, int>{};
     for (final s in servers) {
@@ -84,10 +84,12 @@ class _ServerAnalyticsScreenState extends State<ServerAnalyticsScreen> {
         return app.integrityBinsForDateRange(widget.serverId, todayOnly: true);
       case 'week':
         final weekAgo = DateTime.now().subtract(const Duration(days: 7));
-        return app.integrityBinsForDateRange(widget.serverId, startDate: weekAgo);
+        return app.integrityBinsForDateRange(widget.serverId,
+            startDate: weekAgo);
       case 'month':
         final monthAgo = DateTime.now().subtract(const Duration(days: 30));
-        return app.integrityBinsForDateRange(widget.serverId, startDate: monthAgo);
+        return app.integrityBinsForDateRange(widget.serverId,
+            startDate: monthAgo);
       default:
         return app.integrityBinsForDateRange(widget.serverId, todayOnly: true);
     }
@@ -112,26 +114,28 @@ class _ServerAnalyticsScreenState extends State<ServerAnalyticsScreen> {
         return app.currentCounts[serverId] ?? 0;
       case 'week':
       case 'month':
-        final weekAgo = _selectedTimeframe == 'week' 
+        final weekAgo = _selectedTimeframe == 'week'
             ? DateTime.now().subtract(const Duration(days: 7))
             : DateTime.now().subtract(const Duration(days: 30));
-        final bins = app.integrityBinsForDateRange(serverId, startDate: weekAgo);
+        final bins =
+            app.integrityBinsForDateRange(serverId, startDate: weekAgo);
         return bins.values.fold(0, (sum, count) => sum + count);
       default:
         return app.currentCounts[serverId] ?? 0;
     }
   }
 
-  List<EnhancedIntegrityAssessment> _generateHistoricalAssessments(AppState app) {
+  List<EnhancedIntegrityAssessment> _generateHistoricalAssessments(
+      AppState app) {
     // Generate sample historical data for trend analysis
     final assessments = <EnhancedIntegrityAssessment>[];
     final now = DateTime.now();
-    
+
     for (int i = 7; i >= 0; i--) {
       final date = now.subtract(Duration(days: i));
-      final bins = app.integrityBinsForDateRange(widget.serverId, 
+      final bins = app.integrityBinsForDateRange(widget.serverId,
           startDate: date, endDate: date.add(const Duration(days: 1)));
-      
+
       if (bins.isNotEmpty) {
         final assessment = IntegrityAnalyzer.analyzeServerAdvanced(
           serverId: widget.serverId,
@@ -139,13 +143,15 @@ class _ServerAnalyticsScreenState extends State<ServerAnalyticsScreen> {
           clickBins: bins,
           totalRuns: bins.values.fold(0, (sum, count) => sum + count),
           allServers: app.servers,
-          allServerCounts: {widget.serverId: bins.values.fold(0, (sum, count) => sum + count)},
+          allServerCounts: {
+            widget.serverId: bins.values.fold(0, (sum, count) => sum + count)
+          },
           analysisTime: date,
         );
         assessments.add(assessment);
       }
     }
-    
+
     return assessments;
   }
 
@@ -155,7 +161,8 @@ class _ServerAnalyticsScreenState extends State<ServerAnalyticsScreen> {
     }
 
     final recent = _historicalAssessments.last.riskScore;
-    final previous = _historicalAssessments[_historicalAssessments.length - 2].riskScore;
+    final previous =
+        _historicalAssessments[_historicalAssessments.length - 2].riskScore;
     final change = recent - previous;
 
     String trend = 'stable';
@@ -167,9 +174,11 @@ class _ServerAnalyticsScreenState extends State<ServerAnalyticsScreen> {
 
   Map<String, dynamic> _calculatePeerRanking(Map<String, int> allServerCounts) {
     final serverRuns = allServerCounts[widget.serverId] ?? 0;
-    final sortedRuns = allServerCounts.values.toList()..sort((a, b) => b.compareTo(a));
+    final sortedRuns = allServerCounts.values.toList()
+      ..sort((a, b) => b.compareTo(a));
     final rank = sortedRuns.indexOf(serverRuns) + 1;
-    final percentile = ((sortedRuns.length - rank) / sortedRuns.length * 100).round();
+    final percentile =
+        ((sortedRuns.length - rank) / sortedRuns.length * 100).round();
 
     return {
       'rank': rank,
@@ -184,7 +193,9 @@ class _ServerAnalyticsScreenState extends State<ServerAnalyticsScreen> {
 
     final values = bins.values.toList();
     final mean = values.reduce((a, b) => a + b) / values.length;
-    final variance = values.map((v) => (v - mean) * (v - mean)).reduce((a, b) => a + b) / values.length;
+    final variance =
+        values.map((v) => (v - mean) * (v - mean)).reduce((a, b) => a + b) /
+            values.length;
     final stdDev = variance > 0 ? math.sqrt(variance) : 0.0;
     final coefficientOfVariation = mean > 0 ? stdDev / mean : 0.0;
 
@@ -192,33 +203,43 @@ class _ServerAnalyticsScreenState extends State<ServerAnalyticsScreen> {
       'mean': mean,
       'standardDeviation': stdDev,
       'coefficientOfVariation': coefficientOfVariation,
-      'consistency': coefficientOfVariation < 0.3 ? 'High' : coefficientOfVariation < 0.6 ? 'Medium' : 'Low',
+      'consistency': coefficientOfVariation < 0.3
+          ? 'High'
+          : coefficientOfVariation < 0.6
+              ? 'Medium'
+              : 'Low',
       'peakHours': _identifyPeakHours(bins),
     };
   }
 
   List<String> _identifyPeakHours(Map<String, int> bins) {
-    final sorted = bins.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final sorted = bins.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
     return sorted.take(3).map((e) => e.key).toList();
   }
 
-  List<String> _generateRecommendations(EnhancedIntegrityAssessment assessment) {
+  List<String> _generateRecommendations(
+      EnhancedIntegrityAssessment assessment) {
     final recommendations = <String>[];
 
     if (assessment.riskScore > 80) {
-      recommendations.add('Immediate investigation recommended due to high risk score');
+      recommendations
+          .add('Immediate investigation recommended due to high risk score');
     }
 
     if (assessment.clickClusters.isNotEmpty) {
-      recommendations.add('Monitor click clustering patterns during peak hours');
+      recommendations
+          .add('Monitor click clustering patterns during peak hours');
     }
 
     if (assessment.mechanicalScore > 0.7) {
-      recommendations.add('Review automated processes - high mechanical pattern detected');
+      recommendations
+          .add('Review automated processes - high mechanical pattern detected');
     }
 
     if (assessment.zScore > 2.0) {
-      recommendations.add('Server performance significantly differs from peers');
+      recommendations
+          .add('Server performance significantly differs from peers');
     }
 
     if (assessment.sessionDurationScore > 0.8) {
@@ -246,9 +267,9 @@ class _ServerAnalyticsScreenState extends State<ServerAnalyticsScreen> {
                   children: [
                     // Risk Assessment Overview
                     _buildRiskAssessmentCard(),
-                    
+
                     const SizedBox(height: 16),
-                    
+
                     // Peer Comparison and Trends
                     LayoutBuilder(
                       builder: (context, constraints) {
@@ -329,7 +350,8 @@ class _ServerAnalyticsScreenState extends State<ServerAnalyticsScreen> {
           Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
+                icon:
+                    const Icon(Icons.arrow_back, color: Colors.white, size: 28),
                 onPressed: () => Navigator.pop(context),
               ),
               const SizedBox(width: 12),
@@ -376,7 +398,8 @@ class _ServerAnalyticsScreenState extends State<ServerAnalyticsScreen> {
               ),
               const SizedBox(width: 12),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(20),
@@ -412,12 +435,13 @@ class _ServerAnalyticsScreenState extends State<ServerAnalyticsScreen> {
   }
 
   Widget _buildRiskAssessmentCard() {
-    final assessment = _analyticsData['currentAssessment'] as EnhancedIntegrityAssessment?;
+    final assessment =
+        _analyticsData['currentAssessment'] as EnhancedIntegrityAssessment?;
     if (assessment == null) return const SizedBox();
 
     Color riskColor = Colors.green;
     String riskLevel = 'Low';
-    
+
     if (assessment.riskScore > 80) {
       riskColor = Colors.red;
       riskLevel = 'Critical';
@@ -492,13 +516,17 @@ class _ServerAnalyticsScreenState extends State<ServerAnalyticsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildRiskMetric('Overall Risk', assessment.riskScore / 100),
+                      _buildRiskMetric(
+                          'Overall Risk', assessment.riskScore / 100),
                       const SizedBox(height: 8),
-                      _buildRiskMetric('Mechanical Score', assessment.mechanicalScore),
+                      _buildRiskMetric(
+                          'Mechanical Score', assessment.mechanicalScore),
                       const SizedBox(height: 8),
-                      _buildRiskMetric('Session Score', assessment.sessionDurationScore),
+                      _buildRiskMetric(
+                          'Session Score', assessment.sessionDurationScore),
                       const SizedBox(height: 8),
-                      _buildRiskMetric('Z-Score Risk', (assessment.zScore.abs() / 3.0).clamp(0.0, 1.0)),
+                      _buildRiskMetric('Z-Score Risk',
+                          (assessment.zScore.abs() / 3.0).clamp(0.0, 1.0)),
                     ],
                   ),
                 ),
@@ -512,20 +540,20 @@ class _ServerAnalyticsScreenState extends State<ServerAnalyticsScreen> {
               ),
               const SizedBox(height: 8),
               ...assessment.riskFactors.map((factor) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Row(
-                  children: [
-                    Icon(Icons.warning, color: Colors.orange, size: 16),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        factor,
-                        style: const TextStyle(fontSize: 14),
-                      ),
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Row(
+                      children: [
+                        Icon(Icons.warning, color: Colors.orange, size: 16),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            factor,
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              )),
+                  )),
             ],
           ],
         ),
@@ -535,8 +563,10 @@ class _ServerAnalyticsScreenState extends State<ServerAnalyticsScreen> {
 
   Widget _buildRiskMetric(String label, double value) {
     Color color = Colors.green;
-    if (value > 0.8) color = Colors.red;
-    else if (value > 0.6) color = Colors.orange;
+    if (value > 0.8) {
+      color = Colors.red;
+    } else if (value > 0.6)
+      color = Colors.orange;
     else if (value > 0.4) color = Colors.yellow[700]!;
 
     return Row(
@@ -572,8 +602,9 @@ class _ServerAnalyticsScreenState extends State<ServerAnalyticsScreen> {
   }
 
   Widget _buildPeerComparisonCard() {
-    final peerData = _analyticsData['peerRanking'] as Map<String, dynamic>? ?? {};
-    
+    final peerData =
+        _analyticsData['peerRanking'] as Map<String, dynamic>? ?? {};
+
     return Card(
       elevation: 4,
       child: Padding(
@@ -593,7 +624,8 @@ class _ServerAnalyticsScreenState extends State<ServerAnalyticsScreen> {
             ),
             const SizedBox(height: 16),
             if (peerData.isNotEmpty) ...[
-              _buildStatItem('Rank', '${peerData['rank']} of ${peerData['totalServers']}'),
+              _buildStatItem(
+                  'Rank', '${peerData['rank']} of ${peerData['totalServers']}'),
               _buildStatItem('Percentile', '${peerData['percentile']}th'),
               _buildStatItem('Total Runs', '${peerData['runs']}'),
             ] else
@@ -605,8 +637,9 @@ class _ServerAnalyticsScreenState extends State<ServerAnalyticsScreen> {
   }
 
   Widget _buildTrendAnalysisCard() {
-    final trendData = _analyticsData['riskTrend'] as Map<String, dynamic>? ?? {};
-    
+    final trendData =
+        _analyticsData['riskTrend'] as Map<String, dynamic>? ?? {};
+
     return Card(
       elevation: 4,
       child: Padding(
@@ -627,7 +660,8 @@ class _ServerAnalyticsScreenState extends State<ServerAnalyticsScreen> {
             const SizedBox(height: 16),
             if (trendData.isNotEmpty) ...[
               _buildStatItem('Trend', trendData['trend'] ?? 'stable'),
-              _buildStatItem('Change', '${trendData['change']?.toStringAsFixed(1) ?? '0.0'}%'),
+              _buildStatItem('Change',
+                  '${trendData['change']?.toStringAsFixed(1) ?? '0.0'}%'),
             ] else
               const Text('Insufficient data for trend analysis'),
           ],
@@ -637,8 +671,9 @@ class _ServerAnalyticsScreenState extends State<ServerAnalyticsScreen> {
   }
 
   Widget _buildPatternAnalysisCard() {
-    final patternData = _analyticsData['patternAnalysis'] as Map<String, dynamic>? ?? {};
-    
+    final patternData =
+        _analyticsData['patternAnalysis'] as Map<String, dynamic>? ?? {};
+
     return Card(
       elevation: 4,
       child: Padding(
@@ -658,9 +693,12 @@ class _ServerAnalyticsScreenState extends State<ServerAnalyticsScreen> {
             ),
             const SizedBox(height: 16),
             if (patternData.isNotEmpty) ...[
-              _buildStatItem('Consistency', patternData['consistency'] ?? 'Unknown'),
-              _buildStatItem('Avg Clicks/Hour', '${patternData['mean']?.toStringAsFixed(1) ?? '0.0'}'),
-              _buildStatItem('Coefficient of Variation', '${(patternData['coefficientOfVariation'] ?? 0.0).toStringAsFixed(2)}'),
+              _buildStatItem(
+                  'Consistency', patternData['consistency'] ?? 'Unknown'),
+              _buildStatItem('Avg Clicks/Hour',
+                  '${patternData['mean']?.toStringAsFixed(1) ?? '0.0'}'),
+              _buildStatItem('Coefficient of Variation',
+                  '${(patternData['coefficientOfVariation'] ?? 0.0).toStringAsFixed(2)}'),
             ] else
               const Text('No pattern data available'),
           ],
@@ -670,8 +708,9 @@ class _ServerAnalyticsScreenState extends State<ServerAnalyticsScreen> {
   }
 
   Widget _buildRecommendationsCard() {
-    final recommendations = _analyticsData['recommendations'] as List<String>? ?? [];
-    
+    final recommendations =
+        _analyticsData['recommendations'] as List<String>? ?? [];
+
     return Card(
       elevation: 4,
       child: Padding(
@@ -692,21 +731,22 @@ class _ServerAnalyticsScreenState extends State<ServerAnalyticsScreen> {
             const SizedBox(height: 16),
             if (recommendations.isNotEmpty)
               ...recommendations.map((rec) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(Icons.arrow_right, color: Colors.grey, size: 16),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        rec,
-                        style: const TextStyle(fontSize: 14),
-                      ),
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.arrow_right,
+                            color: Colors.grey, size: 16),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            rec,
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ))
+                  ))
             else
               const Text('No recommendations available'),
           ],
@@ -716,7 +756,8 @@ class _ServerAnalyticsScreenState extends State<ServerAnalyticsScreen> {
   }
 
   Widget _buildDetailedAnalysisCard() {
-    final assessment = _analyticsData['currentAssessment'] as EnhancedIntegrityAssessment?;
+    final assessment =
+        _analyticsData['currentAssessment'] as EnhancedIntegrityAssessment?;
     if (assessment == null) return const SizedBox();
 
     return Card(
@@ -737,10 +778,14 @@ class _ServerAnalyticsScreenState extends State<ServerAnalyticsScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            _buildStatItem('Click Clusters Detected', '${assessment.clickClusters.length}'),
-            _buildStatItem('Mechanical Score', '${(assessment.mechanicalScore * 100).toInt()}%'),
-            _buildStatItem('Session Duration Score', '${(assessment.sessionDurationScore * 100).toInt()}%'),
-            _buildStatItem('Z-Score vs Peers', assessment.zScore.toStringAsFixed(2)),
+            _buildStatItem('Click Clusters Detected',
+                '${assessment.clickClusters.length}'),
+            _buildStatItem('Mechanical Score',
+                '${(assessment.mechanicalScore * 100).toInt()}%'),
+            _buildStatItem('Session Duration Score',
+                '${(assessment.sessionDurationScore * 100).toInt()}%'),
+            _buildStatItem(
+                'Z-Score vs Peers', assessment.zScore.toStringAsFixed(2)),
           ],
         ),
       ),

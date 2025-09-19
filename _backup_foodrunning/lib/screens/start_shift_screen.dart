@@ -29,7 +29,7 @@ class _StartShiftScreenState extends State<StartShiftScreen> {
     final now = DateTime.now();
     final minutes = now.hour * 60 + now.minute;
     if (minutes >= 15 * 60 + 30) return 'Dinner'; // >= 3:30 PM
-    if (minutes >= 11 * 60) return 'Lunch';       // >= 11:00 AM
+    if (minutes >= 11 * 60) return 'Lunch'; // >= 11:00 AM
     return 'Other';
   }
 

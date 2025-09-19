@@ -7,10 +7,12 @@ class EncouragementOptionsScreen extends StatefulWidget {
   const EncouragementOptionsScreen({super.key});
 
   @override
-  State<EncouragementOptionsScreen> createState() => _EncouragementOptionsScreenState();
+  State<EncouragementOptionsScreen> createState() =>
+      _EncouragementOptionsScreenState();
 }
 
-class _EncouragementOptionsScreenState extends State<EncouragementOptionsScreen> {
+class _EncouragementOptionsScreenState
+    extends State<EncouragementOptionsScreen> {
   final TextEditingController _controller = TextEditingController();
 
   @override
@@ -56,7 +58,8 @@ class _EncouragementOptionsScreenState extends State<EncouragementOptionsScreen>
             padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: Row(
               children: [
-                Icon(Icons.celebration, size: 36, color: Theme.of(context).colorScheme.primary),
+                Icon(Icons.celebration,
+                    size: 36, color: Theme.of(context).colorScheme.primary),
                 SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -99,7 +102,9 @@ class _EncouragementOptionsScreenState extends State<EncouragementOptionsScreen>
                       ),
                       onSubmitted: (value) async {
                         if (value.trim().isEmpty) return;
-                        final newList = List<String>.from(app.settings.customEncouragements ?? encouragements);
+                        final newList = List<String>.from(
+                            app.settings.customEncouragements ??
+                                encouragements);
                         newList.add(value.trim());
                         app.settings.customEncouragements = newList;
                         await app.saveSettings(app.settings);
@@ -115,7 +120,8 @@ class _EncouragementOptionsScreenState extends State<EncouragementOptionsScreen>
                       final value = _controller.text.trim();
                       if (value.isEmpty) return;
                       final app = Provider.of<AppState>(context, listen: false);
-                      final newList = List<String>.from(app.settings.customEncouragements ?? encouragements);
+                      final newList = List<String>.from(
+                          app.settings.customEncouragements ?? encouragements);
                       newList.add(value);
                       app.settings.customEncouragements = newList;
                       await app.saveSettings(app.settings);
@@ -130,12 +136,14 @@ class _EncouragementOptionsScreenState extends State<EncouragementOptionsScreen>
           ),
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            child: Text('Current Encouragements:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            child: Text('Current Encouragements:',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           ),
           Expanded(
             child: Consumer<AppState>(
               builder: (context, app, _) {
-                final list = app.settings.customEncouragements ?? encouragements;
+                final list =
+                    app.settings.customEncouragements ?? encouragements;
                 return ListView.separated(
                   itemCount: list.length,
                   separatorBuilder: (context, index) => Container(

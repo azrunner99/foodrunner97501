@@ -7,7 +7,7 @@ import '../providers/nps_provider.dart';
 /// Widget for displaying analytics and reports
 class NPSAnalyticsWidget extends StatefulWidget {
   const NPSAnalyticsWidget({super.key});
-  
+
   @override
   State<NPSAnalyticsWidget> createState() => _NPSAnalyticsWidgetState();
 }
@@ -19,37 +19,39 @@ class _NPSAnalyticsWidgetState extends State<NPSAnalyticsWidget> {
   DateTime? _customEndDate;
   Map<String, dynamic>? _analyticsData;
   bool _isLoadingAnalytics = false;
-  
+
   @override
   void initState() {
     super.initState();
     _loadAnalytics();
   }
-  
+
   Future<void> _loadAnalytics() async {
     setState(() {
       _isLoadingAnalytics = true;
     });
-    
+
     try {
       final npsProvider = Provider.of<NPSProvider>(context, listen: false);
-      
+
       if (_selectedServer != null) {
         // Server-specific analytics
         DateTime? startDate;
         DateTime? endDate;
-        
+
         if (_selectedPeriod == '3_month') {
           endDate = DateTime.now();
           startDate = DateTime(endDate.year, endDate.month - 3, endDate.day);
         } else if (_selectedPeriod == '1_month') {
           endDate = DateTime.now();
           startDate = DateTime(endDate.year, endDate.month, 1);
-        } else if (_selectedPeriod == 'custom' && _customStartDate != null && _customEndDate != null) {
+        } else if (_selectedPeriod == 'custom' &&
+            _customStartDate != null &&
+            _customEndDate != null) {
           startDate = _customStartDate;
           endDate = _customEndDate;
         }
-        
+
         _analyticsData = await npsProvider.calculateServerNPS(
           _selectedServer!.id!,
           startDate: startDate,
@@ -67,7 +69,7 @@ class _NPSAnalyticsWidgetState extends State<NPSAnalyticsWidget> {
       }
     }
   }
-  
+
   Future<void> _selectCustomDateRange() async {
     final DateTimeRange? range = await showDateRangePicker(
       context: context,
@@ -77,7 +79,7 @@ class _NPSAnalyticsWidgetState extends State<NPSAnalyticsWidget> {
           ? DateTimeRange(start: _customStartDate!, end: _customEndDate!)
           : null,
     );
-    
+
     if (range != null) {
       setState(() {
         _customStartDate = range.start;
@@ -87,7 +89,7 @@ class _NPSAnalyticsWidgetState extends State<NPSAnalyticsWidget> {
       _loadAnalytics();
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Consumer<NPSProvider>(
@@ -117,7 +119,7 @@ class _NPSAnalyticsWidgetState extends State<NPSAnalyticsWidget> {
       },
     );
   }
-  
+
   Widget _buildFiltersCard(NPSProvider npsProvider) {
     return Card(
       child: Padding(
@@ -133,10 +135,10 @@ class _NPSAnalyticsWidgetState extends State<NPSAnalyticsWidget> {
               ),
             ),
             const SizedBox(height: 16),
-            
+
             // Server Selection
             DropdownButtonFormField<NPSServer?>(
-              value: _selectedServer,
+              initialValue: _selectedServer,
               decoration: const InputDecoration(
                 labelText: 'Server',
                 border: OutlineInputBorder(),
@@ -161,7 +163,7 @@ class _NPSAnalyticsWidgetState extends State<NPSAnalyticsWidget> {
               },
             ),
             const SizedBox(height: 16),
-            
+
             // Period Selection
             if (_selectedServer != null) ...[
               const Text(
@@ -209,9 +211,10 @@ class _NPSAnalyticsWidgetState extends State<NPSAnalyticsWidget> {
                     },
                   ),
                   ChoiceChip(
-                    label: Text(_selectedPeriod == 'custom' && _customStartDate != null
-                        ? 'Custom Range'
-                        : 'Custom...'),
+                    label: Text(
+                        _selectedPeriod == 'custom' && _customStartDate != null
+                            ? 'Custom Range'
+                            : 'Custom...'),
                     selected: _selectedPeriod == 'custom',
                     onSelected: (selected) {
                       if (selected) {
@@ -221,7 +224,9 @@ class _NPSAnalyticsWidgetState extends State<NPSAnalyticsWidget> {
                   ),
                 ],
               ),
-              if (_selectedPeriod == 'custom' && _customStartDate != null && _customEndDate != null)
+              if (_selectedPeriod == 'custom' &&
+                  _customStartDate != null &&
+                  _customEndDate != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
@@ -239,10 +244,10 @@ class _NPSAnalyticsWidgetState extends State<NPSAnalyticsWidget> {
       ),
     );
   }
-  
+
   Widget _buildServerAnalyticsCard() {
     final npsScore = _analyticsData?['nps_score'] as double?;
-    
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -257,7 +262,6 @@ class _NPSAnalyticsWidgetState extends State<NPSAnalyticsWidget> {
               ),
             ),
             const SizedBox(height: 16),
-            
             if (npsScore != null) ...[
               Center(
                 child: Column(
@@ -330,14 +334,15 @@ class _NPSAnalyticsWidgetState extends State<NPSAnalyticsWidget> {
       ),
     );
   }
-  
+
   Widget _buildOverallAnalyticsCard() {
     final totalServers = _analyticsData?['total_servers'] as int? ?? 0;
     final activeServers = _analyticsData?['active_servers'] as int? ?? 0;
     final totalFeedback = _analyticsData?['total_feedback'] as int? ?? 0;
     final overallNPS = _analyticsData?['overall_nps'] as double?;
-    final feedbackBreakdown = _analyticsData?['feedback_breakdown'] as Map<String, dynamic>?;
-    
+    final feedbackBreakdown =
+        _analyticsData?['feedback_breakdown'] as Map<String, dynamic>?;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -352,7 +357,7 @@ class _NPSAnalyticsWidgetState extends State<NPSAnalyticsWidget> {
               ),
             ),
             const SizedBox(height: 16),
-            
+
             // Summary Stats
             Row(
               children: [
@@ -385,7 +390,7 @@ class _NPSAnalyticsWidgetState extends State<NPSAnalyticsWidget> {
               ],
             ),
             const SizedBox(height: 16),
-            
+
             // Overall NPS
             if (overallNPS != null) ...[
               const Text(
@@ -438,7 +443,8 @@ class _NPSAnalyticsWidgetState extends State<NPSAnalyticsWidget> {
                           ),
                           Text(
                             'Based on $totalFeedback feedback entries',
-                            style: const TextStyle(fontSize: 12, color: Colors.grey),
+                            style: const TextStyle(
+                                fontSize: 12, color: Colors.grey),
                           ),
                         ],
                       ),
@@ -448,7 +454,7 @@ class _NPSAnalyticsWidgetState extends State<NPSAnalyticsWidget> {
               ),
               const SizedBox(height: 16),
             ],
-            
+
             // Feedback Breakdown
             if (feedbackBreakdown != null) ...[
               const Text(
@@ -492,7 +498,7 @@ class _NPSAnalyticsWidgetState extends State<NPSAnalyticsWidget> {
       ),
     );
   }
-  
+
   Widget _buildFeedbackTrendsCard(NPSProvider npsProvider) {
     return Card(
       child: Padding(
@@ -508,7 +514,6 @@ class _NPSAnalyticsWidgetState extends State<NPSAnalyticsWidget> {
               ),
             ),
             const SizedBox(height: 16),
-            
             if (npsProvider.recentFeedback.isEmpty)
               const Center(
                 child: Column(
@@ -542,10 +547,11 @@ class _NPSAnalyticsWidgetState extends State<NPSAnalyticsWidget> {
                   itemBuilder: (context, index) {
                     final feedback = npsProvider.recentFeedback[index];
                     final server = npsProvider.getServerById(feedback.serverId);
-                    
+
                     return ListTile(
                       leading: CircleAvatar(
-                        backgroundColor: _getFeedbackColor(feedback.feedbackType),
+                        backgroundColor:
+                            _getFeedbackColor(feedback.feedbackType),
                         child: Icon(
                           _getFeedbackIcon(feedback.feedbackType),
                           color: Colors.white,
@@ -553,9 +559,11 @@ class _NPSAnalyticsWidgetState extends State<NPSAnalyticsWidget> {
                         ),
                       ),
                       title: Text(server?.name ?? 'Unknown Server'),
-                      subtitle: Text('${feedback.feedbackType.displayName} - ${_formatDate(feedback.feedbackDate)}'),
+                      subtitle: Text(
+                          '${feedback.feedbackType.displayName} - ${_formatDate(feedback.feedbackDate)}'),
                       trailing: feedback.salesAmount != null
-                          ? Text('\$${feedback.salesAmount!.toStringAsFixed(2)}')
+                          ? Text(
+                              '\$${feedback.salesAmount!.toStringAsFixed(2)}')
                           : null,
                     );
                   },
@@ -567,8 +575,9 @@ class _NPSAnalyticsWidgetState extends State<NPSAnalyticsWidget> {
       ),
     );
   }
-  
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+
+  Widget _buildStatCard(
+      String title, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -600,7 +609,7 @@ class _NPSAnalyticsWidgetState extends State<NPSAnalyticsWidget> {
       ),
     );
   }
-  
+
   Widget _buildFeedbackBreakdownCard(String label, int count, Color color) {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -631,7 +640,7 @@ class _NPSAnalyticsWidgetState extends State<NPSAnalyticsWidget> {
       ),
     );
   }
-  
+
   String _getPeriodDisplayName() {
     switch (_selectedPeriod) {
       case 'all_time':
@@ -646,21 +655,21 @@ class _NPSAnalyticsWidgetState extends State<NPSAnalyticsWidget> {
         return 'All Time';
     }
   }
-  
+
   Color _getNPSColor(double nps) {
     if (nps >= 70) return Colors.green;
     if (nps >= 50) return Colors.lightGreen;
     if (nps >= 0) return Colors.orange;
     return Colors.red;
   }
-  
+
   String _getNPSRating(double nps) {
     if (nps >= 70) return 'Excellent';
     if (nps >= 50) return 'Good';
     if (nps >= 0) return 'Needs Improvement';
     return 'Poor';
   }
-  
+
   Color _getFeedbackColor(FeedbackType type) {
     switch (type) {
       case FeedbackType.yes:
@@ -671,7 +680,7 @@ class _NPSAnalyticsWidgetState extends State<NPSAnalyticsWidget> {
         return Colors.red;
     }
   }
-  
+
   IconData _getFeedbackIcon(FeedbackType type) {
     switch (type) {
       case FeedbackType.yes:
@@ -682,7 +691,7 @@ class _NPSAnalyticsWidgetState extends State<NPSAnalyticsWidget> {
         return Icons.thumb_down;
     }
   }
-  
+
   String _formatDate(DateTime date) {
     return '${date.month}/${date.day}/${date.year}';
   }

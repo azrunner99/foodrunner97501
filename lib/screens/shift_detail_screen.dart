@@ -49,7 +49,8 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
 
         // Sort by selected metric
         if (_sortBy == 'runs') {
-          sortedIds.sort((a, b) => (widget.shift.counts[b] ?? 0).compareTo(widget.shift.counts[a] ?? 0));
+          sortedIds.sort((a, b) => (widget.shift.counts[b] ?? 0)
+              .compareTo(widget.shift.counts[a] ?? 0));
         } else if (_sortBy == 'pizookies') {
           sortedIds.sort((a, b) {
             final pizookiesA = widget.shift.pizookieCounts[a] ?? 0;
@@ -69,9 +70,13 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
         }
 
         // Calculate metrics
-        final totalRuns = widget.shift.counts.values.fold<int>(0, (a, b) => a + b);
-        final totalPizookies = widget.shift.pizookieCounts.values.fold<int>(0, (a, b) => a + b);
-        final maxRuns = widget.shift.counts.values.isNotEmpty ? widget.shift.counts.values.reduce((a, b) => a > b ? a : b) : 0;
+        final totalRuns =
+            widget.shift.counts.values.fold<int>(0, (a, b) => a + b);
+        final totalPizookies =
+            widget.shift.pizookieCounts.values.fold<int>(0, (a, b) => a + b);
+        final maxRuns = widget.shift.counts.values.isNotEmpty
+            ? widget.shift.counts.values.reduce((a, b) => a > b ? a : b)
+            : 0;
 
         return Scaffold(
           body: Container(
@@ -94,16 +99,17 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
                   children: [
                     // Enhanced Header
                     _buildHeader(),
-                    
+
                     // Stats Dashboard
                     _buildStatsDashboard(totalRuns, totalPizookies),
-                    
+
                     // Sort Controls
                     _buildSortControls(),
-                    
+
                     // Leaderboard List
                     Expanded(
-                      child: _buildLeaderboardList(sortedIds, maxRuns, appState),
+                      child:
+                          _buildLeaderboardList(sortedIds, maxRuns, appState),
                     ),
                   ],
                 ),
@@ -125,7 +131,8 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
             children: [
               IconButton(
                 onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
+                icon:
+                    const Icon(Icons.arrow_back, color: Colors.white, size: 28),
               ),
               Expanded(
                 child: Column(
@@ -268,7 +275,9 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color: _sortBy == 'xp' ? _getShiftTypeColor(widget.shift.shiftType) : Colors.transparent,
+                  color: _sortBy == 'xp'
+                      ? _getShiftTypeColor(widget.shift.shiftType)
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -277,7 +286,8 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
                     Text(
                       'XP',
                       style: TextStyle(
-                        color: _sortBy == 'xp' ? Colors.white : Colors.grey[600],
+                        color:
+                            _sortBy == 'xp' ? Colors.white : Colors.grey[600],
                         fontWeight: FontWeight.w900,
                         fontSize: 16,
                       ),
@@ -298,7 +308,9 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color: _sortBy == 'runs' ? _getShiftTypeColor(widget.shift.shiftType) : Colors.transparent,
+                  color: _sortBy == 'runs'
+                      ? _getShiftTypeColor(widget.shift.shiftType)
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -307,7 +319,8 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
                     Text(
                       'Runs',
                       style: TextStyle(
-                        color: _sortBy == 'runs' ? Colors.white : Colors.grey[600],
+                        color:
+                            _sortBy == 'runs' ? Colors.white : Colors.grey[600],
                         fontWeight: FontWeight.w900,
                         fontSize: 16,
                       ),
@@ -328,7 +341,9 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color: _sortBy == 'pizookies' ? _getShiftTypeColor(widget.shift.shiftType) : Colors.transparent,
+                  color: _sortBy == 'pizookies'
+                      ? _getShiftTypeColor(widget.shift.shiftType)
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -337,7 +352,9 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
                     Text(
                       'Pizookies',
                       style: TextStyle(
-                        color: _sortBy == 'pizookies' ? Colors.white : Colors.grey[600],
+                        color: _sortBy == 'pizookies'
+                            ? Colors.white
+                            : Colors.grey[600],
                         fontWeight: FontWeight.w900,
                         fontSize: 16,
                       ),
@@ -352,22 +369,23 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
     );
   }
 
-  Widget _buildLeaderboardList(List<String> sortedIds, int maxRuns, AppState appState) {
+  Widget _buildLeaderboardList(
+      List<String> sortedIds, int maxRuns, AppState appState) {
     // Calculate MVP (highest XP earned during shift)
     String? mvpServerId;
     int highestXP = 0;
-    
+
     for (final id in sortedIds) {
       final runs = widget.shift.counts[id] ?? 0;
       final pizookies = widget.shift.pizookieCounts[id] ?? 0;
       final xp = (runs * 10) + (pizookies * 15);
-      
+
       if (xp > highestXP) {
         highestXP = xp;
         mvpServerId = id;
       }
     }
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
@@ -393,7 +411,8 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
           );
           final runs = widget.shift.counts[id] ?? 0;
           final pizookies = widget.shift.pizookieCounts[id] ?? 0;
-          final isMVP = id == mvpServerId && highestXP > 0; // Only show MVP if someone earned XP
+          final isMVP = id == mvpServerId &&
+              highestXP > 0; // Only show MVP if someone earned XP
 
           return _buildEnhancedServerCard(
             server: server,
@@ -422,7 +441,7 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
     final profile = appState.profiles[server.id];
     final avatarPath = profile?.avatarPath;
     final bannerPath = profile?.bannerPath;
-    
+
     ImageProvider? avatarImage;
     if (avatarPath != null && avatarPath.isNotEmpty) {
       if (avatarPath.startsWith('/') || avatarPath.contains(':')) {
@@ -431,7 +450,7 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
         avatarImage = AssetImage(avatarPath);
       }
     }
-    
+
     ImageProvider? bannerImage;
     if (bannerPath != null && bannerPath.isNotEmpty) {
       if (bannerPath.startsWith('/') || bannerPath.contains(':')) {
@@ -440,24 +459,26 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
         bannerImage = AssetImage(bannerPath);
       }
     }
-    
+
     // Calculate shift XP
     final shiftXp = (runs * 10) + (pizookies * 15);
-    
+
     // Get all servers for rankings
     final allServerIds = widget.shift.counts.keys.toList();
-    
+
     // Rank for runs
     final runRanks = List<String>.from(allServerIds);
-    runRanks.sort((a, b) => (widget.shift.counts[b] ?? 0).compareTo(widget.shift.counts[a] ?? 0));
+    runRanks.sort((a, b) =>
+        (widget.shift.counts[b] ?? 0).compareTo(widget.shift.counts[a] ?? 0));
     final runRank = runRanks.indexOf(server.id) + 1;
-    
+
     // Rank for pizookies (for this shift only)
     final pizookieRanks = List<String>.from(allServerIds);
-    pizookieRanks.sort((a, b) => (widget.shift.pizookieCounts[b] ?? 0).compareTo(widget.shift.pizookieCounts[a] ?? 0));
+    pizookieRanks.sort((a, b) => (widget.shift.pizookieCounts[b] ?? 0)
+        .compareTo(widget.shift.pizookieCounts[a] ?? 0));
     final pizookieRank = pizookieRanks.indexOf(server.id) + 1;
     final totalServers = allServerIds.length;
-    
+
     // Check if this is a top 3 position
     final isTopThree = rank <= 3;
 
@@ -465,12 +486,16 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
       margin: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        border: isTopThree ? Border.all(
-          color: rank == 1 ? const Color(0xFFFFD700) : 
-                 rank == 2 ? const Color(0xFFC0C0C0) : 
-                 const Color(0xFFCD7F32),
-          width: 3,
-        ) : null,
+        border: isTopThree
+            ? Border.all(
+                color: rank == 1
+                    ? const Color(0xFFFFD700)
+                    : rank == 2
+                        ? const Color(0xFFC0C0C0)
+                        : const Color(0xFFCD7F32),
+                width: 3,
+              )
+            : null,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.3),
@@ -484,7 +509,7 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
           // Main card content
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: Container(
+            child: SizedBox(
               height: 120,
               child: Stack(
                 children: [
@@ -512,7 +537,7 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
                         color: Colors.grey[200],
                       ),
                     ),
-                  
+
                   // Server name at top right
                   Positioned(
                     top: 8,
@@ -568,7 +593,7 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
                       ),
                     ),
                   ),
-                  
+
                   // XP info positioned separately to avoid line overlap
                   Positioned(
                     top: 50,
@@ -620,7 +645,7 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
                       ),
                     ),
                   ),
-                  
+
                   // Avatar and stats row
                   Positioned(
                     bottom: 8,
@@ -653,11 +678,14 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
                                   bottom: 6,
                                   right: 0,
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
-                                      gradient: AppTheme.getLevelBubbleGradient(profile.level),
+                                      gradient: AppTheme.getLevelBubbleGradient(
+                                          profile.level),
                                       borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(color: Colors.white, width: 1.5),
+                                      border: Border.all(
+                                          color: Colors.white, width: 1.5),
                                       boxShadow: [
                                         BoxShadow(
                                           color: Colors.black.withOpacity(0.3),
@@ -680,7 +708,7 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
                           ),
                         ),
                         const SizedBox(width: 12),
-                        
+
                         // Stats column
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -722,17 +750,20 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
                                 if (runRank == 1)
                                   const Padding(
                                     padding: EdgeInsets.only(left: 4),
-                                    child: Icon(Icons.emoji_events, color: Color(0xFFFFD700), size: 14),
+                                    child: Icon(Icons.emoji_events,
+                                        color: Color(0xFFFFD700), size: 14),
                                   )
                                 else if (runRank == 2)
                                   const Padding(
                                     padding: EdgeInsets.only(left: 4),
-                                    child: Icon(Icons.emoji_events, color: Color(0xFFC0C0C0), size: 14),
+                                    child: Icon(Icons.emoji_events,
+                                        color: Color(0xFFC0C0C0), size: 14),
                                   )
                                 else if (runRank == 3)
                                   const Padding(
                                     padding: EdgeInsets.only(left: 4),
-                                    child: Icon(Icons.emoji_events, color: Color(0xFFCD7F32), size: 14),
+                                    child: Icon(Icons.emoji_events,
+                                        color: Color(0xFFCD7F32), size: 14),
                                   ),
                               ],
                             ),
@@ -773,17 +804,20 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
                                 if (pizookieRank == 1)
                                   const Padding(
                                     padding: EdgeInsets.only(left: 4),
-                                    child: Icon(Icons.emoji_events, color: Color(0xFFFFD700), size: 14),
+                                    child: Icon(Icons.emoji_events,
+                                        color: Color(0xFFFFD700), size: 14),
                                   )
                                 else if (pizookieRank == 2)
                                   const Padding(
                                     padding: EdgeInsets.only(left: 4),
-                                    child: Icon(Icons.emoji_events, color: Color(0xFFC0C0C0), size: 14),
+                                    child: Icon(Icons.emoji_events,
+                                        color: Color(0xFFC0C0C0), size: 14),
                                   )
                                 else if (pizookieRank == 3)
                                   const Padding(
                                     padding: EdgeInsets.only(left: 4),
-                                    child: Icon(Icons.emoji_events, color: Color(0xFFCD7F32), size: 14),
+                                    child: Icon(Icons.emoji_events,
+                                        color: Color(0xFFCD7F32), size: 14),
                                   ),
                               ],
                             ),
@@ -796,7 +830,7 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
               ),
             ),
           ),
-          
+
           // Rank badge positioned at top-left corner, slightly outside
           Positioned(
             top: -12,
@@ -806,17 +840,25 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
               height: 48,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: isTopThree ? 
-                    (rank == 1 ? [const Color(0xFFFFD700), const Color(0xFFFFA500)] : 
-                     rank == 2 ? [const Color(0xFFC0C0C0), const Color(0xFF8C8C8C)] : 
-                     [const Color(0xFFCD7F32), const Color(0xFF8B4513)]) : 
-                    [const Color(0xFF6B7280), const Color(0xFF4B5563)],
+                  colors: isTopThree
+                      ? (rank == 1
+                          ? [const Color(0xFFFFD700), const Color(0xFFFFA500)]
+                          : rank == 2
+                              ? [
+                                  const Color(0xFFC0C0C0),
+                                  const Color(0xFF8C8C8C)
+                                ]
+                              : [
+                                  const Color(0xFFCD7F32),
+                                  const Color(0xFF8B4513)
+                                ])
+                      : [const Color(0xFF6B7280), const Color(0xFF4B5563)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(
-                  color: Colors.white, 
+                  color: Colors.white,
                   width: 3,
                 ),
                 boxShadow: [
@@ -827,11 +869,13 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
                     spreadRadius: 2,
                   ),
                   BoxShadow(
-                    color: isTopThree ? 
-                      (rank == 1 ? const Color(0xFFFFD700).withOpacity(0.4) : 
-                       rank == 2 ? const Color(0xFFC0C0C0).withOpacity(0.4) : 
-                       const Color(0xFFCD7F32).withOpacity(0.4)) : 
-                      Colors.grey.withOpacity(0.3),
+                    color: isTopThree
+                        ? (rank == 1
+                            ? const Color(0xFFFFD700).withOpacity(0.4)
+                            : rank == 2
+                                ? const Color(0xFFC0C0C0).withOpacity(0.4)
+                                : const Color(0xFFCD7F32).withOpacity(0.4))
+                        : Colors.grey.withOpacity(0.3),
                     blurRadius: 20,
                     offset: const Offset(0, 0),
                     spreadRadius: 4,
@@ -857,7 +901,7 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
               ),
             ),
           ),
-          
+
           // MVP badge positioned at bottom-right corner
           if (isMVP)
             Positioned(
@@ -942,7 +986,7 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
   String _weekday(DateTime date) {
     const days = [
       'Monday',
-      'Tuesday', 
+      'Tuesday',
       'Wednesday',
       'Thursday',
       'Friday',
@@ -953,7 +997,8 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
   }
 
   String _hm(DateTime date) {
-    final hour = date.hour == 0 ? 12 : (date.hour > 12 ? date.hour - 12 : date.hour);
+    final hour =
+        date.hour == 0 ? 12 : (date.hour > 12 ? date.hour - 12 : date.hour);
     final minute = date.minute.toString().padLeft(2, '0');
     final period = date.hour < 12 ? 'am' : 'pm';
     return '$hour:$minute$period';
@@ -965,7 +1010,8 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Delete Shift'),
-          content: Text('Are you sure you want to delete this ${shift.shiftType} shift?'),
+          content: Text(
+              'Are you sure you want to delete this ${shift.shiftType} shift?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -973,7 +1019,8 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
             ),
             TextButton(
               onPressed: () {
-                Provider.of<AppState>(context, listen: false).deleteShift(shift);
+                Provider.of<AppState>(context, listen: false)
+                    .deleteShift(shift);
                 Navigator.pop(context); // Close dialog
                 Navigator.pop(context); // Go back to history screen
               },
@@ -990,7 +1037,7 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
     final appState = Provider.of<AppState>(context, listen: false);
     final dayOfWeek = widget.shift.start.weekday;
     final weeklyHours = WeeklyHours.defaults(); // Use default restaurant hours
-    
+
     DateTime? endTime;
     if (widget.shift.shiftType == 'Lunch') {
       // Lunch ends at transition start or restaurant close (whichever comes first)
@@ -1008,7 +1055,9 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
         second: 0,
         millisecond: 0,
       );
-      endTime = transitionStart.isBefore(restaurantClose) ? transitionStart : restaurantClose;
+      endTime = transitionStart.isBefore(restaurantClose)
+          ? transitionStart
+          : restaurantClose;
     } else {
       // Dinner ends at restaurant close
       final closeMinutes = weeklyHours.closeMinutes[dayOfWeek] ?? 22 * 60;
@@ -1019,7 +1068,7 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
         millisecond: 0,
       );
     }
-    
+
     return _hm(endTime);
   }
 }

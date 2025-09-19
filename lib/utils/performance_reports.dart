@@ -10,7 +10,7 @@ import '../app_state.dart';
 class PerformanceReports {
   static const String _reportVersion = '1.0.0';
   static const String _companyName = "BJ's Restaurant & Brewhouse";
-  
+
   /// Generate comprehensive monthly performance report
   static Future<MonthlyPerformanceReport> generateMonthlyReport({
     required DateTime month,
@@ -31,23 +31,25 @@ class PerformanceReports {
 
       // Calculate performance metrics for all servers
       final serverMetrics = <String, ServerPerformanceData>{};
-      
+
       // Convert business data if available
       MonthlyBusinessData? monthlyBusinessData;
       if (businessData != null) {
         monthlyBusinessData = MonthlyBusinessData.fromMap(businessData);
       }
-      
+
       for (final server in servers) {
-        final performanceData = PerformanceCalculator.calculateServerPerformance(
+        final performanceData =
+            PerformanceCalculator.calculateServerPerformance(
           serverId: server.id,
           startDate: DateTime(month.year, month.month, 1),
           endDate: DateTime(month.year, month.month + 1, 0),
           shifts: shifts,
           businessData: monthlyBusinessData,
-          hireDate: DateTime.now().subtract(const Duration(days: 90)), // Default to 90 days
+          hireDate: DateTime.now()
+              .subtract(const Duration(days: 90)), // Default to 90 days
         );
-        
+
         serverMetrics[server.id] = performanceData;
       }
 
@@ -69,7 +71,7 @@ class PerformanceReports {
 
       // Generate trend analysis
       final trends = TrendAnalyzer.analyzePerformanceTrends(
-        serverId: servers.first.id,  // Use first server as team representative
+        serverId: servers.first.id, // Use first server as team representative
         shifts: shifts,
         analysisWindowDays: 30,
       );
@@ -172,7 +174,7 @@ class PerformanceReports {
       // Calculate metrics for all servers
       final allMetrics = <String, ServerPerformanceData>{};
       final shifts = AppState().history;
-      
+
       for (final server in servers) {
         final metrics = PerformanceCalculator.calculateServerPerformance(
           serverId: server.id,
@@ -182,7 +184,7 @@ class PerformanceReports {
           businessData: null,
           hireDate: DateTime.now().subtract(const Duration(days: 90)),
         );
-        
+
         allMetrics[server.id] = metrics;
       }
 
@@ -211,7 +213,8 @@ class PerformanceReports {
 
       return reportData;
     } catch (e) {
-      throw ReportGenerationException('Failed to generate team analytics report: $e');
+      throw ReportGenerationException(
+          'Failed to generate team analytics report: $e');
     }
   }
 
@@ -270,7 +273,8 @@ class PerformanceReports {
 
       return reportData;
     } catch (e) {
-      throw ReportGenerationException('Failed to generate executive summary: $e');
+      throw ReportGenerationException(
+          'Failed to generate executive summary: $e');
     }
   }
 
@@ -288,8 +292,9 @@ class PerformanceReports {
     Map<String, dynamic>? businessData,
     Map<String, dynamic>? enhancedBusinessData,
   ) async {
-    final validMetrics = serverMetrics.values.where((m) => m.performanceScore > 0).toList();
-    
+    final validMetrics =
+        serverMetrics.values.where((m) => m.performanceScore > 0).toList();
+
     if (validMetrics.isEmpty) {
       return TeamAnalytics(
         averagePerformanceScore: 0.0,
@@ -303,9 +308,15 @@ class PerformanceReports {
       );
     }
 
-    final avgScore = validMetrics.map((m) => m.performanceScore).reduce((a, b) => a + b) / validMetrics.length;
-    final totalRuns = validMetrics.map((m) => m.totalFoodRuns).reduce((a, b) => a + b);
-    final avgEfficiency = validMetrics.map((m) => m.metrics.rawEfficiency).reduce((a, b) => a + b) / validMetrics.length;
+    final avgScore =
+        validMetrics.map((m) => m.performanceScore).reduce((a, b) => a + b) /
+            validMetrics.length;
+    final totalRuns =
+        validMetrics.map((m) => m.totalFoodRuns).reduce((a, b) => a + b);
+    final avgEfficiency = validMetrics
+            .map((m) => m.metrics.rawEfficiency)
+            .reduce((a, b) => a + b) /
+        validMetrics.length;
 
     // Performance distribution
     final distribution = <PerformanceRating, int>{};
@@ -318,11 +329,15 @@ class PerformanceReports {
     final sortedByScore = validMetrics.toList()
       ..sort((a, b) => b.performanceScore.compareTo(a.performanceScore));
     final topCount = (validMetrics.length * 0.2).ceil();
-    final topPerformers = sortedByScore.take(topCount).map((m) => m.serverId).toList();
+    final topPerformers =
+        sortedByScore.take(topCount).map((m) => m.serverId).toList();
 
     // Improvement needed (bottom 20%)
     final bottomCount = (validMetrics.length * 0.2).ceil();
-    final improvementNeeded = sortedByScore.reversed.take(bottomCount).map((m) => m.serverId).toList();
+    final improvementNeeded = sortedByScore.reversed
+        .take(bottomCount)
+        .map((m) => m.serverId)
+        .toList();
 
     // Consistency index (inverse of performance variance)
     final scores = validMetrics.map((m) => m.performanceScore).toList();
@@ -358,7 +373,8 @@ class PerformanceReports {
         insights.add(PerformanceInsight(
           type: 'recognition',
           title: 'Top Performer: ${server.name}',
-          description: 'Achieving ${metrics.performanceScore.toStringAsFixed(1)} performance score (${_getPerformanceRating(metrics.performanceScore).displayName})',
+          description:
+              'Achieving ${metrics.performanceScore.toStringAsFixed(1)} performance score (${_getPerformanceRating(metrics.performanceScore).displayName})',
           priority: 'high',
           actionItems: [
             'Consider for employee recognition program',
@@ -379,7 +395,8 @@ class PerformanceReports {
         insights.add(PerformanceInsight(
           type: 'recommendation',
           title: 'Development Opportunity: ${server.name}',
-          description: 'Performance score ${metrics.performanceScore.toStringAsFixed(1)} suggests coaching opportunities',
+          description:
+              'Performance score ${metrics.performanceScore.toStringAsFixed(1)} suggests coaching opportunities',
           priority: 'medium',
           actionItems: [
             'Schedule one-on-one coaching session',
@@ -397,7 +414,8 @@ class PerformanceReports {
       insights.add(PerformanceInsight(
         type: 'alert',
         title: 'Team Performance Variance',
-        description: 'High variance in team performance suggests need for standardized training',
+        description:
+            'High variance in team performance suggests need for standardized training',
         priority: 'medium',
         actionItems: [
           'Implement standardized training procedures',
@@ -486,7 +504,7 @@ class PerformanceReports {
   ) {
     final distribution = <String, int>{};
     final scores = metrics.values.map((m) => m.performanceScore).toList();
-    
+
     // Create score ranges
     final ranges = [
       {'range': '90-100', 'min': 90.0, 'max': 100.0},
@@ -499,15 +517,17 @@ class PerformanceReports {
     for (final range in ranges) {
       final minValue = range['min'] as double;
       final maxValue = range['max'] as double;
-      final count = scores.where((score) => 
-        score >= minValue && score <= maxValue
-      ).length;
+      final count = scores
+          .where((score) => score >= minValue && score <= maxValue)
+          .length;
       distribution[range['range'] as String] = count;
     }
 
     return PerformanceDistribution(
       distribution: distribution,
-      averageScore: scores.isNotEmpty ? scores.reduce((a, b) => a + b) / scores.length : 0.0,
+      averageScore: scores.isNotEmpty
+          ? scores.reduce((a, b) => a + b) / scores.length
+          : 0.0,
       medianScore: _calculateMedian(scores),
       standardDeviation: _calculateStandardDeviation(scores),
     );
@@ -516,8 +536,9 @@ class PerformanceReports {
   static EfficiencyVariance _analyzeEfficiencyVariance(
     Map<String, ServerPerformanceData> metrics,
   ) {
-    final efficiencies = metrics.values.map((m) => m.metrics.rawEfficiency).toList();
-    
+    final efficiencies =
+        metrics.values.map((m) => m.metrics.rawEfficiency).toList();
+
     if (efficiencies.isEmpty) {
       return EfficiencyVariance(
         averageEfficiency: 0.0,
@@ -568,7 +589,8 @@ class PerformanceReports {
       needsAttention: needsAttention,
       needsCoaching: needsCoaching,
       recognitionCandidates: recognitionCandidates,
-      trainingPriority: _determineTrainingPriority(needsAttention, needsCoaching),
+      trainingPriority:
+          _determineTrainingPriority(needsAttention, needsCoaching),
     );
   }
 
@@ -579,11 +601,11 @@ class PerformanceReports {
     Map<String, dynamic>? enhancedBusinessData,
   ) async {
     final kpis = <String, double>{};
-    
+
     // Calculate team performance metrics
     final allMetrics = <ServerPerformanceData>[];
     final shifts = AppState().history;
-    
+
     for (final server in servers) {
       final metrics = PerformanceCalculator.calculateServerPerformance(
         serverId: server.id,
@@ -597,21 +619,34 @@ class PerformanceReports {
     }
 
     if (allMetrics.isNotEmpty) {
-      kpis['Average Performance Score'] = allMetrics.map((m) => m.performanceScore).reduce((a, b) => a + b) / allMetrics.length;
-      kpis['Team Efficiency'] = allMetrics.map((m) => m.metrics.rawEfficiency).reduce((a, b) => a + b) / allMetrics.length;
-      kpis['Total Food Runs'] = allMetrics.map((m) => m.totalFoodRuns.toDouble()).reduce((a, b) => a + b);
-      kpis['Performance Consistency'] = 100.0 - _calculateVariance(allMetrics.map((m) => m.performanceScore).toList());
+      kpis['Average Performance Score'] =
+          allMetrics.map((m) => m.performanceScore).reduce((a, b) => a + b) /
+              allMetrics.length;
+      kpis['Team Efficiency'] = allMetrics
+              .map((m) => m.metrics.rawEfficiency)
+              .reduce((a, b) => a + b) /
+          allMetrics.length;
+      kpis['Total Food Runs'] = allMetrics
+          .map((m) => m.totalFoodRuns.toDouble())
+          .reduce((a, b) => a + b);
+      kpis['Performance Consistency'] = 100.0 -
+          _calculateVariance(
+              allMetrics.map((m) => m.performanceScore).toList());
     }
 
     // Add business metrics if available
     if (businessData != null) {
-      kpis['Total Guests'] = (businessData['totalGuests'] as num?)?.toDouble() ?? 0.0;
-      kpis['Total Sales'] = (businessData['totalSales'] as num?)?.toDouble() ?? 0.0;
+      kpis['Total Guests'] =
+          (businessData['totalGuests'] as num?)?.toDouble() ?? 0.0;
+      kpis['Total Sales'] =
+          (businessData['totalSales'] as num?)?.toDouble() ?? 0.0;
     }
 
     // Add NPS metrics if available
     if (enhancedBusinessData != null) {
-      kpis['Restaurant NPS'] = (enhancedBusinessData['restaurantNPSAverage'] as num?)?.toDouble() ?? 0.0;
+      kpis['Restaurant NPS'] =
+          (enhancedBusinessData['restaurantNPSAverage'] as num?)?.toDouble() ??
+              0.0;
     }
 
     return kpis;
@@ -622,12 +657,15 @@ class PerformanceReports {
     DateTime month,
   ) async {
     final highlights = <String>[];
-    
+
     // This would analyze performance data and generate key highlights
-    highlights.add('Team achieved ${(85.5).toStringAsFixed(1)} average performance score');
-    highlights.add('${(servers.length * 0.25).ceil()} servers recognized for exceptional performance');
-    highlights.add('Overall efficiency improved by 12% compared to previous month');
-    
+    highlights.add(
+        'Team achieved ${(85.5).toStringAsFixed(1)} average performance score');
+    highlights.add(
+        '${(servers.length * 0.25).ceil()} servers recognized for exceptional performance');
+    highlights
+        .add('Overall efficiency improved by 12% compared to previous month');
+
     return highlights;
   }
 
@@ -637,18 +675,20 @@ class PerformanceReports {
     Map<String, double> kpis,
   ) async {
     final actionItems = <String>[];
-    
+
     if ((kpis['Average Performance Score'] ?? 0) < 75) {
-      actionItems.add('Schedule team training workshop to improve overall performance');
+      actionItems.add(
+          'Schedule team training workshop to improve overall performance');
     }
-    
+
     if ((kpis['Performance Consistency'] ?? 0) < 70) {
-      actionItems.add('Implement standardized procedures to reduce performance variance');
+      actionItems.add(
+          'Implement standardized procedures to reduce performance variance');
     }
-    
+
     actionItems.add('Recognize top performers in next team meeting');
     actionItems.add('Review scheduling optimization opportunities');
-    
+
     return actionItems;
   }
 
@@ -684,7 +724,8 @@ class PerformanceReports {
     }
   }
 
-  static String _determineTrainingPriority(List<String> needsAttention, List<String> needsCoaching) {
+  static String _determineTrainingPriority(
+      List<String> needsAttention, List<String> needsCoaching) {
     if (needsAttention.isNotEmpty) return 'High';
     if (needsCoaching.length > 2) return 'Medium';
     return 'Low';
@@ -698,7 +739,7 @@ double sqrt(double value) => value >= 0 ? value.abs().toDouble() : 0.0;
 class ReportGenerationException implements Exception {
   final String message;
   ReportGenerationException(this.message);
-  
+
   @override
   String toString() => 'ReportGenerationException: $message';
 }
@@ -706,7 +747,7 @@ class ReportGenerationException implements Exception {
 class ReportExportException implements Exception {
   final String message;
   ReportExportException(this.message);
-  
+
   @override
   String toString() => 'ReportExportException: $message';
 }
@@ -719,7 +760,7 @@ class MonthlyPerformanceReport {
   final ReportType reportType;
   final String companyName;
   final String version;
-  
+
   TeamAnalytics? teamAnalytics;
   Map<String, ServerPerformanceData>? serverMetrics;
   List<PerformanceInsight>? performanceInsights;
@@ -737,19 +778,20 @@ class MonthlyPerformanceReport {
   });
 
   Map<String, dynamic> toMap() => {
-    'reportId': reportId,
-    'generatedDate': generatedDate.toIso8601String(),
-    'reportMonth': reportMonth.toIso8601String(),
-    'reportType': reportType.name,
-    'companyName': companyName,
-    'version': version,
-    'teamAnalytics': teamAnalytics?.toMap(),
-    'serverMetrics': serverMetrics?.map((k, v) => MapEntry(k, v.toMap())),
-    'performanceInsights': performanceInsights?.map((i) => i.toMap()).toList(),
-    'trendAnalysis': trendAnalysis,
-    'businessData': businessData,
-    'enhancedBusinessData': enhancedBusinessData,
-  };
+        'reportId': reportId,
+        'generatedDate': generatedDate.toIso8601String(),
+        'reportMonth': reportMonth.toIso8601String(),
+        'reportType': reportType.name,
+        'companyName': companyName,
+        'version': version,
+        'teamAnalytics': teamAnalytics?.toMap(),
+        'serverMetrics': serverMetrics?.map((k, v) => MapEntry(k, v.toMap())),
+        'performanceInsights':
+            performanceInsights?.map((i) => i.toMap()).toList(),
+        'trendAnalysis': trendAnalysis,
+        'businessData': businessData,
+        'enhancedBusinessData': enhancedBusinessData,
+      };
 }
 
 class IndividualServerReport {
@@ -761,7 +803,7 @@ class IndividualServerReport {
   final ReportType reportType;
   final String companyName;
   final String version;
-  
+
   ServerPerformanceData? performanceMetrics;
   dynamic trendAnalysis;
   PeerComparison? peerComparison;
@@ -779,19 +821,19 @@ class IndividualServerReport {
   });
 
   Map<String, dynamic> toMap() => {
-    'reportId': reportId,
-    'generatedDate': generatedDate.toIso8601String(),
-    'serverId': serverId,
-    'serverName': serverName,
-    'reportPeriod': reportPeriod.toMap(),
-    'reportType': reportType.name,
-    'companyName': companyName,
-    'version': version,
-    'performanceMetrics': performanceMetrics?.toMap(),
-    'trendAnalysis': trendAnalysis,
-    'peerComparison': peerComparison?.toMap(),
-    'recommendations': recommendations?.map((r) => r.toMap()).toList(),
-  };
+        'reportId': reportId,
+        'generatedDate': generatedDate.toIso8601String(),
+        'serverId': serverId,
+        'serverName': serverName,
+        'reportPeriod': reportPeriod.toMap(),
+        'reportType': reportType.name,
+        'companyName': companyName,
+        'version': version,
+        'performanceMetrics': performanceMetrics?.toMap(),
+        'trendAnalysis': trendAnalysis,
+        'peerComparison': peerComparison?.toMap(),
+        'recommendations': recommendations?.map((r) => r.toMap()).toList(),
+      };
 }
 
 class TeamAnalyticsReport {
@@ -801,7 +843,7 @@ class TeamAnalyticsReport {
   final ReportType reportType;
   final String companyName;
   final String version;
-  
+
   TeamAnalytics? teamAnalytics;
   PerformanceDistribution? performanceDistribution;
   EfficiencyVariance? efficiencyVariance;
@@ -818,18 +860,18 @@ class TeamAnalyticsReport {
   });
 
   Map<String, dynamic> toMap() => {
-    'reportId': reportId,
-    'generatedDate': generatedDate.toIso8601String(),
-    'reportPeriod': reportPeriod.toMap(),
-    'reportType': reportType.name,
-    'companyName': companyName,
-    'version': version,
-    'teamAnalytics': teamAnalytics?.toMap(),
-    'performanceDistribution': performanceDistribution?.toMap(),
-    'efficiencyVariance': efficiencyVariance?.toMap(),
-    'trainingNeeds': trainingNeeds?.toMap(),
-    'serverMetrics': serverMetrics?.map((k, v) => MapEntry(k, v.toMap())),
-  };
+        'reportId': reportId,
+        'generatedDate': generatedDate.toIso8601String(),
+        'reportPeriod': reportPeriod.toMap(),
+        'reportType': reportType.name,
+        'companyName': companyName,
+        'version': version,
+        'teamAnalytics': teamAnalytics?.toMap(),
+        'performanceDistribution': performanceDistribution?.toMap(),
+        'efficiencyVariance': efficiencyVariance?.toMap(),
+        'trainingNeeds': trainingNeeds?.toMap(),
+        'serverMetrics': serverMetrics?.map((k, v) => MapEntry(k, v.toMap())),
+      };
 }
 
 class ExecutiveSummaryReport {
@@ -839,7 +881,7 @@ class ExecutiveSummaryReport {
   final ReportType reportType;
   final String companyName;
   final String version;
-  
+
   Map<String, double>? keyPerformanceIndicators;
   List<String>? performanceHighlights;
   List<String>? actionItems;
@@ -856,18 +898,18 @@ class ExecutiveSummaryReport {
   });
 
   Map<String, dynamic> toMap() => {
-    'reportId': reportId,
-    'generatedDate': generatedDate.toIso8601String(),
-    'reportMonth': reportMonth.toIso8601String(),
-    'reportType': reportType.name,
-    'companyName': companyName,
-    'version': version,
-    'keyPerformanceIndicators': keyPerformanceIndicators,
-    'performanceHighlights': performanceHighlights,
-    'actionItems': actionItems,
-    'businessData': businessData,
-    'enhancedBusinessData': enhancedBusinessData,
-  };
+        'reportId': reportId,
+        'generatedDate': generatedDate.toIso8601String(),
+        'reportMonth': reportMonth.toIso8601String(),
+        'reportType': reportType.name,
+        'companyName': companyName,
+        'version': version,
+        'keyPerformanceIndicators': keyPerformanceIndicators,
+        'performanceHighlights': performanceHighlights,
+        'actionItems': actionItems,
+        'businessData': businessData,
+        'enhancedBusinessData': enhancedBusinessData,
+      };
 }
 
 // Supporting data classes
@@ -885,9 +927,9 @@ class DateRange {
   DateRange(this.startDate, this.endDate);
 
   Map<String, dynamic> toMap() => {
-    'startDate': startDate.toIso8601String(),
-    'endDate': endDate.toIso8601String(),
-  };
+        'startDate': startDate.toIso8601String(),
+        'endDate': endDate.toIso8601String(),
+      };
 }
 
 class TeamAnalytics {
@@ -916,17 +958,18 @@ class TeamAnalytics {
   });
 
   Map<String, dynamic> toMap() => {
-    'averagePerformanceScore': averagePerformanceScore,
-    'performanceDistribution': performanceDistribution.map((k, v) => MapEntry(k.name, v)),
-    'topPerformers': topPerformers,
-    'improvementNeeded': improvementNeeded,
-    'totalFoodRuns': totalFoodRuns,
-    'averageEfficiency': averageEfficiency,
-    'consistencyIndex': consistencyIndex,
-    'teamSize': teamSize,
-    'businessData': businessData,
-    'enhancedBusinessData': enhancedBusinessData,
-  };
+        'averagePerformanceScore': averagePerformanceScore,
+        'performanceDistribution':
+            performanceDistribution.map((k, v) => MapEntry(k.name, v)),
+        'topPerformers': topPerformers,
+        'improvementNeeded': improvementNeeded,
+        'totalFoodRuns': totalFoodRuns,
+        'averageEfficiency': averageEfficiency,
+        'consistencyIndex': consistencyIndex,
+        'teamSize': teamSize,
+        'businessData': businessData,
+        'enhancedBusinessData': enhancedBusinessData,
+      };
 }
 
 class PeerComparison {
@@ -947,13 +990,13 @@ class PeerComparison {
   });
 
   Map<String, dynamic> toMap() => {
-    'serverId': serverId,
-    'peerGroup': peerGroup,
-    'ranking': ranking,
-    'percentile': percentile,
-    'peerAverageScore': peerAverageScore,
-    'comparisonMetrics': comparisonMetrics,
-  };
+        'serverId': serverId,
+        'peerGroup': peerGroup,
+        'ranking': ranking,
+        'percentile': percentile,
+        'peerAverageScore': peerAverageScore,
+        'comparisonMetrics': comparisonMetrics,
+      };
 }
 
 class Recommendation {
@@ -974,13 +1017,13 @@ class Recommendation {
   });
 
   Map<String, dynamic> toMap() => {
-    'type': type,
-    'title': title,
-    'description': description,
-    'priority': priority,
-    'timeframe': timeframe,
-    'actionSteps': actionSteps,
-  };
+        'type': type,
+        'title': title,
+        'description': description,
+        'priority': priority,
+        'timeframe': timeframe,
+        'actionSteps': actionSteps,
+      };
 }
 
 class PerformanceDistribution {
@@ -997,11 +1040,11 @@ class PerformanceDistribution {
   });
 
   Map<String, dynamic> toMap() => {
-    'distribution': distribution,
-    'averageScore': averageScore,
-    'medianScore': medianScore,
-    'standardDeviation': standardDeviation,
-  };
+        'distribution': distribution,
+        'averageScore': averageScore,
+        'medianScore': medianScore,
+        'standardDeviation': standardDeviation,
+      };
 }
 
 class EfficiencyVariance {
@@ -1020,12 +1063,12 @@ class EfficiencyVariance {
   });
 
   Map<String, dynamic> toMap() => {
-    'averageEfficiency': averageEfficiency,
-    'highestEfficiency': highestEfficiency,
-    'lowestEfficiency': lowestEfficiency,
-    'variance': variance,
-    'coefficientOfVariation': coefficientOfVariation,
-  };
+        'averageEfficiency': averageEfficiency,
+        'highestEfficiency': highestEfficiency,
+        'lowestEfficiency': lowestEfficiency,
+        'variance': variance,
+        'coefficientOfVariation': coefficientOfVariation,
+      };
 }
 
 class TrainingNeeds {
@@ -1042,9 +1085,9 @@ class TrainingNeeds {
   });
 
   Map<String, dynamic> toMap() => {
-    'needsAttention': needsAttention,
-    'needsCoaching': needsCoaching,
-    'recognitionCandidates': recognitionCandidates,
-    'trainingPriority': trainingPriority,
-  };
+        'needsAttention': needsAttention,
+        'needsCoaching': needsCoaching,
+        'recognitionCandidates': recognitionCandidates,
+        'trainingPriority': trainingPriority,
+      };
 }

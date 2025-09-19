@@ -10,21 +10,23 @@ class ShiftClickAnalysisScreen extends StatefulWidget {
   final Server server;
 
   const ShiftClickAnalysisScreen({
-    Key? key,
+    super.key,
     required this.server,
-  }) : super(key: key);
+  });
 
   @override
-  State<ShiftClickAnalysisScreen> createState() => _ShiftClickAnalysisScreenState();
+  State<ShiftClickAnalysisScreen> createState() =>
+      _ShiftClickAnalysisScreenState();
 }
 
 class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
   DateTime _selectedDate = DateTime.now();
   List<ClickDataPoint> _clickData = [];
   List<DateTime> _individualClicks = [];
-  List<int> _restaurantActivityData = []; // Restaurant-wide activity for underlay
+  List<int> _restaurantActivityData =
+      []; // Restaurant-wide activity for underlay
   bool _isLoading = true;
-  
+
   // Chart interaction state
   int? _selectedBarIndex;
   final ScrollController _clicksScrollController = ScrollController();
@@ -42,18 +44,20 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
   }
 
   // Get all dates with shift data for the current server within a date range
-  Set<DateTime> _getDatesWithShiftData(AppState app, DateTime start, DateTime end) {
+  Set<DateTime> _getDatesWithShiftData(
+      AppState app, DateTime start, DateTime end) {
     final datesWithData = <DateTime>{};
-    
+
     for (final shift in app.history) {
       final shiftDate = shift.start;
-      if (shiftDate.isAfter(start.subtract(Duration(days: 1))) && 
+      if (shiftDate.isAfter(start.subtract(Duration(days: 1))) &&
           shiftDate.isBefore(end.add(Duration(days: 1))) &&
           (shift.counts[widget.server.id] ?? 0) > 0) {
-        datesWithData.add(DateTime(shiftDate.year, shiftDate.month, shiftDate.day));
+        datesWithData
+            .add(DateTime(shiftDate.year, shiftDate.month, shiftDate.day));
       }
     }
-    
+
     return datesWithData;
   }
 
@@ -65,28 +69,31 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
 
     final app = Provider.of<AppState>(context, listen: false);
     final npsProvider = context.read<NPSProvider>();
-    
+
     print('DEBUG: Starting _loadClickData for date: $_selectedDate');
     print('DEBUG: NPS Provider initialized: ${npsProvider.isInitialized}');
-    
+
     // Calculate dynamic timeframe based on actual clicks
     final dynamicTimeframe = _calculateDynamicTimeframe(_selectedDate, app);
     final startTime = dynamicTimeframe['start']!;
     final endTime = dynamicTimeframe['end']!;
-    
+
     print('DEBUG: Dynamic timeframe calculated: $startTime to $endTime');
-    
+
     // Generate 15-minute intervals for the dynamic timeframe
-    final clickData = _generateClickDataForDynamicRange(_selectedDate, startTime, endTime, app);
-    
+    final clickData = _generateClickDataForDynamicRange(
+        _selectedDate, startTime, endTime, app);
+
     // Generate restaurant-wide activity data for the same timeframe
-    final restaurantActivity = _generateRestaurantActivityData(startTime, endTime, app);
-    
+    final restaurantActivity =
+        _generateRestaurantActivityData(startTime, endTime, app);
+
     // Load individual clicks for the day
     final individualClicks = _getIndividualClicksForDate(_selectedDate, app);
-    
-    print('DEBUG: Generated ${clickData.length} click data points and ${restaurantActivity.length} restaurant activity points');
-    
+
+    print(
+        'DEBUG: Generated ${clickData.length} click data points and ${restaurantActivity.length} restaurant activity points');
+
     setState(() {
       _clickData = clickData;
       _restaurantActivityData = restaurantActivity;
@@ -96,24 +103,21 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
   }
 
   List<ClickDataPoint> _generateClickDataForDynamicRange(
-    DateTime date, 
-    DateTime startTime, 
-    DateTime endTime, 
-    AppState app
-  ) {
+      DateTime date, DateTime startTime, DateTime endTime, AppState app) {
     final List<ClickDataPoint> dataPoints = [];
-    
+
     print('DEBUG: Generating chart data from $startTime to $endTime');
-    
+
     // Calculate the total time span in seconds for precision
     final totalSeconds = endTime.difference(startTime).inSeconds;
     final totalMinutes = totalSeconds / 60.0;
-    print('DEBUG: Total time span: $totalSeconds seconds ($totalMinutes minutes)');
-    
+    print(
+        'DEBUG: Total time span: $totalSeconds seconds ($totalMinutes minutes)');
+
     // Determine optimal interval and number of bars
     Duration intervalDuration;
     int targetBars = 8; // Ideal number of bars for good visualization
-    
+
     if (totalSeconds <= 30) {
       // Very short time span (≤30 seconds) - use 5-second intervals
       intervalDuration = Duration(seconds: 5);
@@ -136,53 +140,53 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
       final intervalMinutes = (totalMinutes / targetBars).ceil().clamp(15, 30);
       intervalDuration = Duration(minutes: intervalMinutes);
     }
-    
-    print('DEBUG: Using ${intervalDuration.inSeconds} second intervals (${intervalDuration.inMinutes} minutes) for optimal visualization');
-    
+
+    print(
+        'DEBUG: Using ${intervalDuration.inSeconds} second intervals (${intervalDuration.inMinutes} minutes) for optimal visualization');
+
     // Generate intervals using the calculated interval size
     DateTime currentTime = startTime;
     int intervalCount = 0;
     while (currentTime.isBefore(endTime)) {
       final intervalEnd = currentTime.add(intervalDuration);
       final actualEnd = intervalEnd.isBefore(endTime) ? intervalEnd : endTime;
-      
+
       // Get click count for this window
       final clickCount = _getClickCountForTimeWindow(
-        app, 
-        widget.server.id, 
-        currentTime, 
-        actualEnd
-      );
-      
-      print('DEBUG: Interval $intervalCount: ${currentTime.toString()} to ${actualEnd.toString()} = $clickCount clicks');
-      
+          app, widget.server.id, currentTime, actualEnd);
+
+      print(
+          'DEBUG: Interval $intervalCount: ${currentTime.toString()} to ${actualEnd.toString()} = $clickCount clicks');
+
       dataPoints.add(ClickDataPoint(
         timeWindow: currentTime,
         clickCount: clickCount,
         label: _formatTimeLabel(currentTime),
       ));
-      
+
       currentTime = intervalEnd;
       intervalCount++;
     }
-    
+
     print('DEBUG: Generated ${dataPoints.length} data points for chart');
     return dataPoints;
   }
 
   // Generate restaurant-wide activity data for the same time intervals
-  List<int> _generateRestaurantActivityData(DateTime startTime, DateTime endTime, AppState app) {
+  List<int> _generateRestaurantActivityData(
+      DateTime startTime, DateTime endTime, AppState app) {
     final List<int> activityData = [];
-    
-    print('DEBUG: Generating restaurant activity data from $startTime to $endTime');
-    
+
+    print(
+        'DEBUG: Generating restaurant activity data from $startTime to $endTime');
+
     // Calculate the same interval size as the main chart
     final totalSeconds = endTime.difference(startTime).inSeconds;
     final totalMinutes = totalSeconds / 60.0;
-    
+
     Duration intervalDuration;
     int targetBars = 8;
-    
+
     if (totalSeconds <= 30) {
       intervalDuration = Duration(seconds: 5);
     } else if (totalSeconds <= 120) {
@@ -199,72 +203,85 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
       final intervalMinutes = (totalMinutes / targetBars).ceil().clamp(15, 30);
       intervalDuration = Duration(minutes: intervalMinutes);
     }
-    
+
     // Generate intervals using the same interval size as main chart
     DateTime currentTime = startTime;
     while (currentTime.isBefore(endTime)) {
       final intervalEnd = currentTime.add(intervalDuration);
       final actualEnd = intervalEnd.isBefore(endTime) ? intervalEnd : endTime;
-      
+
       // Get total click count from ALL servers for this window
       int totalClicks = 0;
       for (final server in app.servers) {
-        final serverClicks = app.getTapCountForTimeWindow(server.id, currentTime, actualEnd);
+        final serverClicks =
+            app.getTapCountForTimeWindow(server.id, currentTime, actualEnd);
         totalClicks += serverClicks;
       }
-      
+
       activityData.add(totalClicks);
       currentTime = intervalEnd;
     }
-    
-    print('DEBUG: Generated ${activityData.length} restaurant activity data points');
+
+    print(
+        'DEBUG: Generated ${activityData.length} restaurant activity data points');
     return activityData;
   }
 
-  int _getClickCountForTimeWindow(AppState app, String serverId, DateTime start, DateTime end) {
+  int _getClickCountForTimeWindow(
+      AppState app, String serverId, DateTime start, DateTime end) {
     // Use the same individual timestamps method to ensure data consistency
-    final individualClicks = app.getIndividualClickTimestamps(serverId, start, end);
+    final individualClicks =
+        app.getIndividualClickTimestamps(serverId, start, end);
     final clickCount = individualClicks.length;
-    
-    print('DEBUG: Time window ${start.toString()} to ${end.toString()} has $clickCount clicks (from individual timestamps)');
+
+    print(
+        'DEBUG: Time window ${start.toString()} to ${end.toString()} has $clickCount clicks (from individual timestamps)');
     return clickCount;
   }
 
   // Calculate dynamic timeframe based on actual first and last clicks for the day
-  Map<String, DateTime> _calculateDynamicTimeframe(DateTime date, AppState app) {
+  Map<String, DateTime> _calculateDynamicTimeframe(
+      DateTime date, AppState app) {
     // Get all clicks for the selected date
     final startOfDay = DateTime(date.year, date.month, date.day);
     final endOfDay = startOfDay.add(Duration(days: 1));
-    final clicks = app.getIndividualClickTimestamps(widget.server.id, startOfDay, endOfDay);
-    
-    print('DEBUG: Found ${clicks.length} total clicks for timeframe calculation');
+    final clicks = app.getIndividualClickTimestamps(
+        widget.server.id, startOfDay, endOfDay);
+
+    print(
+        'DEBUG: Found ${clicks.length} total clicks for timeframe calculation');
     if (clicks.isNotEmpty) {
       clicks.sort((a, b) => a.compareTo(b));
       print('DEBUG: Clicks range from ${clicks.first} to ${clicks.last}');
     }
-    
+
     if (clicks.isEmpty) {
       // No clicks found, use default restaurant hours
       return {
         'start': DateTime(date.year, date.month, date.day, 11, 0), // 11 AM
-        'end': DateTime(date.year, date.month, date.day, 22, 0),   // 10 PM
+        'end': DateTime(date.year, date.month, date.day, 22, 0), // 10 PM
       };
     }
-    
+
     // Sort clicks to find first and last
     clicks.sort((a, b) => a.compareTo(b));
     final firstClick = clicks.first;
     final lastClick = clicks.last;
-    
+
     // Use the actual first and last click times with minimal padding
-    final adjustedFirstClick = firstClick.subtract(Duration(seconds: 5)); // 5 seconds before first click
-    final adjustedLastClick = lastClick.add(Duration(seconds: 5)); // 5 seconds after last click
-    
+    final adjustedFirstClick = firstClick
+        .subtract(Duration(seconds: 5)); // 5 seconds before first click
+    final adjustedLastClick =
+        lastClick.add(Duration(seconds: 5)); // 5 seconds after last click
+
     final totalSpan = adjustedLastClick.difference(adjustedFirstClick);
-    print('DEBUG: Dynamic timeframe - First click: $firstClick -> $adjustedFirstClick');
-    print('DEBUG: Dynamic timeframe - Last click: $lastClick -> $adjustedLastClick');
-    print('DEBUG: Total span: ${totalSpan.inSeconds} seconds (${totalSpan.inMinutes} minutes)');
-    
+    print(
+        'DEBUG: Dynamic timeframe - First click: $firstClick -> $adjustedFirstClick');
+    print(
+        'DEBUG: Dynamic timeframe - Last click: $lastClick -> $adjustedLastClick');
+    print(
+        'DEBUG: Total span: ${totalSpan.inSeconds} seconds (${totalSpan.inMinutes} minutes)');
+
     return {
       'start': adjustedFirstClick,
       'end': adjustedLastClick,
@@ -275,13 +292,14 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
     // Get start and end of the selected date
     final startOfDay = DateTime(date.year, date.month, date.day);
     final endOfDay = startOfDay.add(Duration(days: 1));
-    
+
     // Use new individual timestamp method instead of artificial generation
-    final clicks = app.getIndividualClickTimestamps(widget.server.id, startOfDay, endOfDay);
-    
+    final clicks = app.getIndividualClickTimestamps(
+        widget.server.id, startOfDay, endOfDay);
+
     print('DEBUG: Getting real clicks for ${widget.server.id} on $date');
     print('DEBUG: Individual clicks found: ${clicks.length}');
-    
+
     // Sort clicks by time (newest first for display)
     clicks.sort((a, b) => b.compareTo(a));
     return clicks;
@@ -290,11 +308,11 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
   // Handle bar selection in chart
   void _onBarTapped(int barIndex) {
     if (barIndex < 0 || barIndex >= _clickData.length) return;
-    
+
     setState(() {
       _selectedBarIndex = barIndex;
     });
-    
+
     // Scroll to the corresponding clicks in the list
     _scrollToClicksInInterval(barIndex);
   }
@@ -302,7 +320,7 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
   // Helper method to get the interval duration being used
   Duration _getIntervalDuration() {
     if (_clickData.length <= 1) return Duration(minutes: 1);
-    
+
     // Calculate based on the time difference between first two data points
     final firstInterval = _clickData[0].timeWindow;
     final secondInterval = _clickData[1].timeWindow;
@@ -314,43 +332,43 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
     final duration = _getIntervalDuration();
     final seconds = duration.inSeconds;
     final minutes = duration.inMinutes;
-    
+
     if (seconds < 60) {
-      return 'Clicks per ${seconds}-second interval';
+      return 'Clicks per $seconds-second interval';
     } else if (minutes == 1) {
       return 'Clicks per minute';
     } else if (minutes < 60) {
-      return 'Clicks per ${minutes}-minute interval';
+      return 'Clicks per $minutes-minute interval';
     } else {
       final hours = (minutes / 60).round();
-      return 'Clicks per ${hours}-hour interval';
+      return 'Clicks per $hours-hour interval';
     }
   }
 
   // Scroll to clicks that fall within the selected time interval
   void _scrollToClicksInInterval(int barIndex) {
     if (_individualClicks.isEmpty || barIndex >= _clickData.length) return;
-    
+
     final selectedDataPoint = _clickData[barIndex];
     final intervalStart = selectedDataPoint.timeWindow;
     final intervalDuration = _getIntervalDuration();
     final intervalEnd = intervalStart.add(intervalDuration);
-    
+
     // Find the first click that falls within this interval
     int firstClickIndex = -1;
     for (int i = 0; i < _individualClicks.length; i++) {
       final clickTime = _individualClicks[i];
-      if (clickTime.isAfter(intervalStart.subtract(Duration(seconds: 1))) && 
+      if (clickTime.isAfter(intervalStart.subtract(Duration(seconds: 1))) &&
           clickTime.isBefore(intervalEnd)) {
         firstClickIndex = i;
         break;
       }
     }
-    
+
     if (firstClickIndex != -1) {
       // Calculate scroll position (each list item is approximately 80 pixels)
       final scrollPosition = firstClickIndex * 80.0;
-      
+
       _clicksScrollController.animateTo(
         scrollPosition,
         duration: Duration(milliseconds: 500),
@@ -364,14 +382,14 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
     if (_selectedBarIndex == null || _selectedBarIndex! >= _clickData.length) {
       return false;
     }
-    
+
     final selectedDataPoint = _clickData[_selectedBarIndex!];
     final intervalStart = selectedDataPoint.timeWindow;
     final intervalDuration = _getIntervalDuration();
     final intervalEnd = intervalStart.add(intervalDuration);
-    
-    return clickTime.isAfter(intervalStart.subtract(Duration(seconds: 1))) && 
-           clickTime.isBefore(intervalEnd);
+
+    return clickTime.isAfter(intervalStart.subtract(Duration(seconds: 1))) &&
+        clickTime.isBefore(intervalEnd);
   }
 
   String _formatTimeLabel(DateTime time) {
@@ -381,7 +399,7 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
     final millisecond = time.millisecond;
     final period = hour >= 12 ? 'PM' : 'AM';
     final displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
-    return '${displayHour}:${minute.toString().padLeft(2, '0')}:${second.toString().padLeft(2, '0')}.${millisecond.toString().padLeft(3, '0')} $period';
+    return '$displayHour:${minute.toString().padLeft(2, '0')}:${second.toString().padLeft(2, '0')}.${millisecond.toString().padLeft(3, '0')} $period';
   }
 
   Future<void> _selectDate() async {
@@ -389,7 +407,7 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
     final now = DateTime.now();
     final firstDate = now.subtract(Duration(days: 90));
     final lastDate = now;
-    
+
     final datesWithData = _getDatesWithShiftData(app, firstDate, lastDate);
 
     final DateTime? picked = await showDialog<DateTime>(
@@ -446,7 +464,7 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
         final currentReport = npsProvider.currentReport;
         final checkCount = currentReport?.allTimeTableCount ?? 0;
         final totalSales = currentReport?.allTimeSales ?? 0.0;
-        
+
         return Container(
           padding: EdgeInsets.all(16),
           margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -534,7 +552,8 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
   }
 
   // Helper method to build metric cards
-  Widget _buildMetricCard(String title, String value, IconData icon, MaterialColor color) {
+  Widget _buildMetricCard(
+      String title, String value, IconData icon, MaterialColor color) {
     return Container(
       padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -618,7 +637,8 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
                     onTap: _selectDate,
                     borderRadius: BorderRadius.circular(8),
                     child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       decoration: BoxDecoration(
                         border: Border.all(color: Colors.blue[300]!),
                         borderRadius: BorderRadius.circular(8),
@@ -644,10 +664,10 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
               ],
             ),
           ),
-          
+
           // NPS Performance Data Display
           _buildNPSDataDisplay(),
-          
+
           // Chart Area - 40% height in a styled container
           Container(
             height: MediaQuery.of(context).size.height * 0.4,
@@ -687,7 +707,7 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
                   )
                 : _buildChart(),
           ),
-          
+
           // Individual Clicks List
           Expanded(
             child: Container(
@@ -716,7 +736,10 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
                           ],
                         ),
                         // Show data discrepancy warning if exists
-                        if (_clickData.map((d) => d.clickCount).fold(0, (a, b) => a + b) != _individualClicks.length) ...[
+                        if (_clickData
+                                .map((d) => d.clickCount)
+                                .fold(0, (a, b) => a + b) !=
+                            _individualClicks.length) ...[
                           SizedBox(height: 8),
                           Container(
                             padding: EdgeInsets.all(12),
@@ -727,7 +750,8 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
                             ),
                             child: Row(
                               children: [
-                                Icon(Icons.warning, color: Colors.orange[600], size: 20),
+                                Icon(Icons.warning,
+                                    color: Colors.orange[600], size: 20),
                                 SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
@@ -745,7 +769,7 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
                       ],
                     ),
                   ),
-                  
+
                   // Clicks List
                   Expanded(
                     child: _individualClicks.isEmpty
@@ -753,7 +777,8 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.touch_app, size: 48, color: Colors.grey[400]),
+                                Icon(Icons.touch_app,
+                                    size: 48, color: Colors.grey[400]),
                                 SizedBox(height: 12),
                                 Text(
                                   'No clicks recorded for this date',
@@ -772,69 +797,92 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
                               final clickTime = _individualClicks[index];
                               final isToday = _isToday(clickTime);
                               final timeAgo = _getTimeAgo(clickTime);
-                              final isInSelectedInterval = _isClickInSelectedInterval(clickTime);
-                              
+                              final isInSelectedInterval =
+                                  _isClickInSelectedInterval(clickTime);
+
                               return Card(
                                 margin: EdgeInsets.only(bottom: 8),
                                 elevation: isInSelectedInterval ? 4 : 2,
-                                color: isInSelectedInterval ? Colors.blue[50] : null,
+                                color: isInSelectedInterval
+                                    ? Colors.blue[50]
+                                    : null,
                                 child: Container(
-                                  decoration: isInSelectedInterval ? BoxDecoration(
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: Colors.blue[300]!,
-                                      width: 2,
-                                    ),
-                                  ) : null,
+                                  decoration: isInSelectedInterval
+                                      ? BoxDecoration(
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                          border: Border.all(
+                                            color: Colors.blue[300]!,
+                                            width: 2,
+                                          ),
+                                        )
+                                      : null,
                                   child: ListTile(
                                     leading: CircleAvatar(
-                                      backgroundColor: isInSelectedInterval 
-                                          ? Colors.blue[200] 
-                                          : (isToday ? Colors.green[100] : Colors.blue[100]),
+                                      backgroundColor: isInSelectedInterval
+                                          ? Colors.blue[200]
+                                          : (isToday
+                                              ? Colors.green[100]
+                                              : Colors.blue[100]),
                                       child: Icon(
                                         Icons.touch_app,
-                                        color: isInSelectedInterval 
-                                            ? Colors.blue[800] 
-                                            : (isToday ? Colors.green[600] : Colors.blue[600]),
+                                        color: isInSelectedInterval
+                                            ? Colors.blue[800]
+                                            : (isToday
+                                                ? Colors.green[600]
+                                                : Colors.blue[600]),
                                         size: 20,
                                       ),
                                     ),
                                     title: Text(
                                       _formatFullDateTime(clickTime),
                                       style: TextStyle(
-                                        fontWeight: isInSelectedInterval ? FontWeight.bold : FontWeight.w500,
+                                        fontWeight: isInSelectedInterval
+                                            ? FontWeight.bold
+                                            : FontWeight.w500,
                                         fontSize: 14,
-                                        color: isInSelectedInterval ? Colors.blue[800] : null,
+                                        color: isInSelectedInterval
+                                            ? Colors.blue[800]
+                                            : null,
                                       ),
                                     ),
                                     subtitle: Text(
                                       timeAgo,
                                       style: TextStyle(
-                                        color: isInSelectedInterval ? Colors.blue[600] : Colors.grey[600],
+                                        color: isInSelectedInterval
+                                            ? Colors.blue[600]
+                                            : Colors.grey[600],
                                         fontSize: 12,
-                                        fontWeight: isInSelectedInterval ? FontWeight.w500 : FontWeight.normal,
+                                        fontWeight: isInSelectedInterval
+                                            ? FontWeight.w500
+                                            : FontWeight.normal,
                                       ),
                                     ),
                                     trailing: isToday
                                         ? Container(
-                                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: Colors.green[100],
-                                            borderRadius: BorderRadius.circular(12),
-                                            border: Border.all(color: Colors.green[300]!),
-                                          ),
-                                          child: Text(
-                                            'TODAY',
-                                            style: TextStyle(
-                                              color: Colors.green[700],
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.bold,
+                                            padding: EdgeInsets.symmetric(
+                                                horizontal: 8, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: Colors.green[100],
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              border: Border.all(
+                                                  color: Colors.green[300]!),
                                             ),
-                                          ),
-                                        )
-                                      : (isInSelectedInterval 
-                                          ? Icon(Icons.star, color: Colors.blue[600], size: 20)
-                                          : null),
+                                            child: Text(
+                                              'TODAY',
+                                              style: TextStyle(
+                                                color: Colors.green[700],
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          )
+                                        : (isInSelectedInterval
+                                            ? Icon(Icons.star,
+                                                color: Colors.blue[600],
+                                                size: 20)
+                                            : null),
                                   ),
                                 ),
                               );
@@ -852,8 +900,18 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
 
   String _formatDateLabel(DateTime date) {
     final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
     ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
@@ -879,7 +937,7 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
     }
 
     final maxClicks = _clickData.map((d) => d.clickCount).reduce(max);
-    
+
     return Container(
       padding: EdgeInsets.all(16),
       child: Column(
@@ -897,7 +955,10 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
                 Expanded(
                   child: _buildStatCard(
                     'Total Clicks',
-                    _clickData.map((d) => d.clickCount).fold(0, (a, b) => a + b).toString(),
+                    _clickData
+                        .map((d) => d.clickCount)
+                        .fold(0, (a, b) => a + b)
+                        .toString(),
                     Icons.touch_app,
                     Colors.blue,
                   ),
@@ -915,7 +976,11 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
                 Expanded(
                   child: _buildStatCard(
                     'Avg/15min',
-                    (_clickData.map((d) => d.clickCount).fold(0, (a, b) => a + b) / _clickData.length).toStringAsFixed(1),
+                    (_clickData
+                                .map((d) => d.clickCount)
+                                .fold(0, (a, b) => a + b) /
+                            _clickData.length)
+                        .toStringAsFixed(1),
                     Icons.analytics,
                     Colors.green,
                   ),
@@ -923,9 +988,9 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
               ],
             ),
           ),
-          
+
           SizedBox(height: 20),
-          
+
           // Professional Bar Chart using fl_chart
           Expanded(
             child: Container(
@@ -983,8 +1048,9 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
                                 ),
                                 SizedBox(width: 4),
                                 Text(
-                                  '${widget.server.name}',
-                                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                                  widget.server.name,
+                                  style: TextStyle(
+                                      fontSize: 12, color: Colors.grey[600]),
                                 ),
                               ],
                             ),
@@ -1003,7 +1069,8 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
                                 SizedBox(width: 4),
                                 Text(
                                   'All servers',
-                                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                                  style: TextStyle(
+                                      fontSize: 12, color: Colors.grey[600]),
                                 ),
                               ],
                             ),
@@ -1012,7 +1079,7 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
                       ],
                     ),
                   ),
-                  
+
                   // Composite Chart - Line chart underlay with bar chart overlay
                   Expanded(
                     child: Stack(
@@ -1023,7 +1090,8 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
                         ),
                         // Foreground Bar Chart (server-specific clicks) - moved down to align baselines
                         Transform.translate(
-                          offset: const Offset(0, 40), // Move the entire bar chart down by 40 pixels total
+                          offset: const Offset(0,
+                              40), // Move the entire bar chart down by 40 pixels total
                           child: _buildServerBarChart(maxClicks),
                         ),
                       ],
@@ -1038,7 +1106,8 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
     );
   }
 
-  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+      String label, String value, IconData icon, Color color) {
     return Container(
       padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -1074,37 +1143,44 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
   Color _getBarColor(int clickCount, int maxClicks, int index) {
     // If this bar is selected, use a distinctive color
     if (_selectedBarIndex == index) {
-      return Colors.purple[600]!.withOpacity(0.95); // High opacity for selected bar
+      return Colors.purple[600]!
+          .withOpacity(0.95); // High opacity for selected bar
     }
-    
+
     if (maxClicks == 0) return Colors.grey[300]!.withOpacity(0.8);
-    
+
     final intensity = clickCount / maxClicks;
-    if (intensity > 0.8) return Colors.red[400]!.withOpacity(0.9);      // High activity - high opacity
-    if (intensity > 0.6) return Colors.orange[400]!.withOpacity(0.9);   // Medium-high activity
-    if (intensity > 0.4) return Colors.yellow[600]!.withOpacity(0.9);   // Medium activity
-    if (intensity > 0.2) return Colors.blue[400]!.withOpacity(0.9);     // Low-medium activity
-    return Colors.grey[400]!.withOpacity(0.8);                          // Low activity
+    if (intensity > 0.8)
+      return Colors.red[400]!.withOpacity(0.9); // High activity - high opacity
+    if (intensity > 0.6)
+      return Colors.orange[400]!.withOpacity(0.9); // Medium-high activity
+    if (intensity > 0.4)
+      return Colors.yellow[600]!.withOpacity(0.9); // Medium activity
+    if (intensity > 0.2)
+      return Colors.blue[400]!.withOpacity(0.9); // Low-medium activity
+    return Colors.grey[400]!.withOpacity(0.8); // Low activity
   }
 
   // Build the background line chart showing restaurant-wide activity
   Widget _buildRestaurantActivityLineChart(int maxClicks) {
     if (_restaurantActivityData.isEmpty) {
-      print('DEBUG: Restaurant activity data is empty, returning empty container');
+      print(
+          'DEBUG: Restaurant activity data is empty, returning empty container');
       return Container();
     }
-    
-    print('DEBUG: Building line chart with ${_restaurantActivityData.length} data points: $_restaurantActivityData');
+
+    print(
+        'DEBUG: Building line chart with ${_restaurantActivityData.length} data points: $_restaurantActivityData');
     print('DEBUG: Server max clicks: $maxClicks');
-    
+
     // Calculate max value for better scaling
     final maxRestaurantActivity = _restaurantActivityData.reduce(max);
     print('DEBUG: Restaurant max activity: $maxRestaurantActivity');
-    
+
     // Use 0-based Y-axis range that matches the server bar chart
     final chartMaxY = maxClicks > 0 ? maxClicks.toDouble() * 1.1 : 10.0;
     print('DEBUG: Line chart using 0-based Y-axis, maxY: $chartMaxY');
-    
+
     return LineChart(
       LineChartData(
         gridData: FlGridData(show: false),
@@ -1118,12 +1194,17 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
           LineChartBarData(
             spots: _restaurantActivityData.asMap().entries.map((entry) {
               // Use original restaurant data, scaled down to fit within server max
-              final maxRestaurantValue = _restaurantActivityData.isEmpty ? 1 : _restaurantActivityData.reduce((a, b) => a > b ? a : b);
+              final maxRestaurantValue = _restaurantActivityData.isEmpty
+                  ? 1
+                  : _restaurantActivityData.reduce((a, b) => a > b ? a : b);
               final maxServerValue = maxClicks > 0 ? maxClicks : 1;
-              
+
               // Simple proportional scaling - restaurant data scaled to 85% of server max (increased for more prominence)
-              final scaledValue = (entry.value.toDouble() / maxRestaurantValue) * maxServerValue * 0.85;
-              
+              final scaledValue =
+                  (entry.value.toDouble() / maxRestaurantValue) *
+                      maxServerValue *
+                      0.85;
+
               return FlSpot(entry.key.toDouble(), scaledValue);
             }).toList(),
             isCurved: true,
@@ -1163,7 +1244,9 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
         barTouchData: BarTouchData(
           enabled: true,
           touchCallback: (FlTouchEvent event, barTouchResponse) {
-            if (event is FlTapUpEvent && barTouchResponse != null && barTouchResponse.spot != null) {
+            if (event is FlTapUpEvent &&
+                barTouchResponse != null &&
+                barTouchResponse.spot != null) {
               final touchedIndex = barTouchResponse.spot!.touchedBarGroupIndex;
               _onBarTapped(touchedIndex);
             }
@@ -1173,9 +1256,10 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
             getTooltipItem: (group, groupIndex, rod, rodIndex) {
               if (groupIndex < _clickData.length) {
                 final dataPoint = _clickData[groupIndex];
-                final restaurantTotal = groupIndex < _restaurantActivityData.length 
-                    ? _restaurantActivityData[groupIndex] 
-                    : 0;
+                final restaurantTotal =
+                    groupIndex < _restaurantActivityData.length
+                        ? _restaurantActivityData[groupIndex]
+                        : 0;
                 return BarTooltipItem(
                   '${dataPoint.label}\n${widget.server.name}: ${dataPoint.clickCount} clicks\nRestaurant: $restaurantTotal total',
                   TextStyle(
@@ -1248,7 +1332,7 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
         barGroups: _clickData.asMap().entries.map((entry) {
           final index = entry.key;
           final dataPoint = entry.value;
-          
+
           return BarChartGroupData(
             x: index,
             barRods: [
@@ -1268,7 +1352,8 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
-          horizontalInterval: maxClicks > 10 ? (maxClicks / 5).ceilToDouble() : 2,
+          horizontalInterval:
+              maxClicks > 10 ? (maxClicks / 5).ceilToDouble() : 2,
           getDrawingHorizontalLine: (value) {
             return FlLine(
               color: Colors.grey[200]!,
@@ -1282,18 +1367,19 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
 
   String _getPeakPeriod() {
     if (_clickData.isEmpty) return 'N/A';
-    
+
     final maxClicks = _clickData.map((d) => d.clickCount).reduce(max);
-    final peakDataPoint = _clickData.firstWhere((d) => d.clickCount == maxClicks);
-    
+    final peakDataPoint =
+        _clickData.firstWhere((d) => d.clickCount == maxClicks);
+
     return peakDataPoint.label;
   }
 
   bool _isToday(DateTime dateTime) {
     final now = DateTime.now();
     return dateTime.year == now.year &&
-           dateTime.month == now.month &&
-           dateTime.day == now.day;
+        dateTime.month == now.month &&
+        dateTime.day == now.day;
   }
 
   String _getTimeAgo(DateTime dateTime) {
@@ -1320,8 +1406,8 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
     final millisecond = dateTime.millisecond;
     final period = hour >= 12 ? 'PM' : 'AM';
     final displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
-    
-    return '${displayHour}:${minute.toString().padLeft(2, '0')}:${second.toString().padLeft(2, '0')}.${millisecond.toString().padLeft(3, '0')} $period';
+
+    return '$displayHour:${minute.toString().padLeft(2, '0')}:${second.toString().padLeft(2, '0')}.${millisecond.toString().padLeft(3, '0')} $period';
   }
 }
 
@@ -1345,13 +1431,12 @@ class _CustomCalendarDialog extends StatefulWidget {
   final String serverName;
 
   const _CustomCalendarDialog({
-    Key? key,
     required this.initialDate,
     required this.firstDate,
     required this.lastDate,
     required this.datesWithData,
     required this.serverName,
-  }) : super(key: key);
+  });
 
   @override
   State<_CustomCalendarDialog> createState() => _CustomCalendarDialogState();
@@ -1365,7 +1450,8 @@ class _CustomCalendarDialogState extends State<_CustomCalendarDialog> {
   void initState() {
     super.initState();
     _selectedDate = widget.initialDate;
-    _currentMonth = DateTime(widget.initialDate.year, widget.initialDate.month, 1);
+    _currentMonth =
+        DateTime(widget.initialDate.year, widget.initialDate.month, 1);
   }
 
   void _previousMonth() {
@@ -1381,14 +1467,26 @@ class _CustomCalendarDialogState extends State<_CustomCalendarDialog> {
   }
 
   bool _isDateWithData(DateTime date) {
-    return widget.datesWithData.contains(DateTime(date.year, date.month, date.day));
+    return widget.datesWithData
+        .contains(DateTime(date.year, date.month, date.day));
   }
 
   @override
   Widget build(BuildContext context) {
     final monthName = [
-      '', 'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      '',
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December'
     ][_currentMonth.month];
 
     return Dialog(
@@ -1415,7 +1513,7 @@ class _CustomCalendarDialogState extends State<_CustomCalendarDialog> {
               ],
             ),
             const SizedBox(height: 16),
-            
+
             // Current selection display
             Container(
               width: double.infinity,
@@ -1440,13 +1538,15 @@ class _CustomCalendarDialogState extends State<_CustomCalendarDialog> {
               ),
             ),
             const SizedBox(height: 20),
-            
+
             // Month navigation
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 IconButton(
-                  onPressed: _currentMonth.isAfter(widget.firstDate) ? _previousMonth : null,
+                  onPressed: _currentMonth.isAfter(widget.firstDate)
+                      ? _previousMonth
+                      : null,
                   icon: Icon(Icons.chevron_left),
                 ),
                 Text(
@@ -1454,13 +1554,16 @@ class _CustomCalendarDialogState extends State<_CustomCalendarDialog> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                 ),
                 IconButton(
-                  onPressed: _currentMonth.isBefore(DateTime(widget.lastDate.year, widget.lastDate.month, 1)) ? _nextMonth : null,
+                  onPressed: _currentMonth.isBefore(DateTime(
+                          widget.lastDate.year, widget.lastDate.month, 1))
+                      ? _nextMonth
+                      : null,
                   icon: Icon(Icons.chevron_right),
                 ),
               ],
             ),
             const SizedBox(height: 16),
-            
+
             // Day headers
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -1471,18 +1574,20 @@ class _CustomCalendarDialogState extends State<_CustomCalendarDialog> {
                         alignment: Alignment.center,
                         child: Text(
                           day,
-                          style: TextStyle(fontWeight: FontWeight.w500, color: Colors.grey[600]),
+                          style: TextStyle(
+                              fontWeight: FontWeight.w500,
+                              color: Colors.grey[600]),
                         ),
                       ))
                   .toList(),
             ),
             const SizedBox(height: 8),
-            
+
             // Calendar grid
             _buildCalendarGrid(),
-            
+
             const SizedBox(height: 20),
-            
+
             // Legend
             Container(
               padding: const EdgeInsets.all(12),
@@ -1530,9 +1635,9 @@ class _CustomCalendarDialogState extends State<_CustomCalendarDialog> {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 20),
-            
+
             // Action buttons
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
@@ -1559,47 +1664,55 @@ class _CustomCalendarDialogState extends State<_CustomCalendarDialog> {
   }
 
   Widget _buildCalendarGrid() {
-    final firstDayOfMonth = DateTime(_currentMonth.year, _currentMonth.month, 1);
-    final lastDayOfMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 0);
-    final firstWeekday = firstDayOfMonth.weekday % 7; // Convert to 0=Sunday format
-    
+    final firstDayOfMonth =
+        DateTime(_currentMonth.year, _currentMonth.month, 1);
+    final lastDayOfMonth =
+        DateTime(_currentMonth.year, _currentMonth.month + 1, 0);
+    final firstWeekday =
+        firstDayOfMonth.weekday % 7; // Convert to 0=Sunday format
+
     final days = <Widget>[];
-    
+
     // Add empty cells for days before the first day of the month
     for (int i = 0; i < firstWeekday; i++) {
-      days.add(Container(width: 35, height: 35));
+      days.add(SizedBox(width: 35, height: 35));
     }
-    
+
     // Add days of the month
     for (int day = 1; day <= lastDayOfMonth.day; day++) {
       final date = DateTime(_currentMonth.year, _currentMonth.month, day);
-      final isSelected = _selectedDate.year == date.year && 
-                        _selectedDate.month == date.month && 
-                        _selectedDate.day == date.day;
+      final isSelected = _selectedDate.year == date.year &&
+          _selectedDate.month == date.month &&
+          _selectedDate.day == date.day;
       final hasData = _isDateWithData(date);
-      final isInRange = date.isAfter(widget.firstDate.subtract(Duration(days: 1))) && 
-                       date.isBefore(widget.lastDate.add(Duration(days: 1)));
-      
+      final isInRange =
+          date.isAfter(widget.firstDate.subtract(Duration(days: 1))) &&
+              date.isBefore(widget.lastDate.add(Duration(days: 1)));
+
       days.add(
         GestureDetector(
-          onTap: isInRange ? () {
-            setState(() {
-              _selectedDate = date;
-            });
-          } : null,
+          onTap: isInRange
+              ? () {
+                  setState(() {
+                    _selectedDate = date;
+                  });
+                }
+              : null,
           child: Container(
             width: 35,
             height: 35,
             margin: const EdgeInsets.all(2),
             decoration: BoxDecoration(
-              color: isSelected 
-                  ? Colors.blue 
+              color: isSelected
+                  ? Colors.blue
                   : (isInRange ? Colors.transparent : Colors.grey[100]),
               borderRadius: BorderRadius.circular(18),
-              border: isSelected ? null : Border.all(
-                color: Colors.transparent,
-                width: 1,
-              ),
+              border: isSelected
+                  ? null
+                  : Border.all(
+                      color: Colors.transparent,
+                      width: 1,
+                    ),
             ),
             child: Stack(
               children: [
@@ -1607,10 +1720,11 @@ class _CustomCalendarDialogState extends State<_CustomCalendarDialog> {
                   child: Text(
                     day.toString(),
                     style: TextStyle(
-                      color: isSelected 
-                          ? Colors.white 
+                      color: isSelected
+                          ? Colors.white
                           : (isInRange ? Colors.black : Colors.grey[400]),
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      fontWeight:
+                          isSelected ? FontWeight.bold : FontWeight.normal,
                     ),
                   ),
                 ),
@@ -1633,13 +1747,13 @@ class _CustomCalendarDialogState extends State<_CustomCalendarDialog> {
         ),
       );
     }
-    
+
     // Group days into weeks
     final weeks = <Widget>[];
     for (int i = 0; i < days.length; i += 7) {
       final weekDays = days.skip(i).take(7).toList();
       while (weekDays.length < 7) {
-        weekDays.add(Container(width: 35, height: 35));
+        weekDays.add(SizedBox(width: 35, height: 35));
       }
       weeks.add(
         Row(
@@ -1648,7 +1762,7 @@ class _CustomCalendarDialogState extends State<_CustomCalendarDialog> {
         ),
       );
     }
-    
+
     return Column(children: weeks);
   }
 }

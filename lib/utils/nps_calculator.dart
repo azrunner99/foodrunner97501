@@ -1,7 +1,8 @@
 /// NPS Calculator Engine
-/// 
+///
 /// This class provides all the calculation logic for the Server NPS system,
 /// including NPS score calculations, trend analysis, and report generation.
+library;
 
 import '../storage/nps_database.dart';
 import '../models/monthly_report.dart';
@@ -26,17 +27,18 @@ class NPSCalculator {
   }
 
   /// Calculate three-month NPS for a specific server
-  Future<double?> calculateThreeMonthNPS(int serverId, [DateTime? endDate]) async {
+  Future<double?> calculateThreeMonthNPS(int serverId,
+      [DateTime? endDate]) async {
     try {
       final end = endDate ?? DateTime.now();
       final start = DateTime(end.year, end.month - 3, end.day);
-      
+
       final feedback = await _database.getFeedbackForServer(
         serverId,
         startDate: start,
         endDate: end,
       );
-      
+
       return _calculateNPSFromFeedback(feedback);
     } catch (e) {
       print('[NPSCalculator] Error calculating three-month NPS: $e');
@@ -49,16 +51,16 @@ class NPSCalculator {
     try {
       final year = monthKey ~/ 100;
       final month = monthKey % 100;
-      
+
       final startDate = DateTime(year, month, 1);
       final endDate = DateTime(year, month + 1, 0); // Last day of month
-      
+
       final feedback = await _database.getFeedbackForServer(
         serverId,
         startDate: startDate,
         endDate: endDate,
       );
-      
+
       return _calculateNPSFromFeedback(feedback);
     } catch (e) {
       print('[NPSCalculator] Error calculating one-month NPS: $e');
@@ -71,11 +73,11 @@ class NPSCalculator {
     try {
       final now = DateTime.now();
       final currentMonth = now.year * 100 + now.month;
-      
+
       final oneMonthNPS = await calculateOneMonthNPS(serverId, currentMonth);
       final threeMonthNPS = await calculateThreeMonthNPS(serverId);
       final allTimeNPS = await calculateAllTimeNPS(serverId);
-      
+
       return NPSTrendAnalysis(
         serverId: serverId,
         oneMonthNPS: oneMonthNPS,
@@ -96,23 +98,26 @@ class NPSCalculator {
   }
 
   /// Generate complete monthly report for a server
-  Future<NPSMonthlyReport> generateMonthlyReport(int serverId, int reportMonth) async {
+  Future<NPSMonthlyReport> generateMonthlyReport(
+      int serverId, int reportMonth) async {
     try {
-      print('[NPSCalculator] Generating monthly report for server $serverId, month $reportMonth');
-      
+      print(
+          '[NPSCalculator] Generating monthly report for server $serverId, month $reportMonth');
+
       final year = reportMonth ~/ 100;
       final month = reportMonth % 100;
-      
+
       // Calculate NPS scores
       final allTimeNPS = await calculateAllTimeNPS(serverId);
-      final threeMonthNPS = await calculateThreeMonthNPS(serverId, DateTime(year, month + 1, 0));
+      final threeMonthNPS =
+          await calculateThreeMonthNPS(serverId, DateTime(year, month + 1, 0));
       final oneMonthNPS = await calculateOneMonthNPS(serverId, reportMonth);
-      
+
       // Get feedback counts
       final allTimeFeedback = await _getFeedbackCounts(serverId);
       final threeMonthFeedback = await _getFeedbackCounts(
-        serverId, 
-        DateTime(year, month - 2, 1), 
+        serverId,
+        DateTime(year, month - 2, 1),
         DateTime(year, month + 1, 0),
       );
       final monthFeedback = await _getFeedbackCounts(
@@ -120,10 +125,10 @@ class NPSCalculator {
         DateTime(year, month, 1),
         DateTime(year, month + 1, 0),
       );
-      
+
       // Get cumulative metrics
       final allTimeMetrics = await _getCumulativeMetrics(serverId);
-      
+
       return NPSMonthlyReport(
         serverId: serverId,
         reportMonth: reportMonth,
@@ -146,26 +151,29 @@ class NPSCalculator {
   }
 
   /// Generate monthly reports for all active servers
-  Future<List<NPSMonthlyReport>> generateMonthlyReportsForAllServers(int reportMonth) async {
+  Future<List<NPSMonthlyReport>> generateMonthlyReportsForAllServers(
+      int reportMonth) async {
     try {
       final servers = await _database.getAllServers(activeOnly: true);
       final reports = <NPSMonthlyReport>[];
-      
+
       for (final serverMap in servers) {
         final serverId = serverMap['id'] as int;
         try {
           final report = await generateMonthlyReport(serverId, reportMonth);
           reports.add(report);
         } catch (e) {
-          print('[NPSCalculator] Error generating report for server $serverId: $e');
+          print(
+              '[NPSCalculator] Error generating report for server $serverId: $e');
           // Continue with other servers
         }
       }
-      
+
       print('[NPSCalculator] Generated ${reports.length} monthly reports');
       return reports;
     } catch (e) {
-      print('[NPSCalculator] Error generating monthly reports for all servers: $e');
+      print(
+          '[NPSCalculator] Error generating monthly reports for all servers: $e');
       rethrow;
     }
   }
@@ -174,7 +182,8 @@ class NPSCalculator {
   Future<void> saveMonthlyReport(NPSMonthlyReport report) async {
     try {
       await _database.insertOrUpdateMonthlyReport(report.toMap());
-      print('[NPSCalculator] Saved monthly report for server ${report.serverId}');
+      print(
+          '[NPSCalculator] Saved monthly report for server ${report.serverId}');
     } catch (e) {
       print('[NPSCalculator] Error saving monthly report: $e');
       rethrow;
@@ -184,16 +193,18 @@ class NPSCalculator {
   /// Process monthly report generation for a specific month
   Future<List<NPSMonthlyReport>> processMonthlyReports(int reportMonth) async {
     try {
-      print('[NPSCalculator] Processing monthly reports for month $reportMonth');
-      
+      print(
+          '[NPSCalculator] Processing monthly reports for month $reportMonth');
+
       final reports = await generateMonthlyReportsForAllServers(reportMonth);
-      
+
       // Save all reports to database
       for (final report in reports) {
         await saveMonthlyReport(report);
       }
-      
-      print('[NPSCalculator] Processed and saved ${reports.length} monthly reports');
+
+      print(
+          '[NPSCalculator] Processed and saved ${reports.length} monthly reports');
       return reports;
     } catch (e) {
       print('[NPSCalculator] Error processing monthly reports: $e');
@@ -204,13 +215,14 @@ class NPSCalculator {
   /// Private helper methods
 
   /// Calculate NPS from a list of feedback records
-  double? _calculateNPSFromFeedback(List<Map<String, dynamic>> feedbackRecords) {
+  double? _calculateNPSFromFeedback(
+      List<Map<String, dynamic>> feedbackRecords) {
     if (feedbackRecords.isEmpty) return null;
-    
+
     int yes = 0;
     int maybe = 0;
     int no = 0;
-    
+
     for (final record in feedbackRecords) {
       final type = record['feedback_type'] as String;
       switch (type) {
@@ -225,10 +237,10 @@ class NPSCalculator {
           break;
       }
     }
-    
+
     final total = yes + maybe + no;
     if (total == 0) return null;
-    
+
     return ((yes - no) / total) * 100.0;
   }
 
@@ -244,11 +256,11 @@ class NPSCalculator {
         startDate: startDate,
         endDate: endDate,
       );
-      
+
       int yes = 0;
       int maybe = 0;
       int no = 0;
-      
+
       for (final record in feedback) {
         final type = record['feedback_type'] as String;
         switch (type) {
@@ -263,7 +275,7 @@ class NPSCalculator {
             break;
         }
       }
-      
+
       return FeedbackCounts(yes: yes, maybe: maybe, no: no);
     } catch (e) {
       print('[NPSCalculator] Error getting feedback counts: $e');
@@ -275,18 +287,18 @@ class NPSCalculator {
   Future<Map<String, dynamic>> _getCumulativeMetrics(int serverId) async {
     try {
       final feedback = await _database.getFeedbackForServer(serverId);
-      
+
       double totalSales = 0.0;
       int tableCount = 0;
       final uniqueTables = <String>{};
-      
+
       for (final record in feedback) {
         // Add sales if available
         final salesAmount = record['sales_amount'] as double?;
         if (salesAmount != null) {
           totalSales += salesAmount;
         }
-        
+
         // Count unique tables
         final tableNumber = record['table_number'] as int?;
         final feedbackDate = record['feedback_date'] as String;
@@ -294,9 +306,9 @@ class NPSCalculator {
           uniqueTables.add('${feedbackDate}_$tableNumber');
         }
       }
-      
+
       tableCount = uniqueTables.length;
-      
+
       return {
         'sales': totalSales,
         'tableCount': tableCount,
@@ -338,8 +350,19 @@ class NPSCalculator {
   static String monthKeyToName(int monthKey) {
     final date = monthKeyToDateTime(monthKey);
     const monthNames = [
-      '', 'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      '',
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December'
     ];
     return '${monthNames[date.month]} ${date.year}';
   }
@@ -353,7 +376,7 @@ class NPSCalculator {
   /// Format NPS score for display
   static String formatNPSScore(double? score, {bool includeSign = true}) {
     if (score == null) return 'N/A';
-    
+
     final formatted = score.toStringAsFixed(1);
     if (includeSign && score > 0) {
       return '+$formatted';
@@ -394,7 +417,7 @@ class NPSTrendAnalysis {
     }
 
     final difference = oneMonthNPS! - threeMonthNPS!;
-    
+
     if (difference > 5.0) {
       return PerformanceTrend.improving;
     } else if (difference < -5.0) {
@@ -426,7 +449,7 @@ class NPSTrendAnalysis {
   String get formattedTrendChange {
     final change = trendChange;
     if (change == null) return 'N/A';
-    
+
     final formatted = change.abs().toStringAsFixed(1);
     if (change > 0) {
       return '+$formatted';

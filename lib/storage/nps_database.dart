@@ -4,7 +4,7 @@ import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 
 /// SQLite database manager for the Server NPS system
-/// 
+///
 /// This class handles database initialization, schema creation, and migrations
 /// for the comprehensive Server NPS tracking system.
 class NPSDatabase {
@@ -27,9 +27,9 @@ class NPSDatabase {
     try {
       final documentsDirectory = await getApplicationDocumentsDirectory();
       final path = join(documentsDirectory.path, 'nps_database.db');
-      
+
       print('[NPSDatabase] Initializing database at: $path');
-      
+
       return await openDatabase(
         path,
         version: 2, // Increased version for original_id migration
@@ -45,7 +45,7 @@ class NPSDatabase {
 
   Future<void> _onCreate(Database db, int version) async {
     print('[NPSDatabase] Creating database schema version $version');
-    
+
     try {
       // Create servers table
       await db.execute('''
@@ -62,7 +62,8 @@ class NPSDatabase {
 
       // Create indexes for servers table
       await db.execute('CREATE INDEX idx_servers_active ON servers(active)');
-      await db.execute('CREATE INDEX idx_servers_hire_date ON servers(hire_date)');
+      await db
+          .execute('CREATE INDEX idx_servers_hire_date ON servers(hire_date)');
 
       // Create nps_feedback table
       await db.execute('''
@@ -82,10 +83,14 @@ class NPSDatabase {
       ''');
 
       // Create indexes for nps_feedback table
-      await db.execute('CREATE INDEX idx_feedback_server_id ON nps_feedback(server_id)');
-      await db.execute('CREATE INDEX idx_feedback_date ON nps_feedback(feedback_date)');
-      await db.execute('CREATE INDEX idx_feedback_server_date ON nps_feedback(server_id, feedback_date)');
-      await db.execute('CREATE INDEX idx_feedback_type ON nps_feedback(feedback_type)');
+      await db.execute(
+          'CREATE INDEX idx_feedback_server_id ON nps_feedback(server_id)');
+      await db.execute(
+          'CREATE INDEX idx_feedback_date ON nps_feedback(feedback_date)');
+      await db.execute(
+          'CREATE INDEX idx_feedback_server_date ON nps_feedback(server_id, feedback_date)');
+      await db.execute(
+          'CREATE INDEX idx_feedback_type ON nps_feedback(feedback_type)');
 
       // Create nps_monthly_reports table
       await db.execute('''
@@ -116,10 +121,14 @@ class NPSDatabase {
       ''');
 
       // Create indexes for nps_monthly_reports table
-      await db.execute('CREATE INDEX idx_monthly_reports_server_id ON nps_monthly_reports(server_id)');
-      await db.execute('CREATE INDEX idx_monthly_reports_month ON nps_monthly_reports(report_month)');
-      await db.execute('CREATE INDEX idx_monthly_reports_year ON nps_monthly_reports(report_year)');
-      await db.execute('CREATE INDEX idx_monthly_reports_server_month ON nps_monthly_reports(server_id, report_month)');
+      await db.execute(
+          'CREATE INDEX idx_monthly_reports_server_id ON nps_monthly_reports(server_id)');
+      await db.execute(
+          'CREATE INDEX idx_monthly_reports_month ON nps_monthly_reports(report_month)');
+      await db.execute(
+          'CREATE INDEX idx_monthly_reports_year ON nps_monthly_reports(report_year)');
+      await db.execute(
+          'CREATE INDEX idx_monthly_reports_server_month ON nps_monthly_reports(server_id, report_month)');
 
       // Create nps_calculation_log table for audit trail
       await db.execute('''
@@ -139,8 +148,10 @@ class NPSDatabase {
       ''');
 
       // Create indexes for calculation log
-      await db.execute('CREATE INDEX idx_calc_log_type ON nps_calculation_log(calculation_type)');
-      await db.execute('CREATE INDEX idx_calc_log_date ON nps_calculation_log(calculation_start)');
+      await db.execute(
+          'CREATE INDEX idx_calc_log_type ON nps_calculation_log(calculation_type)');
+      await db.execute(
+          'CREATE INDEX idx_calc_log_date ON nps_calculation_log(calculation_start)');
 
       print('[NPSDatabase] Database schema created successfully');
     } catch (e) {
@@ -150,22 +161,25 @@ class NPSDatabase {
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    print('[NPSDatabase] Upgrading database from version $oldVersion to $newVersion');
-    
+    print(
+        '[NPSDatabase] Upgrading database from version $oldVersion to $newVersion');
+
     if (oldVersion < 2) {
       // Add original_id column to servers table
       try {
         await db.execute('ALTER TABLE servers ADD COLUMN original_id TEXT');
         print('[NPSDatabase] ✅ Added original_id column to servers table');
       } catch (e) {
-        print('[NPSDatabase] ⚠️ Could not add original_id column (may already exist): $e');
+        print(
+            '[NPSDatabase] ⚠️ Could not add original_id column (may already exist): $e');
       }
     }
   }
 
   Future<void> _onDowngrade(Database db, int oldVersion, int newVersion) async {
-    print('[NPSDatabase] Downgrading database from version $oldVersion to $newVersion');
-    
+    print(
+        '[NPSDatabase] Downgrading database from version $oldVersion to $newVersion');
+
     // Handle downgrade scenarios if needed
     // Generally, we should avoid downgrades in production
   }
@@ -186,11 +200,13 @@ class NPSDatabase {
   }
 
   /// Get all servers from the database
-  Future<List<Map<String, dynamic>>> getAllServers({bool activeOnly = false}) async {
+  Future<List<Map<String, dynamic>>> getAllServers(
+      {bool activeOnly = false}) async {
     try {
       final db = await database;
       final where = activeOnly ? 'active = 1' : null;
-      final servers = await db.query('servers', where: where, orderBy: 'name ASC');
+      final servers =
+          await db.query('servers', where: where, orderBy: 'name ASC');
       print('[NPSDatabase] Retrieved ${servers.length} servers');
       return servers;
     } catch (e) {
@@ -203,7 +219,8 @@ class NPSDatabase {
   Future<Map<String, dynamic>?> getServerById(int serverId) async {
     try {
       final db = await database;
-      final servers = await db.query('servers', where: 'id = ?', whereArgs: [serverId]);
+      final servers =
+          await db.query('servers', where: 'id = ?', whereArgs: [serverId]);
       return servers.isNotEmpty ? servers.first : null;
     } catch (e) {
       print('[NPSDatabase] Error getting server by ID: $e');
@@ -216,8 +233,10 @@ class NPSDatabase {
     try {
       final db = await database;
       server['updated_at'] = DateTime.now().toIso8601String();
-      final rowsAffected = await db.update('servers', server, where: 'id = ?', whereArgs: [serverId]);
-      print('[NPSDatabase] Updated server $serverId, rows affected: $rowsAffected');
+      final rowsAffected = await db
+          .update('servers', server, where: 'id = ?', whereArgs: [serverId]);
+      print(
+          '[NPSDatabase] Updated server $serverId, rows affected: $rowsAffected');
       return rowsAffected;
     } catch (e) {
       print('[NPSDatabase] Error updating server: $e');
@@ -235,7 +254,8 @@ class NPSDatabase {
         where: 'id = ?',
         whereArgs: [serverId],
       );
-      print('[NPSDatabase] Soft deleted server $serverId, rows affected: $rowsAffected');
+      print(
+          '[NPSDatabase] Soft deleted server $serverId, rows affected: $rowsAffected');
       return rowsAffected;
     } catch (e) {
       print('[NPSDatabase] Error deleting server: $e');
@@ -286,7 +306,8 @@ class NPSDatabase {
         orderBy: 'feedback_date DESC',
       );
 
-      print('[NPSDatabase] Retrieved ${feedback.length} feedback entries for server $serverId');
+      print(
+          '[NPSDatabase] Retrieved ${feedback.length} feedback entries for server $serverId');
       return feedback;
     } catch (e) {
       print('[NPSDatabase] Error getting feedback for server: $e');
@@ -311,7 +332,8 @@ class NPSDatabase {
         orderBy: 'feedback_date DESC',
       );
 
-      print('[NPSDatabase] Retrieved ${feedback.length} feedback entries in date range');
+      print(
+          '[NPSDatabase] Retrieved ${feedback.length} feedback entries in date range');
       return feedback;
     } catch (e) {
       print('[NPSDatabase] Error getting feedback in date range: $e');
@@ -325,7 +347,7 @@ class NPSDatabase {
   Future<int> insertOrUpdateMonthlyReport(Map<String, dynamic> report) async {
     try {
       final db = await database;
-      
+
       // Try to insert first
       try {
         final id = await db.insert('nps_monthly_reports', report);
@@ -340,7 +362,8 @@ class NPSDatabase {
             where: 'server_id = ? AND report_month = ?',
             whereArgs: [report['server_id'], report['report_month']],
           );
-          print('[NPSDatabase] Updated existing monthly report, rows affected: $rowsAffected');
+          print(
+              '[NPSDatabase] Updated existing monthly report, rows affected: $rowsAffected');
           return rowsAffected;
         } else {
           rethrow;
@@ -353,7 +376,8 @@ class NPSDatabase {
   }
 
   /// Get monthly report for a specific server and month
-  Future<Map<String, dynamic>?> getMonthlyReport(int serverId, int reportMonth) async {
+  Future<Map<String, dynamic>?> getMonthlyReport(
+      int serverId, int reportMonth) async {
     try {
       final db = await database;
       final reports = await db.query(
@@ -369,7 +393,8 @@ class NPSDatabase {
   }
 
   /// Get all monthly reports for a specific month
-  Future<List<Map<String, dynamic>>> getMonthlyReportsForMonth(int reportMonth) async {
+  Future<List<Map<String, dynamic>>> getMonthlyReportsForMonth(
+      int reportMonth) async {
     try {
       final db = await database;
       final reports = await db.query(
@@ -378,7 +403,8 @@ class NPSDatabase {
         whereArgs: [reportMonth],
         orderBy: 'all_time_nps_percentage DESC',
       );
-      print('[NPSDatabase] Retrieved ${reports.length} monthly reports for month $reportMonth');
+      print(
+          '[NPSDatabase] Retrieved ${reports.length} monthly reports for month $reportMonth');
       return reports;
     } catch (e) {
       print('[NPSDatabase] Error getting monthly reports for month: $e');
@@ -406,7 +432,8 @@ class NPSDatabase {
   }
 
   /// Get server NPS data for a specific month
-  Future<List<Map<String, dynamic>>> getServerNPSDataForMonth(int reportMonth, int reportYear) async {
+  Future<List<Map<String, dynamic>>> getServerNPSDataForMonth(
+      int reportMonth, int reportYear) async {
     try {
       final db = await database;
       final serverData = await db.rawQuery('''
@@ -430,8 +457,9 @@ class NPSDatabase {
         WHERE nmr.report_month = ? AND nmr.report_year = ?
         ORDER BY s.name ASC
       ''', [reportMonth, reportYear]);
-      
-      print('[NPSDatabase] Retrieved NPS data for ${serverData.length} servers for $reportMonth/$reportYear');
+
+      print(
+          '[NPSDatabase] Retrieved NPS data for ${serverData.length} servers for $reportMonth/$reportYear');
       return serverData;
     } catch (e) {
       print('[NPSDatabase] Error getting server NPS data for month: $e');

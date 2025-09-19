@@ -9,10 +9,12 @@ class NPSSecurityManagementScreen extends StatefulWidget {
   const NPSSecurityManagementScreen({super.key});
 
   @override
-  State<NPSSecurityManagementScreen> createState() => _NPSSecurityManagementScreenState();
+  State<NPSSecurityManagementScreen> createState() =>
+      _NPSSecurityManagementScreenState();
 }
 
-class _NPSSecurityManagementScreenState extends State<NPSSecurityManagementScreen> 
+class _NPSSecurityManagementScreenState
+    extends State<NPSSecurityManagementScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
@@ -89,7 +91,8 @@ class SecurityDashboardTab extends StatelessWidget {
               const SizedBox(height: 20),
               _buildQuickActions(context, security, encryption, audit),
               const SizedBox(height: 20),
-              _buildSecurityMetrics(context, securityStats, encryptionStats, auditStats),
+              _buildSecurityMetrics(
+                  context, securityStats, encryptionStats, auditStats),
               const SizedBox(height: 20),
               _buildRecentSecurityEvents(context, audit),
             ],
@@ -99,7 +102,8 @@ class SecurityDashboardTab extends StatelessWidget {
     );
   }
 
-  Widget _buildSecurityOverview(BuildContext context, Map<String, dynamic> stats) {
+  Widget _buildSecurityOverview(
+      BuildContext context, Map<String, dynamic> stats) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -109,8 +113,8 @@ class SecurityDashboardTab extends StatelessWidget {
             Text(
               'Security Overview',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 16),
             Row(
@@ -141,7 +145,9 @@ class SecurityDashboardTab extends StatelessWidget {
                     'Failed Logins (24h)',
                     '${stats['failed_logins_24h']}',
                     Icons.warning,
-                    stats['failed_logins_24h'] > 0 ? Colors.orange : Colors.green,
+                    stats['failed_logins_24h'] > 0
+                        ? Colors.orange
+                        : Colors.green,
                   ),
                 ),
               ],
@@ -152,7 +158,8 @@ class SecurityDashboardTab extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusCard(BuildContext context, String title, String value, IconData icon, Color color) {
+  Widget _buildStatusCard(BuildContext context, String title, String value,
+      IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -167,9 +174,9 @@ class SecurityDashboardTab extends StatelessWidget {
           Text(
             value,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
           ),
           Text(
             title,
@@ -181,7 +188,7 @@ class SecurityDashboardTab extends StatelessWidget {
     );
   }
 
-  Widget _buildQuickActions(BuildContext context, NPSSecurityService security, 
+  Widget _buildQuickActions(BuildContext context, NPSSecurityService security,
       NPSEncryptionService encryption, NPSAuditService audit) {
     return Card(
       child: Padding(
@@ -192,8 +199,8 @@ class SecurityDashboardTab extends StatelessWidget {
             Text(
               'Quick Actions',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 16),
             Wrap(
@@ -216,7 +223,8 @@ class SecurityDashboardTab extends StatelessWidget {
                   label: const Text('Cleanup Old Logs'),
                 ),
                 ElevatedButton.icon(
-                  onPressed: () => _showSecurityReport(context, security, encryption, audit),
+                  onPressed: () =>
+                      _showSecurityReport(context, security, encryption, audit),
                   icon: const Icon(Icons.assessment),
                   label: const Text('Generate Report'),
                 ),
@@ -228,8 +236,11 @@ class SecurityDashboardTab extends StatelessWidget {
     );
   }
 
-  Widget _buildSecurityMetrics(BuildContext context, Map<String, dynamic> securityStats,
-      Map<String, dynamic> encryptionStats, Map<String, dynamic> auditStats) {
+  Widget _buildSecurityMetrics(
+      BuildContext context,
+      Map<String, dynamic> securityStats,
+      Map<String, dynamic> encryptionStats,
+      Map<String, dynamic> auditStats) {
     return Row(
       children: [
         Expanded(
@@ -242,13 +253,19 @@ class SecurityDashboardTab extends StatelessWidget {
                   Text(
                     'Authentication',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   const SizedBox(height: 12),
-                  _buildMetricRow('Active Sessions', '${securityStats['active_sessions']}'),
-                  _buildMetricRow('Locked Accounts', '${securityStats['locked_accounts']}'),
-                  _buildMetricRow('MFA Required', securityStats['security_policy']['mfa_required'] ? 'Yes' : 'No'),
+                  _buildMetricRow(
+                      'Active Sessions', '${securityStats['active_sessions']}'),
+                  _buildMetricRow(
+                      'Locked Accounts', '${securityStats['locked_accounts']}'),
+                  _buildMetricRow(
+                      'MFA Required',
+                      securityStats['security_policy']['mfa_required']
+                          ? 'Yes'
+                          : 'No'),
                 ],
               ),
             ),
@@ -265,13 +282,19 @@ class SecurityDashboardTab extends StatelessWidget {
                   Text(
                     'Encryption',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   const SizedBox(height: 12),
-                  _buildMetricRow('Active Keys', '${encryptionStats['active_keys']}'),
-                  _buildMetricRow('Algorithm', '${encryptionStats['current_algorithm']}'),
-                  _buildMetricRow('PII Protection', encryptionStats['pii_encryption_enabled'] ? 'Enabled' : 'Disabled'),
+                  _buildMetricRow(
+                      'Active Keys', '${encryptionStats['active_keys']}'),
+                  _buildMetricRow(
+                      'Algorithm', '${encryptionStats['current_algorithm']}'),
+                  _buildMetricRow(
+                      'PII Protection',
+                      encryptionStats['pii_encryption_enabled']
+                          ? 'Enabled'
+                          : 'Disabled'),
                 ],
               ),
             ),
@@ -288,13 +311,14 @@ class SecurityDashboardTab extends StatelessWidget {
                   Text(
                     'Audit Trail',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   const SizedBox(height: 12),
                   _buildMetricRow('Total Logs', '${auditStats['total_logs']}'),
                   _buildMetricRow('Logs (24h)', '${auditStats['logs_24h']}'),
-                  _buildMetricRow('Security Events', '${auditStats['security_events']}'),
+                  _buildMetricRow(
+                      'Security Events', '${auditStats['security_events']}'),
                 ],
               ),
             ),
@@ -320,7 +344,8 @@ class SecurityDashboardTab extends StatelessWidget {
     );
   }
 
-  Widget _buildRecentSecurityEvents(BuildContext context, NPSAuditService audit) {
+  Widget _buildRecentSecurityEvents(
+      BuildContext context, NPSAuditService audit) {
     final securityLogs = audit.queryLogs(const AuditQuery(
       securityOnly: true,
       limit: 5,
@@ -335,25 +360,27 @@ class SecurityDashboardTab extends StatelessWidget {
             Text(
               'Recent Security Events',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 12),
             if (securityLogs.isEmpty)
               const Text('No recent security events')
             else
               ...securityLogs.map((log) => ListTile(
-                dense: true,
-                leading: Icon(
-                  _getLogIcon(log.level),
-                  color: _getLogColor(log.level),
-                ),
-                title: Text(log.action),
-                subtitle: Text('${log.userName} • ${_formatDateTime(log.timestamp)}'),
-                trailing: log.success 
-                    ? const Icon(Icons.check_circle, color: Colors.green, size: 16)
-                    : const Icon(Icons.error, color: Colors.red, size: 16),
-              )),
+                    dense: true,
+                    leading: Icon(
+                      _getLogIcon(log.level),
+                      color: _getLogColor(log.level),
+                    ),
+                    title: Text(log.action),
+                    subtitle: Text(
+                        '${log.userName} • ${_formatDateTime(log.timestamp)}'),
+                    trailing: log.success
+                        ? const Icon(Icons.check_circle,
+                            color: Colors.green, size: 16)
+                        : const Icon(Icons.error, color: Colors.red, size: 16),
+                  )),
           ],
         ),
       ),
@@ -394,13 +421,14 @@ class SecurityDashboardTab extends StatelessWidget {
     return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
   }
 
-  void _showSecurityReport(BuildContext context, NPSSecurityService security, 
+  void _showSecurityReport(BuildContext context, NPSSecurityService security,
       NPSEncryptionService encryption, NPSAuditService audit) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Security Report Generated'),
-        content: const Text('A comprehensive security report has been generated and is ready for download.'),
+        content: const Text(
+            'A comprehensive security report has been generated and is ready for download.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -460,8 +488,8 @@ class _UserManagementTabState extends State<UserManagementTab> {
                   Text(
                     'User Management',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   const Spacer(),
                   ElevatedButton.icon(
@@ -478,7 +506,8 @@ class _UserManagementTabState extends State<UserManagementTab> {
                 itemBuilder: (context, index) {
                   final user = users[index];
                   return Card(
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    margin:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                     child: ListTile(
                       leading: CircleAvatar(
                         backgroundColor: _getRoleColor(user.role),
@@ -569,7 +598,8 @@ class _UserManagementTabState extends State<UserManagementTab> {
     return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
   }
 
-  void _showCreateUserDialog(BuildContext context, NPSSecurityService security) {
+  void _showCreateUserDialog(
+      BuildContext context, NPSSecurityService security) {
     // Implementation for create user dialog
     showDialog(
       context: context,
@@ -590,7 +620,8 @@ class _UserManagementTabState extends State<UserManagementTab> {
     );
   }
 
-  void _showEditUserDialog(BuildContext context, NPSSecurityService security, UserProfile user) {
+  void _showEditUserDialog(
+      BuildContext context, NPSSecurityService security, UserProfile user) {
     // Implementation for edit user dialog
     showDialog(
       context: context,
@@ -625,13 +656,14 @@ class _UserManagementTabState extends State<UserManagementTab> {
               const SizedBox(height: 16),
               const Text('Permissions:'),
               const SizedBox(height: 8),
-              ...user.getAllPermissions().map((permission) => 
-                ListTile(
-                  dense: true,
-                  leading: const Icon(Icons.check, color: Colors.green, size: 16),
-                  title: Text(permission.name),
-                ),
-              ),
+              ...user.getAllPermissions().map(
+                    (permission) => ListTile(
+                      dense: true,
+                      leading: const Icon(Icons.check,
+                          color: Colors.green, size: 16),
+                      title: Text(permission.name),
+                    ),
+                  ),
             ],
           ),
         ),
@@ -645,12 +677,14 @@ class _UserManagementTabState extends State<UserManagementTab> {
     );
   }
 
-  void _showDeleteUserDialog(BuildContext context, NPSSecurityService security, UserProfile user) {
+  void _showDeleteUserDialog(
+      BuildContext context, NPSSecurityService security, UserProfile user) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete User'),
-        content: Text('Are you sure you want to delete ${user.displayName}? This action cannot be undone.'),
+        content: Text(
+            'Are you sure you want to delete ${user.displayName}? This action cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -700,7 +734,8 @@ class EncryptionManagementTab extends StatelessWidget {
     );
   }
 
-  Widget _buildEncryptionStatus(BuildContext context, Map<String, dynamic> stats) {
+  Widget _buildEncryptionStatus(
+      BuildContext context, Map<String, dynamic> stats) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -710,20 +745,23 @@ class EncryptionManagementTab extends StatelessWidget {
             Text(
               'Encryption Status',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
-                  child: _buildEncryptionMetric('Algorithm', stats['current_algorithm']),
+                  child: _buildEncryptionMetric(
+                      'Algorithm', stats['current_algorithm']),
                 ),
                 Expanded(
-                  child: _buildEncryptionMetric('Active Keys', '${stats['active_keys']}'),
+                  child: _buildEncryptionMetric(
+                      'Active Keys', '${stats['active_keys']}'),
                 ),
                 Expanded(
-                  child: _buildEncryptionMetric('Total Keys', '${stats['total_keys']}'),
+                  child: _buildEncryptionMetric(
+                      'Total Keys', '${stats['total_keys']}'),
                 ),
               ],
             ),
@@ -731,13 +769,16 @@ class EncryptionManagementTab extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: _buildEncryptionToggle('PII Encryption', stats['pii_encryption_enabled']),
+                  child: _buildEncryptionToggle(
+                      'PII Encryption', stats['pii_encryption_enabled']),
                 ),
                 Expanded(
-                  child: _buildEncryptionToggle('Feedback Encryption', stats['feedback_encryption_enabled']),
+                  child: _buildEncryptionToggle('Feedback Encryption',
+                      stats['feedback_encryption_enabled']),
                 ),
                 Expanded(
-                  child: _buildEncryptionToggle('Export Encryption', stats['export_encryption_enabled']),
+                  child: _buildEncryptionToggle(
+                      'Export Encryption', stats['export_encryption_enabled']),
                 ),
               ],
             ),
@@ -783,7 +824,8 @@ class EncryptionManagementTab extends StatelessWidget {
     );
   }
 
-  Widget _buildKeyManagement(BuildContext context, NPSEncryptionService encryption) {
+  Widget _buildKeyManagement(
+      BuildContext context, NPSEncryptionService encryption) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -793,8 +835,8 @@ class EncryptionManagementTab extends StatelessWidget {
             Text(
               'Key Management',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 16),
             Row(
@@ -823,7 +865,8 @@ class EncryptionManagementTab extends StatelessWidget {
     );
   }
 
-  Widget _buildEncryptionTest(BuildContext context, NPSEncryptionService encryption) {
+  Widget _buildEncryptionTest(
+      BuildContext context, NPSEncryptionService encryption) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -833,8 +876,8 @@ class EncryptionManagementTab extends StatelessWidget {
             Text(
               'Encryption Test',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
@@ -844,16 +887,21 @@ class EncryptionManagementTab extends StatelessWidget {
                   showDialog(
                     context: context,
                     builder: (context) => AlertDialog(
-                      title: Text(result['success'] ? 'Test Passed' : 'Test Failed'),
+                      title: Text(
+                          result['success'] ? 'Test Passed' : 'Test Failed'),
                       content: Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           if (result['success']) ...[
-                            Text('Original Length: ${result['original_length']} bytes'),
-                            Text('Encrypted Length: ${result['encrypted_length']} bytes'),
-                            Text('Encrypt Time: ${result['encrypt_time_microseconds']}μs'),
-                            Text('Decrypt Time: ${result['decrypt_time_microseconds']}μs'),
+                            Text(
+                                'Original Length: ${result['original_length']} bytes'),
+                            Text(
+                                'Encrypted Length: ${result['encrypted_length']} bytes'),
+                            Text(
+                                'Encrypt Time: ${result['encrypt_time_microseconds']}μs'),
+                            Text(
+                                'Decrypt Time: ${result['decrypt_time_microseconds']}μs'),
                           ] else
                             Text('Error: ${result['error']}'),
                         ],
@@ -901,7 +949,7 @@ class _AuditLogsTabState extends State<AuditLogsTab> {
           securityOnly: _securityOnly,
           limit: 50,
         );
-        
+
         final logs = audit.queryLogs(query);
 
         return Column(
@@ -913,7 +961,8 @@ class _AuditLogsTabState extends State<AuditLogsTab> {
                 itemBuilder: (context, index) {
                   final log = logs[index];
                   return Card(
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    margin:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                     child: ListTile(
                       leading: Icon(
                         _getLogIcon(log.level),
@@ -930,9 +979,11 @@ class _AuditLogsTabState extends State<AuditLogsTab> {
                           ),
                         ],
                       ),
-                      trailing: log.success 
-                          ? const Icon(Icons.check_circle, color: Colors.green, size: 16)
-                          : const Icon(Icons.error, color: Colors.red, size: 16),
+                      trailing: log.success
+                          ? const Icon(Icons.check_circle,
+                              color: Colors.green, size: 16)
+                          : const Icon(Icons.error,
+                              color: Colors.red, size: 16),
                       onTap: () => _showLogDetails(context, log),
                     ),
                   );
@@ -952,7 +1003,7 @@ class _AuditLogsTabState extends State<AuditLogsTab> {
         children: [
           Expanded(
             child: DropdownButtonFormField<AuditLogLevel>(
-              value: _selectedLevel,
+              initialValue: _selectedLevel,
               decoration: const InputDecoration(
                 labelText: 'Level',
                 border: OutlineInputBorder(),
@@ -962,8 +1013,8 @@ class _AuditLogsTabState extends State<AuditLogsTab> {
                   value: null,
                   child: Text('All Levels'),
                 ),
-                ...AuditLogLevel.values.map((level) =>
-                  DropdownMenuItem(
+                ...AuditLogLevel.values.map(
+                  (level) => DropdownMenuItem(
                     value: level,
                     child: Text(level.name),
                   ),
@@ -975,7 +1026,7 @@ class _AuditLogsTabState extends State<AuditLogsTab> {
           const SizedBox(width: 16),
           Expanded(
             child: DropdownButtonFormField<AuditCategory>(
-              value: _selectedCategory,
+              initialValue: _selectedCategory,
               decoration: const InputDecoration(
                 labelText: 'Category',
                 border: OutlineInputBorder(),
@@ -985,8 +1036,8 @@ class _AuditLogsTabState extends State<AuditLogsTab> {
                   value: null,
                   child: Text('All Categories'),
                 ),
-                ...AuditCategory.values.map((category) =>
-                  DropdownMenuItem(
+                ...AuditCategory.values.map(
+                  (category) => DropdownMenuItem(
                     value: category,
                     child: Text(category.name),
                   ),
@@ -1056,7 +1107,8 @@ class _AuditLogsTabState extends State<AuditLogsTab> {
                 _buildDetailRow('Error', log.errorMessage!),
               if (log.details.isNotEmpty) ...[
                 const SizedBox(height: 16),
-                const Text('Details:', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text('Details:',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
                 Text(log.details.toString()),
               ],
             ],

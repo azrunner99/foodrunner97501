@@ -72,12 +72,14 @@ class DatabaseService {
     return await db.query(table);
   }
 
-  Future<int> update(String table, Map<String, dynamic> data, String where, List<dynamic> whereArgs) async {
+  Future<int> update(String table, Map<String, dynamic> data, String where,
+      List<dynamic> whereArgs) async {
     final db = await database;
     return await db.update(table, data, where: where, whereArgs: whereArgs);
   }
 
-  Future<int> delete(String table, String where, List<dynamic> whereArgs) async {
+  Future<int> delete(
+      String table, String where, List<dynamic> whereArgs) async {
     final db = await database;
     return await db.delete(table, where: where, whereArgs: whereArgs);
   }

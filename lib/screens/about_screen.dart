@@ -92,7 +92,8 @@ class AboutScreen extends StatelessWidget {
               title: 'About RUNNER!',
               icon: Icons.info_outline,
               color: Colors.blue,
-              content: 'RUNNER! is a comprehensive restaurant management system designed to streamline food running operations, track server performance, and enhance team collaboration. Built with modern technology, it offers real-time tracking, gamification features, and detailed analytics to help restaurants optimize their service efficiency.',
+              content:
+                  'RUNNER! is a comprehensive restaurant management system designed to streamline food running operations, track server performance, and enhance team collaboration. Built with modern technology, it offers real-time tracking, gamification features, and detailed analytics to help restaurants optimize their service efficiency.',
             ),
 
             // Developer Card
@@ -100,7 +101,8 @@ class AboutScreen extends StatelessWidget {
               title: 'Developer',
               icon: Icons.code,
               color: Colors.green,
-              content: 'Developed with passion for the restaurant industry. This app combines years of hospitality experience with modern software development to create a tool that truly understands the fast-paced restaurant environment.',
+              content:
+                  'Developed with passion for the restaurant industry. This app combines years of hospitality experience with modern software development to create a tool that truly understands the fast-paced restaurant environment.',
             ),
 
             // Features Card
@@ -108,7 +110,8 @@ class AboutScreen extends StatelessWidget {
               title: 'Key Features',
               icon: Icons.star,
               color: Colors.orange,
-              content: '• Real-time shift tracking\n• Team competition system\n• Advanced gamification with 150 levels\n• Comprehensive analytics\n• Custom avatars and personalization\n• Admin controls and data management\n• Cross-platform compatibility',
+              content:
+                  '• Real-time shift tracking\n• Team competition system\n• Advanced gamification with 150 levels\n• Comprehensive analytics\n• Custom avatars and personalization\n• Admin controls and data management\n• Cross-platform compatibility',
             ),
 
             // Contact Card
@@ -116,7 +119,8 @@ class AboutScreen extends StatelessWidget {
               title: 'Feedback & Support',
               icon: Icons.support_agent,
               color: Colors.purple,
-              content: 'We value your feedback! This app is continuously improved based on real-world restaurant usage. Your suggestions help make RUNNER! even better for the entire hospitality community.',
+              content:
+                  'We value your feedback! This app is continuously improved based on real-world restaurant usage. Your suggestions help make RUNNER! even better for the entire hospitality community.',
             ),
 
             // Copyright

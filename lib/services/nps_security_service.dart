@@ -18,34 +18,34 @@ enum Permission {
   viewOwnNPSData,
   viewTeamNPSData,
   viewReports,
-  
+
   // Data Modification
   createFeedback,
   editFeedback,
   deleteFeedback,
   bulkOperations,
-  
+
   // Analytics & Reporting
   accessAnalytics,
   exportData,
   viewBenchmarks,
   manageBenchmarks,
-  
+
   // System Administration
   manageUsers,
   configureSystem,
   viewAuditLogs,
   manageBackups,
-  
+
   // Notifications
   manageNotifications,
   sendNotifications,
-  
+
   // Security
   manageRoles,
   configureSecurity,
   encryptData,
-  
+
   // Compliance
   manageRetention,
   exportForCompliance,
@@ -81,8 +81,8 @@ class UserProfile {
   });
 
   bool hasPermission(Permission permission) {
-    return _getRolePermissions(role).contains(permission) || 
-           customPermissions.contains(permission);
+    return _getRolePermissions(role).contains(permission) ||
+        customPermissions.contains(permission);
   }
 
   bool hasAnyPermission(List<Permission> permissions) {
@@ -91,7 +91,10 @@ class UserProfile {
 
   List<Permission> getAllPermissions() {
     final rolePermissions = _getRolePermissions(role);
-    final allPermissions = <Permission>{...rolePermissions, ...customPermissions};
+    final allPermissions = <Permission>{
+      ...rolePermissions,
+      ...customPermissions
+    };
     return allPermissions.toList();
   }
 
@@ -99,7 +102,7 @@ class UserProfile {
     switch (role) {
       case UserRole.superAdmin:
         return Permission.values; // All permissions
-      
+
       case UserRole.admin:
         return [
           Permission.viewAllNPSData,
@@ -119,7 +122,7 @@ class UserProfile {
           Permission.manageRetention,
           Permission.exportForCompliance,
         ];
-      
+
       case UserRole.manager:
         return [
           Permission.viewTeamNPSData,
@@ -133,7 +136,7 @@ class UserProfile {
           Permission.manageNotifications,
           Permission.sendNotifications,
         ];
-      
+
       case UserRole.teamLead:
         return [
           Permission.viewTeamNPSData,
@@ -144,14 +147,14 @@ class UserProfile {
           Permission.viewBenchmarks,
           Permission.sendNotifications,
         ];
-      
+
       case UserRole.server:
         return [
           Permission.viewOwnNPSData,
           Permission.createFeedback,
           Permission.viewReports,
         ];
-      
+
       case UserRole.viewer:
         return [
           Permission.viewReports,
@@ -264,7 +267,8 @@ class NPSSecurityService extends ChangeNotifier {
   SecuritySession? get currentSession => _currentSession;
   List<SecurityAuditLog> get auditLogs => List.unmodifiable(_auditLogs);
   SecurityPolicy get securityPolicy => _securityPolicy;
-  bool get isLoggedIn => _currentUser != null && _currentSession?.isValid == true;
+  bool get isLoggedIn =>
+      _currentUser != null && _currentSession?.isValid == true;
 
   /// Initialize security service with demo users
   void initialize() {
@@ -332,7 +336,8 @@ class NPSSecurityService extends ChangeNotifier {
     try {
       // Check for locked accounts
       if (_isAccountLocked(username)) {
-        _log(username, 'unknown', 'Authentication failed - account locked', 'auth', {
+        _log(username, 'unknown', 'Authentication failed - account locked',
+            'auth', {
           'reason': 'account_locked',
         });
         return false;
@@ -355,7 +360,8 @@ class NPSSecurityService extends ChangeNotifier {
 
       if (validPasswords[username] != password) {
         _incrementLoginAttempts(username);
-        _log(username, user.id, 'Authentication failed - invalid password', 'auth', {
+        _log(username, user.id, 'Authentication failed - invalid password',
+            'auth', {
           'reason': 'invalid_password',
         });
         return false;
@@ -376,7 +382,8 @@ class NPSSecurityService extends ChangeNotifier {
       return true;
     } catch (e) {
       _incrementLoginAttempts(username);
-      _log(username, 'unknown', 'Authentication failed - ${e.toString()}', 'auth', {
+      _log(username, 'unknown', 'Authentication failed - ${e.toString()}',
+          'auth', {
         'error': e.toString(),
       });
       return false;
@@ -412,7 +419,8 @@ class NPSSecurityService extends ChangeNotifier {
     final lockTime = _lockedAccounts[username];
     if (lockTime == null) return false;
 
-    if (DateTime.now().isBefore(lockTime.add(_securityPolicy.lockoutDuration))) {
+    if (DateTime.now()
+        .isBefore(lockTime.add(_securityPolicy.lockoutDuration))) {
       return true;
     } else {
       _lockedAccounts.remove(username);
@@ -423,10 +431,11 @@ class NPSSecurityService extends ChangeNotifier {
   /// Increment login attempts and lock if needed
   void _incrementLoginAttempts(String username) {
     _loginAttempts[username] = (_loginAttempts[username] ?? 0) + 1;
-    
+
     if (_loginAttempts[username]! >= _securityPolicy.maxLoginAttempts) {
       _lockedAccounts[username] = DateTime.now();
-      _log(username, 'unknown', 'Account locked due to excessive login attempts', 'security', {
+      _log(username, 'unknown',
+          'Account locked due to excessive login attempts', 'security', {
         'attempts': _loginAttempts[username],
       });
     }
@@ -435,7 +444,8 @@ class NPSSecurityService extends ChangeNotifier {
   /// Logout user
   void logout() {
     if (_currentUser != null) {
-      _log(_currentUser!.username, _currentUser!.id, 'User logged out', 'auth', {});
+      _log(_currentUser!.username, _currentUser!.id, 'User logged out', 'auth',
+          {});
     }
 
     _currentUser = null;
@@ -490,7 +500,7 @@ class NPSSecurityService extends ChangeNotifier {
   /// Create new user (admin only)
   Future<void> createUser(UserProfile user) async {
     requirePermission(Permission.manageUsers);
-    
+
     _users[user.id] = user;
     _log(
       _currentUser?.username ?? 'system',
@@ -508,7 +518,7 @@ class NPSSecurityService extends ChangeNotifier {
   /// Update user (admin only)
   Future<void> updateUser(UserProfile user) async {
     requirePermission(Permission.manageUsers);
-    
+
     _users[user.id] = user;
     _log(
       _currentUser?.username ?? 'system',
@@ -526,7 +536,7 @@ class NPSSecurityService extends ChangeNotifier {
   /// Delete user (admin only)
   Future<void> deleteUser(String userId) async {
     requirePermission(Permission.manageUsers);
-    
+
     final user = _users.remove(userId);
     if (user != null) {
       _log(
@@ -544,7 +554,8 @@ class NPSSecurityService extends ChangeNotifier {
   }
 
   /// Log security action
-  void _log(String username, String userId, String action, String resource, Map<String, dynamic> details) {
+  void _log(String username, String userId, String action, String resource,
+      Map<String, dynamic> details) {
     final logEntry = SecurityAuditLog(
       id: _generateLogId(),
       userId: userId,
@@ -559,7 +570,7 @@ class NPSSecurityService extends ChangeNotifier {
     );
 
     _auditLogs.add(logEntry);
-    
+
     // Keep only recent logs (in production, persist to database)
     if (_auditLogs.length > 10000) {
       _auditLogs.removeRange(0, _auditLogs.length - 10000);
@@ -580,34 +591,41 @@ class NPSSecurityService extends ChangeNotifier {
     String? resource,
   }) {
     requirePermission(Permission.viewAuditLogs);
-    
+
     var logs = _auditLogs.toList();
-    
+
     if (startDate != null) {
       logs = logs.where((log) => log.timestamp.isAfter(startDate)).toList();
     }
-    
+
     if (endDate != null) {
       logs = logs.where((log) => log.timestamp.isBefore(endDate)).toList();
     }
-    
+
     if (userId != null) {
       logs = logs.where((log) => log.userId == userId).toList();
     }
-    
+
     if (action != null) {
-      logs = logs.where((log) => log.action.toLowerCase().contains(action.toLowerCase())).toList();
+      logs = logs
+          .where(
+              (log) => log.action.toLowerCase().contains(action.toLowerCase()))
+          .toList();
     }
-    
+
     if (resource != null) {
-      logs = logs.where((log) => log.resource.toLowerCase().contains(resource.toLowerCase())).toList();
+      logs = logs
+          .where((log) =>
+              log.resource.toLowerCase().contains(resource.toLowerCase()))
+          .toList();
     }
-    
+
     return logs.reversed.toList(); // Most recent first
   }
 
   /// Audit action - use this for all sensitive operations
-  void auditAction(String action, String resource, Map<String, dynamic> details) {
+  void auditAction(
+      String action, String resource, Map<String, dynamic> details) {
     if (_securityPolicy.auditAllActions) {
       _log(
         _currentUser?.username ?? 'anonymous',
@@ -631,18 +649,21 @@ class NPSSecurityService extends ChangeNotifier {
   /// Get security statistics
   Map<String, dynamic> getSecurityStatistics() {
     requirePermission(Permission.viewAuditLogs);
-    
+
     final now = DateTime.now();
     final last24Hours = now.subtract(const Duration(hours: 24));
     final last7Days = now.subtract(const Duration(days: 7));
-    
-    final logsLast24h = _auditLogs.where((log) => log.timestamp.isAfter(last24Hours)).length;
-    final logsLast7d = _auditLogs.where((log) => log.timestamp.isAfter(last7Days)).length;
-    final failedLogins = _auditLogs.where((log) => 
-      log.action.contains('Authentication failed') && 
-      log.timestamp.isAfter(last24Hours)
-    ).length;
-    
+
+    final logsLast24h =
+        _auditLogs.where((log) => log.timestamp.isAfter(last24Hours)).length;
+    final logsLast7d =
+        _auditLogs.where((log) => log.timestamp.isAfter(last7Days)).length;
+    final failedLogins = _auditLogs
+        .where((log) =>
+            log.action.contains('Authentication failed') &&
+            log.timestamp.isAfter(last24Hours))
+        .length;
+
     return {
       'total_users': _users.length,
       'active_sessions': _sessions.values.where((s) => s.isValid).length,

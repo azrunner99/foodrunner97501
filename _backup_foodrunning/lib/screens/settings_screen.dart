@@ -35,7 +35,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Gamification', style: TextStyle(fontWeight: FontWeight.w700)),
+                  const Text('Gamification',
+                      style: TextStyle(fontWeight: FontWeight.w700)),
                   SwitchListTile(
                     title: const Text('Enable gamification'),
                     value: s.enableGamification,
@@ -120,7 +121,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                FilledButton(onPressed: () => _add(context), child: const Text('Add')),
+                FilledButton(
+                    onPressed: () => _add(context), child: const Text('Add')),
               ],
             ),
           ),
@@ -139,7 +141,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       if (v == 'rename') {
                         final newName = await _promptRename(context, s.name);
                         if (newName != null && newName.trim().isNotEmpty) {
-                          await context.read<AppState>().renameServer(s.id, newName);
+                          await context
+                              .read<AppState>()
+                              .renameServer(s.id, newName);
                         }
                       } else if (v == 'delete') {
                         final ok = await _confirmDelete(context, s.name);
@@ -150,7 +154,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     },
                     itemBuilder: (_) => const [
                       PopupMenuItem(value: 'rename', child: Text('Rename')),
-                      PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: Colors.red))),
+                      PopupMenuItem(
+                          value: 'delete',
+                          child: Text('Delete',
+                              style: TextStyle(color: Colors.red))),
                     ],
                   ),
                 );
@@ -168,10 +175,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Rename server'),
-        content: TextField(controller: ctrl, decoration: const InputDecoration(border: OutlineInputBorder())),
+        content: TextField(
+            controller: ctrl,
+            decoration: const InputDecoration(border: OutlineInputBorder())),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context, ctrl.text), child: const Text('Save')),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(context, ctrl.text),
+              child: const Text('Save')),
         ],
       ),
     );
@@ -184,8 +197,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: const Text('Remove server'),
         content: Text('Remove "$name"? This also deletes their totals.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Remove')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Remove')),
         ],
       ),
     );

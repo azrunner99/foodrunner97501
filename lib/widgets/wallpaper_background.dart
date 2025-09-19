@@ -4,7 +4,7 @@ import '../app_state.dart';
 
 class WallpaperBackground extends StatelessWidget {
   final Widget child;
-  
+
   const WallpaperBackground({
     super.key,
     required this.child,
@@ -13,11 +13,11 @@ class WallpaperBackground extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
-    
+
     if (app.selectedWallpaper == 'none') {
       return child;
     }
-    
+
     return Stack(
       children: [
         // Background wallpaper
@@ -29,7 +29,7 @@ class WallpaperBackground extends StatelessWidget {
       ],
     );
   }
-  
+
   Widget _buildWallpaperImage(String wallpaperId) {
     // Handle the new image001-image073 format
     if (wallpaperId.startsWith('image')) {
@@ -43,7 +43,7 @@ class WallpaperBackground extends StatelessWidget {
         },
       );
     }
-    
+
     // Legacy wallpaper support (if any old ones exist)
     final wallpaperAssets = {
       'flowing_waves': 'assets/wallpapers/flowing_waves.png',
@@ -51,9 +51,9 @@ class WallpaperBackground extends StatelessWidget {
       'food_pattern': 'assets/wallpapers/food_pattern.png',
       'kitchen_utensils': 'assets/wallpapers/kitchen_utensils.png',
     };
-    
+
     final assetPath = wallpaperAssets[wallpaperId];
-    
+
     if (assetPath == null) {
       // Fallback to no wallpaper if asset not found
       return const SizedBox.shrink();

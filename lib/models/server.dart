@@ -1,7 +1,8 @@
 /// Data models for the Server NPS system
-/// 
+///
 /// These models represent the structure of data used in the NPS tracking system,
 /// including servers, feedback, and monthly reports.
+library;
 
 /// Represents a server in the NPS system
 class NPSServer {
@@ -31,11 +32,11 @@ class NPSServer {
       originalId: map['original_id'] as String?,
       hireDate: DateTime.parse(map['hire_date'] as String),
       active: (map['active'] as int) == 1,
-      createdAt: map['created_at'] != null 
-          ? DateTime.parse(map['created_at'] as String) 
+      createdAt: map['created_at'] != null
+          ? DateTime.parse(map['created_at'] as String)
           : null,
-      updatedAt: map['updated_at'] != null 
-          ? DateTime.parse(map['updated_at'] as String) 
+      updatedAt: map['updated_at'] != null
+          ? DateTime.parse(map['updated_at'] as String)
           : null,
     );
   }
@@ -46,7 +47,8 @@ class NPSServer {
       if (id != null) 'id': id,
       'name': name,
       if (originalId != null) 'original_id': originalId,
-      'hire_date': hireDate.toIso8601String().split('T')[0], // Store as YYYY-MM-DD
+      'hire_date':
+          hireDate.toIso8601String().split('T')[0], // Store as YYYY-MM-DD
       'active': active ? 1 : 0,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
@@ -96,26 +98,26 @@ class NPSServer {
 
   /// Check if the server data is valid
   bool isValid() {
-    return name.trim().isNotEmpty && 
-           hireDate.isBefore(DateTime.now().add(const Duration(days: 1)));
+    return name.trim().isNotEmpty &&
+        hireDate.isBefore(DateTime.now().add(const Duration(days: 1)));
   }
 
   /// Get validation errors
   List<String> getValidationErrors() {
     final errors = <String>[];
-    
+
     if (name.trim().isEmpty) {
       errors.add('Server name cannot be empty');
     }
-    
+
     if (name.trim().length > 100) {
       errors.add('Server name cannot exceed 100 characters');
     }
-    
+
     if (hireDate.isAfter(DateTime.now().add(const Duration(days: 1)))) {
       errors.add('Hire date cannot be in the future');
     }
-    
+
     return errors;
   }
 
@@ -130,8 +132,8 @@ class NPSServer {
   /// Calculate tenure in months (approximate)
   int getTenureInMonths([DateTime? asOfDate]) {
     final referenceDate = asOfDate ?? DateTime.now();
-    final months = (referenceDate.year - hireDate.year) * 12 + 
-                   (referenceDate.month - hireDate.month);
+    final months = (referenceDate.year - hireDate.year) * 12 +
+        (referenceDate.month - hireDate.month);
     return months;
   }
 

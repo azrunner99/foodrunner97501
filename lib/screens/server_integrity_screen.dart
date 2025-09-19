@@ -24,9 +24,12 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
-    
+
     final servers = _shouldFilterByRoster()
-        ? app.workingServerIds.map((id) => app.serverById(id)).whereType<Server>().toList()
+        ? app.workingServerIds
+            .map((id) => app.serverById(id))
+            .whereType<Server>()
+            .toList()
         : app.servers;
 
     // Generate integrity assessments
@@ -85,16 +88,16 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
               children: [
                 // Alert Summary Card
                 _buildAlertSummary(),
-                
+
                 // System Health Overview
                 _buildSystemHealth(),
-                
+
                 // Filter Controls
                 _buildFilterControls(),
-                
+
                 // Server Risk Assessment List
                 _buildServerAssessmentList(),
-                
+
                 // Bottom padding to prevent cut-off
                 const SizedBox(height: 20),
               ],
@@ -110,12 +113,12 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
         .expand((a) => a.alerts)
         .where((alert) => alert.level == AlertLevel.critical)
         .length;
-    
+
     final highAlerts = _assessments
         .expand((a) => a.alerts)
         .where((alert) => alert.level == AlertLevel.high)
         .length;
-    
+
     final mediumAlerts = _assessments
         .expand((a) => a.alerts)
         .where((alert) => alert.level == AlertLevel.medium)
@@ -173,18 +176,15 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
             children: [
               Expanded(
                 child: _buildAlertCounter(
-                  'Critical', criticalAlerts, Colors.red, Icons.dangerous
-                ),
+                    'Critical', criticalAlerts, Colors.red, Icons.dangerous),
               ),
               Expanded(
                 child: _buildAlertCounter(
-                  'High', highAlerts, Colors.deepOrange, Icons.error
-                ),
+                    'High', highAlerts, Colors.deepOrange, Icons.error),
               ),
               Expanded(
                 child: _buildAlertCounter(
-                  'Medium', mediumAlerts, Colors.orange, Icons.warning
-                ),
+                    'Medium', mediumAlerts, Colors.orange, Icons.warning),
               ),
               Expanded(
                 child: _buildOverallHealth(),
@@ -196,7 +196,8 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
     );
   }
 
-  Widget _buildAlertCounter(String label, int count, Color color, IconData icon) {
+  Widget _buildAlertCounter(
+      String label, int count, Color color, IconData icon) {
     return Container(
       padding: const EdgeInsets.all(12),
       margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -231,13 +232,14 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
   }
 
   Widget _buildOverallHealth() {
-    final averageRisk = _assessments.isEmpty 
-        ? 0.0 
-        : _assessments.map((a) => a.riskScore).reduce((a, b) => a + b) / _assessments.length;
-    
+    final averageRisk = _assessments.isEmpty
+        ? 0.0
+        : _assessments.map((a) => a.riskScore).reduce((a, b) => a + b) /
+            _assessments.length;
+
     final healthScore = (100 - averageRisk).clamp(0.0, 100.0);
     Color healthColor = Colors.green;
-    
+
     if (healthScore < 40) {
       healthColor = Colors.red;
     } else if (healthScore < 70) {
@@ -278,10 +280,12 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
   }
 
   Widget _buildSystemHealth() {
-    final highRiskServers = _assessments.where((a) => a.riskLevel == RiskLevel.red).length;
-    final mediumRiskServers = _assessments.where((a) => a.riskLevel == RiskLevel.orange).length;
+    final highRiskServers =
+        _assessments.where((a) => a.riskLevel == RiskLevel.red).length;
+    final mediumRiskServers =
+        _assessments.where((a) => a.riskLevel == RiskLevel.orange).length;
     final totalServers = _assessments.length;
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(16),
@@ -316,19 +320,18 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
           Row(
             children: [
               Expanded(
-                child: _buildHealthStat(
-                  'High Risk', highRiskServers, Colors.red
-                ),
+                child:
+                    _buildHealthStat('High Risk', highRiskServers, Colors.red),
               ),
               Expanded(
                 child: _buildHealthStat(
-                  'Medium Risk', mediumRiskServers, Colors.orange
-                ),
+                    'Medium Risk', mediumRiskServers, Colors.orange),
               ),
               Expanded(
                 child: _buildHealthStat(
-                  'Normal', totalServers - highRiskServers - mediumRiskServers, Colors.green
-                ),
+                    'Normal',
+                    totalServers - highRiskServers - mediumRiskServers,
+                    Colors.green),
               ),
             ],
           ),
@@ -395,7 +398,7 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          
+
           // Dropdown for date range selection
           Container(
             width: double.infinity,
@@ -415,9 +418,11 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
                   DropdownMenuItem(value: 'today', child: Text('Today Only')),
                   DropdownMenuItem(value: 'all', child: Text('All Time')),
                   DropdownMenuItem(value: 'week', child: Text('Last Week')),
-                  DropdownMenuItem(value: '2weeks', child: Text('Last 2 Weeks')),
+                  DropdownMenuItem(
+                      value: '2weeks', child: Text('Last 2 Weeks')),
                   DropdownMenuItem(value: 'month', child: Text('Last Month')),
-                  DropdownMenuItem(value: 'custom', child: Text('Custom Range')),
+                  DropdownMenuItem(
+                      value: 'custom', child: Text('Custom Range')),
                 ],
                 onChanged: (String? newValue) {
                   if (newValue != null) {
@@ -433,14 +438,15 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
               ),
             ),
           ),
-          
+
           // Custom date picker (only show when custom is selected)
           if (_dateRange == 'custom') ...[
             const SizedBox(height: 12),
             GestureDetector(
               onTap: () => _selectDateRange(),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(8),
@@ -453,15 +459,19 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
                     Expanded(
                       child: Text(
                         _customStartDate != null && _customEndDate != null
-                          ? '${DateFormat('MMM d, y').format(_customStartDate!)} - ${DateFormat('MMM d, y').format(_customEndDate!)}'
-                          : 'Select date range',
+                            ? '${DateFormat('MMM d, y').format(_customStartDate!)} - ${DateFormat('MMM d, y').format(_customEndDate!)}'
+                            : 'Select date range',
                         style: TextStyle(
-                          color: (_customStartDate != null && _customEndDate != null) ? Colors.red[700] : Colors.grey[600],
+                          color: (_customStartDate != null &&
+                                  _customEndDate != null)
+                              ? Colors.red[700]
+                              : Colors.grey[600],
                           fontSize: 14,
                         ),
                       ),
                     ),
-                    Icon(Icons.calendar_today, color: Colors.red[700], size: 16),
+                    Icon(Icons.calendar_today,
+                        color: Colors.red[700], size: 16),
                   ],
                 ),
               ),
@@ -502,7 +512,7 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
         );
       },
     );
-    
+
     if (picked != null) {
       setState(() {
         _customStartDate = picked.start;
@@ -541,45 +551,53 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
             ),
             child: Row(
               children: const [
-                Expanded(flex: 3, child: Text(
-                  'Server',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    fontSize: 16,
-                  ),
-                )),
-                Expanded(flex: 2, child: Text(
-                  'Risk Score',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    fontSize: 14,
-                  ),
-                  textAlign: TextAlign.center,
-                )),
-                Expanded(flex: 2, child: Text(
-                  'Status',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    fontSize: 14,
-                  ),
-                  textAlign: TextAlign.center,
-                )),
-                Expanded(flex: 2, child: Text(
-                  'Alerts',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    fontSize: 14,
-                  ),
-                  textAlign: TextAlign.center,
-                )),
+                Expanded(
+                    flex: 3,
+                    child: Text(
+                      'Server',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontSize: 16,
+                      ),
+                    )),
+                Expanded(
+                    flex: 2,
+                    child: Text(
+                      'Risk Score',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontSize: 14,
+                      ),
+                      textAlign: TextAlign.center,
+                    )),
+                Expanded(
+                    flex: 2,
+                    child: Text(
+                      'Status',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontSize: 14,
+                      ),
+                      textAlign: TextAlign.center,
+                    )),
+                Expanded(
+                    flex: 2,
+                    child: Text(
+                      'Alerts',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontSize: 14,
+                      ),
+                      textAlign: TextAlign.center,
+                    )),
               ],
             ),
           ),
-          
+
           // Data Rows
           Padding(
             padding: const EdgeInsets.all(8),
@@ -601,9 +619,7 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
       margin: const EdgeInsets.symmetric(vertical: 2),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
-        color: isEven 
-            ? Colors.red.withOpacity(0.05)
-            : Colors.transparent,
+        color: isEven ? Colors.red.withOpacity(0.05) : Colors.transparent,
       ),
       child: Material(
         color: Colors.transparent,
@@ -641,7 +657,8 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
                   child: Column(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: assessment.riskColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
@@ -665,7 +682,8 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
                 Expanded(
                   flex: 2,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                     decoration: BoxDecoration(
                       color: assessment.riskColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
@@ -688,9 +706,11 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
                     children: [
                       if (assessment.alerts.isNotEmpty) ...[
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: assessment.alerts.first.color.withOpacity(0.1),
+                            color:
+                                assessment.alerts.first.color.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
@@ -703,8 +723,8 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
                           ),
                         ),
                       ] else ...[
-                        Icon(Icons.check_circle_outline, 
-                             color: Colors.green, size: 18),
+                        Icon(Icons.check_circle_outline,
+                            color: Colors.green, size: 18),
                       ],
                     ],
                   ),
@@ -717,7 +737,8 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
     );
   }
 
-  List<IntegrityAssessment> _generateAssessments(AppState app, List<Server> servers) {
+  List<IntegrityAssessment> _generateAssessments(
+      AppState app, List<Server> servers) {
     final allServerCounts = <String, int>{};
     for (final server in servers) {
       allServerCounts[server.id] = _getRunCountForDateRange(app, server.id);
@@ -726,11 +747,12 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
     return servers.map((server) {
       final bins = _getIntegrityBinsForDateRange(app, server.id);
       final runCount = _getRunCountForDateRange(app, server.id);
-      
+
       // Get individual timestamps for enhanced analysis
       final (startDate, endDate) = _getDateRangeForAnalysis();
-      final individualTimestamps = app.getIndividualClickTimestamps(server.id, startDate, endDate);
-      
+      final individualTimestamps =
+          app.getIndividualClickTimestamps(server.id, startDate, endDate);
+
       // Generate timestamp-enhanced assessment
       final assessment = IntegrityAnalyzer.analyzeServer(
         serverId: server.id,
@@ -740,9 +762,10 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
         allServers: servers,
         allServerCounts: allServerCounts,
         analysisTime: DateTime.now(),
-        individualTimestamps: individualTimestamps.isNotEmpty ? individualTimestamps : null,
+        individualTimestamps:
+            individualTimestamps.isNotEmpty ? individualTimestamps : null,
       );
-      
+
       return assessment;
     }).toList();
   }
@@ -768,11 +791,11 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
         print('DEBUG: Processing date range $_dateRange for server $serverId');
         final bins = _getIntegrityBinsForDateRange(app, serverId);
         int historicalCount = bins.values.fold(0, (sum, count) => sum + count);
-        
+
         // If the date range includes today, add current counts
         final includesToday = _dateRangeIncludesToday();
         final currentCount = app.currentCounts[serverId] ?? 0;
-        
+
         // Debug logging for custom range
         if (_dateRange == 'custom' && serverId == '4f55jaewuhldbaoi') {
           print('DEBUG Custom range for server $serverId:');
@@ -784,11 +807,11 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
           print('  Current count: $currentCount');
           print('  Bins: $bins');
         }
-        
+
         if (includesToday) {
           historicalCount += currentCount;
         }
-        
+
         return historicalCount;
       default:
         return app.currentCounts[serverId] ?? 0;
@@ -798,23 +821,30 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
   bool _dateRangeIncludesToday() {
     final today = DateTime.now();
     final todayStart = DateTime(today.year, today.month, today.day);
-    
+
     switch (_dateRange) {
       case 'week':
         final weekAgo = today.subtract(const Duration(days: 7));
-        return todayStart.isAfter(weekAgo) || todayStart.isAtSameMomentAs(weekAgo);
+        return todayStart.isAfter(weekAgo) ||
+            todayStart.isAtSameMomentAs(weekAgo);
       case '2weeks':
         final twoWeeksAgo = today.subtract(const Duration(days: 14));
-        return todayStart.isAfter(twoWeeksAgo) || todayStart.isAtSameMomentAs(twoWeeksAgo);
+        return todayStart.isAfter(twoWeeksAgo) ||
+            todayStart.isAtSameMomentAs(twoWeeksAgo);
       case 'month':
         final monthAgo = today.subtract(const Duration(days: 30));
-        return todayStart.isAfter(monthAgo) || todayStart.isAtSameMomentAs(monthAgo);
+        return todayStart.isAfter(monthAgo) ||
+            todayStart.isAtSameMomentAs(monthAgo);
       case 'custom':
         if (_customStartDate != null && _customEndDate != null) {
           // Use the same end-of-day logic as integrityBinsForDateRange
-          final filterEndDate = DateTime(_customEndDate!.year, _customEndDate!.month, _customEndDate!.day, 23, 59, 59, 999);
-          return (todayStart.isAfter(_customStartDate!) || todayStart.isAtSameMomentAs(_customStartDate!)) &&
-                 (todayStart.isBefore(filterEndDate) || todayStart.isAtSameMomentAs(DateTime(filterEndDate.year, filterEndDate.month, filterEndDate.day)));
+          final filterEndDate = DateTime(_customEndDate!.year,
+              _customEndDate!.month, _customEndDate!.day, 23, 59, 59, 999);
+          return (todayStart.isAfter(_customStartDate!) ||
+                  todayStart.isAtSameMomentAs(_customStartDate!)) &&
+              (todayStart.isBefore(filterEndDate) ||
+                  todayStart.isAtSameMomentAs(DateTime(filterEndDate.year,
+                      filterEndDate.month, filterEndDate.day)));
         }
         return false;
       default:
@@ -822,9 +852,10 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
     }
   }
 
-  Map<String, int> _getIntegrityBinsForDateRange(AppState app, String serverId) {
+  Map<String, int> _getIntegrityBinsForDateRange(
+      AppState app, String serverId) {
     final now = DateTime.now();
-    
+
     switch (_dateRange) {
       case 'today':
         return app.integrityBinsForDateRange(serverId, todayOnly: true);
@@ -876,7 +907,8 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
         _assessments.sort((a, b) => a.serverName.compareTo(b.serverName));
         break;
       case 'runs':
-        _assessments.sort((a, b) => b.clickData.totalRuns.compareTo(a.clickData.totalRuns));
+        _assessments.sort(
+            (a, b) => b.clickData.totalRuns.compareTo(a.clickData.totalRuns));
         break;
     }
   }
@@ -943,7 +975,8 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
                   decoration: BoxDecoration(
                     color: assessment.riskColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: assessment.riskColor.withOpacity(0.3)),
+                    border: Border.all(
+                        color: assessment.riskColor.withOpacity(0.3)),
                   ),
                   child: Row(
                     children: [
@@ -958,7 +991,8 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
                       ),
                       const Spacer(),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: assessment.riskColor,
                           borderRadius: BorderRadius.circular(4),
@@ -975,9 +1009,9 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Click Data
                 Text(
                   'Click Analysis',
@@ -988,12 +1022,12 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
                 ),
                 const SizedBox(height: 8),
                 _buildClickDataGrid(assessment.clickData),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Timestamp Analysis (if available)
                 _buildTimestampAnalysisSection(assessment),
-                
+
                 // Risk Factors
                 if (assessment.riskFactors.isNotEmpty) ...[
                   Text(
@@ -1005,25 +1039,25 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
                   ),
                   const SizedBox(height: 8),
                   ...assessment.riskFactors.map((factor) => Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(Icons.warning_amber, 
-                             color: Colors.orange, size: 16),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            factor,
-                            style: const TextStyle(fontSize: 14),
-                          ),
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(Icons.warning_amber,
+                                color: Colors.orange, size: 16),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                factor,
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  )),
+                      )),
                   const SizedBox(height: 16),
                 ],
-                
+
                 // Alerts
                 if (assessment.alerts.isNotEmpty) ...[
                   Text(
@@ -1035,39 +1069,40 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
                   ),
                   const SizedBox(height: 8),
                   ...assessment.alerts.map((alert) => Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: alert.color.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: alert.color.withOpacity(0.3)),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(alert.icon, color: alert.color, size: 18),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                alert.title,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: alert.color,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              Text(
-                                alert.message,
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                            ],
-                          ),
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: alert.color.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(6),
+                          border:
+                              Border.all(color: alert.color.withOpacity(0.3)),
                         ),
-                      ],
-                    ),
-                  )),
+                        child: Row(
+                          children: [
+                            Icon(alert.icon, color: alert.color, size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    alert.title,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: alert.color,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  Text(
+                                    alert.message,
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      )),
                 ],
               ],
             ),
@@ -1095,37 +1130,53 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
         children: [
           Row(
             children: [
-              Expanded(child: _buildDataCell('Total Runs', '${data.totalRuns}')),
-              Expanded(child: _buildDataCell('Active Minutes', '${data.totalClickMinutes}')),
+              Expanded(
+                  child: _buildDataCell('Total Runs', '${data.totalRuns}')),
+              Expanded(
+                  child: _buildDataCell(
+                      'Active Minutes', '${data.totalClickMinutes}')),
             ],
           ),
           const SizedBox(height: 8),
           Row(
             children: [
-              Expanded(child: _buildDataCell('1-Click Minutes', '${data.singleClickMinutes}')),
-              Expanded(child: _buildDataCell('2-Click Minutes', '${data.doubleClickMinutes}')),
+              Expanded(
+                  child: _buildDataCell(
+                      '1-Click Minutes', '${data.singleClickMinutes}')),
+              Expanded(
+                  child: _buildDataCell(
+                      '2-Click Minutes', '${data.doubleClickMinutes}')),
             ],
           ),
           const SizedBox(height: 8),
           Row(
             children: [
-              Expanded(child: _buildDataCell('3-Click Minutes', '${data.tripleClickMinutes}')),
-              Expanded(child: _buildDataCell('4+ Click Minutes', '${data.quadPlusClickMinutes}')),
+              Expanded(
+                  child: _buildDataCell(
+                      '3-Click Minutes', '${data.tripleClickMinutes}')),
+              Expanded(
+                  child: _buildDataCell(
+                      '4+ Click Minutes', '${data.quadPlusClickMinutes}')),
             ],
           ),
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: data.rapidClickRatio > 0.2 ? Colors.orange.withOpacity(0.1) : Colors.green.withOpacity(0.1),
+              color: data.rapidClickRatio > 0.2
+                  ? Colors.orange.withOpacity(0.1)
+                  : Colors.green.withOpacity(0.1),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  data.rapidClickRatio > 0.2 ? Icons.warning : Icons.check_circle,
-                  color: data.rapidClickRatio > 0.2 ? Colors.orange : Colors.green,
+                  data.rapidClickRatio > 0.2
+                      ? Icons.warning
+                      : Icons.check_circle,
+                  color:
+                      data.rapidClickRatio > 0.2 ? Colors.orange : Colors.green,
                   size: 16,
                 ),
                 const SizedBox(width: 8),
@@ -1133,7 +1184,9 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
                   'Rapid Click Ratio: ${(data.rapidClickRatio * 100).toStringAsFixed(1)}%',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: data.rapidClickRatio > 0.2 ? Colors.orange : Colors.green,
+                    color: data.rapidClickRatio > 0.2
+                        ? Colors.orange
+                        : Colors.green,
                   ),
                 ),
               ],
@@ -1170,23 +1223,25 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
 
   Widget _buildTimestampAnalysisSection(IntegrityAssessment assessment) {
     // Check if we have timestamp-based risk factors or alerts
-    final timestampRiskFactors = assessment.riskFactors.where((factor) => 
-      factor.contains('multi-clicking') || 
-      factor.contains('velocity') || 
-      factor.contains('mechanical') ||
-      factor.contains('burst') ||
-      factor.contains('proportional') ||
-      factor.toLowerCase().contains('timing')
-    ).toList();
-    
-    final timestampAlerts = assessment.alerts.where((alert) => 
-      alert.title.contains('Multi-Click') ||
-      alert.title.contains('Velocity') ||
-      alert.title.contains('Mechanical') ||
-      alert.title.contains('Burst') ||
-      alert.title.contains('Pattern') ||
-      alert.title.contains('Automation')
-    ).toList();
+    final timestampRiskFactors = assessment.riskFactors
+        .where((factor) =>
+            factor.contains('multi-clicking') ||
+            factor.contains('velocity') ||
+            factor.contains('mechanical') ||
+            factor.contains('burst') ||
+            factor.contains('proportional') ||
+            factor.toLowerCase().contains('timing'))
+        .toList();
+
+    final timestampAlerts = assessment.alerts
+        .where((alert) =>
+            alert.title.contains('Multi-Click') ||
+            alert.title.contains('Velocity') ||
+            alert.title.contains('Mechanical') ||
+            alert.title.contains('Burst') ||
+            alert.title.contains('Pattern') ||
+            alert.title.contains('Automation'))
+        .toList();
 
     // Only show section if we have timestamp-based analysis
     if (timestampRiskFactors.isEmpty && timestampAlerts.isEmpty) {
@@ -1227,81 +1282,81 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
           ],
         ),
         const SizedBox(height: 12),
-        
+
         // Timestamp-based alerts
         if (timestampAlerts.isNotEmpty) ...[
           ...timestampAlerts.map((alert) => Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: _getAlertLevelColor(alert.level).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: _getAlertLevelColor(alert.level).withOpacity(0.3),
-              ),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  _getAlertLevelIcon(alert.level),
-                  color: _getAlertLevelColor(alert.level),
-                  size: 18,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        alert.title,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          color: _getAlertLevelColor(alert.level),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        alert.message,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey.shade700,
-                        ),
-                      ),
-                    ],
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: _getAlertLevelColor(alert.level).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: _getAlertLevelColor(alert.level).withOpacity(0.3),
                   ),
                 ),
-              ],
-            ),
-          )),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      _getAlertLevelIcon(alert.level),
+                      color: _getAlertLevelColor(alert.level),
+                      size: 18,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            alert.title,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: _getAlertLevelColor(alert.level),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            alert.message,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              )),
         ],
-        
+
         // Timestamp-based risk factors
         if (timestampRiskFactors.isNotEmpty) ...[
           const SizedBox(height: 8),
           ...timestampRiskFactors.map((factor) => Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.insights, color: Colors.blue, size: 16),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    factor,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey.shade600,
-                      fontStyle: FontStyle.italic,
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.insights, color: Colors.blue, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        factor,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey.shade600,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
-            ),
-          )),
+              )),
         ],
-        
+
         const SizedBox(height: 16),
       ],
     );
@@ -1337,7 +1392,7 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
   (DateTime, DateTime) _getDateRangeForAnalysis() {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    
+
     switch (_dateRange) {
       case 'today':
         return (today, now);

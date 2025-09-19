@@ -7,7 +7,7 @@ import 'integrity_monitoring_info_screen.dart';
 import 'server_integrity_profile_screen.dart';
 
 class ServerDashboardScreen extends StatefulWidget {
-  const ServerDashboardScreen({Key? key}) : super(key: key);
+  const ServerDashboardScreen({super.key});
 
   @override
   State<ServerDashboardScreen> createState() => _ServerDashboardScreenState();
@@ -17,8 +17,9 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
   String selectedPeriod = 'Today';
   bool _systemHealthExpanded = false;
   String _sortBy = 'name'; // 'name', 'integrity', 'alerts'
-  bool _activeShiftOnly = false; // Toggle for filtering active shift servers only
-  
+  bool _activeShiftOnly =
+      false; // Toggle for filtering active shift servers only
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -55,15 +56,16 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
     final app = context.watch<AppState>();
     final servers = app.servers;
     final assessments = _generateIntegrityAssessments(app, servers);
-    
+
     final highRisk = assessments.where((a) => a.riskScore >= 70).length;
-    final mediumRisk = assessments.where((a) => a.riskScore >= 40 && a.riskScore < 70).length;
+    final mediumRisk =
+        assessments.where((a) => a.riskScore >= 40 && a.riskScore < 70).length;
     final totalServers = assessments.length;
-    
+
     String healthStatus;
     Color healthColor;
     IconData healthIcon;
-    
+
     if (highRisk == 0 && mediumRisk <= 1) {
       healthStatus = "All systems running smoothly";
       healthColor = Colors.green;
@@ -81,7 +83,7 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
       healthColor = Colors.red;
       healthIcon = Icons.error;
     }
-    
+
     return Card(
       elevation: 2,
       child: Column(
@@ -104,11 +106,14 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
                       const SizedBox(width: 8),
                       const Text(
                         'System Health',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       const Spacer(),
                       Icon(
-                        _systemHealthExpanded ? Icons.expand_less : Icons.expand_more,
+                        _systemHealthExpanded
+                            ? Icons.expand_less
+                            : Icons.expand_more,
                         color: Colors.grey[600],
                       ),
                     ],
@@ -119,7 +124,8 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const IntegrityMonitoringInfoScreen(),
+                          builder: (context) =>
+                              const IntegrityMonitoringInfoScreen(),
                         ),
                       );
                     },
@@ -188,12 +194,19 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
                     style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                   ),
                   const SizedBox(height: 12),
-                  _buildHealthDetailRow('Total Servers Monitored', '$totalServers', Icons.computer),
-                  _buildHealthDetailRow('Green Status (Normal)', '${totalServers - highRisk - mediumRisk}', Icons.check_circle, Colors.green),
+                  _buildHealthDetailRow('Total Servers Monitored',
+                      '$totalServers', Icons.computer),
+                  _buildHealthDetailRow(
+                      'Green Status (Normal)',
+                      '${totalServers - highRisk - mediumRisk}',
+                      Icons.check_circle,
+                      Colors.green),
                   if (mediumRisk > 0)
-                    _buildHealthDetailRow('Medium Risk Servers', '$mediumRisk', Icons.warning, Colors.orange),
+                    _buildHealthDetailRow('Medium Risk Servers', '$mediumRisk',
+                        Icons.warning, Colors.orange),
                   if (highRisk > 0)
-                    _buildHealthDetailRow('High Risk Servers', '$highRisk', Icons.error, Colors.red),
+                    _buildHealthDetailRow('High Risk Servers', '$highRisk',
+                        Icons.error, Colors.red),
                   const SizedBox(height: 8),
                   Row(
                     children: [
@@ -223,7 +236,7 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
     final servers = app.servers;
     final assessments = _generateIntegrityAssessments(app, servers);
     final insights = _generateSmartInsights(assessments);
-    
+
     return Card(
       elevation: 2,
       child: Padding(
@@ -253,7 +266,7 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
                 ),
               )
             else
-              ...insights.map((insight) => _buildInsightItem(insight)).toList(),
+              ...insights.map((insight) => _buildInsightItem(insight)),
           ],
         ),
       ),
@@ -295,7 +308,7 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
     final assessments = _generateIntegrityAssessments(app, servers);
     final flaggedServers = assessments.where((a) => a.riskScore >= 40).toList();
     flaggedServers.sort((a, b) => b.riskScore.compareTo(a.riskScore));
-    
+
     return Card(
       elevation: 2,
       child: Padding(
@@ -325,7 +338,9 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
                 ),
               )
             else
-              ...flaggedServers.take(5).map((assessment) => _buildWatchlistItem(assessment, app)).toList(),
+              ...flaggedServers
+                  .take(5)
+                  .map((assessment) => _buildWatchlistItem(assessment, app)),
           ],
         ),
       ),
@@ -336,10 +351,10 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
     final server = app.serverById(assessment.serverId);
     final profile = app.profiles[assessment.serverId];
     final explanation = _getPlainEnglishExplanation(assessment);
-    
+
     Color riskColor;
     String riskLevel;
-    
+
     if (assessment.riskScore >= 70) {
       riskColor = Colors.red;
       riskLevel = 'High';
@@ -350,7 +365,7 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
       riskColor = Colors.yellow;
       riskLevel = 'Low';
     }
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
@@ -366,8 +381,8 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
             children: [
               CircleAvatar(
                 radius: 16,
-                backgroundImage: profile?.avatarPath != null 
-                    ? AssetImage(profile!.avatarPath!) 
+                backgroundImage: profile?.avatarPath != null
+                    ? AssetImage(profile!.avatarPath!)
                     : const AssetImage('assets/avatars/image001.png'),
               ),
               const SizedBox(width: 12),
@@ -409,7 +424,7 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
 
   Widget _buildPeriodSelector() {
     final periods = ['Today', 'This Week', 'This Month', 'All Time'];
-    
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -446,10 +461,12 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
     final app = context.watch<AppState>();
     final servers = app.servers;
     final profiles = app.profiles;
-    final activeServers = servers.where((s) => (profiles[s.id]?.allTimeRuns ?? 0) > 0).length;
-    final totalRuns = servers.fold(0, (sum, s) => sum + (profiles[s.id]?.allTimeRuns ?? 0));
+    final activeServers =
+        servers.where((s) => (profiles[s.id]?.allTimeRuns ?? 0) > 0).length;
+    final totalRuns =
+        servers.fold(0, (sum, s) => sum + (profiles[s.id]?.allTimeRuns ?? 0));
     final avgRuns = activeServers > 0 ? (totalRuns / activeServers).round() : 0;
-    
+
     return Row(
       children: [
         Expanded(
@@ -482,7 +499,8 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
     );
   }
 
-  Widget _buildOverviewCard(String title, String value, IconData icon, Color color) {
+  Widget _buildOverviewCard(
+      String title, String value, IconData icon, Color color) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -517,7 +535,7 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
     final servers = app.servers;
     final profiles = app.profiles;
     final assessments = _generateIntegrityAssessments(app, servers);
-    
+
     // Create a list of server data
     final serverData = servers
         .map((server) => {
@@ -546,34 +564,40 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
               ),
             })
         .where((data) {
-          // Filter by active shift if toggle is enabled
-          if (_activeShiftOnly && app.shiftActive) {
-            final server = data['server'] as Server;
-            return app.workingServerIds.contains(server.id);
-          }
-          return true; // Show all servers when toggle is off or no active shift
-        })
-        .toList();
-    
+      // Filter by active shift if toggle is enabled
+      if (_activeShiftOnly && app.shiftActive) {
+        final server = data['server'] as Server;
+        return app.workingServerIds.contains(server.id);
+      }
+      return true; // Show all servers when toggle is off or no active shift
+    }).toList();
+
     // Sort based on selected criteria
     switch (_sortBy) {
       case 'name':
-        serverData.sort((a, b) => (a['server'] as Server).name.compareTo((b['server'] as Server).name));
+        serverData.sort((a, b) => (a['server'] as Server)
+            .name
+            .compareTo((b['server'] as Server).name));
         break;
       case 'integrity':
-        serverData.sort((a, b) => (b['assessment'] as IntegrityAssessment).riskScore.compareTo((a['assessment'] as IntegrityAssessment).riskScore));
+        serverData.sort((a, b) => (b['assessment'] as IntegrityAssessment)
+            .riskScore
+            .compareTo((a['assessment'] as IntegrityAssessment).riskScore));
         break;
       case 'alerts':
         serverData.sort((a, b) {
-          final aAlerts = (a['assessment'] as IntegrityAssessment).alerts.length;
-          final bAlerts = (b['assessment'] as IntegrityAssessment).alerts.length;
+          final aAlerts =
+              (a['assessment'] as IntegrityAssessment).alerts.length;
+          final bAlerts =
+              (b['assessment'] as IntegrityAssessment).alerts.length;
           return bAlerts.compareTo(aAlerts);
         });
         break;
       default:
-        serverData.sort((a, b) => (b['runs'] as int).compareTo(a['runs'] as int));
+        serverData
+            .sort((a, b) => (b['runs'] as int).compareTo(a['runs'] as int));
     }
-    
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -591,11 +615,17 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
                 const SizedBox(width: 12),
                 // Active Shift Only toggle
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    border: Border.all(color: _activeShiftOnly ? Colors.orange[300]! : Colors.grey[300]!),
+                    border: Border.all(
+                        color: _activeShiftOnly
+                            ? Colors.orange[300]!
+                            : Colors.grey[300]!),
                     borderRadius: BorderRadius.circular(8),
-                    color: _activeShiftOnly ? Colors.orange[50] : Colors.transparent,
+                    color: _activeShiftOnly
+                        ? Colors.orange[50]
+                        : Colors.transparent,
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -604,8 +634,12 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
                         'Active Shift Only',
                         style: TextStyle(
                           fontSize: 12,
-                          fontWeight: _activeShiftOnly ? FontWeight.w600 : FontWeight.normal,
-                          color: _activeShiftOnly ? Colors.orange[800] : Colors.black87,
+                          fontWeight: _activeShiftOnly
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                          color: _activeShiftOnly
+                              ? Colors.orange[800]
+                              : Colors.black87,
                         ),
                       ),
                       const SizedBox(width: 6),
@@ -618,8 +652,9 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
                               _activeShiftOnly = value;
                             });
                           },
-                          activeColor: Colors.orange,
-                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          activeThumbColor: Colors.orange,
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
                         ),
                       ),
                     ],
@@ -671,7 +706,7 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
               )
             else
               // Make the server list scrollable and show all servers
-              Container(
+              SizedBox(
                 height: 400, // Fixed height for scrollable area
                 child: ListView.builder(
                   itemCount: serverData.length,
@@ -692,9 +727,9 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
     final runs = data['runs'] as int;
     final assessment = data['assessment'] as IntegrityAssessment;
     final hasAlerts = assessment.alerts.isNotEmpty;
-    final hasHighRiskAlerts = assessment.alerts.any((alert) => 
+    final hasHighRiskAlerts = assessment.alerts.any((alert) =>
         alert.level == AlertLevel.high || alert.level == AlertLevel.critical);
-    
+
     return InkWell(
       onTap: () => Navigator.push(
         context,
@@ -712,7 +747,9 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
         decoration: BoxDecoration(
           color: hasAlerts ? Colors.orange[50] : Colors.grey[50],
           borderRadius: BorderRadius.circular(8),
-          border: hasAlerts ? Border.all(color: Colors.orange.withOpacity(0.3), width: 1) : null,
+          border: hasAlerts
+              ? Border.all(color: Colors.orange.withOpacity(0.3), width: 1)
+              : null,
         ),
         child: Row(
           children: [
@@ -720,8 +757,8 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
               children: [
                 CircleAvatar(
                   radius: 20,
-                  backgroundImage: profile?.avatarPath != null 
-                      ? AssetImage(profile!.avatarPath!) 
+                  backgroundImage: profile?.avatarPath != null
+                      ? AssetImage(profile!.avatarPath!)
                       : const AssetImage('assets/avatars/image001.png'),
                 ),
                 if (hasAlerts)
@@ -778,20 +815,26 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
                         // Show current shift runs when toggle is active
                         Text(
                           '${app.currentCounts[server.id] ?? 0} runs (current shift)',
-                          style: TextStyle(color: Colors.orange[600], fontSize: 12, fontWeight: FontWeight.w500),
+                          style: TextStyle(
+                              color: Colors.orange[600],
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500),
                         ),
                       ] else ...[
                         // Show all-time runs when toggle is off
                         Text(
                           '$runs runs',
-                          style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                          style:
+                              TextStyle(color: Colors.grey[600], fontSize: 12),
                         ),
                       ],
                       if (hasAlerts) ...[
                         Text(
                           ' • ${assessment.alerts.length} alert${assessment.alerts.length > 1 ? 's' : ''}',
                           style: TextStyle(
-                            color: hasHighRiskAlerts ? Colors.red[600] : Colors.orange[600],
+                            color: hasHighRiskAlerts
+                                ? Colors.red[600]
+                                : Colors.orange[600],
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
                           ),
@@ -839,7 +882,7 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
     final isActive = app.shiftActive;
     final shiftType = app.shiftType;
     final workingCount = app.workingServerIds.length;
-    
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -880,7 +923,8 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: isActive ? Colors.green[700] : Colors.grey[700],
+                          color:
+                              isActive ? Colors.green[700] : Colors.grey[700],
                         ),
                       ),
                     ],
@@ -897,7 +941,8 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
     );
   }
 
-  List<IntegrityAssessment> _generateIntegrityAssessments(AppState app, List<Server> servers) {
+  List<IntegrityAssessment> _generateIntegrityAssessments(
+      AppState app, List<Server> servers) {
     final allServerCounts = <String, int>{};
     for (final server in servers) {
       allServerCounts[server.id] = _getRunCountForDateRange(app, server.id);
@@ -906,7 +951,7 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
     return servers.map((server) {
       final bins = _getIntegrityBinsForDateRange(app, server.id);
       final runCount = _getRunCountForDateRange(app, server.id);
-      
+
       try {
         // Generate enhanced assessment with advanced pattern recognition
         final enhancedAssessment = IntegrityAnalyzer.analyzeServerAdvanced(
@@ -918,7 +963,7 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
           allServerCounts: allServerCounts,
           analysisTime: DateTime.now(),
         );
-        
+
         // Return the enhanced assessment which contains all advanced analytics
         return enhancedAssessment.toBasicAssessment();
       } catch (e) {
@@ -936,9 +981,10 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
     }).toList();
   }
 
-  Map<String, int> _getIntegrityBinsForDateRange(AppState app, String serverId) {
+  Map<String, int> _getIntegrityBinsForDateRange(
+      AppState app, String serverId) {
     final now = DateTime.now();
-    
+
     switch (selectedPeriod) {
       case 'Today':
         return app.integrityBinsForDateRange(serverId, todayOnly: true);
@@ -979,53 +1025,65 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
     }
   }
 
-  List<Map<String, dynamic>> _generateSmartInsights(List<IntegrityAssessment> assessments) {
+  List<Map<String, dynamic>> _generateSmartInsights(
+      List<IntegrityAssessment> assessments) {
     final insights = <Map<String, dynamic>>[];
-    
+
     // High risk servers
-    final highRiskServers = assessments.where((a) => a.riskScore >= 70).toList();
+    final highRiskServers =
+        assessments.where((a) => a.riskScore >= 70).toList();
     if (highRiskServers.isNotEmpty) {
       insights.add({
         'icon': Icons.warning,
         'color': Colors.red,
-        'message': '${highRiskServers.length} server${highRiskServers.length > 1 ? 's show' : ' shows'} unusual activity patterns that need immediate attention.',
+        'message':
+            '${highRiskServers.length} server${highRiskServers.length > 1 ? 's show' : ' shows'} unusual activity patterns that need immediate attention.',
       });
     }
-    
+
     // Medium risk servers
-    final mediumRiskServers = assessments.where((a) => a.riskScore >= 40 && a.riskScore < 70).toList();
+    final mediumRiskServers = assessments
+        .where((a) => a.riskScore >= 40 && a.riskScore < 70)
+        .toList();
     if (mediumRiskServers.isNotEmpty) {
       insights.add({
         'icon': Icons.info,
         'color': Colors.orange,
-        'message': '${mediumRiskServers.length} server${mediumRiskServers.length > 1 ? 's have' : ' has'} moderate concerns worth monitoring.',
+        'message':
+            '${mediumRiskServers.length} server${mediumRiskServers.length > 1 ? 's have' : ' has'} moderate concerns worth monitoring.',
       });
     }
-    
+
     // Alert analysis
-    final serversWithAlerts = assessments.where((a) => a.alerts.isNotEmpty).length;
+    final serversWithAlerts =
+        assessments.where((a) => a.alerts.isNotEmpty).length;
     if (serversWithAlerts > 0) {
       insights.add({
         'icon': Icons.notification_important,
         'color': Colors.orange,
-        'message': '$serversWithAlerts server${serversWithAlerts > 1 ? 's have' : ' has'} active alerts requiring review.',
+        'message':
+            '$serversWithAlerts server${serversWithAlerts > 1 ? 's have' : ' has'} active alerts requiring review.',
       });
     }
-    
+
     // Performance insights
-    final totalRuns = assessments.fold(0, (sum, a) => sum + a.clickData.totalRuns);
+    final totalRuns =
+        assessments.fold(0, (sum, a) => sum + a.clickData.totalRuns);
     if (totalRuns > 0) {
       final avgRuns = totalRuns / assessments.length;
-      final topPerformers = assessments.where((a) => a.clickData.totalRuns > avgRuns * 1.5).length;
+      final topPerformers = assessments
+          .where((a) => a.clickData.totalRuns > avgRuns * 1.5)
+          .length;
       if (topPerformers > 0) {
         insights.add({
           'icon': Icons.star,
           'color': Colors.green,
-          'message': '$topPerformers server${topPerformers > 1 ? 's are' : ' is'} performing exceptionally well this period.',
+          'message':
+              '$topPerformers server${topPerformers > 1 ? 's are' : ' is'} performing exceptionally well this period.',
         });
       }
     }
-    
+
     // If no concerns, show positive message
     if (insights.isEmpty || insights.every((i) => i['color'] == Colors.green)) {
       insights.insert(0, {
@@ -1034,11 +1092,12 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
         'message': 'All servers are operating within normal parameters.',
       });
     }
-    
+
     return insights;
   }
 
-  Widget _buildHealthDetailRow(String label, String value, IconData icon, [Color? color]) {
+  Widget _buildHealthDetailRow(String label, String value, IconData icon,
+      [Color? color]) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -1070,7 +1129,7 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
 
   String _getPlainEnglishExplanation(IntegrityAssessment assessment) {
     final reasons = <String>[];
-    
+
     // Base the explanation on risk score and factors
     if (assessment.riskScore >= 80) {
       reasons.add('Shows very unusual activity patterns');
@@ -1079,7 +1138,7 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
     } else if (assessment.riskScore >= 40) {
       reasons.add('Shows some irregular patterns');
     }
-    
+
     // Include specific risk factors mentioned in the assessment
     if (assessment.riskFactors.isNotEmpty) {
       for (final factor in assessment.riskFactors.take(2)) {
@@ -1087,18 +1146,20 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
           reasons.add('has periods of very rapid clicking');
         } else if (factor.toLowerCase().contains('session')) {
           reasons.add('works for unusually long periods');
-        } else if (factor.toLowerCase().contains('peer') || factor.toLowerCase().contains('outlier')) {
+        } else if (factor.toLowerCase().contains('peer') ||
+            factor.toLowerCase().contains('outlier')) {
           reasons.add('performs very differently from other servers');
         } else if (factor.toLowerCase().contains('volume')) {
           reasons.add('has unusually high activity levels');
-        } else if (factor.toLowerCase().contains('temporal') || factor.toLowerCase().contains('time')) {
+        } else if (factor.toLowerCase().contains('temporal') ||
+            factor.toLowerCase().contains('time')) {
           reasons.add('shows unusual timing patterns');
         } else if (factor.toLowerCase().contains('pattern')) {
           reasons.add('has mechanical or repetitive patterns');
         }
       }
     }
-    
+
     // Check for alerts
     if (assessment.alerts.isNotEmpty) {
       final alertCount = assessment.alerts.length;
@@ -1108,13 +1169,13 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
         reasons.add('has $alertCount active alerts');
       }
     }
-    
+
     if (reasons.isEmpty) {
       return 'Activity patterns are slightly unusual but within acceptable range.';
     }
-    
+
     if (reasons.length == 1) {
-      return reasons.first.capitalize() + '.';
+      return '${reasons.first.capitalize()}.';
     } else if (reasons.length == 2) {
       return '${reasons[0].capitalize()} and ${reasons[1]}.';
     } else {

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class IntegrityMonitoringInfoScreen extends StatelessWidget {
-  const IntegrityMonitoringInfoScreen({Key? key}) : super(key: key);
+  const IntegrityMonitoringInfoScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +33,6 @@ class IntegrityMonitoringInfoScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            
             _buildFeatureCard(
               'Multi-Dimensional Fairness Scoring',
               'Like a fairness report card that combines multiple factors to detect potential cheating. We analyze different aspects of clicking behavior to spot servers who might be gaming the system.',
@@ -46,7 +45,6 @@ class IntegrityMonitoringInfoScreen extends StatelessWidget {
               Icons.analytics,
               Colors.blue,
             ),
-            
             _buildFeatureCard(
               'Rapid-Fire Click Detection',
               'The biggest red flag: servers clicking extremely fast in short bursts to rack up fake deliveries. This catches people trying to cheat by rapid-clicking their button.',
@@ -59,7 +57,6 @@ class IntegrityMonitoringInfoScreen extends StatelessWidget {
               Icons.mouse,
               Colors.red,
             ),
-            
             _buildFeatureCard(
               'Unnatural Pattern Detection',
               'Real food service has natural variation - sometimes busy, sometimes slow. This catches overly consistent clicking that suggests someone is gaming the system methodically.',
@@ -72,7 +69,6 @@ class IntegrityMonitoringInfoScreen extends StatelessWidget {
               Icons.precision_manufacturing,
               Colors.orange,
             ),
-            
             _buildFeatureCard(
               'Unrealistic Session Monitoring',
               'Real servers take breaks, have rushes and slow periods. This flags sessions that seem too long or consistent to be genuine food service work.',
@@ -85,7 +81,6 @@ class IntegrityMonitoringInfoScreen extends StatelessWidget {
               Icons.schedule,
               Colors.green,
             ),
-            
             _buildFeatureCard(
               'Performance Outlier Analysis',
               'When someone is delivering way more food than everyone else, it raises questions. This compares each server to the group to spot unrealistic overperformers.',
@@ -98,7 +93,6 @@ class IntegrityMonitoringInfoScreen extends StatelessWidget {
               Icons.show_chart,
               Colors.purple,
             ),
-            
             _buildFeatureCard(
               'Sudden Performance Spike Detection',
               'If someone suddenly goes from 10 deliveries to 30+ deliveries instantly, that\'s suspicious. This catches dramatic increases that don\'t match restaurant reality.',
@@ -111,7 +105,6 @@ class IntegrityMonitoringInfoScreen extends StatelessWidget {
               Icons.trending_up,
               Colors.deepOrange,
             ),
-            
             const SizedBox(height: 24),
             Container(
               width: double.infinity,
@@ -153,7 +146,6 @@ class IntegrityMonitoringInfoScreen extends StatelessWidget {
                 ],
               ),
             ),
-            
             const SizedBox(height: 24),
           ],
         ),
@@ -207,26 +199,26 @@ class IntegrityMonitoringInfoScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             ...details.map((detail) => Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '• ',
-                    style: TextStyle(
-                      color: color,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '• ',
+                        style: TextStyle(
+                          color: color,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          detail,
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                      ),
+                    ],
                   ),
-                  Expanded(
-                    child: Text(
-                      detail,
-                      style: const TextStyle(fontSize: 13),
-                    ),
-                  ),
-                ],
-              ),
-            )).toList(),
+                )),
           ],
         ),
       ),

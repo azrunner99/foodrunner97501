@@ -1,0 +1,38 @@
+﻿{
+    "settings":  {
+                     "files.watcherExclude":  {
+                                                  "windows/**":  true,
+                                                  "linux/**":  true,
+                                                  "backup foodrunning/**":  true,
+                                                  "web/**":  true,
+                                                  "android/**":  true,
+                                                  "macos/**":  true,
+                                                  "_backup_foodrunning/**":  true,
+                                                  ".dart_tool/**":  true,
+                                                  "ios/**":  true,
+                                                  "build/**":  true
+                                              },
+                     "dart.onlyAnalyzeProjectsWithOpenFiles":  true,
+                     "workbench.startupEditor":  "none",
+                     "window.restoreWindows":  "none",
+                     "search.exclude":  {
+                                            "ios":  true,
+                                            "web":  true,
+                                            "build":  true,
+                                            "backup foodrunning":  true,
+                                            "linux":  true,
+                                            "android":  true,
+                                            "windows":  true,
+                                            "macos":  true,
+                                            "_backup_foodrunning":  true,
+                                            ".dart_tool":  true
+                                        },
+                     "terminal.integrated.gpuAcceleration":  "off",
+                     "git.enabled":  false
+                 },
+    "folders":  [
+                    {
+                        "path":  "."
+                    }
+                ]
+}

@@ -20,7 +20,9 @@ class Server {
       name: map['name'] as String,
       teamColor: map['teamColor'] as String?,
       stationType: map['stationType'] as String?,
-      hireDate: map['hireDate'] != null ? DateTime.parse(map['hireDate'] as String) : null,
+      hireDate: map['hireDate'] != null
+          ? DateTime.parse(map['hireDate'] as String)
+          : null,
     );
   }
 
@@ -38,9 +40,9 @@ class Server {
 
 class ShiftRecord {
   String id;
-  String label;      // “Lunch” or “Dinner”
-  String shiftType;  // “Lunch” or “Dinner”
-  DateTime start;    // start of that shift
+  String label; // “Lunch” or “Dinner”
+  String shiftType; // “Lunch” or “Dinner”
+  DateTime start; // start of that shift
   Map<String, int> counts; // serverId -> runs
   Map<String, int> pizookieCounts; // serverId -> pizookie runs for this shift
 
@@ -54,29 +56,31 @@ class ShiftRecord {
   }) : pizookieCounts = pizookieCounts ?? <String, int>{};
 
   Map<String, dynamic> toMap() => {
-    'id': id,
-    'label': label,
-    'shiftType': shiftType,
-    'start': start.toIso8601String(),
-    'counts': counts,
-    'pizookieCounts': pizookieCounts,
-  };
+        'id': id,
+        'label': label,
+        'shiftType': shiftType,
+        'start': start.toIso8601String(),
+        'counts': counts,
+        'pizookieCounts': pizookieCounts,
+      };
   static ShiftRecord fromMap(Map<String, dynamic> m) => ShiftRecord(
-    id: m['id'],
-    label: m['label'],
-    shiftType: m['shiftType'],
-    start: DateTime.parse(m['start']),
-    counts: Map<String, int>.from((m['counts'] as Map).map((k, v) => MapEntry(k as String, v as int))),
-    pizookieCounts: m['pizookieCounts'] != null
-      ? Map<String, int>.from((m['pizookieCounts'] as Map).map((k, v) => MapEntry(k as String, v as int)))
-      : <String, int>{},
-  );
+        id: m['id'],
+        label: m['label'],
+        shiftType: m['shiftType'],
+        start: DateTime.parse(m['start']),
+        counts: Map<String, int>.from((m['counts'] as Map)
+            .map((k, v) => MapEntry(k as String, v as int))),
+        pizookieCounts: m['pizookieCounts'] != null
+            ? Map<String, int>.from((m['pizookieCounts'] as Map)
+                .map((k, v) => MapEntry(k as String, v as int)))
+            : <String, int>{},
+      );
 }
 
 /// Day plan for building both rosters ahead of time.
 class DayPlan {
   String ymd; // YYYY-MM-DD
-  List<String> lunchRoster;  // server ids
+  List<String> lunchRoster; // server ids
   List<String> dinnerRoster; // server ids
   int transitionStartMinutes;
   int transitionEndMinutes;
@@ -88,35 +92,37 @@ class DayPlan {
     required this.transitionEndMinutes,
   });
   Map<String, dynamic> toMap() => {
-    'ymd': ymd,
-    'lunchRoster': lunchRoster,
-    'dinnerRoster': dinnerRoster,
-    'transitionStartMinutes': transitionStartMinutes,
-    'transitionEndMinutes': transitionEndMinutes,
-  };
+        'ymd': ymd,
+        'lunchRoster': lunchRoster,
+        'dinnerRoster': dinnerRoster,
+        'transitionStartMinutes': transitionStartMinutes,
+        'transitionEndMinutes': transitionEndMinutes,
+      };
   static DayPlan fromMap(Map<String, dynamic> m) => DayPlan(
-    ymd: m['ymd'],
-    lunchRoster: (m['lunchRoster'] as List).cast<String>(),
-    dinnerRoster: (m['dinnerRoster'] as List).cast<String>(),
-    transitionStartMinutes: m['transitionStartMinutes'] ?? (15 * 60 + 30),
-    transitionEndMinutes: m['transitionEndMinutes'] ?? (17 * 60),
-  );
+        ymd: m['ymd'],
+        lunchRoster: (m['lunchRoster'] as List).cast<String>(),
+        dinnerRoster: (m['dinnerRoster'] as List).cast<String>(),
+        transitionStartMinutes: m['transitionStartMinutes'] ?? (15 * 60 + 30),
+        transitionEndMinutes: m['transitionEndMinutes'] ?? (17 * 60),
+      );
 }
 
 /// Weekly open/close minutes since midnight, 1=Mon .. 7=Sun
 class WeeklyHours {
-  final Map<int, int> openMinutes;  // weekday -> minutes since midnight
+  final Map<int, int> openMinutes; // weekday -> minutes since midnight
   final Map<int, int> closeMinutes; // weekday -> minutes since midnight
   final Map<int, int> closeDayOffset; // weekday -> 0 (same day) or 1 (next day)
-  
+
   WeeklyHours({
-    required this.openMinutes, 
+    required this.openMinutes,
     required this.closeMinutes,
     Map<int, int>? closeDayOffset,
-  }) : closeDayOffset = closeDayOffset ?? _computeCloseDayOffset(openMinutes, closeMinutes);
-  
+  }) : closeDayOffset =
+            closeDayOffset ?? _computeCloseDayOffset(openMinutes, closeMinutes);
+
   /// Automatically compute closeDayOffset based on close time logic
-  static Map<int, int> _computeCloseDayOffset(Map<int, int> openMinutes, Map<int, int> closeMinutes) {
+  static Map<int, int> _computeCloseDayOffset(
+      Map<int, int> openMinutes, Map<int, int> closeMinutes) {
     final result = <int, int>{};
     for (final weekday in [1, 2, 3, 4, 5, 6, 7]) {
       final close = closeMinutes[weekday] ?? 23 * 60;
@@ -125,26 +131,28 @@ class WeeklyHours {
     }
     return result;
   }
-  
+
   Map<String, dynamic> toMap() => {
-    'open': openMinutes.map((k, v) => MapEntry(k.toString(), v)),
-    'close': closeMinutes.map((k, v) => MapEntry(k.toString(), v)),
-    'closeDayOffset': closeDayOffset.map((k, v) => MapEntry(k.toString(), v)),
-  };
-  
+        'open': openMinutes.map((k, v) => MapEntry(k.toString(), v)),
+        'close': closeMinutes.map((k, v) => MapEntry(k.toString(), v)),
+        'closeDayOffset':
+            closeDayOffset.map((k, v) => MapEntry(k.toString(), v)),
+      };
+
   static WeeklyHours fromMap(Map<String, dynamic> m) {
-    Map<int, int> parse(Map src) => src.map((k, v) => MapEntry(int.parse(k as String), v as int));
+    Map<int, int> parse(Map src) =>
+        src.map((k, v) => MapEntry(int.parse(k as String), v as int));
     final openMinutes = parse(m['open']);
     final closeMinutes = parse(m['close']);
-    
+
     // Handle migration: if closeDayOffset doesn't exist, compute it
     final closeDayOffsetRaw = m['closeDayOffset'] as Map?;
-    final closeDayOffset = closeDayOffsetRaw != null 
-      ? parse(closeDayOffsetRaw)
-      : _computeCloseDayOffset(openMinutes, closeMinutes);
-    
+    final closeDayOffset = closeDayOffsetRaw != null
+        ? parse(closeDayOffsetRaw)
+        : _computeCloseDayOffset(openMinutes, closeMinutes);
+
     return WeeklyHours(
-      openMinutes: openMinutes, 
+      openMinutes: openMinutes,
       closeMinutes: closeMinutes,
       closeDayOffset: closeDayOffset,
     );
@@ -152,10 +160,13 @@ class WeeklyHours {
 
   static WeeklyHours defaults() {
     // Mon-Thu 11:00–23:00, Fri-Sat 11:00–24:00, Sun 11:00–22:00
-    final open = <int, int>{for (var d = 1; d <= 7; d++) d: 11 * 60}; // All days open at 11:00 AM
+    final open = <int, int>{
+      for (var d = 1; d <= 7; d++) d: 11 * 60
+    }; // All days open at 11:00 AM
     final close = <int, int>{
-      1: 23 * 60, 2: 23 * 60, 3: 23 * 60, 4: 23 * 60,  // Mon-Thu: 11 PM
-      5: 24 * 60, 6: 1455, 7: 22 * 60,  // Fri: 12 AM, Sat: 12:15 AM next day, Sun: 10 PM
+      1: 23 * 60, 2: 23 * 60, 3: 23 * 60, 4: 23 * 60, // Mon-Thu: 11 PM
+      5: 24 * 60, 6: 1455,
+      7: 22 * 60, // Fri: 12 AM, Sat: 12:15 AM next day, Sun: 10 PM
     };
     return WeeklyHours(openMinutes: open, closeMinutes: close);
   }

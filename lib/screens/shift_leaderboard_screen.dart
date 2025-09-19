@@ -13,10 +13,10 @@ class ShiftLeaderboardScreen extends StatefulWidget {
   final String shiftType; // 'Lunch' or 'Dinner'
 
   const ShiftLeaderboardScreen({
-    Key? key,
+    super.key,
     required this.app,
     required this.shiftType,
-  }) : super(key: key);
+  });
 
   @override
   State<ShiftLeaderboardScreen> createState() => _ShiftLeaderboardScreenState();
@@ -27,10 +27,10 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
   String _sortBy = 'xp'; // 'runs', 'pizookies', 'xp'
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
-  
+
   // Easter egg tap counting
-  Map<String, int> _easterEggTapCounts = {};
-  Map<String, Timer?> _easterEggTimers = {};
+  final Map<String, int> _easterEggTapCounts = {};
+  final Map<String, Timer?> _easterEggTimers = {};
 
   @override
   void initState() {
@@ -65,7 +65,9 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
         final lunchIds = plan?.lunchRoster ?? [];
         final dinnerIds = plan?.dinnerRoster ?? [];
         final isLunch = widget.shiftType.toLowerCase() == 'lunch';
-        final isAfterTransition = m >= (plan?.transitionEndMinutes ?? appState.settings.transitionEndMinutes);
+        final isAfterTransition = m >=
+            (plan?.transitionEndMinutes ??
+                appState.settings.transitionEndMinutes);
 
         // Get roster based on shift type
         final ids = isLunch ? lunchIds : dinnerIds;
@@ -73,16 +75,18 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
 
         // Sort by selected metric
         if (_sortBy == 'runs') {
-          sortedIds.sort((a, b) => (appState.currentCounts[b] ?? 0).compareTo(appState.currentCounts[a] ?? 0));
+          sortedIds.sort((a, b) => (appState.currentCounts[b] ?? 0)
+              .compareTo(appState.currentCounts[a] ?? 0));
         } else if (_sortBy == 'pizookies') {
-          sortedIds.sort((a, b) => (appState.currentPizookieCounts[b] ?? 0).compareTo(appState.currentPizookieCounts[a] ?? 0));
+          sortedIds.sort((a, b) => (appState.currentPizookieCounts[b] ?? 0)
+              .compareTo(appState.currentPizookieCounts[a] ?? 0));
         } else if (_sortBy == 'xp') {
           sortedIds.sort((a, b) {
             final runsA = appState.currentCounts[a] ?? 0;
             final pizookiesA = appState.currentPizookieCounts[a] ?? 0;
             final runsB = appState.currentCounts[b] ?? 0;
             final pizookiesB = appState.currentPizookieCounts[b] ?? 0;
-            
+
             // Apply boost multiplier if active - Pizookies are 25 XP total, not 10+25
             final boost = appState.boostActive ? appState.boostMultiplier : 1.0;
             final regularRunsA = runsA - pizookiesA;
@@ -94,12 +98,16 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
         }
 
         // Calculate enhanced metrics
-        final counts = sortedIds.map((id) => appState.currentCounts[id] ?? 0).toList();
+        final counts =
+            sortedIds.map((id) => appState.currentCounts[id] ?? 0).toList();
         final totalRuns = counts.fold<int>(0, (a, b) => a + b);
         final avgRuns = totalRuns > 0 ? totalRuns / sortedIds.length : 0.0;
-        final maxRuns = counts.isNotEmpty ? counts.reduce((a, b) => a > b ? a : b) : 0;
+        final maxRuns =
+            counts.isNotEmpty ? counts.reduce((a, b) => a > b ? a : b) : 0;
         final activeServers = counts.where((c) => c > 0).length;
-        final totalPizookies = sortedIds.map((id) => appState.currentPizookieCounts[id] ?? 0).fold<int>(0, (a, b) => a + b);
+        final totalPizookies = sortedIds
+            .map((id) => appState.currentPizookieCounts[id] ?? 0)
+            .fold<int>(0, (a, b) => a + b);
 
         return Scaffold(
           body: Container(
@@ -122,16 +130,18 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
                   children: [
                     // Enhanced Header
                     _buildHeader(isLunch, isAfterTransition, appState),
-                    
+
                     // Stats Dashboard
-                    _buildStatsDashboard(totalRuns, avgRuns, maxRuns, activeServers, sortedIds.length, totalPizookies),
-                    
+                    _buildStatsDashboard(totalRuns, avgRuns, maxRuns,
+                        activeServers, sortedIds.length, totalPizookies),
+
                     // Sort Controls
                     _buildSortControls(),
-                    
+
                     // Leaderboard List
                     Expanded(
-                      child: _buildLeaderboardList(sortedIds, maxRuns, appState),
+                      child:
+                          _buildLeaderboardList(sortedIds, maxRuns, appState),
                     ),
                   ],
                 ),
@@ -153,7 +163,8 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
             children: [
               IconButton(
                 onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
+                icon:
+                    const Icon(Icons.arrow_back, color: Colors.white, size: 28),
               ),
               Text(
                 '🏆 ${widget.shiftType} Leaderboard',
@@ -169,7 +180,9 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
                   print('[DEBUG] Manual reconstruction triggered');
                   appState.manuallyReconstructAllTimeRuns();
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Reconstruction triggered - check console')),
+                    const SnackBar(
+                        content:
+                            Text('Reconstruction triggered - check console')),
                   );
                 },
                 icon: const Icon(Icons.refresh, color: Colors.white),
@@ -200,7 +213,8 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
     );
   }
 
-  Widget _buildStatsDashboard(int totalRuns, double avgRuns, int maxRuns, int activeServers, int totalServers, int totalPizookies) {
+  Widget _buildStatsDashboard(int totalRuns, double avgRuns, int maxRuns,
+      int activeServers, int totalServers, int totalPizookies) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
@@ -289,7 +303,9 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color: _sortBy == 'xp' ? Theme.of(context).primaryColor : Colors.transparent,
+                  color: _sortBy == 'xp'
+                      ? Theme.of(context).primaryColor
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -298,7 +314,8 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
                     Text(
                       'XP',
                       style: TextStyle(
-                        color: _sortBy == 'xp' ? Colors.white : Colors.grey[600],
+                        color:
+                            _sortBy == 'xp' ? Colors.white : Colors.grey[600],
                         fontWeight: FontWeight.w900,
                         fontSize: 16,
                       ),
@@ -319,7 +336,9 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color: _sortBy == 'runs' ? Theme.of(context).primaryColor : Colors.transparent,
+                  color: _sortBy == 'runs'
+                      ? Theme.of(context).primaryColor
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -328,7 +347,8 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
                     Text(
                       'Runs',
                       style: TextStyle(
-                        color: _sortBy == 'runs' ? Colors.white : Colors.grey[600],
+                        color:
+                            _sortBy == 'runs' ? Colors.white : Colors.grey[600],
                         fontWeight: FontWeight.w900,
                         fontSize: 16,
                       ),
@@ -349,7 +369,9 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color: _sortBy == 'pizookies' ? Theme.of(context).primaryColor : Colors.transparent,
+                  color: _sortBy == 'pizookies'
+                      ? Theme.of(context).primaryColor
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -358,7 +380,9 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
                     Text(
                       'Pizookies',
                       style: TextStyle(
-                        color: _sortBy == 'pizookies' ? Colors.white : Colors.grey[600],
+                        color: _sortBy == 'pizookies'
+                            ? Colors.white
+                            : Colors.grey[600],
                         fontWeight: FontWeight.w900,
                         fontSize: 16,
                       ),
@@ -373,7 +397,8 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
     );
   }
 
-  Widget _buildLeaderboardList(List<String> sortedIds, int maxRuns, AppState appState) {
+  Widget _buildLeaderboardList(
+      List<String> sortedIds, int maxRuns, AppState appState) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
@@ -399,7 +424,9 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
           );
           final runs = appState.currentCounts[id] ?? 0;
           final pizookies = appState.profiles[id]?.pizookieRuns ?? 0;
-          final totalRuns = sortedIds.map((id) => appState.currentCounts[id] ?? 0).fold<int>(0, (a, b) => a + b);
+          final totalRuns = sortedIds
+              .map((id) => appState.currentCounts[id] ?? 0)
+              .fold<int>(0, (a, b) => a + b);
           final percentage = totalRuns > 0 ? (runs / totalRuns) * 100 : 0.0;
 
           return _buildEnhancedServerCard(
@@ -429,7 +456,7 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
         final profile = appState.profiles[server.id];
         final avatarPath = profile?.avatarPath;
         final bannerPath = profile?.bannerPath;
-        
+
         ImageProvider? avatarImage;
         if (avatarPath != null && avatarPath.isNotEmpty) {
           if (avatarPath.startsWith('/') || avatarPath.contains(':')) {
@@ -438,7 +465,7 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
             avatarImage = AssetImage(avatarPath);
           }
         }
-        
+
         ImageProvider? bannerImage;
         if (bannerPath != null && bannerPath.isNotEmpty) {
           if (bannerPath.startsWith('/') || bannerPath.contains(':')) {
@@ -447,28 +474,34 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
             bannerImage = AssetImage(bannerPath);
           }
         }
-        
+
         // Calculate shift XP with boost applied - Pizookies are 25 XP total, not 10+25
         final runCount = appState.currentCounts[server.id] ?? 0;
         final pizookieCount = appState.currentPizookieCounts[server.id] ?? 0;
         final boost = appState.boostActive ? appState.boostMultiplier : 1.0;
         final regularRuns = runCount - pizookieCount;
-        final shiftXp = (((regularRuns * 10) + (pizookieCount * 25)) * boost).round();
-        
+        final shiftXp =
+            (((regularRuns * 10) + (pizookieCount * 25)) * boost).round();
+
         // Get all working servers for rankings
-        final workingServers = appState.servers.where((s) => appState.workingServerIds.contains(s.id)).toList();
-        
+        final workingServers = appState.servers
+            .where((s) => appState.workingServerIds.contains(s.id))
+            .toList();
+
         // Rank for runs
         final runRanks = List<String>.from(workingServers.map((s) => s.id));
-        runRanks.sort((a, b) => (appState.currentCounts[b] ?? 0).compareTo(appState.currentCounts[a] ?? 0));
+        runRanks.sort((a, b) => (appState.currentCounts[b] ?? 0)
+            .compareTo(appState.currentCounts[a] ?? 0));
         final runRank = runRanks.indexOf(server.id) + 1;
-        
+
         // Rank for pizookies
-        final pizookieRanks = List<String>.from(workingServers.map((s) => s.id));
-        pizookieRanks.sort((a, b) => (appState.currentPizookieCounts[b] ?? 0).compareTo(appState.currentPizookieCounts[a] ?? 0));
+        final pizookieRanks =
+            List<String>.from(workingServers.map((s) => s.id));
+        pizookieRanks.sort((a, b) => (appState.currentPizookieCounts[b] ?? 0)
+            .compareTo(appState.currentPizookieCounts[a] ?? 0));
         final pizookieRank = pizookieRanks.indexOf(server.id) + 1;
         final totalServers = workingServers.length;
-        
+
         // Check if this is a top 3 position
         final isTopThree = rank <= 3;
 
@@ -476,12 +509,16 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
           margin: EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            border: isTopThree ? Border.all(
-              color: rank == 1 ? Color(0xFFFFD700) : 
-                     rank == 2 ? Color(0xFFC0C0C0) : 
-                     Color(0xFFCD7F32),
-              width: 3,
-            ) : null,
+            border: isTopThree
+                ? Border.all(
+                    color: rank == 1
+                        ? Color(0xFFFFD700)
+                        : rank == 2
+                            ? Color(0xFFC0C0C0)
+                            : Color(0xFFCD7F32),
+                    width: 3,
+                  )
+                : null,
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.3),
@@ -495,7 +532,7 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
               // Main card content
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Container(
+                child: SizedBox(
                   height: 120,
                   child: Stack(
                     children: [
@@ -523,7 +560,7 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
                             color: Colors.grey[200],
                           ),
                         ),
-                      
+
                       // Server name at top right
                       Positioned(
                         top: 8,
@@ -560,9 +597,11 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
                               ),
                               // Line under name - moved up and made shorter
                               Container(
-                                margin: const EdgeInsets.only(top: 6, bottom: 8),
+                                margin:
+                                    const EdgeInsets.only(top: 6, bottom: 8),
                                 height: 2,
-                                width: 120, // Made shorter so it doesn't interfere with stats
+                                width:
+                                    120, // Made shorter so it doesn't interfere with stats
                                 decoration: BoxDecoration(
                                   color: Colors.grey,
                                   borderRadius: BorderRadius.circular(2),
@@ -579,7 +618,7 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
                           ),
                         ),
                       ),
-                      
+
                       // XP info positioned separately to avoid line overlap
                       Positioned(
                         top: 50,
@@ -631,7 +670,7 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
                           ),
                         ),
                       ),
-                      
+
                       // Avatar and stats row
                       Positioned(
                         bottom: 8,
@@ -664,14 +703,20 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
                                       bottom: 6,
                                       right: 0,
                                       child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 6, vertical: 2),
                                         decoration: BoxDecoration(
-                                          gradient: AppTheme.getLevelBubbleGradient(profile.level),
-                                          borderRadius: BorderRadius.circular(10),
-                                          border: Border.all(color: Colors.white, width: 1.5),
+                                          gradient:
+                                              AppTheme.getLevelBubbleGradient(
+                                                  profile.level),
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          border: Border.all(
+                                              color: Colors.white, width: 1.5),
                                           boxShadow: [
                                             BoxShadow(
-                                              color: Colors.black.withOpacity(0.3),
+                                              color:
+                                                  Colors.black.withOpacity(0.3),
                                               blurRadius: 3,
                                               offset: const Offset(0, 1),
                                             ),
@@ -691,7 +736,7 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
                               ),
                             ),
                             SizedBox(width: 12),
-                            
+
                             // Stats column
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -733,17 +778,20 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
                                     if (runRank == 1)
                                       Padding(
                                         padding: const EdgeInsets.only(left: 4),
-                                        child: Icon(Icons.emoji_events, color: Color(0xFFFFD700), size: 14),
+                                        child: Icon(Icons.emoji_events,
+                                            color: Color(0xFFFFD700), size: 14),
                                       )
                                     else if (runRank == 2)
                                       Padding(
                                         padding: const EdgeInsets.only(left: 4),
-                                        child: Icon(Icons.emoji_events, color: Color(0xFFC0C0C0), size: 14),
+                                        child: Icon(Icons.emoji_events,
+                                            color: Color(0xFFC0C0C0), size: 14),
                                       )
                                     else if (runRank == 3)
                                       Padding(
                                         padding: const EdgeInsets.only(left: 4),
-                                        child: Icon(Icons.emoji_events, color: Color(0xFFCD7F32), size: 14),
+                                        child: Icon(Icons.emoji_events,
+                                            color: Color(0xFFCD7F32), size: 14),
                                       ),
                                   ],
                                 ),
@@ -784,17 +832,20 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
                                     if (pizookieRank == 1)
                                       Padding(
                                         padding: const EdgeInsets.only(left: 4),
-                                        child: Icon(Icons.emoji_events, color: Color(0xFFFFD700), size: 14),
+                                        child: Icon(Icons.emoji_events,
+                                            color: Color(0xFFFFD700), size: 14),
                                       )
                                     else if (pizookieRank == 2)
                                       Padding(
                                         padding: const EdgeInsets.only(left: 4),
-                                        child: Icon(Icons.emoji_events, color: Color(0xFFC0C0C0), size: 14),
+                                        child: Icon(Icons.emoji_events,
+                                            color: Color(0xFFC0C0C0), size: 14),
                                       )
                                     else if (pizookieRank == 3)
                                       Padding(
                                         padding: const EdgeInsets.only(left: 4),
-                                        child: Icon(Icons.emoji_events, color: Color(0xFFCD7F32), size: 14),
+                                        child: Icon(Icons.emoji_events,
+                                            color: Color(0xFFCD7F32), size: 14),
                                       ),
                                   ],
                                 ),
@@ -807,7 +858,7 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
                   ),
                 ),
               ),
-              
+
               // Rank badge positioned at top-left corner, slightly outside
               Positioned(
                 top: -12,
@@ -817,17 +868,19 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
                   height: 48,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: isTopThree ? 
-                        (rank == 1 ? [Color(0xFFFFD700), Color(0xFFFFA500)] : 
-                         rank == 2 ? [Color(0xFFC0C0C0), Color(0xFF8C8C8C)] : 
-                         [Color(0xFFCD7F32), Color(0xFF8B4513)]) : 
-                        [Color(0xFF6B7280), Color(0xFF4B5563)],
+                      colors: isTopThree
+                          ? (rank == 1
+                              ? [Color(0xFFFFD700), Color(0xFFFFA500)]
+                              : rank == 2
+                                  ? [Color(0xFFC0C0C0), Color(0xFF8C8C8C)]
+                                  : [Color(0xFFCD7F32), Color(0xFF8B4513)])
+                          : [Color(0xFF6B7280), Color(0xFF4B5563)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(24),
                     border: Border.all(
-                      color: Colors.white, 
+                      color: Colors.white,
                       width: 3,
                     ),
                     boxShadow: [
@@ -838,11 +891,13 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
                         spreadRadius: 2,
                       ),
                       BoxShadow(
-                        color: isTopThree ? 
-                          (rank == 1 ? Color(0xFFFFD700).withOpacity(0.4) : 
-                           rank == 2 ? Color(0xFFC0C0C0).withOpacity(0.4) : 
-                           Color(0xFFCD7F32).withOpacity(0.4)) : 
-                          Colors.grey.withOpacity(0.3),
+                        color: isTopThree
+                            ? (rank == 1
+                                ? Color(0xFFFFD700).withOpacity(0.4)
+                                : rank == 2
+                                    ? Color(0xFFC0C0C0).withOpacity(0.4)
+                                    : Color(0xFFCD7F32).withOpacity(0.4))
+                            : Colors.grey.withOpacity(0.3),
                         blurRadius: 20,
                         offset: Offset(0, 0),
                         spreadRadius: 4,
@@ -868,7 +923,7 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
                   ),
                 ),
               ),
-              
+
               // Easter egg: Hidden admin access in bottom-right corner
               Positioned(
                 bottom: 0,
@@ -906,20 +961,20 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
   // Easter egg: Track taps on bottom-right corner for admin access
   void _handleEasterEggTap(BuildContext context, Server server) {
     final serverId = server.id;
-    
+
     // Cancel existing timer for this server
     _easterEggTimers[serverId]?.cancel();
-    
+
     // Increment tap count
     _easterEggTapCounts[serverId] = (_easterEggTapCounts[serverId] ?? 0) + 1;
-    
+
     // Show admin dialog after 5 taps
     if (_easterEggTapCounts[serverId]! >= 5) {
       _easterEggTapCounts[serverId] = 0; // Reset counter
       _showAdminPinDialog(context, server);
       return;
     }
-    
+
     // Reset counter after 2 seconds of inactivity
     _easterEggTimers[serverId] = Timer(Duration(seconds: 2), () {
       if (mounted) {
@@ -941,7 +996,7 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
 class IntegrityPinDialog extends StatefulWidget {
   final Server server;
 
-  const IntegrityPinDialog({Key? key, required this.server}) : super(key: key);
+  const IntegrityPinDialog({super.key, required this.server});
 
   @override
   _IntegrityPinDialogState createState() => _IntegrityPinDialogState();
@@ -995,9 +1050,10 @@ class _IntegrityPinDialogState extends State<IntegrityPinDialog> {
 
   void _navigateToServerIntegrityProfile() {
     final app = Provider.of<AppState>(context, listen: false);
-    
+
     // Generate current assessment for the server
-    final bins = app.integrityBinsForDateRange(widget.server.id, todayOnly: true);
+    final bins =
+        app.integrityBinsForDateRange(widget.server.id, todayOnly: true);
     final runCount = app.currentCounts[widget.server.id] ?? 0;
     final allServerCounts = <String, int>{};
     for (final s in app.servers) {
@@ -1044,7 +1100,8 @@ class _IntegrityPinDialogState extends State<IntegrityPinDialog> {
     );
   }
 
-  Widget _buildPinActionButton(IconData icon, String tooltip, VoidCallback onPressed) {
+  Widget _buildPinActionButton(
+      IconData icon, String tooltip, VoidCallback onPressed) {
     return SizedBox(
       width: 60,
       height: 60,
@@ -1071,7 +1128,7 @@ class _IntegrityPinDialogState extends State<IntegrityPinDialog> {
           Text('Admin Access'),
         ],
       ),
-      content: Container(
+      content: SizedBox(
         width: double.maxFinite,
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1099,7 +1156,9 @@ class _IntegrityPinDialogState extends State<IntegrityPinDialog> {
                       height: 20,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: i < _enteredPin.length ? Colors.blue : Colors.grey[300],
+                        color: i < _enteredPin.length
+                            ? Colors.blue
+                            : Colors.grey[300],
                       ),
                     ),
                 ],
@@ -1107,7 +1166,7 @@ class _IntegrityPinDialogState extends State<IntegrityPinDialog> {
             ),
             SizedBox(height: 20),
             // PIN Pad
-            Container(
+            SizedBox(
               width: 250,
               child: Column(
                 children: [
@@ -1147,7 +1206,8 @@ class _IntegrityPinDialogState extends State<IntegrityPinDialog> {
                     children: [
                       _buildPinActionButton(Icons.clear, 'Clear', _onPinClear),
                       _buildPinButton('0'),
-                      _buildPinActionButton(Icons.backspace, 'Back', _onPinBackspace),
+                      _buildPinActionButton(
+                          Icons.backspace, 'Back', _onPinBackspace),
                     ],
                   ),
                 ],

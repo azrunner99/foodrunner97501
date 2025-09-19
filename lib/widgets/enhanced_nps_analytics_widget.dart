@@ -16,10 +16,12 @@ class EnhancedNPSAnalyticsWidget extends StatefulWidget {
   const EnhancedNPSAnalyticsWidget({super.key});
 
   @override
-  State<EnhancedNPSAnalyticsWidget> createState() => _EnhancedNPSAnalyticsWidgetState();
+  State<EnhancedNPSAnalyticsWidget> createState() =>
+      _EnhancedNPSAnalyticsWidgetState();
 }
 
-class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget> {
+class _EnhancedNPSAnalyticsWidgetState
+    extends State<EnhancedNPSAnalyticsWidget> {
   int _selectedTimeRange = 30; // Days
   String _selectedChartType = 'trend';
 
@@ -57,7 +59,7 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
                   ),
                 );
               }
-              
+
               if (snapshot.hasError) {
                 return Center(
                   child: Column(
@@ -77,13 +79,14 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
               }
 
               final monthlyReports = snapshot.data ?? [];
-              
+
               if (monthlyReports.isEmpty) {
                 return Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.analytics_outlined, size: 64, color: Colors.grey),
+                      Icon(Icons.analytics_outlined,
+                          size: 64, color: Colors.grey),
                       SizedBox(height: 16),
                       Text(
                         'No NPS Data Available',
@@ -93,8 +96,8 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
                       Text(
                         'Enter monthly NPS data to see analytics',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey,
-                        ),
+                              color: Colors.grey,
+                            ),
                       ),
                     ],
                   ),
@@ -114,7 +117,8 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
                         _buildMonthlyReportsSummary(monthlyReports),
                         const SizedBox(height: 20),
                         // Server Performance Rankings
-                        _buildServerRankings(monthlyReports, npsProvider.servers),
+                        _buildServerRankings(
+                            monthlyReports, npsProvider.servers),
                         const SizedBox(height: 20),
                         // Key Metrics from Monthly Reports
                         _buildKeyMetricsFromReports(monthlyReports),
@@ -160,12 +164,18 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
 
     // Calculate aggregate metrics
     final totalServers = reports.length;
-    final avgNPS = reports.map((r) => r.allTimeNpsPercentage ?? 0.0).reduce((a, b) => a + b) / totalServers;
-    final totalSales = reports.map((r) => r.allTimeSales).reduce((a, b) => a + b);
-    final totalChecks = reports.map((r) => r.allTimeTableCount).reduce((a, b) => a + b);
+    final avgNPS = reports
+            .map((r) => r.allTimeNpsPercentage ?? 0.0)
+            .reduce((a, b) => a + b) /
+        totalServers;
+    final totalSales =
+        reports.map((r) => r.allTimeSales).reduce((a, b) => a + b);
+    final totalChecks =
+        reports.map((r) => r.allTimeTableCount).reduce((a, b) => a + b);
 
     // Get unique months represented in the data
-    final months = reports.map((r) => r.reportMonth % 100).toSet().toList()..sort(); // Extract month from YYYYMM
+    final months = reports.map((r) => r.reportMonth % 100).toSet().toList()
+      ..sort(); // Extract month from YYYYMM
     final monthNames = months.map((m) => _getMonthName(m)).join(', ');
 
     return Card(
@@ -177,30 +187,34 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
             Text(
               'Monthly NPS Summary',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 4),
             Text(
               'Data from: $monthNames',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey.shade600,
-              ),
+                    color: Colors.grey.shade600,
+                  ),
             ),
             const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
-                  child: _buildSummaryMetric('Servers Reporting', totalServers.toString()),
+                  child: _buildSummaryMetric(
+                      'Servers Reporting', totalServers.toString()),
                 ),
                 Expanded(
-                  child: _buildSummaryMetric('Average NPS', '${avgNPS.toStringAsFixed(1)}%'),
+                  child: _buildSummaryMetric(
+                      'Average NPS', '${avgNPS.toStringAsFixed(1)}%'),
                 ),
                 Expanded(
-                  child: _buildSummaryMetric('Total Sales', '\$${totalSales.toStringAsFixed(0)}'),
+                  child: _buildSummaryMetric(
+                      'Total Sales', '\$${totalSales.toStringAsFixed(0)}'),
                 ),
                 Expanded(
-                  child: _buildSummaryMetric('Total Checks', totalChecks.toString()),
+                  child: _buildSummaryMetric(
+                      'Total Checks', totalChecks.toString()),
                 ),
               ],
             ),
@@ -212,8 +226,19 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
 
   String _getMonthName(int month) {
     const monthNames = [
-      '', 'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      '',
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December'
     ];
     return monthNames[month];
   }
@@ -248,8 +273,8 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
             Text(
               'Performance Metrics',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 12),
             Text('Based on ${reports.length} monthly reports'),
@@ -358,9 +383,9 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: entry.key == 'Overall NPS' 
-                        ? _getNPSColor(entry.value)
-                        : Colors.orange.shade600,
+                      color: entry.key == 'Overall NPS'
+                          ? _getNPSColor(entry.value)
+                          : Colors.orange.shade600,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -400,8 +425,16 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
               spacing: 8,
               children: [
                 {'key': 'trend', 'label': 'Trend', 'icon': Icons.trending_up},
-                {'key': 'distribution', 'label': 'Distribution', 'icon': Icons.pie_chart},
-                {'key': 'comparison', 'label': 'Server Comparison', 'icon': Icons.bar_chart},
+                {
+                  'key': 'distribution',
+                  'label': 'Distribution',
+                  'icon': Icons.pie_chart
+                },
+                {
+                  'key': 'comparison',
+                  'label': 'Server Comparison',
+                  'icon': Icons.bar_chart
+                },
               ].map((chart) {
                 final isSelected = _selectedChartType == chart['key'];
                 return ChoiceChip(
@@ -432,7 +465,8 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
     );
   }
 
-  Widget _buildSelectedChart(List<NPSScoreFeedback> feedback, List<dynamic> servers) {
+  Widget _buildSelectedChart(
+      List<NPSScoreFeedback> feedback, List<dynamic> servers) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -444,7 +478,8 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
     );
   }
 
-  Widget _getChartWidget(List<NPSScoreFeedback> feedback, List<dynamic> servers) {
+  Widget _getChartWidget(
+      List<NPSScoreFeedback> feedback, List<dynamic> servers) {
     switch (_selectedChartType) {
       case 'trend':
         return _buildTrendChart(feedback);
@@ -458,8 +493,9 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
   }
 
   Widget _buildTrendChart(List<NPSScoreFeedback> feedback) {
-    final spots = AdvancedAnalyticsService.calculateNPSTrend(feedback, daysBack: _selectedTimeRange);
-    
+    final spots = AdvancedAnalyticsService.calculateNPSTrend(feedback,
+        daysBack: _selectedTimeRange);
+
     if (spots.isEmpty) {
       return const Center(
         child: Text(
@@ -504,8 +540,10 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
               },
             ),
           ),
-          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         ),
         borderData: FlBorderData(
           show: true,
@@ -531,8 +569,9 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
   }
 
   Widget _buildDistributionChart(List<NPSScoreFeedback> feedback) {
-    final sections = AdvancedAnalyticsService.calculateScoreDistribution(feedback);
-    
+    final sections =
+        AdvancedAnalyticsService.calculateScoreDistribution(feedback);
+
     return PieChart(
       PieChartData(
         sections: sections,
@@ -542,7 +581,8 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
     );
   }
 
-  Widget _buildComparisonChart(List<NPSScoreFeedback> feedback, List<dynamic> servers) {
+  Widget _buildComparisonChart(
+      List<NPSScoreFeedback> feedback, List<dynamic> servers) {
     if (servers.isEmpty) {
       return const Center(
         child: Text(
@@ -556,9 +596,12 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
     final barGroups = <BarChartGroupData>[];
     for (int i = 0; i < servers.length && i < 5; i++) {
       final sampleNPS = 20 + (i * 15) + (i.isEven ? 10 : -5); // Sample data
-      final color = sampleNPS >= 50 ? Colors.green :
-                   sampleNPS >= 0 ? Colors.orange : Colors.red;
-      
+      final color = sampleNPS >= 50
+          ? Colors.green
+          : sampleNPS >= 0
+              ? Colors.orange
+              : Colors.red;
+
       barGroups.add(
         BarChartGroupData(
           x: i,
@@ -586,9 +629,12 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
               getTitlesWidget: (value, meta) {
                 final index = value.toInt();
                 if (index < servers.length) {
-                  final serverName = servers[index].toString().split('(')[0]; // Extract name
+                  final serverName =
+                      servers[index].toString().split('(')[0]; // Extract name
                   return Text(
-                    serverName.length > 8 ? '${serverName.substring(0, 8)}...' : serverName,
+                    serverName.length > 8
+                        ? '${serverName.substring(0, 8)}...'
+                        : serverName,
                     style: const TextStyle(fontSize: 10),
                   );
                 }
@@ -608,8 +654,10 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
               },
             ),
           ),
-          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         ),
         borderData: FlBorderData(
           show: true,
@@ -654,20 +702,20 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
               ),
               const SizedBox(height: 8),
               ...insights.insights.map((insight) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      Icons.analytics,
-                      size: 16,
-                      color: Colors.blue.shade600,
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.analytics,
+                          size: 16,
+                          color: Colors.blue.shade600,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(child: Text(insight)),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(child: Text(insight)),
-                  ],
-                ),
-              )),
+                  )),
             ],
             if (insights.recommendations.isNotEmpty) ...[
               const SizedBox(height: 16),
@@ -680,20 +728,20 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
               ),
               const SizedBox(height: 8),
               ...insights.recommendations.map((recommendation) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      Icons.star,
-                      size: 16,
-                      color: Colors.orange.shade600,
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.star,
+                          size: 16,
+                          color: Colors.orange.shade600,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(child: Text(recommendation)),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(child: Text(recommendation)),
-                  ],
-                ),
-              )),
+                  )),
             ],
           ],
         ),
@@ -701,23 +749,25 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
     );
   }
 
-  Widget _buildServerRankings(List<NPSMonthlyReport> monthlyReports, List<dynamic> servers) {
+  Widget _buildServerRankings(
+      List<NPSMonthlyReport> monthlyReports, List<dynamic> servers) {
     // Group reports by server ID and aggregate their performance
     final Map<int, List<NPSMonthlyReport>> reportsByServer = {};
     for (final report in monthlyReports) {
       reportsByServer.putIfAbsent(report.serverId, () => []).add(report);
     }
-    
+
     // Calculate aggregated performance scores for each server
     final serverScores = reportsByServer.entries.map((entry) {
       final serverId = entry.key;
       final serverReports = entry.value;
-      return _calculateAggregatedServerPerformance(serverId, serverReports, monthlyReports);
+      return _calculateAggregatedServerPerformance(
+          serverId, serverReports, monthlyReports);
     }).toList();
-    
+
     // Sort by performance score (descending)
     serverScores.sort((a, b) => b['score'].compareTo(a['score']));
-    
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -769,8 +819,10 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
                 final scoreData = entry.value;
                 final serverId = scoreData['serverId'] as int;
                 final performanceScore = scoreData['score'] as double;
-                final recentPerformance = scoreData['recentPerformance'] as double;
-                final historicalInsight = scoreData['historicalInsight'] as String;
+                final recentPerformance =
+                    scoreData['recentPerformance'] as double;
+                final historicalInsight =
+                    scoreData['historicalInsight'] as String;
                 final salesPercentage = scoreData['salesPercentage'] as double;
                 final impactLevel = scoreData['impactLevel'] as String;
                 final impactColor = scoreData['impactColor'] as Color;
@@ -778,26 +830,34 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
                 final trend = scoreData['trend'] as String;
                 final trendIcon = scoreData['trendIcon'] as String;
                 final improvementRate = scoreData['improvementRate'] as double;
-                
-                final medal = index == 0 ? '🥇' : index == 1 ? '🥈' : index == 2 ? '🥉' : '${index + 1}';
-                
+
+                final medal = index == 0
+                    ? '🥇'
+                    : index == 1
+                        ? '🥈'
+                        : index == 2
+                            ? '🥉'
+                            : '${index + 1}';
+
                 // Find corresponding server name - extract just the name
                 final server = servers.cast<dynamic>().firstWhere(
-                  (server) => server.id == serverId,
-                  orElse: () => null,
-                );
-                
+                      (server) => server.id == serverId,
+                      orElse: () => null,
+                    );
+
                 // Extract clean server name (just the name part)
                 String serverName = 'Server $serverId';
                 if (server != null) {
                   final serverStr = server.toString();
                   // Extract name from pattern like "NPSServer(id: 2, name: b, hireDate: ...)"
-                  final nameMatch = RegExp(r'name:\s*([^,]+)').firstMatch(serverStr);
+                  final nameMatch =
+                      RegExp(r'name:\s*([^,]+)').firstMatch(serverStr);
                   if (nameMatch != null) {
-                    serverName = nameMatch.group(1)?.trim() ?? 'Server $serverId';
+                    serverName =
+                        nameMatch.group(1)?.trim() ?? 'Server $serverId';
                   }
                 }
-                
+
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   child: Container(
@@ -830,188 +890,210 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                            // Server name and primary impact indicator
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    serverName,
-                                    style: const TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
+                              // Server name and primary impact indicator
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      serverName,
+                                      style: const TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
-                                ),
-                                // Simple impact indicator
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: impactColor,
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  child: Text(
-                                    impactLevel,
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
+                                  // Simple impact indicator
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: impactColor,
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: Text(
+                                      impactLevel,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
                                     ),
                                   ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+
+                              // Simple summary - dummy proof
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: impactColor.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                      color: impactColor.withOpacity(0.3)),
                                 ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            
-                            // Simple summary - dummy proof
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      simpleSummary,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color:
+                                            impactColor.computeLuminance() > 0.5
+                                                ? Colors.grey.shade800
+                                                : impactColor,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        // Sales percentage - clear format
+                                        Icon(
+                                          Icons.pie_chart,
+                                          size: 18,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          '${salesPercentage.toStringAsFixed(1)}% of restaurant sales',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: Colors.grey.shade700,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Row(
+                                      children: [
+                                        // Trend emoji icon
+                                        Text(
+                                          trendIcon,
+                                          style: const TextStyle(fontSize: 16),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          '${recentPerformance.toStringAsFixed(0)}% NPS',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: recentPerformance >= 80
+                                                ? Colors.green.shade700
+                                                : Colors.red.shade700,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        // Trend indicator badge
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: _getTrendBadgeColor(
+                                                improvementRate),
+                                            borderRadius:
+                                                BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            _getTrendLabel(improvementRate),
+                                            style: const TextStyle(
+                                              fontSize: 10,
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        // Clear benchmark context
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: recentPerformance >= 80
+                                                ? Colors.green.withOpacity(0.1)
+                                                : Colors.red.withOpacity(0.1),
+                                            borderRadius:
+                                                BorderRadius.circular(6),
+                                            border: Border.all(
+                                              color: recentPerformance >= 80
+                                                  ? Colors.green
+                                                      .withOpacity(0.3)
+                                                  : Colors.red.withOpacity(0.3),
+                                            ),
+                                          ),
+                                          child: Text(
+                                            recentPerformance >= 80
+                                                ? 'Above 80% target'
+                                                : 'Below 80% target',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: recentPerformance >= 80
+                                                  ? Colors.green.shade700
+                                                  : Colors.red.shade700,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+
+                              // Historical insight (simplified)
+                              Text(
+                                historicalInsight,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Simple score indicator with restaurant impact
+                        Column(
+                          children: [
                             Container(
-                              padding: const EdgeInsets.all(12),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 20, vertical: 12),
                               decoration: BoxDecoration(
-                                color: impactColor.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: impactColor.withOpacity(0.3)),
+                                color: impactColor.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: impactColor,
+                                  width: 2,
+                                ),
                               ),
                               child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    simpleSummary,
+                                    performanceScore.toStringAsFixed(0),
                                     style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: impactColor.computeLuminance() > 0.5 ? Colors.grey.shade800 : impactColor,
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: impactColor,
                                     ),
                                   ),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      // Sales percentage - clear format
-                                      Icon(
-                                        Icons.pie_chart,
-                                        size: 18,
-                                        color: Colors.grey.shade600,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        '${salesPercentage.toStringAsFixed(1)}% of restaurant sales',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: Colors.grey.shade700,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Row(
-                                    children: [
-                                      // Trend emoji icon
-                                      Text(
-                                        trendIcon,
-                                        style: const TextStyle(fontSize: 16),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        '${recentPerformance.toStringAsFixed(0)}% NPS',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: recentPerformance >= 80 ? Colors.green.shade700 : Colors.red.shade700,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      // Trend indicator badge
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: _getTrendBadgeColor(improvementRate),
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                          _getTrendLabel(improvementRate),
-                                          style: const TextStyle(
-                                            fontSize: 10,
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      // Clear benchmark context
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: recentPerformance >= 80 ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(6),
-                                          border: Border.all(
-                                            color: recentPerformance >= 80 ? Colors.green.withOpacity(0.3) : Colors.red.withOpacity(0.3),
-                                          ),
-                                        ),
-                                        child: Text(
-                                          recentPerformance >= 80 ? 'Above 80% target' : 'Below 80% target',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: recentPerformance >= 80 ? Colors.green.shade700 : Colors.red.shade700,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Impact Score',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: impactColor,
+                                    ),
                                   ),
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 8),
-                            
-                            // Historical insight (simplified)
-                            Text(
-                              historicalInsight,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade600,
-                                fontStyle: FontStyle.italic,
-                              ),
-                            ),
                           ],
                         ),
-                      ),
-                      // Simple score indicator with restaurant impact
-                      Column(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                            decoration: BoxDecoration(
-                              color: impactColor.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: impactColor,
-                                width: 2,
-                              ),
-                            ),
-                            child: Column(
-                              children: [
-                                Text(
-                                  '${performanceScore.toStringAsFixed(0)}',
-                                  style: TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                    color: impactColor,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Impact Score',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                    color: impactColor,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      ],  // Closing bracket for Row children
+                      ], // Closing bracket for Row children
                     ),
                   ),
                 );
@@ -1023,7 +1105,8 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
   }
 
   /// Calculate aggregated performance for a server across all their monthly reports
-  Map<String, dynamic> _calculateAggregatedServerPerformance(int serverId, List<NPSMonthlyReport> serverReports, List<NPSMonthlyReport> allReports) {
+  Map<String, dynamic> _calculateAggregatedServerPerformance(int serverId,
+      List<NPSMonthlyReport> serverReports, List<NPSMonthlyReport> allReports) {
     if (serverReports.isEmpty) {
       return {
         'serverId': serverId,
@@ -1048,38 +1131,47 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
         'simpleSummary': 'No data available',
       };
     }
-    
+
     // Sort reports by month to get chronological order
     serverReports.sort((a, b) => a.reportMonth.compareTo(b.reportMonth));
-    
+
     // Extract all available performance data with month tracking
     final List<double> performanceHistory = [];
     final List<String> monthNames = [];
-    
+
     for (final report in serverReports) {
-      final performance = report.oneMonthNpsPercentage ?? report.allTimeNpsPercentage ?? 0.0;
+      final performance =
+          report.oneMonthNpsPercentage ?? report.allTimeNpsPercentage ?? 0.0;
       performanceHistory.add(performance);
-      
+
       // Extract month name from YYYYMM format
       final month = report.reportMonth % 100;
       monthNames.add(_getMonthName(month));
     }
-    
+
     // Calculate aggregated performance metrics
-    final recentPerformance = performanceHistory.isNotEmpty ? performanceHistory.last : 0.0;
-    final overallPerformance = performanceHistory.isNotEmpty 
-        ? performanceHistory.reduce((a, b) => a + b) / performanceHistory.length 
+    final recentPerformance =
+        performanceHistory.isNotEmpty ? performanceHistory.last : 0.0;
+    final overallPerformance = performanceHistory.isNotEmpty
+        ? performanceHistory.reduce((a, b) => a + b) / performanceHistory.length
         : 0.0;
-    
+
     // Calculate consistency score (lower standard deviation = more consistent)
     double consistencyScore = 0.0;
     if (performanceHistory.length > 1) {
       final mean = overallPerformance;
-      final variance = performanceHistory.map((x) => (x - mean) * (x - mean)).reduce((a, b) => a + b) / performanceHistory.length;
-      final standardDeviation = variance > 0 ? (variance).abs() : 0.0; // Simplified sqrt
-      consistencyScore = 100.0 - (standardDeviation > 20 ? 20 : standardDeviation); // Max penalty of 20 points
+      final variance = performanceHistory
+              .map((x) => (x - mean) * (x - mean))
+              .reduce((a, b) => a + b) /
+          performanceHistory.length;
+      final standardDeviation =
+          variance > 0 ? (variance).abs() : 0.0; // Simplified sqrt
+      consistencyScore = 100.0 -
+          (standardDeviation > 20
+              ? 20
+              : standardDeviation); // Max penalty of 20 points
     }
-    
+
     // Calculate improvement rate
     double improvementRate = 0.0;
     if (performanceHistory.length >= 2) {
@@ -1087,63 +1179,63 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
       final lastPerformance = performanceHistory.last;
       improvementRate = lastPerformance - firstPerformance;
     }
-    
+
     // Generate historical insight
-    String historicalInsight = _generateHistoricalInsight(
-      performanceHistory, 
-      monthNames, 
-      consistencyScore, 
-      improvementRate,
-      overallPerformance
-    );
-    
+    String historicalInsight = _generateHistoricalInsight(performanceHistory,
+        monthNames, consistencyScore, improvementRate, overallPerformance);
+
     // Calculate sales percentage and restaurant impact
     final totalRestaurantSales = allReports
         .map((r) => r.allTimeSales)
         .fold(0.0, (sum, sales) => sum + sales);
-    
+
     final serverTotalSales = serverReports
         .map((r) => r.allTimeSales)
         .fold(0.0, (sum, sales) => sum + sales);
-    
-    final salesPercentage = totalRestaurantSales > 0 
-        ? (serverTotalSales / totalRestaurantSales) * 100 
+
+    final salesPercentage = totalRestaurantSales > 0
+        ? (serverTotalSales / totalRestaurantSales) * 100
         : 0.0;
-    
+
     // Calculate restaurant impact (simple and clear)
     String restaurantImpact;
     String impactLevel;
     Color impactColor;
     String simpleSummary;
-    
+
     // Calculate trend description for admin insights
     String trendDescription = "";
     if (performanceHistory.length >= 2) {
       if (improvementRate > 5.0) {
-        trendDescription = " and improving significantly (+${improvementRate.toStringAsFixed(1)}%)";
+        trendDescription =
+            " and improving significantly (+${improvementRate.toStringAsFixed(1)}%)";
       } else if (improvementRate > 2.0) {
-        trendDescription = " and trending upward (+${improvementRate.toStringAsFixed(1)}%)";
+        trendDescription =
+            " and trending upward (+${improvementRate.toStringAsFixed(1)}%)";
       } else if (improvementRate >= -2.0) {
         trendDescription = " and performance is stable";
       } else if (improvementRate < -5.0) {
-        trendDescription = " and declining significantly (${improvementRate.toStringAsFixed(1)}%)";
+        trendDescription =
+            " and declining significantly (${improvementRate.toStringAsFixed(1)}%)";
       } else {
-        trendDescription = " and trending downward (${improvementRate.toStringAsFixed(1)}%)";
+        trendDescription =
+            " and trending downward (${improvementRate.toStringAsFixed(1)}%)";
       }
     }
-    
+
     if (salesPercentage < 5.0) {
       // Low sales impact
       if (recentPerformance >= 80) {
         restaurantImpact = 'Minor Boost';
         impactLevel = 'Good';
         impactColor = Colors.green.shade300;
-        simpleSummary = 'Good performance but low sales impact${trendDescription}';
+        simpleSummary =
+            'Good performance but low sales impact$trendDescription';
       } else {
         restaurantImpact = 'Minor Drag';
         impactLevel = 'Bad';
         impactColor = Colors.orange.shade300;
-        simpleSummary = 'Below standard but low sales impact${trendDescription}';
+        simpleSummary = 'Below standard but low sales impact$trendDescription';
       }
     } else if (salesPercentage < 15.0) {
       // Medium sales impact
@@ -1151,22 +1243,22 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
         restaurantImpact = 'Restaurant Booster';
         impactLevel = 'Excellent';
         impactColor = Colors.green.shade600;
-        simpleSummary = 'HELPING the restaurant succeed${trendDescription}';
+        simpleSummary = 'HELPING the restaurant succeed$trendDescription';
       } else if (recentPerformance >= 80) {
         restaurantImpact = 'Above Standard';
         impactLevel = 'Good';
         impactColor = Colors.green.shade400;
-        simpleSummary = 'Meeting our 80% standard${trendDescription}';
+        simpleSummary = 'Meeting our 80% standard$trendDescription';
       } else if (recentPerformance >= 70) {
         restaurantImpact = 'Below Standard';
         impactLevel = 'Okay';
         impactColor = Colors.yellow.shade600;
-        simpleSummary = 'Below our 80% standard${trendDescription}';
+        simpleSummary = 'Below our 80% standard$trendDescription';
       } else {
         restaurantImpact = 'Restaurant Drag';
         impactLevel = 'Problem';
         impactColor = Colors.red.shade500;
-        simpleSummary = 'HURTING the restaurant${trendDescription}';
+        simpleSummary = 'HURTING the restaurant$trendDescription';
       }
     } else {
       // High sales impact
@@ -1174,37 +1266,41 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
         restaurantImpact = 'STAR PERFORMER';
         impactLevel = 'Superstar';
         impactColor = Colors.green.shade800;
-        simpleSummary = 'MAJOR restaurant booster - keep this server!${trendDescription}';
+        simpleSummary =
+            'MAJOR restaurant booster - keep this server!$trendDescription';
       } else if (recentPerformance >= 80) {
         restaurantImpact = 'High Volume Above Standard';
         impactLevel = 'Excellent';
         impactColor = Colors.green.shade600;
-        simpleSummary = 'High sales and meeting our 80% standard${trendDescription}';
+        simpleSummary =
+            'High sales and meeting our 80% standard$trendDescription';
       } else if (recentPerformance >= 70) {
         restaurantImpact = 'High Volume Below Standard';
         impactLevel = 'Concerning';
         impactColor = Colors.orange.shade600;
-        simpleSummary = 'High sales but below our 80% standard - needs improvement${trendDescription}';
+        simpleSummary =
+            'High sales but below our 80% standard - needs improvement$trendDescription';
       } else {
         restaurantImpact = 'RESTAURANT KILLER';
         impactLevel = 'Crisis';
         impactColor = Colors.red.shade800;
-        simpleSummary = 'MAJOR problem - high sales but terrible NPS!${trendDescription}';
+        simpleSummary =
+            'MAJOR problem - high sales but terrible NPS!$trendDescription';
       }
     }
-    
-    const double PERFORMANCE_BENCHMARK = 80.0;
-    
+
+    const double performanceBenchmark = 80.0;
+
     // Calculate performance level relative to 80% benchmark
     String performanceLevel;
     Color performanceColor;
     double performanceMultiplier;
-    
+
     if (recentPerformance >= 90.0) {
       performanceLevel = 'Exceptional';
       performanceColor = Colors.green.shade700;
       performanceMultiplier = 1.25;
-    } else if (recentPerformance >= PERFORMANCE_BENCHMARK) {
+    } else if (recentPerformance >= performanceBenchmark) {
       performanceLevel = 'Above Standard';
       performanceColor = Colors.green;
       performanceMultiplier = 1.1;
@@ -1221,14 +1317,14 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
       performanceColor = Colors.red.shade700;
       performanceMultiplier = 0.5;
     }
-    
+
     // Calculate trend across all reports
     String trend;
     String trendIcon;
     double trendMultiplier;
-    
+
     if (serverReports.length >= 2) {
-      if (improvementRate > 5.0 && recentPerformance >= PERFORMANCE_BENCHMARK) {
+      if (improvementRate > 5.0 && recentPerformance >= performanceBenchmark) {
         trend = 'Strong Improvement';
         trendIcon = '🚀';
         trendMultiplier = 1.2;
@@ -1236,7 +1332,8 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
         trend = 'Improving';
         trendIcon = '📈';
         trendMultiplier = 1.15;
-      } else if (improvementRate >= -2.0 && recentPerformance >= PERFORMANCE_BENCHMARK) {
+      } else if (improvementRate >= -2.0 &&
+          recentPerformance >= performanceBenchmark) {
         trend = 'Stable Above Standard';
         trendIcon = '✅';
         trendMultiplier = 1.1;
@@ -1255,7 +1352,7 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
       }
     } else {
       // Single report - assess based on performance level
-      if (recentPerformance >= PERFORMANCE_BENCHMARK) {
+      if (recentPerformance >= performanceBenchmark) {
         trend = 'Above Standard';
         trendIcon = '✅';
         trendMultiplier = 1.0;
@@ -1265,38 +1362,50 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
         trendMultiplier = 0.8;
       }
     }
-    
+
     // Calculate final score with sales impact weighting
     double baseScore = recentPerformance;
-    
+
     // Sales impact multiplier (higher sales = higher impact on restaurant)
-    double salesImpactMultiplier = 1.0 + (salesPercentage / 100.0); // Each 1% of sales adds 1% to multiplier
-    
+    double salesImpactMultiplier = 1.0 +
+        (salesPercentage / 100.0); // Each 1% of sales adds 1% to multiplier
+
     // Bonus for meeting/exceeding 80% benchmark
     double benchmarkBonus = 1.0;
-    if (recentPerformance >= PERFORMANCE_BENCHMARK) {
-      benchmarkBonus = 1.0 + ((recentPerformance - PERFORMANCE_BENCHMARK) / 200.0); // Moderate bonus
+    if (recentPerformance >= performanceBenchmark) {
+      benchmarkBonus = 1.0 +
+          ((recentPerformance - performanceBenchmark) /
+              200.0); // Moderate bonus
     } else {
-      benchmarkBonus = recentPerformance / PERFORMANCE_BENCHMARK; // Penalty for below standard
+      benchmarkBonus = recentPerformance /
+          performanceBenchmark; // Penalty for below standard
     }
-    
+
     // Consistency bonus (reward consistent performers)
-    double consistencyBonus = 1.0 + (consistencyScore / 1000.0); // Small bonus for consistency
-    
+    double consistencyBonus =
+        1.0 + (consistencyScore / 1000.0); // Small bonus for consistency
+
     // Restaurant impact modifier - amplifies or reduces based on actual business impact
     double restaurantImpactModifier = 1.0;
     if (salesPercentage >= 15.0) {
       // High sales servers get amplified scores (good or bad)
-      restaurantImpactModifier = recentPerformance >= 70 ? 1.3 : 0.7; // Major boost for good, penalty for bad
+      restaurantImpactModifier = recentPerformance >= 70
+          ? 1.3
+          : 0.7; // Major boost for good, penalty for bad
     } else if (salesPercentage >= 5.0) {
       // Medium sales servers get moderate adjustment
       restaurantImpactModifier = recentPerformance >= 80 ? 1.15 : 0.9;
     }
-    
+
     // Apply all multipliers
-    final finalScore = baseScore * trendMultiplier * performanceMultiplier * benchmarkBonus * 
-                      consistencyBonus * salesImpactMultiplier * restaurantImpactModifier;
-    
+    final finalScore = baseScore *
+        trendMultiplier *
+        performanceMultiplier *
+        benchmarkBonus *
+        consistencyBonus *
+        salesImpactMultiplier *
+        restaurantImpactModifier;
+
     return {
       'serverId': serverId,
       'score': finalScore,
@@ -1304,7 +1413,7 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
       'trendIcon': trendIcon,
       'performanceLevel': performanceLevel,
       'performanceColor': performanceColor,
-      'benchmarkGap': recentPerformance - PERFORMANCE_BENCHMARK,
+      'benchmarkGap': recentPerformance - performanceBenchmark,
       'recentPerformance': recentPerformance,
       'overallPerformance': overallPerformance,
       'monthsReporting': serverReports.length,
@@ -1331,10 +1440,10 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
   ) {
     if (performanceHistory.isEmpty) return 'No data available';
     if (performanceHistory.length == 1) return 'Single month reporting';
-    
+
     final monthCount = performanceHistory.length;
     final months = monthNames.join(', ');
-    
+
     // Analyze patterns
     if (consistencyScore > 90 && averagePerformance >= 80) {
       return 'Consistently excellent performer across $monthCount months ($months)';
@@ -1356,25 +1465,27 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
   }
 
   /// Calculate a comprehensive performance score for a server
-  Map<String, dynamic> _calculateServerPerformanceScore(NPSMonthlyReport report) {
+  Map<String, dynamic> _calculateServerPerformanceScore(
+      NPSMonthlyReport report) {
     final oneMonth = report.oneMonthNpsPercentage ?? 0.0;
     final threeMonth = report.threeMonthNpsPercentage ?? 0.0;
     final allTime = report.allTimeNpsPercentage ?? 0.0;
-    
-    const double PERFORMANCE_BENCHMARK = 80.0; // Industry standard for acceptable performance
-    
+
+    const double performanceBenchmark =
+        80.0; // Industry standard for acceptable performance
+
     // Calculate performance level relative to 80% benchmark
     String performanceLevel;
     Color performanceColor;
     double performanceMultiplier;
-    
+
     final recentPerformance = oneMonth > 0 ? oneMonth : allTime;
-    
+
     if (recentPerformance >= 90.0) {
       performanceLevel = 'Exceptional';
       performanceColor = Colors.green.shade700;
       performanceMultiplier = 1.25;
-    } else if (recentPerformance >= PERFORMANCE_BENCHMARK) {
+    } else if (recentPerformance >= performanceBenchmark) {
       performanceLevel = 'Above Standard';
       performanceColor = Colors.green;
       performanceMultiplier = 1.1;
@@ -1391,15 +1502,15 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
       performanceColor = Colors.red.shade700;
       performanceMultiplier = 0.5;
     }
-    
+
     // Calculate trend analysis with 80% benchmark in mind
     String trend;
     String trendIcon;
     double trendMultiplier;
-    
+
     // Determine trend based on progression toward/away from 80% benchmark
     if (oneMonth > 0 && threeMonth > 0) {
-      if (oneMonth > threeMonth && oneMonth >= PERFORMANCE_BENCHMARK) {
+      if (oneMonth > threeMonth && oneMonth >= performanceBenchmark) {
         trend = 'Improving & Above Standard';
         trendIcon = '🌟';
         trendMultiplier = 1.2;
@@ -1407,11 +1518,12 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
         trend = 'Improving';
         trendIcon = '📈';
         trendMultiplier = 1.15;
-      } else if (oneMonth >= PERFORMANCE_BENCHMARK && threeMonth >= PERFORMANCE_BENCHMARK) {
+      } else if (oneMonth >= performanceBenchmark &&
+          threeMonth >= performanceBenchmark) {
         trend = 'Consistently Above Standard';
         trendIcon = '✅';
         trendMultiplier = 1.1;
-      } else if (oneMonth < threeMonth && oneMonth < PERFORMANCE_BENCHMARK) {
+      } else if (oneMonth < threeMonth && oneMonth < performanceBenchmark) {
         trend = 'Declining Below Standard';
         trendIcon = '⚠️';
         trendMultiplier = 0.8;
@@ -1426,7 +1538,7 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
       }
     } else {
       // Fallback for missing data
-      if (allTime >= PERFORMANCE_BENCHMARK) {
+      if (allTime >= performanceBenchmark) {
         trend = 'Above Standard';
         trendIcon = '✅';
         trendMultiplier = 1.0;
@@ -1436,21 +1548,25 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
         trendMultiplier = 0.8;
       }
     }
-    
+
     // Weight recent performance more heavily, but factor in benchmark achievement
     final baseScore = (oneMonth * 0.5) + (threeMonth * 0.3) + (allTime * 0.2);
-    
+
     // Bonus for meeting/exceeding 80% benchmark
     double benchmarkBonus = 1.0;
-    if (recentPerformance >= PERFORMANCE_BENCHMARK) {
-      benchmarkBonus = 1.0 + ((recentPerformance - PERFORMANCE_BENCHMARK) / 100.0); // Extra credit for exceeding
+    if (recentPerformance >= performanceBenchmark) {
+      benchmarkBonus = 1.0 +
+          ((recentPerformance - performanceBenchmark) /
+              100.0); // Extra credit for exceeding
     } else {
-      benchmarkBonus = recentPerformance / PERFORMANCE_BENCHMARK; // Penalty for below standard
+      benchmarkBonus = recentPerformance /
+          performanceBenchmark; // Penalty for below standard
     }
-    
+
     // Apply all multipliers
-    final finalScore = baseScore * trendMultiplier * performanceMultiplier * benchmarkBonus;
-    
+    final finalScore =
+        baseScore * trendMultiplier * performanceMultiplier * benchmarkBonus;
+
     return {
       'report': report,
       'score': finalScore,
@@ -1458,17 +1574,19 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
       'trendIcon': trendIcon,
       'performanceLevel': performanceLevel,
       'performanceColor': performanceColor,
-      'benchmarkStatus': recentPerformance >= PERFORMANCE_BENCHMARK ? 'Above Standard' : 'Below Standard',
-      'benchmarkGap': recentPerformance - PERFORMANCE_BENCHMARK,
+      'benchmarkStatus': recentPerformance >= performanceBenchmark
+          ? 'Above Standard'
+          : 'Below Standard',
+      'benchmarkGap': recentPerformance - performanceBenchmark,
     };
   }
-  
+
   /// Format percentage values for display
   String _formatPercentage(double? percentage) {
     if (percentage == null) return 'N/A';
     return '${percentage.toStringAsFixed(1)}%';
   }
-  
+
   /// Format benchmark gap for display
   String _formatBenchmarkGap(double gap) {
     if (gap >= 0) {
@@ -1477,7 +1595,7 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
       return '${gap.toStringAsFixed(1)}%';
     }
   }
-  
+
   /// Get color for trend indicators
   Color _getTrendColor(String trend) {
     switch (trend) {
@@ -1494,7 +1612,7 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
         return Colors.grey;
     }
   }
-  
+
   /// Get color based on performance score
   Color _getScoreColor(double score) {
     if (score >= 70) return Colors.green;
@@ -1526,8 +1644,8 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
                 Text(
                   'Performance Benchmarking',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
                 const Spacer(),
                 ElevatedButton.icon(
@@ -1607,9 +1725,9 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
               Text(
                 'Overall Performance: $ratingText',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: ratingColor,
-                ),
+                      fontWeight: FontWeight.bold,
+                      color: ratingColor,
+                    ),
               ),
               Text(
                 'Current NPS: ${analysis.currentNPS.toStringAsFixed(1)}',
@@ -1629,8 +1747,8 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
         Text(
           'Industry Comparison',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+                fontWeight: FontWeight.bold,
+              ),
         ),
         const SizedBox(height: 8),
         _buildComparisonRow(
@@ -1643,22 +1761,24 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
           Text(
             'vs. Competitors',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+                  fontWeight: FontWeight.bold,
+                ),
           ),
           const SizedBox(height: 4),
-          ...analysis.competitorComparison.entries.take(2).map((entry) =>
-            _buildComparisonRow(entry.key, entry.value, analysis.currentNPS),
-          ),
+          ...analysis.competitorComparison.entries.take(2).map(
+                (entry) => _buildComparisonRow(
+                    entry.key, entry.value, analysis.currentNPS),
+              ),
         ],
       ],
     );
   }
 
-  Widget _buildComparisonRow(String label, double benchmarkValue, double currentValue) {
+  Widget _buildComparisonRow(
+      String label, double benchmarkValue, double currentValue) {
     final difference = currentValue - benchmarkValue;
     final isPositive = difference >= 0;
-    
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
@@ -1704,33 +1824,33 @@ class _EnhancedNPSAnalyticsWidgetState extends State<EnhancedNPSAnalyticsWidget>
         Text(
           'Top Recommendations',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+                fontWeight: FontWeight.bold,
+              ),
         ),
         const SizedBox(height: 8),
         ...analysis.recommendations.take(3).map((rec) => Padding(
-          padding: const EdgeInsets.only(bottom: 4),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 6,
-                height: 6,
-                margin: const EdgeInsets.only(top: 6, right: 8),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor,
-                  shape: BoxShape.circle,
-                ),
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 6,
+                    height: 6,
+                    margin: const EdgeInsets.only(top: 6, right: 8),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).primaryColor,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      rec.title,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                ],
               ),
-              Expanded(
-                child: Text(
-                  rec.title,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ),
-            ],
-          ),
-        )),
+            )),
       ],
     );
   }

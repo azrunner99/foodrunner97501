@@ -6,18 +6,19 @@ class StationType {
   final String name;
   final String abbreviation;
   final int sections;
-  StationType({required this.name, required this.abbreviation, required this.sections});
+  StationType(
+      {required this.name, required this.abbreviation, required this.sections});
 
   Map<String, dynamic> toJson() => {
-    'name': name,
-    'abbreviation': abbreviation,
-    'sections': sections,
-  };
+        'name': name,
+        'abbreviation': abbreviation,
+        'sections': sections,
+      };
   factory StationType.fromJson(Map<String, dynamic> json) => StationType(
-    name: json['name'],
-    abbreviation: json['abbreviation'],
-    sections: json['sections'],
-  );
+        name: json['name'],
+        abbreviation: json['abbreviation'],
+        sections: json['sections'],
+      );
 }
 
 class StationTypesScreen extends StatefulWidget {
@@ -46,7 +47,8 @@ class _StationTypesScreenState extends State<StationTypesScreen> {
       final List decoded = json.decode(jsonString);
       setState(() {
         _stationTypes.clear();
-        _stationTypes.addAll(decoded.map((e) => StationType.fromJson(e)).cast<StationType>());
+        _stationTypes.addAll(
+            decoded.map((e) => StationType.fromJson(e)).cast<StationType>());
       });
     }
   }
@@ -54,7 +56,8 @@ class _StationTypesScreenState extends State<StationTypesScreen> {
   // Simulate saving to persistent storage
   Future<void> _saveStationTypes() async {
     final prefs = await SharedPreferences.getInstance();
-    final jsonString = json.encode(_stationTypes.map((e) => e.toJson()).toList());
+    final jsonString =
+        json.encode(_stationTypes.map((e) => e.toJson()).toList());
     await prefs.setString(_prefsKey, jsonString);
   }
 
@@ -91,20 +94,27 @@ class _StationTypesScreenState extends State<StationTypesScreen> {
             ),
             TextField(
               controller: sectionsController,
-              decoration: const InputDecoration(labelText: 'Number of sections'),
+              decoration:
+                  const InputDecoration(labelText: 'Number of sections'),
               keyboardType: TextInputType.number,
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel')),
           TextButton(
             onPressed: () {
               final name = nameController.text.trim();
               final abbr = abbrController.text.trim();
-              final sections = int.tryParse(sectionsController.text.trim()) ?? 0;
+              final sections =
+                  int.tryParse(sectionsController.text.trim()) ?? 0;
               if (name.isNotEmpty && abbr.isNotEmpty && sections > 0) {
-                Navigator.pop(context, StationType(name: name, abbreviation: abbr, sections: sections));
+                Navigator.pop(
+                    context,
+                    StationType(
+                        name: name, abbreviation: abbr, sections: sections));
               }
             },
             child: const Text('Add'),
@@ -132,7 +142,8 @@ class _StationTypesScreenState extends State<StationTypesScreen> {
     final type = _stationTypes[index];
     final nameController = TextEditingController(text: type.name);
     final abbrController = TextEditingController(text: type.abbreviation);
-    final sectionsController = TextEditingController(text: type.sections.toString());
+    final sectionsController =
+        TextEditingController(text: type.sections.toString());
     final result = await showDialog<StationType>(
       context: context,
       builder: (context) => AlertDialog(
@@ -151,20 +162,27 @@ class _StationTypesScreenState extends State<StationTypesScreen> {
             ),
             TextField(
               controller: sectionsController,
-              decoration: const InputDecoration(labelText: 'Number of sections'),
+              decoration:
+                  const InputDecoration(labelText: 'Number of sections'),
               keyboardType: TextInputType.number,
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel')),
           TextButton(
             onPressed: () {
               final name = nameController.text.trim();
               final abbr = abbrController.text.trim();
-              final sections = int.tryParse(sectionsController.text.trim()) ?? 0;
+              final sections =
+                  int.tryParse(sectionsController.text.trim()) ?? 0;
               if (name.isNotEmpty && abbr.isNotEmpty && sections > 0) {
-                Navigator.pop(context, StationType(name: name, abbreviation: abbr, sections: sections));
+                Navigator.pop(
+                    context,
+                    StationType(
+                        name: name, abbreviation: abbr, sections: sections));
               }
             },
             child: const Text('Save'),
@@ -192,7 +210,7 @@ class _StationTypesScreenState extends State<StationTypesScreen> {
       body: WillPopScope(
         onWillPop: _onWillPop,
         child: Container(
-          color: theme.colorScheme.surfaceVariant.withOpacity(0.2),
+          color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.2),
           child: Padding(
             padding: const EdgeInsets.all(20.0),
             child: Column(
@@ -200,13 +218,15 @@ class _StationTypesScreenState extends State<StationTypesScreen> {
               children: [
                 Row(
                   children: [
-                    Text('Create a new station type:', style: theme.textTheme.titleMedium),
+                    Text('Create a new station type:',
+                        style: theme.textTheme.titleMedium),
                     const Spacer(),
                     FilledButton.icon(
                       icon: const Icon(Icons.add),
                       label: const Text('Add'),
                       style: FilledButton.styleFrom(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
                         backgroundColor: theme.colorScheme.primary,
                         foregroundColor: theme.colorScheme.onPrimary,
                       ),
@@ -215,23 +235,28 @@ class _StationTypesScreenState extends State<StationTypesScreen> {
                   ],
                 ),
                 const SizedBox(height: 24),
-                Text('Existing station types:', style: theme.textTheme.titleMedium),
+                Text('Existing station types:',
+                    style: theme.textTheme.titleMedium),
                 const SizedBox(height: 8),
                 Expanded(
                   child: _stationTypes.isEmpty
                       ? Center(
-                          child: Text('No station types yet.', style: theme.textTheme.bodyLarge?.copyWith(color: theme.hintColor)),
+                          child: Text('No station types yet.',
+                              style: theme.textTheme.bodyLarge
+                                  ?.copyWith(color: theme.hintColor)),
                         )
                       : ListView.separated(
                           itemCount: _stationTypes.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 12),
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 12),
                           itemBuilder: (context, index) {
                             final type = _stationTypes[index];
                             final isExpanded = _expanded.contains(index);
                             return Card(
                               elevation: isExpanded ? 4 : 1,
                               color: theme.colorScheme.surface,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16)),
                               child: ExpansionTile(
                                 key: PageStorageKey('${type.name}_$index'),
                                 initiallyExpanded: isExpanded,
@@ -249,22 +274,28 @@ class _StationTypesScreenState extends State<StationTypesScreen> {
                                     Expanded(
                                       child: Text(
                                         type.name,
-                                        style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                                        style: theme.textTheme.titleLarge
+                                            ?.copyWith(
+                                                fontWeight: FontWeight.bold),
                                       ),
                                     ),
                                     Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         IconButton(
-                                          icon: const Icon(Icons.edit, color: Colors.blueGrey),
+                                          icon: const Icon(Icons.edit,
+                                              color: Colors.blueGrey),
                                           tooltip: 'Edit',
-                                          onPressed: () => _editStationType(index),
+                                          onPressed: () =>
+                                              _editStationType(index),
                                         ),
                                         SizedBox(width: 4),
                                         IconButton(
-                                          icon: const Icon(Icons.delete, color: Colors.redAccent),
+                                          icon: const Icon(Icons.delete,
+                                              color: Colors.redAccent),
                                           tooltip: 'Delete',
-                                          onPressed: () => _removeStationType(index),
+                                          onPressed: () =>
+                                              _removeStationType(index),
                                         ),
                                       ],
                                     ),
@@ -272,19 +303,32 @@ class _StationTypesScreenState extends State<StationTypesScreen> {
                                 ),
                                 subtitle: Padding(
                                   padding: const EdgeInsets.only(top: 2.0),
-                                  child: Text('Abbr: ${type.abbreviation} • Sections: ${type.sections}', style: theme.textTheme.bodyMedium),
+                                  child: Text(
+                                      'Abbr: ${type.abbreviation} • Sections: ${type.sections}',
+                                      style: theme.textTheme.bodyMedium),
                                 ),
                                 children: [
-                                  Divider(indent: 16, endIndent: 16, color: theme.dividerColor),
+                                  Divider(
+                                      indent: 16,
+                                      endIndent: 16,
+                                      color: theme.dividerColor),
                                   Padding(
-                                    padding: const EdgeInsets.only(left: 24, right: 24, bottom: 16, top: 4),
+                                    padding: const EdgeInsets.only(
+                                        left: 24,
+                                        right: 24,
+                                        bottom: 16,
+                                        top: 4),
                                     child: Wrap(
                                       spacing: 12,
                                       runSpacing: 8,
                                       children: _generateStations(type)
                                           .map((s) => Chip(
-                                                label: Text(s, style: theme.textTheme.bodyMedium),
-                                                backgroundColor: theme.colorScheme.secondaryContainer,
+                                                label: Text(s,
+                                                    style: theme
+                                                        .textTheme.bodyMedium),
+                                                backgroundColor: theme
+                                                    .colorScheme
+                                                    .secondaryContainer,
                                               ))
                                           .toList(),
                                     ),
@@ -311,7 +355,10 @@ Future<List<StationType>> loadStationTypes() async {
   final jsonString = prefs.getString(prefsKey);
   if (jsonString != null) {
     final List decoded = json.decode(jsonString);
-    return decoded.map((e) => StationType.fromJson(e)).cast<StationType>().toList();
+    return decoded
+        .map((e) => StationType.fromJson(e))
+        .cast<StationType>()
+        .toList();
   }
   return [];
 }

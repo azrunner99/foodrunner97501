@@ -24,7 +24,8 @@ class ProfilesScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Server Profiles')),
       body: servers.isEmpty
-          ? const Center(child: Text('No servers yet. Add from Assign or Manage.'))
+          ? const Center(
+              child: Text('No servers yet. Add from Assign or Manage.'))
           : ListView.separated(
               padding: const EdgeInsets.all(16),
               itemCount: servers.length,
@@ -33,12 +34,13 @@ class ProfilesScreen extends StatelessWidget {
                 final s = servers[i];
                 final prof = app.profiles[s.id];
                 final bannerPath = prof?.bannerPath;
-                
+
                 return GestureDetector(
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => ProfileDetailScreen(serverId: s.id)),
+                      MaterialPageRoute(
+                          builder: (_) => ProfileDetailScreen(serverId: s.id)),
                     );
                   },
                   child: Container(
@@ -63,21 +65,28 @@ class ProfilesScreen extends StatelessWidget {
                                 ? Image.asset(
                                     bannerPath,
                                     fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) =>
-                                        Container(
-                                          decoration: BoxDecoration(
-                                            gradient: LinearGradient(
-                                              colors: [Colors.blue.shade400, Colors.purple.shade400],
-                                              begin: Alignment.topLeft,
-                                              end: Alignment.bottomRight,
-                                            ),
-                                          ),
+                                    errorBuilder:
+                                        (context, error, stackTrace) =>
+                                            Container(
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            Colors.blue.shade400,
+                                            Colors.purple.shade400
+                                          ],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
                                         ),
+                                      ),
+                                    ),
                                   )
                                 : Container(
                                     decoration: BoxDecoration(
                                       gradient: LinearGradient(
-                                        colors: [Colors.grey.shade300, Colors.grey.shade500],
+                                        colors: [
+                                          Colors.grey.shade300,
+                                          Colors.grey.shade500
+                                        ],
                                         begin: Alignment.topLeft,
                                         end: Alignment.bottomRight,
                                       ),
@@ -106,8 +115,9 @@ class ProfilesScreen extends StatelessWidget {
                               child: Row(
                                 children: [
                                   // Avatar section
-                                  Container(
-                                    width: 100, // Increased width to accommodate level bubble
+                                  SizedBox(
+                                    width:
+                                        100, // Increased width to accommodate level bubble
                                     height: 80,
                                     child: Stack(
                                       children: [
@@ -118,10 +128,13 @@ class ProfilesScreen extends StatelessWidget {
                                             height: 80,
                                             decoration: BoxDecoration(
                                               shape: BoxShape.circle,
-                                              border: Border.all(color: Colors.white, width: 3),
+                                              border: Border.all(
+                                                  color: Colors.white,
+                                                  width: 3),
                                               boxShadow: [
                                                 BoxShadow(
-                                                  color: Colors.black.withOpacity(0.3),
+                                                  color: Colors.black
+                                                      .withOpacity(0.3),
                                                   blurRadius: 8,
                                                   offset: const Offset(0, 2),
                                                 ),
@@ -129,14 +142,27 @@ class ProfilesScreen extends StatelessWidget {
                                             ),
                                             child: CircleAvatar(
                                               radius: 37,
-                                              backgroundImage: prof?.avatarPath != null && prof!.avatarPath!.isNotEmpty
-                                                  ? (prof.avatarPath!.startsWith('assets/')
-                                                      ? AssetImage(prof.avatarPath!)
-                                                      : FileImage(File(prof.avatarPath!))) as ImageProvider
+                                              backgroundImage: prof
+                                                              ?.avatarPath !=
+                                                          null &&
+                                                      prof!.avatarPath!
+                                                          .isNotEmpty
+                                                  ? (prof.avatarPath!.startsWith(
+                                                              'assets/')
+                                                          ? AssetImage(
+                                                              prof.avatarPath!)
+                                                          : FileImage(File(prof
+                                                              .avatarPath!)))
+                                                      as ImageProvider
                                                   : null,
-                                              backgroundColor: Colors.grey.shade300,
-                                              child: prof?.avatarPath == null || prof!.avatarPath!.isEmpty
-                                                  ? Icon(Icons.person, size: 40, color: Colors.grey.shade600)
+                                              backgroundColor:
+                                                  Colors.grey.shade300,
+                                              child: prof?.avatarPath == null ||
+                                                      prof!.avatarPath!.isEmpty
+                                                  ? Icon(Icons.person,
+                                                      size: 40,
+                                                      color:
+                                                          Colors.grey.shade600)
                                                   : null,
                                             ),
                                           ),
@@ -146,14 +172,21 @@ class ProfilesScreen extends StatelessWidget {
                                           bottom: 0,
                                           right: 8,
                                           child: Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 8, vertical: 2),
                                             decoration: BoxDecoration(
-                                              gradient: AppTheme.getLevelBubbleGradient(prof?.level ?? 1),
-                                              borderRadius: BorderRadius.circular(12),
-                                              border: Border.all(color: Colors.white, width: 2),
+                                              gradient: AppTheme
+                                                  .getLevelBubbleGradient(
+                                                      prof?.level ?? 1),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              border: Border.all(
+                                                  color: Colors.white,
+                                                  width: 2),
                                               boxShadow: [
                                                 BoxShadow(
-                                                  color: Colors.black.withOpacity(0.3),
+                                                  color: Colors.black
+                                                      .withOpacity(0.3),
                                                   blurRadius: 4,
                                                   offset: const Offset(0, 1),
                                                 ),
@@ -162,10 +195,9 @@ class ProfilesScreen extends StatelessWidget {
                                             child: Text(
                                               'Lvl${prof?.level ?? 1}',
                                               style: const TextStyle(
-                                                color: Colors.white, 
-                                                fontWeight: FontWeight.bold, 
-                                                fontSize: 14
-                                              ),
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 14),
                                             ),
                                           ),
                                         ),
@@ -176,8 +208,10 @@ class ProfilesScreen extends StatelessWidget {
                                   // Server info
                                   Expanded(
                                     child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           s.name,
@@ -187,12 +221,14 @@ class ProfilesScreen extends StatelessWidget {
                                             color: Colors.white,
                                             shadows: [
                                               Shadow(
-                                                color: Colors.black.withOpacity(0.7),
+                                                color: Colors.black
+                                                    .withOpacity(0.7),
                                                 offset: const Offset(1, 1),
                                                 blurRadius: 3,
                                               ),
                                               Shadow(
-                                                color: Colors.black.withOpacity(0.5),
+                                                color: Colors.black
+                                                    .withOpacity(0.5),
                                                 offset: const Offset(2, 2),
                                                 blurRadius: 6,
                                               ),
@@ -206,19 +242,27 @@ class ProfilesScreen extends StatelessWidget {
                                         Container(
                                           height: 10,
                                           width: double.infinity,
-                                          margin: const EdgeInsets.only(right: 20),
+                                          margin:
+                                              const EdgeInsets.only(right: 20),
                                           decoration: BoxDecoration(
-                                            color: Colors.black.withOpacity(0.4),
-                                            borderRadius: BorderRadius.circular(4),
-                                            border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+                                            color:
+                                                Colors.black.withOpacity(0.4),
+                                            borderRadius:
+                                                BorderRadius.circular(4),
+                                            border: Border.all(
+                                                color: Colors.white
+                                                    .withOpacity(0.3),
+                                                width: 1),
                                             boxShadow: [
                                               BoxShadow(
-                                                color: Colors.black.withOpacity(0.6),
+                                                color: Colors.black
+                                                    .withOpacity(0.6),
                                                 blurRadius: 6,
                                                 offset: const Offset(0, 2),
                                               ),
                                               BoxShadow(
-                                                color: Colors.black.withOpacity(0.3),
+                                                color: Colors.black
+                                                    .withOpacity(0.3),
                                                 blurRadius: 12,
                                                 offset: const Offset(0, 4),
                                               ),
@@ -226,16 +270,24 @@ class ProfilesScreen extends StatelessWidget {
                                           ),
                                           child: FractionallySizedBox(
                                             alignment: Alignment.centerLeft,
-                                            widthFactor: prof != null 
+                                            widthFactor: prof != null
                                                 ? () {
                                                     // Calculate progress same as home_screen.dart
                                                     final points = prof.points;
-                                                    final lvl = levelForPoints(points);
-                                                    final prevLevelXp = xpTable[lvl];
-                                                    final nextLevelXp = xpTable[lvl + 1];
-                                                    
-                                                    if (nextLevelXp > prevLevelXp) {
-                                                      return ((points - prevLevelXp) / (nextLevelXp - prevLevelXp)).clamp(0.0, 1.0);
+                                                    final lvl =
+                                                        levelForPoints(points);
+                                                    final prevLevelXp =
+                                                        xpTable[lvl];
+                                                    final nextLevelXp =
+                                                        xpTable[lvl + 1];
+
+                                                    if (nextLevelXp >
+                                                        prevLevelXp) {
+                                                      return ((points -
+                                                                  prevLevelXp) /
+                                                              (nextLevelXp -
+                                                                  prevLevelXp))
+                                                          .clamp(0.0, 1.0);
                                                     }
                                                     return 1.0;
                                                   }()
@@ -245,20 +297,24 @@ class ProfilesScreen extends StatelessWidget {
                                                 gradient: LinearGradient(
                                                   colors: [
                                                     Colors.white,
-                                                    Colors.white.withOpacity(0.9),
+                                                    Colors.white
+                                                        .withOpacity(0.9),
                                                   ],
                                                   begin: Alignment.topCenter,
                                                   end: Alignment.bottomCenter,
                                                 ),
-                                                borderRadius: BorderRadius.circular(4),
+                                                borderRadius:
+                                                    BorderRadius.circular(4),
                                                 boxShadow: [
                                                   BoxShadow(
-                                                    color: Colors.white.withOpacity(0.6),
+                                                    color: Colors.white
+                                                        .withOpacity(0.6),
                                                     blurRadius: 8,
                                                     offset: const Offset(0, 0),
                                                   ),
                                                   BoxShadow(
-                                                    color: Colors.white.withOpacity(0.3),
+                                                    color: Colors.white
+                                                        .withOpacity(0.3),
                                                     blurRadius: 16,
                                                     offset: const Offset(0, 0),
                                                   ),
@@ -269,11 +325,13 @@ class ProfilesScreen extends StatelessWidget {
                                         ),
                                         const SizedBox(height: 3),
                                         // XP Metrics
-                                        prof != null 
+                                        prof != null
                                             ? () {
                                                 final points = prof.points;
-                                                final lvl = levelForPoints(points);
-                                                final nextLevelXp = xpTable[lvl + 1];
+                                                final lvl =
+                                                    levelForPoints(points);
+                                                final nextLevelXp =
+                                                    xpTable[lvl + 1];
                                                 return Text(
                                                   '$points / $nextLevelXp XP',
                                                   style: TextStyle(
@@ -282,13 +340,17 @@ class ProfilesScreen extends StatelessWidget {
                                                     color: Colors.white,
                                                     shadows: [
                                                       Shadow(
-                                                        color: Colors.black.withOpacity(0.8),
-                                                        offset: const Offset(1, 1),
+                                                        color: Colors.black
+                                                            .withOpacity(0.8),
+                                                        offset:
+                                                            const Offset(1, 1),
                                                         blurRadius: 3,
                                                       ),
                                                       Shadow(
-                                                        color: Colors.black.withOpacity(0.6),
-                                                        offset: const Offset(2, 2),
+                                                        color: Colors.black
+                                                            .withOpacity(0.6),
+                                                        offset:
+                                                            const Offset(2, 2),
                                                         blurRadius: 6,
                                                       ),
                                                     ],
@@ -331,14 +393,25 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
   // Helper method to extract month name from birthday
   String _getBirthdayMonth(String birthday) {
     if (birthday.isEmpty) return '';
-    
+
     try {
       final parts = birthday.split('/');
-      if (parts.length >= 1) {
+      if (parts.isNotEmpty) {
         final monthNum = int.parse(parts[0]);
         const months = [
-          '', 'January', 'February', 'March', 'April', 'May', 'June',
-          'July', 'August', 'September', 'October', 'November', 'December'
+          '',
+          'January',
+          'February',
+          'March',
+          'April',
+          'May',
+          'June',
+          'July',
+          'August',
+          'September',
+          'October',
+          'November',
+          'December'
         ];
         if (monthNum >= 1 && monthNum <= 12) {
           return months[monthNum];
@@ -353,7 +426,7 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
   // Helper method to calculate tenure from hire date
   String _calculateTenure(String hireDate) {
     if (hireDate.isEmpty) return 'Not specified';
-    
+
     try {
       final parts = hireDate.split('/');
       if (parts.length == 3) {
@@ -362,22 +435,22 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
         final year = int.parse(parts[2]);
         final hireDateObj = DateTime(year, month, day);
         final now = DateTime.now();
-        
+
         if (hireDateObj.isAfter(now)) {
           return 'Future hire date';
         }
-        
+
         final difference = now.difference(hireDateObj);
         final totalDays = difference.inDays;
-        
+
         // Calculate years, months, and remaining days
         final years = (totalDays / 365.25).floor();
         final remainingDaysAfterYears = totalDays - (years * 365.25).floor();
         final months = (remainingDaysAfterYears / 30.44).floor();
         final days = remainingDaysAfterYears - (months * 30.44).floor();
-        
+
         List<String> tenureParts = [];
-        
+
         if (years > 0) {
           tenureParts.add('$years year${years == 1 ? '' : 's'}');
         }
@@ -387,11 +460,11 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
         if (days > 0) {
           tenureParts.add('$days day${days == 1 ? '' : 's'}');
         }
-        
+
         if (tenureParts.isEmpty) {
           return 'Less than 1 day';
         }
-        
+
         // Join parts with commas and "and" for the last item
         if (tenureParts.length == 1) {
           return tenureParts[0];
@@ -411,7 +484,7 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
   double _calculateAvgRunsPerShift(AppState app, String serverId) {
     int totalRuns = 0;
     int totalShifts = 0;
-    
+
     for (final shift in app.history) {
       final runs = shift.counts[serverId] ?? 0;
       if (runs > 0) {
@@ -419,7 +492,7 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
         totalShifts += 1;
       }
     }
-    
+
     return totalShifts > 0 ? totalRuns / totalShifts : 0.0;
   }
 
@@ -427,7 +500,7 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
   double _calculateAvgPizookiePerShift(AppState app, String serverId) {
     int totalPizookieRuns = 0;
     int totalShifts = 0;
-    
+
     for (final shift in app.history) {
       final pizookieRuns = shift.pizookieCounts[serverId] ?? 0;
       if (pizookieRuns > 0) {
@@ -435,12 +508,16 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
         totalShifts += 1;
       }
     }
-    
+
     return totalShifts > 0 ? totalPizookieRuns / totalShifts : 0.0;
   }
 
   // Enhanced metric card widget with modern design
-  Widget metricCard({required String label, required String value, required Color color, Widget? extra}) {
+  Widget metricCard(
+      {required String label,
+      required String value,
+      required Color color,
+      Widget? extra}) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
@@ -500,18 +577,17 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
                   Row(
                     children: [
                       Expanded(
-                        child: Text(
-                          label, 
-                          style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 22, // Increased from 18
-                            color: color.withOpacity(0.9),
-                            letterSpacing: 0.5,
-                          )
-                        ),
+                        child: Text(label,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 22, // Increased from 18
+                              color: color.withOpacity(0.9),
+                              letterSpacing: 0.5,
+                            )),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: color.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(12),
@@ -525,15 +601,13 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  Text(
-                    value, 
-                    style: const TextStyle(
-                      fontSize: 28, // Increased from 24
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                      height: 1.2,
-                    )
-                  ),
+                  Text(value,
+                      style: const TextStyle(
+                        fontSize: 28, // Increased from 24
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                        height: 1.2,
+                      )),
                   if (extra != null) ...[
                     const SizedBox(height: 16),
                     Container(
@@ -643,12 +717,14 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
   }
 
   // Helper method to build individual detail items
-  Widget _buildDetailItem(String label, String value, {bool highlight = false}) {
+  Widget _buildDetailItem(String label, String value,
+      {bool highlight = false}) {
     return Flexible(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: highlight ? Colors.black.withOpacity(0.05) : Colors.transparent,
+          color:
+              highlight ? Colors.black.withOpacity(0.05) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -692,7 +768,7 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
       // Save avatar path to ServerProfile for global access
       final app = Provider.of<AppState>(context, listen: false);
       app.updateAvatar(widget.serverId, newPath);
-  // Removed 'Show on Server Button?' dialog
+      // Removed 'Show on Server Button?' dialog
     }
   }
 
@@ -711,10 +787,12 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.grey[300],
                   foregroundColor: Colors.black,
-                  textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  textStyle: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold),
                   minimumSize: const Size(120, 40),
                   elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
                 onPressed: () => Navigator.pop(context, 'replace'),
                 child: const Text('Take Photo'),
@@ -726,10 +804,12 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.grey[300],
                   foregroundColor: Colors.black,
-                  textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  textStyle: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold),
                   minimumSize: const Size(180, 40),
                   elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
                 onPressed: () => Navigator.pop(context, 'presets'),
                 child: const Text('Select From Presets'),
@@ -741,10 +821,12 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.grey[300],
                   foregroundColor: Colors.black,
-                  textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  textStyle: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold),
                   minimumSize: const Size(120, 40),
                   elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
                 onPressed: () => Navigator.pop(context, 'remove'),
                 child: const Text('Remove'),
@@ -757,7 +839,10 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
                 child: TextButton(
                   onPressed: () => Navigator.pop(context),
                   child: const Text('Cancel',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black)),
                 ),
               ),
             ),
@@ -801,10 +886,11 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
       cancelText: 'Cancel',
       confirmText: 'Save',
     );
-    
+
     if (date != null) {
-      final birthday = '${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}';
-      
+      final birthday =
+          '${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}';
+
       // Update the profile with the new birthday
       final app = Provider.of<AppState>(context, listen: false);
       final currentProfile = app.profiles[serverId] ?? ServerProfile();
@@ -833,10 +919,16 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
     }
 
     // Calculate team totals for all-time and pizookie runs
-    final teamAllTimeRuns = app.profiles.values.fold<int>(0, (sum, prof) => sum + prof.allTimeRuns);
-    final teamPizookieRuns = app.profiles.values.fold<int>(0, (sum, prof) => sum + prof.pizookieRuns);
-    final allTimePct = teamAllTimeRuns > 0 ? ((p.allTimeRuns / teamAllTimeRuns) * 100).toStringAsFixed(1) : '0';
-    final pizookiePct = teamPizookieRuns > 0 ? ((p.pizookieRuns / teamPizookieRuns) * 100).toStringAsFixed(1) : '0';
+    final teamAllTimeRuns =
+        app.profiles.values.fold<int>(0, (sum, prof) => sum + prof.allTimeRuns);
+    final teamPizookieRuns = app.profiles.values
+        .fold<int>(0, (sum, prof) => sum + prof.pizookieRuns);
+    final allTimePct = teamAllTimeRuns > 0
+        ? ((p.allTimeRuns / teamAllTimeRuns) * 100).toStringAsFixed(1)
+        : '0';
+    final pizookiePct = teamPizookieRuns > 0
+        ? ((p.pizookieRuns / teamPizookieRuns) * 100).toStringAsFixed(1)
+        : '0';
 
     // Calculate ranks for all-time runs and pizookie runs
     List<ServerProfile> sortedAllTime = app.profiles.values.toList()
@@ -846,7 +938,7 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
     int allTimeRank = sortedAllTime.indexWhere((prof) => prof == p) + 1;
     int pizookieRank = sortedPizookie.indexWhere((prof) => prof == p) + 1;
 
-  // Badge logic removed
+    // Badge logic removed
     final totalServers = app.profiles.length;
 
     return Scaffold(
@@ -863,19 +955,23 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => ProfileBannerScreen(serverId: widget.serverId),
+                        builder: (_) =>
+                            ProfileBannerScreen(serverId: widget.serverId),
                       ),
                     );
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: Colors.grey.shade200,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: Colors.grey.shade300),
                     ),
                     child: Text(
-                      p.bannerPath != null ? 'Change Profile Banner' : 'Add Profile Banner',
+                      p.bannerPath != null
+                          ? 'Change Profile Banner'
+                          : 'Add Profile Banner',
                       style: const TextStyle(
                         fontSize: 12,
                         color: Colors.black87,
@@ -889,13 +985,13 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
             ),
           ),
           // Banner section with avatar and name overlay - full width
-          Container(
+          SizedBox(
             width: double.infinity,
             height: 240, // Height to accommodate avatar + name + spacing
             child: Stack(
               children: [
                 // Banner background - full width, no rounded corners
-                Container(
+                SizedBox(
                   width: double.infinity,
                   height: double.infinity,
                   child: p.bannerPath != null
@@ -977,14 +1073,21 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
                               child: CircleAvatar(
                                 radius: 60,
                                 backgroundColor: Colors.deepPurple.shade100,
-                                child: (p.avatarPath == null || p.avatarPath!.isEmpty)
-                                  ? null
-                                  : (p.avatarPath!.startsWith('assets/')
-                                    ? ClipOval(child: Image.asset(p.avatarPath!, width: 120, height: 120, fit: BoxFit.cover))
-                                    : null),
-                                backgroundImage: (p.avatarPath != null && p.avatarPath!.isNotEmpty && !p.avatarPath!.startsWith('assets/'))
-                                  ? FileImage(File(p.avatarPath!))
-                                  : null,
+                                backgroundImage: (p.avatarPath != null &&
+                                        p.avatarPath!.isNotEmpty &&
+                                        !p.avatarPath!.startsWith('assets/'))
+                                    ? FileImage(File(p.avatarPath!))
+                                    : null,
+                                child: (p.avatarPath == null ||
+                                        p.avatarPath!.isEmpty)
+                                    ? null
+                                    : (p.avatarPath!.startsWith('assets/')
+                                        ? ClipOval(
+                                            child: Image.asset(p.avatarPath!,
+                                                width: 120,
+                                                height: 120,
+                                                fit: BoxFit.cover))
+                                        : null),
                               ),
                             ),
                           ),
@@ -992,11 +1095,14 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
                             bottom: 0,
                             right: 0,
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 4),
                               decoration: BoxDecoration(
-                                gradient: AppTheme.getLevelBubbleGradient(p.level),
+                                gradient:
+                                    AppTheme.getLevelBubbleGradient(p.level),
                                 borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: Colors.white, width: 2),
+                                border:
+                                    Border.all(color: Colors.white, width: 2),
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black.withOpacity(0.3),
@@ -1008,10 +1114,9 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
                               child: Text(
                                 'Lvl${p.level}',
                                 style: const TextStyle(
-                                  color: Colors.white, 
-                                  fontWeight: FontWeight.bold, 
-                                  fontSize: 14
-                                ),
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14),
                               ),
                             ),
                           ),
@@ -1112,7 +1217,8 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
                   const SizedBox(height: 12),
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
@@ -1126,7 +1232,8 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
                             color: Colors.pink.shade50,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Icon(Icons.cake, color: Colors.pink.shade400, size: 20),
+                          child: Icon(Icons.cake,
+                              color: Colors.pink.shade400, size: 20),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -1143,7 +1250,9 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                p.birthday.isNotEmpty ? _getBirthdayMonth(p.birthday) : 'Not set',
+                                p.birthday.isNotEmpty
+                                    ? _getBirthdayMonth(p.birthday)
+                                    : 'Not set',
                                 style: const TextStyle(
                                   fontSize: 16, // Increased from 14
                                   fontWeight: FontWeight.w500,
@@ -1156,7 +1265,8 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
                         GestureDetector(
                           onTap: () => _editBirthday(context, widget.serverId),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
                               color: Colors.pink.shade100,
                               borderRadius: BorderRadius.circular(8),
@@ -1193,7 +1303,8 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
             color: Colors.purple,
             extra: _buildDetailRow([
               _buildDetailItem('Level ${p.level}', 'Current'),
-              _buildDetailItem('Next level', '${p.nextLevelAt} XP', highlight: true),
+              _buildDetailItem('Next level', '${p.nextLevelAt} XP',
+                  highlight: true),
             ]),
           ),
           // Remove the metricCard for 'Points'
@@ -1209,19 +1320,23 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
                 ]),
                 const SizedBox(height: 8),
                 _buildDetailRow([
-                  _buildDetailItem('Rank', '$allTimeRank/$totalServers', highlight: true),
+                  _buildDetailItem('Rank', '$allTimeRank/$totalServers',
+                      highlight: true),
                 ]),
               ],
             ),
           ),
           metricCard(
             label: 'Average Runs Per Shift',
-            value: '${_calculateAvgRunsPerShift(app, widget.serverId).toStringAsFixed(1)} runs',
+            value:
+                '${_calculateAvgRunsPerShift(app, widget.serverId).toStringAsFixed(1)} runs',
             color: Colors.green,
             extra: _buildDetailRow([
-              _buildDetailItem('Shifts worked', '${app.history.where((shift) => (shift.counts[widget.serverId] ?? 0) > 0).length}'),
+              _buildDetailItem('Shifts worked',
+                  '${app.history.where((shift) => (shift.counts[widget.serverId] ?? 0) > 0).length}'),
               if (p.bestShiftRuns > 0)
-                _buildDetailItem('Personal best', '${p.bestShiftRuns}', highlight: true),
+                _buildDetailItem('Personal best', '${p.bestShiftRuns}',
+                    highlight: true),
             ]),
           ),
           metricCard(
@@ -1232,11 +1347,13 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
               children: [
                 _buildDetailRow([
                   _buildDetailItem('Team share', '$pizookiePct%'),
-                  _buildDetailItem('Rank', '$pizookieRank/$totalServers', highlight: true),
+                  _buildDetailItem('Rank', '$pizookieRank/$totalServers',
+                      highlight: true),
                 ]),
                 const SizedBox(height: 8),
                 _buildDetailRow([
-                  _buildDetailItem('Avg per shift', '${_calculateAvgPizookiePerShift(app, widget.serverId).round()}'),
+                  _buildDetailItem('Avg per shift',
+                      '${_calculateAvgPizookiePerShift(app, widget.serverId).round()}'),
                 ]),
               ],
             ),

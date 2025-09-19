@@ -51,14 +51,16 @@ class MvpScreen extends StatelessWidget {
                 return ListTile(
                   leading: leading,
                   title: Text(e.name),
-                  subtitle: Text('All-time: ${e.runs} • Share: ${e.pct.toStringAsFixed(1)}%'),
+                  subtitle: Text(
+                      'All-time: ${e.runs} • Share: ${e.pct.toStringAsFixed(1)}%'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     // Optional: jump to that profile
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => _QuickProfileView(name: e.name, runs: e.runs, pct: e.pct),
+                        builder: (_) => _QuickProfileView(
+                            name: e.name, runs: e.runs, pct: e.pct),
                       ),
                     );
                   },
@@ -74,14 +76,19 @@ class _Entry {
   final String name;
   final int runs;
   final double pct;
-  _Entry({required this.id, required this.name, required this.runs, required this.pct});
+  _Entry(
+      {required this.id,
+      required this.name,
+      required this.runs,
+      required this.pct});
 }
 
 class _QuickProfileView extends StatelessWidget {
   final String name;
   final int runs;
   final double pct;
-  const _QuickProfileView({super.key, required this.name, required this.runs, required this.pct});
+  const _QuickProfileView(
+      {super.key, required this.name, required this.runs, required this.pct});
 
   @override
   Widget build(BuildContext context) {
@@ -92,7 +99,8 @@ class _QuickProfileView extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('All-time runs: $runs', style: Theme.of(context).textTheme.titleLarge),
+            Text('All-time runs: $runs',
+                style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
             Text('All-time % of team runs: ${pct.toStringAsFixed(1)}%'),
           ],

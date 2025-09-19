@@ -6,6 +6,7 @@ import '../widgets/wallpaper_background.dart';
 import 'encouragement_options_screen.dart';
 import 'wallpaper_gallery_screen.dart';
 import 'clean_admin_screen.dart';
+import 'weekly_hours_editor_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -74,14 +75,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Icons.emoji_events,
                 'Enable or disable achievements and streaks',
                 _gamificationExpanded,
-                () => setState(() => _gamificationExpanded = !_gamificationExpanded),
+                () => setState(
+                    () => _gamificationExpanded = !_gamificationExpanded),
                 Column(
                   children: [
                     _buildSettingsTile(
                       icon: Icons.emoji_events,
                       title: 'Gamification Options',
                       subtitle: 'Enable or disable achievements and streaks',
-                      onTap: () => Navigator.pushNamed(context, '/gamification_options'),
+                      onTap: () =>
+                          Navigator.pushNamed(context, '/gamification_options'),
                     ),
                     _buildSettingsTile(
                       icon: Icons.celebration,
@@ -90,7 +93,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const EncouragementOptionsScreen()),
+                          MaterialPageRoute(
+                              builder: (_) =>
+                                  const EncouragementOptionsScreen()),
                         );
                       },
                     ),
@@ -103,7 +108,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Icons.palette,
                 'Choose wallpapers and appearance settings',
                 _appearanceExpanded,
-                () => setState(() => _appearanceExpanded = !_appearanceExpanded),
+                () =>
+                    setState(() => _appearanceExpanded = !_appearanceExpanded),
                 Column(
                   children: [
                     _buildSettingsTile(
@@ -113,7 +119,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const WallpaperGalleryScreen()),
+                          MaterialPageRoute(
+                              builder: (_) => const WallpaperGalleryScreen()),
                         );
                       },
                     ),
@@ -136,41 +143,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 () => setState(() => _hoursExpanded = !_hoursExpanded),
                 Column(
                   children: [
+                    // New bulk editor entry
+                    _buildSettingsTile(
+                      icon: Icons.calendar_view_week,
+                      title: 'Edit Weekly Business Hours (Grid)',
+                      subtitle: 'Drag across days to set open/close including overnight',
+                      onTap: () async {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const WeeklyHoursEditorScreen(),
+                          ),
+                        );
+                        setState(() {
+                          _hours = context.read<AppState>().hours;
+                        });
+                      },
+                    ),
+                    // ...existing code...
                     for (final d in _days)
                       _buildSettingsTile(
                         icon: Icons.schedule,
                         title: d.label,
-                        subtitle: 'Open ${_fmtMin(_hours.openMinutes[d.weekday]!)} • Close ${_fmtMin(_hours.closeMinutes[d.weekday]!)}',
-                        trailing: const Icon(Icons.edit, color: Colors.lightBlue),
+                        subtitle:
+                            'Open ${_fmtMin(_hours.openMinutes[d.weekday]!)} • Close ${_fmtMin(_hours.closeMinutes[d.weekday]!)}',
+                        trailing:
+                            const Icon(Icons.edit, color: Colors.lightBlue),
                         onTap: () async {
-                          final open = await _pickTime(context, 'Set open time for ${d.label}', _hours.openMinutes[d.weekday]!);
+                          final open = await _pickTime(
+                              context,
+                              'Set open time for ${d.label}',
+                              _hours.openMinutes[d.weekday]!);
                           if (open == null) return;
-                          final close = await _pickTime(context, 'Set close time for ${d.label}', _hours.closeMinutes[d.weekday]!);
+                          final close = await _pickTime(
+                              context,
+                              'Set close time for ${d.label}',
+                              _hours.closeMinutes[d.weekday]!);
                           if (close == null) return;
-                          
-                          // Temporarily update hours to check transition conflicts
-                          // TEMPORARILY DISABLED: final oldOpen = _hours.openMinutes[d.weekday]!;
-                          // TEMPORARILY DISABLED: final oldClose = _hours.closeMinutes[d.weekday]!;
                           _hours.openMinutes[d.weekday] = open;
                           _hours.closeMinutes[d.weekday] = close;
-                          
-                          // TEMPORARILY DISABLED: Check if current transition times are still valid with new hours
-                          // final conflicts = _validateTransitionTimes(_transitionStart, _transitionEnd);
-                          // if (conflicts.isNotEmpty) {
-                          //   // Restore old values
-                          //   _hours.openMinutes[d.weekday] = oldOpen;
-                          //   _hours.closeMinutes[d.weekday] = oldClose;
-                          //   
-                          //   await _showTransitionConflictDialog([
-                          //     'Changing ${d.label} hours would create conflicts with current transition times:',
-                          //     ...conflicts,
-                          //   ]);
-                          //   return;
-                          // }
-                          
-                          setState(() {
-                            // Hours already updated above for validation
-                          });
+                          setState(() {});
                           app.setWeeklyHours(_hours);
                         },
                       ),
@@ -181,7 +193,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       endIndent: 16,
                     ),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
                       child: Text(
                         'Transition Period',
                         style: TextStyle(
@@ -194,21 +207,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _buildSettingsTile(
                       icon: Icons.swap_horiz,
                       title: 'Lunch to Dinner Transition',
-                      subtitle: 'Start ${_fmtMin(_transitionStart)} • End ${_fmtMin(_transitionEnd)}${_getTransitionValidationStatus()}',
+                      subtitle:
+                          'Start ${_fmtMin(_transitionStart)} • End ${_fmtMin(_transitionEnd)}${_getTransitionValidationStatus()}',
                       trailing: const Icon(Icons.edit, color: Colors.lightBlue),
                       onTap: () async {
-                        final start = await _pickTime(context, 'Set transition start time', _transitionStart);
+                        final start = await _pickTime(context,
+                            'Set transition start time', _transitionStart);
                         if (start == null) return;
-                        final end = await _pickTime(context, 'Set transition end time', _transitionEnd);
+                        final end = await _pickTime(
+                            context, 'Set transition end time', _transitionEnd);
                         if (end == null) return;
-                        
+
                         // TEMPORARILY DISABLED: Validate that transition times are within business hours
                         // final conflicts = _validateTransitionTimes(start, end);
                         // if (conflicts.isNotEmpty) {
                         //   await _showTransitionConflictDialog(conflicts);
                         //   return; // Don't save the invalid times
                         // }
-                        
+
                         setState(() {
                           _transitionStart = start;
                           _transitionEnd = end;
@@ -242,42 +258,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Future<int?> _pickTime(BuildContext context, String title, int minutes) async {
+  Future<int?> _pickTime(
+      BuildContext context, String title, int minutes) async {
     final h = minutes ~/ 60;
     final m = minutes % 60;
     final tod = TimeOfDay(hour: h % 24, minute: m);
-    
+
     if (title.toLowerCase().contains('close')) {
       return await _pickClosingTimeSimple(context, title, minutes);
     } else {
       // For opening times, use standard time picker
-      final picked = await showTimePicker(context: context, helpText: title, initialTime: tod);
+      final picked = await showTimePicker(
+          context: context, helpText: title, initialTime: tod);
       if (picked == null) return null;
       return picked.hour * 60 + picked.minute;
     }
   }
 
-  Future<int?> _pickClosingTimeSimple(BuildContext context, String title, int currentMinutes) async {
+  Future<int?> _pickClosingTimeSimple(
+      BuildContext context, String title, int currentMinutes) async {
     // Convert current minutes to display format
     final h = currentMinutes ~/ 60;
     final m = currentMinutes % 60;
     final displayHour = h % 24;
     final initialTime = TimeOfDay(hour: displayHour, minute: m);
-    
+
     final picked = await showTimePicker(
-      context: context, 
+      context: context,
       helpText: title,
       initialTime: initialTime,
     );
-    
+
     if (picked == null) return null;
-    
+
     final pickedMinutes = picked.hour * 60 + picked.minute;
-    
+
     // Smart overnight detection: if closing time is earlier in the day than typical opening time,
     // assume it's overnight (next day). Typical restaurant opens around 11 AM (660 minutes).
-    final isLikelyOvernight = pickedMinutes < 660; // Before 11 AM = likely overnight
-    
+    final isLikelyOvernight =
+        pickedMinutes < 660; // Before 11 AM = likely overnight
+
     return isLikelyOvernight ? pickedMinutes + 1440 : pickedMinutes;
   }
 
@@ -343,7 +363,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         color: Colors.white.withOpacity(0.9),
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: Icon(iconData, color: Colors.lightBlue.shade700, size: 16),
+                      child: Icon(iconData,
+                          color: Colors.lightBlue.shade700, size: 16),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -433,7 +454,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     color: Colors.white.withOpacity(0.9),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: Icon(iconData, color: Colors.lightBlue.shade700, size: 16),
+                  child: Icon(iconData,
+                      color: Colors.lightBlue.shade700, size: 16),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -509,7 +531,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             fontSize: 14,
           ),
         ),
-        trailing: trailing ?? Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey.shade400),
+        trailing: trailing ??
+            Icon(Icons.arrow_forward_ios,
+                size: 16, color: Colors.grey.shade400),
         onTap: onTap,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
@@ -556,7 +580,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         trailing: Switch(
           value: value,
           onChanged: onChanged,
-          activeColor: Colors.lightBlue,
+          activeThumbColor: Colors.lightBlue,
           activeTrackColor: Colors.lightBlue.withOpacity(0.3),
         ),
       ),
@@ -656,7 +680,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   */
 }
 
-class _DayRow { final int weekday; final String label; const _DayRow(this.weekday, this.label); }
+class _DayRow {
+  final int weekday;
+  final String label;
+  const _DayRow(this.weekday, this.label);
+}
+
 const _days = <_DayRow>[
   _DayRow(7, 'Sunday'),
   _DayRow(1, 'Monday'),

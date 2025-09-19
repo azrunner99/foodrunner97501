@@ -9,7 +9,7 @@ import '../utils/performance_calculator.dart';
 class SchedulingOptimizationEngine {
   static const double _minimumPerformanceThreshold = 60.0;
   static const int _historicalDataDays = 60;
-  
+
   /// Generate optimal shift schedule recommendations
   static Future<ScheduleRecommendation> generateOptimalSchedule({
     required List<Server> availableServers,
@@ -20,9 +20,8 @@ class SchedulingOptimizationEngine {
     List<String>? unavailableServerIds,
   }) async {
     final unavailable = unavailableServerIds ?? [];
-    final eligibleServers = availableServers
-        .where((s) => !unavailable.contains(s.id))
-        .toList();
+    final eligibleServers =
+        availableServers.where((s) => !unavailable.contains(s.id)).toList();
 
     if (eligibleServers.length < targetTeamSize) {
       return ScheduleRecommendation(
@@ -67,11 +66,13 @@ class SchedulingOptimizationEngine {
 
     // Calculate team synergy and balance scores
     final teamScore = _calculateTeamScore(primaryTeam, shiftType);
-    final confidence = _calculateRecommendationConfidence(primaryTeam, serverAnalytics);
+    final confidence =
+        _calculateRecommendationConfidence(primaryTeam, serverAnalytics);
 
     // Generate optimization insights and warnings
     final warnings = _generateSchedulingWarnings(primaryTeam, serverAnalytics);
-    final optimizationNotes = _generateOptimizationNotes(primaryTeam, serverAnalytics);
+    final optimizationNotes =
+        _generateOptimizationNotes(primaryTeam, serverAnalytics);
 
     return ScheduleRecommendation(
       scheduleDate: scheduleDate,
@@ -93,14 +94,14 @@ class SchedulingOptimizationEngine {
   }) async {
     final appState = AppState();
     final historicalShifts = appState.history;
-    
+
     // Filter shifts by type and recent history
     final relevantShifts = historicalShifts.where((shift) {
       final shiftDate = shift.start;
       final daysDifference = targetDate.difference(shiftDate).inDays;
-      return daysDifference >= 0 && 
-             daysDifference <= _historicalDataDays &&
-             shift.shiftType.toLowerCase() == shiftType.name.toLowerCase();
+      return daysDifference >= 0 &&
+          daysDifference <= _historicalDataDays &&
+          shift.shiftType.toLowerCase() == shiftType.name.toLowerCase();
     }).toList();
 
     if (relevantShifts.length < 10) {
@@ -115,15 +116,17 @@ class SchedulingOptimizationEngine {
 
     // Analyze team performance vs team size
     final teamSizeAnalysis = _analyzeTeamSizePerformance(relevantShifts);
-    
+
     // Consider business projections if available
     var workloadProjection = WorkloadProjection.medium;
     if (businessProjections != null) {
-      workloadProjection = _calculateWorkloadProjection(businessProjections, targetDate);
+      workloadProjection =
+          _calculateWorkloadProjection(businessProjections, targetDate);
     }
 
     // Calculate optimal team size based on analysis
-    final optimalSize = _calculateOptimalTeamSize(teamSizeAnalysis, workloadProjection);
+    final optimalSize =
+        _calculateOptimalTeamSize(teamSizeAnalysis, workloadProjection);
     final confidence = _calculateTeamSizeConfidence(teamSizeAnalysis);
 
     return TeamSizeRecommendation(
@@ -131,22 +134,28 @@ class SchedulingOptimizationEngine {
       confidenceLevel: confidence,
       historicalAnalysis: _generateTeamSizeAnalysis(teamSizeAnalysis),
       projectedWorkload: workloadProjection,
-      recommendations: _generateTeamSizeRecommendations(optimalSize, workloadProjection),
+      recommendations:
+          _generateTeamSizeRecommendations(optimalSize, workloadProjection),
     );
   }
 
   /// Generate personalized server scheduling recommendations
-  static Future<Map<String, ServerScheduleRecommendation>> generateServerRecommendations({
+  static Future<Map<String, ServerScheduleRecommendation>>
+      generateServerRecommendations({
     required List<Server> servers,
     required DateRange schedulingPeriod,
   }) async {
     final recommendations = <String, ServerScheduleRecommendation>{};
 
     for (final server in servers) {
-      final performance = await _getServerPerformanceAnalysis(server.id, schedulingPeriod);
-      final workloadCapacity = _calculateServerWorkloadCapacity(server.id, performance);
-      final optimalShifts = _identifyOptimalShiftsForServer(server.id, performance);
-      final restRecommendations = _calculateRestRecommendations(server.id, performance);
+      final performance =
+          await _getServerPerformanceAnalysis(server.id, schedulingPeriod);
+      final workloadCapacity =
+          _calculateServerWorkloadCapacity(server.id, performance);
+      final optimalShifts =
+          _identifyOptimalShiftsForServer(server.id, performance);
+      final restRecommendations =
+          _calculateRestRecommendations(server.id, performance);
 
       recommendations[server.id] = ServerScheduleRecommendation(
         serverId: server.id,
@@ -154,7 +163,8 @@ class SchedulingOptimizationEngine {
         performanceProfile: performance,
         workloadCapacity: workloadCapacity,
         optimalShiftTypes: optimalShifts,
-        recommendedShiftsPerWeek: _calculateRecommendedShiftsPerWeek(workloadCapacity),
+        recommendedShiftsPerWeek:
+            _calculateRecommendedShiftsPerWeek(workloadCapacity),
         restDaysNeeded: restRecommendations.daysNeeded,
         schedulingPriority: _calculateSchedulingPriority(performance),
         strengths: _identifyServerStrengths(performance),
@@ -172,23 +182,26 @@ class SchedulingOptimizationEngine {
     required List<Server> allServers,
   }) {
     final conflicts = <SchedulingConflict>[];
-    
+
     // Check for over-scheduling
     final serverScheduleCounts = <String, int>{};
     for (final team in proposedSchedule) {
       for (final serverId in team.servers) {
-        serverScheduleCounts[serverId] = (serverScheduleCounts[serverId] ?? 0) + 1;
+        serverScheduleCounts[serverId] =
+            (serverScheduleCounts[serverId] ?? 0) + 1;
       }
     }
 
     for (final entry in serverScheduleCounts.entries) {
-      if (entry.value > 5) { // More than 5 shifts per week
+      if (entry.value > 5) {
+        // More than 5 shifts per week
         final server = allServers.firstWhere((s) => s.id == entry.key);
         conflicts.add(SchedulingConflict(
           type: ConflictType.overScheduling,
           serverId: entry.key,
           serverName: server.name,
-          description: 'Server scheduled for ${entry.value} shifts (exceeds recommended maximum)',
+          description:
+              'Server scheduled for ${entry.value} shifts (exceeds recommended maximum)',
           severity: ConflictSeverity.high,
           suggestions: [
             'Reduce shift count to 4-5 per week',
@@ -209,7 +222,8 @@ class SchedulingOptimizationEngine {
   }
 
   /// Analyze server performance profiles for scheduling
-  static Future<Map<String, ServerPerformanceProfile>> _analyzeServerPerformanceProfiles(
+  static Future<Map<String, ServerPerformanceProfile>>
+      _analyzeServerPerformanceProfiles(
     List<Server> servers,
     ShiftType shiftType,
     DateTime scheduleDate,
@@ -217,12 +231,12 @@ class SchedulingOptimizationEngine {
     final profiles = <String, ServerPerformanceProfile>{};
     final appState = AppState();
     final shifts = appState.history;
-    
+
     for (final server in servers) {
       // Calculate recent performance
       final endDate = DateTime.now();
       final startDate = endDate.subtract(const Duration(days: 30));
-      
+
       final performance = PerformanceCalculator.calculateServerPerformance(
         serverId: server.id,
         startDate: startDate,
@@ -233,14 +247,16 @@ class SchedulingOptimizationEngine {
       );
 
       // Analyze shift type preference
-      final shiftTypePerformance = _analyzeShiftTypePerformance(server.id, shifts, shiftType);
-      
+      final shiftTypePerformance =
+          _analyzeShiftTypePerformance(server.id, shifts, shiftType);
+
       // Analyze day of week patterns
-      final dayOfWeekPerformance = _analyzeDayOfWeekPerformance(server.id, shifts, scheduleDate.weekday);
-      
+      final dayOfWeekPerformance =
+          _analyzeDayOfWeekPerformance(server.id, shifts, scheduleDate.weekday);
+
       // Calculate availability and reliability
       final reliability = _calculateServerReliability(server.id, shifts);
-      
+
       profiles[server.id] = ServerPerformanceProfile(
         serverId: server.id,
         serverName: server.name,
@@ -265,24 +281,26 @@ class SchedulingOptimizationEngine {
     ShiftType shiftType,
   ) {
     final eligibleProfiles = serverProfiles.values
-        .where((p) => p.overallPerformance.performanceScore >= _minimumPerformanceThreshold)
+        .where((p) =>
+            p.overallPerformance.performanceScore >=
+            _minimumPerformanceThreshold)
         .toList();
 
     // Sort by shift-specific performance
     eligibleProfiles.sort((a, b) {
-      final aScore = a.shiftTypeEfficiency * 0.4 + 
-                     a.overallPerformance.performanceScore * 0.3 +
-                     a.reliabilityScore * 0.3;
-      final bScore = b.shiftTypeEfficiency * 0.4 + 
-                     b.overallPerformance.performanceScore * 0.3 +
-                     b.reliabilityScore * 0.3;
+      final aScore = a.shiftTypeEfficiency * 0.4 +
+          a.overallPerformance.performanceScore * 0.3 +
+          a.reliabilityScore * 0.3;
+      final bScore = b.shiftTypeEfficiency * 0.4 +
+          b.overallPerformance.performanceScore * 0.3 +
+          b.reliabilityScore * 0.3;
       return bScore.compareTo(aScore);
     });
 
     // Select team with balance considerations
     final selectedServers = <String>[];
     final selectedProfiles = <ServerPerformanceProfile>[];
-    
+
     // Always include top performer
     if (eligibleProfiles.isNotEmpty) {
       selectedServers.add(eligibleProfiles[0].serverId);
@@ -290,9 +308,11 @@ class SchedulingOptimizationEngine {
     }
 
     // Add remaining servers balancing performance and diversity
-    for (int i = 1; i < eligibleProfiles.length && selectedServers.length < targetSize; i++) {
+    for (int i = 1;
+        i < eligibleProfiles.length && selectedServers.length < targetSize;
+        i++) {
       final candidate = eligibleProfiles[i];
-      
+
       // Check if adding this server improves team balance
       if (_wouldImproveTeamBalance(selectedProfiles, candidate)) {
         selectedServers.add(candidate.serverId);
@@ -301,7 +321,8 @@ class SchedulingOptimizationEngine {
     }
 
     // Fill remaining slots if needed
-    while (selectedServers.length < targetSize && selectedServers.length < eligibleProfiles.length) {
+    while (selectedServers.length < targetSize &&
+        selectedServers.length < eligibleProfiles.length) {
       for (final profile in eligibleProfiles) {
         if (!selectedServers.contains(profile.serverId)) {
           selectedServers.add(profile.serverId);
@@ -314,8 +335,11 @@ class SchedulingOptimizationEngine {
     return TeamRecommendation(
       servers: selectedServers,
       teamProfiles: selectedProfiles,
-      averagePerformance: selectedProfiles.isNotEmpty 
-          ? selectedProfiles.map((p) => p.overallPerformance.performanceScore).reduce((a, b) => a + b) / selectedProfiles.length
+      averagePerformance: selectedProfiles.isNotEmpty
+          ? selectedProfiles
+                  .map((p) => p.overallPerformance.performanceScore)
+                  .reduce((a, b) => a + b) /
+              selectedProfiles.length
           : 0.0,
       teamSynergy: _calculateTeamSynergy(selectedProfiles),
       balanceScore: _calculateTeamBalance(selectedProfiles),
@@ -324,29 +348,28 @@ class SchedulingOptimizationEngine {
 
   /// Generate alternative team configurations
   static List<TeamRecommendation> _generateAlternativeTeams(
-    Map<String, ServerPerformanceProfile> serverProfiles,
-    int targetSize,
-    ShiftType shiftType,
-    {List<String>? excludeTeam}
-  ) {
+      Map<String, ServerPerformanceProfile> serverProfiles,
+      int targetSize,
+      ShiftType shiftType,
+      {List<String>? excludeTeam}) {
     final alternatives = <TeamRecommendation>[];
     final exclude = excludeTeam ?? [];
-    
+
     // Generate 2-3 alternative configurations
     for (int alt = 0; alt < 3; alt++) {
       final availableProfiles = serverProfiles.values
           .where((p) => !exclude.contains(p.serverId))
           .toList();
-          
+
       if (availableProfiles.length < targetSize) break;
-      
+
       // Use different optimization strategies for each alternative
       final team = _generateAlternativeTeamConfiguration(
         availableProfiles,
         targetSize,
         alt,
       );
-      
+
       if (team.servers.isNotEmpty) {
         alternatives.add(team);
         exclude.addAll(team.servers);
@@ -357,16 +380,17 @@ class SchedulingOptimizationEngine {
   }
 
   /// Calculate team performance score
-  static double _calculateTeamScore(TeamRecommendation team, ShiftType shiftType) {
+  static double _calculateTeamScore(
+      TeamRecommendation team, ShiftType shiftType) {
     if (team.teamProfiles.isEmpty) return 0.0;
-    
+
     final performanceWeight = 0.4;
     final synergyWeight = 0.3;
     final balanceWeight = 0.3;
-    
+
     return (team.averagePerformance * performanceWeight) +
-           (team.teamSynergy * synergyWeight) +
-           (team.balanceScore * balanceWeight);
+        (team.teamSynergy * synergyWeight) +
+        (team.balanceScore * balanceWeight);
   }
 
   /// Calculate recommendation confidence
@@ -375,16 +399,20 @@ class SchedulingOptimizationEngine {
     Map<String, ServerPerformanceProfile> allProfiles,
   ) {
     if (team.teamProfiles.isEmpty) return 0.0;
-    
+
     // Base confidence on data quality and team stability
     final dataQuality = team.teamProfiles
-        .map((p) => p.overallPerformance.shiftsWorked > 10 ? 1.0 : 0.5)
-        .reduce((a, b) => a + b) / team.teamProfiles.length;
-    
-    final performanceStability = 1.0 - (team.teamProfiles
-        .map((p) => p.overallPerformance.metrics.consistencyScore / 100.0)
-        .reduce((a, b) => a + b) / team.teamProfiles.length);
-    
+            .map((p) => p.overallPerformance.shiftsWorked > 10 ? 1.0 : 0.5)
+            .reduce((a, b) => a + b) /
+        team.teamProfiles.length;
+
+    final performanceStability = 1.0 -
+        (team.teamProfiles
+                .map((p) =>
+                    p.overallPerformance.metrics.consistencyScore / 100.0)
+                .reduce((a, b) => a + b) /
+            team.teamProfiles.length);
+
     return (dataQuality + performanceStability) / 2.0;
   }
 
@@ -394,21 +422,21 @@ class SchedulingOptimizationEngine {
     Map<String, ServerPerformanceProfile> profiles,
   ) {
     final warnings = <String>[];
-    
+
     for (final profile in team.teamProfiles) {
       if (profile.fatigueLevel > 0.8) {
         warnings.add('${profile.serverName} shows high fatigue levels');
       }
-      
+
       if (profile.currentWorkload > 0.9) {
         warnings.add('${profile.serverName} has very high current workload');
       }
-      
+
       if (profile.reliabilityScore < 0.7) {
         warnings.add('${profile.serverName} has lower reliability score');
       }
     }
-    
+
     return warnings;
   }
 
@@ -418,43 +446,47 @@ class SchedulingOptimizationEngine {
     Map<String, ServerPerformanceProfile> profiles,
   ) {
     final notes = <String>[];
-    
+
     if (team.averagePerformance > 85.0) {
       notes.add('High-performing team selected with strong track record');
     }
-    
+
     if (team.teamSynergy > 80.0) {
       notes.add('Team shows excellent synergy and collaboration potential');
     }
-    
-    final experiencedServers = team.teamProfiles.where((p) => 
-      p.overallPerformance.daysEmployed > 90).length;
+
+    final experiencedServers = team.teamProfiles
+        .where((p) => p.overallPerformance.daysEmployed > 90)
+        .length;
     if (experiencedServers >= team.teamProfiles.length * 0.6) {
       notes.add('Team has good experience balance for training newer servers');
     }
-    
+
     return notes;
   }
 
   /// Analyze team size performance from historical data
-  static Map<int, double> _analyzeTeamSizePerformance(List<ShiftRecord> shifts) {
+  static Map<int, double> _analyzeTeamSizePerformance(
+      List<ShiftRecord> shifts) {
     final teamSizePerformance = <int, List<double>>{};
-    
+
     for (final shift in shifts) {
       final teamSize = shift.counts.values.where((count) => count > 0).length;
-      final totalRuns = shift.counts.values.fold<int>(0, (sum, count) => sum + count);
+      final totalRuns =
+          shift.counts.values.fold<int>(0, (sum, count) => sum + count);
       final efficiency = teamSize > 0 ? totalRuns / teamSize : 0.0;
-      
+
       teamSizePerformance.putIfAbsent(teamSize, () => []).add(efficiency);
     }
-    
+
     final averages = <int, double>{};
     for (final entry in teamSizePerformance.entries) {
       if (entry.value.isNotEmpty) {
-        averages[entry.key] = entry.value.reduce((a, b) => a + b) / entry.value.length;
+        averages[entry.key] =
+            entry.value.reduce((a, b) => a + b) / entry.value.length;
       }
     }
-    
+
     return averages;
   }
 
@@ -464,12 +496,16 @@ class SchedulingOptimizationEngine {
     DateTime targetDate,
   ) {
     // Analyze business projections to determine expected workload
-    final projectedSales = businessProjections['projectedSales'] as double? ?? 1.0;
-    final projectedGuests = businessProjections['projectedGuests'] as double? ?? 1.0;
-    final seasonalFactor = businessProjections['seasonalFactor'] as double? ?? 1.0;
-    
-    final workloadMultiplier = (projectedSales + projectedGuests + seasonalFactor) / 3.0;
-    
+    final projectedSales =
+        businessProjections['projectedSales'] as double? ?? 1.0;
+    final projectedGuests =
+        businessProjections['projectedGuests'] as double? ?? 1.0;
+    final seasonalFactor =
+        businessProjections['seasonalFactor'] as double? ?? 1.0;
+
+    final workloadMultiplier =
+        (projectedSales + projectedGuests + seasonalFactor) / 3.0;
+
     if (workloadMultiplier > 1.3) return WorkloadProjection.high;
     if (workloadMultiplier > 1.1) return WorkloadProjection.medium;
     if (workloadMultiplier < 0.8) return WorkloadProjection.low;
@@ -486,14 +522,14 @@ class SchedulingOptimizationEngine {
     // Find the team size with best efficiency
     var bestSize = 4;
     var bestEfficiency = 0.0;
-    
+
     for (final entry in teamSizeAnalysis.entries) {
       if (entry.value > bestEfficiency && entry.key >= 3 && entry.key <= 8) {
         bestEfficiency = entry.value;
         bestSize = entry.key;
       }
     }
-    
+
     // Adjust based on workload projection
     switch (workload) {
       case WorkloadProjection.high:
@@ -506,140 +542,169 @@ class SchedulingOptimizationEngine {
         // Keep optimal size
         break;
     }
-    
+
     return bestSize;
   }
 
   /// Helper methods for detailed analysis
-  static double _analyzeShiftTypePerformance(String serverId, List<ShiftRecord> shifts, ShiftType shiftType) {
-    final relevantShifts = shifts.where((s) => 
-      s.shiftType.toLowerCase() == shiftType.name.toLowerCase() &&
-      s.counts.containsKey(serverId)
-    ).toList();
-    
+  static double _analyzeShiftTypePerformance(
+      String serverId, List<ShiftRecord> shifts, ShiftType shiftType) {
+    final relevantShifts = shifts
+        .where((s) =>
+            s.shiftType.toLowerCase() == shiftType.name.toLowerCase() &&
+            s.counts.containsKey(serverId))
+        .toList();
+
     if (relevantShifts.isEmpty) return 50.0; // Neutral score
-    
-    final totalRuns = relevantShifts.fold<int>(0, (sum, shift) => sum + (shift.counts[serverId] ?? 0));
+
+    final totalRuns = relevantShifts.fold<int>(
+        0, (sum, shift) => sum + (shift.counts[serverId] ?? 0));
     return (totalRuns / relevantShifts.length) * 10; // Scale to 0-100
   }
 
-  static double _analyzeDayOfWeekPerformance(String serverId, List<ShiftRecord> shifts, int weekday) {
-    final relevantShifts = shifts.where((s) => 
-      s.start.weekday == weekday &&
-      s.counts.containsKey(serverId)
-    ).toList();
-    
+  static double _analyzeDayOfWeekPerformance(
+      String serverId, List<ShiftRecord> shifts, int weekday) {
+    final relevantShifts = shifts
+        .where(
+            (s) => s.start.weekday == weekday && s.counts.containsKey(serverId))
+        .toList();
+
     if (relevantShifts.isEmpty) return 50.0; // Neutral score
-    
-    final totalRuns = relevantShifts.fold<int>(0, (sum, shift) => sum + (shift.counts[serverId] ?? 0));
+
+    final totalRuns = relevantShifts.fold<int>(
+        0, (sum, shift) => sum + (shift.counts[serverId] ?? 0));
     return (totalRuns / relevantShifts.length) * 10; // Scale to 0-100
   }
 
-  static double _calculateServerReliability(String serverId, List<ShiftRecord> shifts) {
-    final recentShifts = shifts.where((s) => 
-      s.start.isAfter(DateTime.now().subtract(const Duration(days: 30))) &&
-      s.counts.containsKey(serverId)
-    ).toList();
-    
+  static double _calculateServerReliability(
+      String serverId, List<ShiftRecord> shifts) {
+    final recentShifts = shifts
+        .where((s) =>
+            s.start
+                .isAfter(DateTime.now().subtract(const Duration(days: 30))) &&
+            s.counts.containsKey(serverId))
+        .toList();
+
     if (recentShifts.isEmpty) return 0.5; // Neutral score
-    
+
     // Calculate consistency of attendance and performance
-    final performances = recentShifts.map((s) => s.counts[serverId] ?? 0).toList();
+    final performances =
+        recentShifts.map((s) => s.counts[serverId] ?? 0).toList();
     if (performances.isEmpty) return 0.5;
-    
+
     final avg = performances.reduce((a, b) => a + b) / performances.length;
-    final variance = performances.map((p) => math.pow(p - avg, 2)).reduce((a, b) => a + b) / performances.length;
+    final variance =
+        performances.map((p) => math.pow(p - avg, 2)).reduce((a, b) => a + b) /
+            performances.length;
     final cv = avg > 0 ? math.sqrt(variance) / avg : 1.0;
-    
-    return math.max(0.0, 1.0 - cv); // Lower coefficient of variation = higher reliability
+
+    return math.max(
+        0.0, 1.0 - cv); // Lower coefficient of variation = higher reliability
   }
 
-  static List<ShiftType> _identifyPreferredShiftTypes(String serverId, List<ShiftRecord> shifts) {
+  static List<ShiftType> _identifyPreferredShiftTypes(
+      String serverId, List<ShiftRecord> shifts) {
     final shiftTypePerformance = <String, double>{};
-    
+
     for (final shiftTypeName in ['lunch', 'dinner']) {
-      final performance = _analyzeShiftTypePerformance(
-        serverId, 
-        shifts, 
-        shiftTypeName == 'lunch' ? ShiftType.lunch : ShiftType.dinner
-      );
+      final performance = _analyzeShiftTypePerformance(serverId, shifts,
+          shiftTypeName == 'lunch' ? ShiftType.lunch : ShiftType.dinner);
       shiftTypePerformance[shiftTypeName] = performance;
     }
-    
+
     // Return shift types with above-average performance
-    final avgPerformance = shiftTypePerformance.values.reduce((a, b) => a + b) / shiftTypePerformance.length;
+    final avgPerformance = shiftTypePerformance.values.reduce((a, b) => a + b) /
+        shiftTypePerformance.length;
     return shiftTypePerformance.entries
         .where((e) => e.value > avgPerformance)
         .map((e) => e.key == 'lunch' ? ShiftType.lunch : ShiftType.dinner)
         .toList();
   }
 
-  static List<int> _identifyOptimalDaysOfWeek(String serverId, List<ShiftRecord> shifts) {
+  static List<int> _identifyOptimalDaysOfWeek(
+      String serverId, List<ShiftRecord> shifts) {
     final dayPerformance = <int, double>{};
-    
+
     for (int day = 1; day <= 7; day++) {
       dayPerformance[day] = _analyzeDayOfWeekPerformance(serverId, shifts, day);
     }
-    
-    final avgPerformance = dayPerformance.values.reduce((a, b) => a + b) / dayPerformance.length;
+
+    final avgPerformance =
+        dayPerformance.values.reduce((a, b) => a + b) / dayPerformance.length;
     return dayPerformance.entries
         .where((e) => e.value > avgPerformance)
         .map((e) => e.key)
         .toList();
   }
 
-  static double _calculateCurrentWorkload(String serverId, List<ShiftRecord> shifts) {
-    final recentShifts = shifts.where((s) => 
-      s.start.isAfter(DateTime.now().subtract(const Duration(days: 7))) &&
-      s.counts.containsKey(serverId)
-    ).length;
-    
-    return math.min(recentShifts / 5.0, 1.0); // Normalize to 0-1 (5 shifts/week = 100%)
+  static double _calculateCurrentWorkload(
+      String serverId, List<ShiftRecord> shifts) {
+    final recentShifts = shifts
+        .where((s) =>
+            s.start.isAfter(DateTime.now().subtract(const Duration(days: 7))) &&
+            s.counts.containsKey(serverId))
+        .length;
+
+    return math.min(
+        recentShifts / 5.0, 1.0); // Normalize to 0-1 (5 shifts/week = 100%)
   }
 
-  static double _calculateFatigueLevel(String serverId, List<ShiftRecord> shifts) {
-    final recentShifts = shifts.where((s) => 
-      s.start.isAfter(DateTime.now().subtract(const Duration(days: 14))) &&
-      s.counts.containsKey(serverId)
-    ).toList();
-    
+  static double _calculateFatigueLevel(
+      String serverId, List<ShiftRecord> shifts) {
+    final recentShifts = shifts
+        .where((s) =>
+            s.start
+                .isAfter(DateTime.now().subtract(const Duration(days: 14))) &&
+            s.counts.containsKey(serverId))
+        .toList();
+
     if (recentShifts.length < 3) return 0.0;
-    
+
     // Check for declining performance pattern
-    final performances = recentShifts.map((s) => s.counts[serverId] ?? 0).toList();
+    final performances =
+        recentShifts.map((s) => s.counts[serverId] ?? 0).toList();
     final firstHalf = performances.take(performances.length ~/ 2).toList();
     final secondHalf = performances.skip(performances.length ~/ 2).toList();
-    
+
     if (firstHalf.isEmpty || secondHalf.isEmpty) return 0.0;
-    
+
     final firstAvg = firstHalf.reduce((a, b) => a + b) / firstHalf.length;
     final secondAvg = secondHalf.reduce((a, b) => a + b) / secondHalf.length;
-    
+
     final decline = firstAvg > 0 ? (firstAvg - secondAvg) / firstAvg : 0.0;
     return math.max(0.0, math.min(decline, 1.0));
   }
 
-  static bool _wouldImproveTeamBalance(List<ServerPerformanceProfile> currentTeam, ServerPerformanceProfile candidate) {
+  static bool _wouldImproveTeamBalance(
+      List<ServerPerformanceProfile> currentTeam,
+      ServerPerformanceProfile candidate) {
     if (currentTeam.isEmpty) return true;
-    
+
     // Check if candidate adds diversity to experience levels
-    final currentExperienceLevels = currentTeam.map((p) => p.overallPerformance.daysEmployed).toList();
-    final avgExperience = currentExperienceLevels.reduce((a, b) => a + b) / currentExperienceLevels.length;
-    
+    final currentExperienceLevels =
+        currentTeam.map((p) => p.overallPerformance.daysEmployed).toList();
+    final avgExperience = currentExperienceLevels.reduce((a, b) => a + b) /
+        currentExperienceLevels.length;
+
     // Prefer candidates that balance experience
-    if (avgExperience > 120 && candidate.overallPerformance.daysEmployed < 90) return true;
-    if (avgExperience < 60 && candidate.overallPerformance.daysEmployed > 120) return true;
-    
+    if (avgExperience > 120 && candidate.overallPerformance.daysEmployed < 90)
+      return true;
+    if (avgExperience < 60 && candidate.overallPerformance.daysEmployed > 120)
+      return true;
+
     return true; // Default to accepting
   }
 
   static double _calculateTeamSynergy(List<ServerPerformanceProfile> profiles) {
     if (profiles.length < 2) return 50.0;
-    
+
     // Calculate based on performance complementarity and reliability
-    final avgReliability = profiles.map((p) => p.reliabilityScore).reduce((a, b) => a + b) / profiles.length;
-    final performanceVariance = _calculateVariance(profiles.map((p) => p.overallPerformance.performanceScore).toList());
-    
+    final avgReliability =
+        profiles.map((p) => p.reliabilityScore).reduce((a, b) => a + b) /
+            profiles.length;
+    final performanceVariance = _calculateVariance(
+        profiles.map((p) => p.overallPerformance.performanceScore).toList());
+
     // Lower variance = better synergy (more consistent team)
     final synergyScore = (avgReliability * 100) - (performanceVariance * 2);
     return math.max(0.0, math.min(synergyScore, 100.0));
@@ -647,22 +712,27 @@ class SchedulingOptimizationEngine {
 
   static double _calculateTeamBalance(List<ServerPerformanceProfile> profiles) {
     if (profiles.isEmpty) return 0.0;
-    
+
     // Balance based on experience and performance distribution
-    final experienceLevels = profiles.map((p) => p.overallPerformance.daysEmployed).toList();
-    final performanceLevels = profiles.map((p) => p.overallPerformance.performanceScore).toList();
-    
-    final experienceBalance = 100.0 - _calculateVariance(experienceLevels.map((e) => e.toDouble()).toList());
+    final experienceLevels =
+        profiles.map((p) => p.overallPerformance.daysEmployed).toList();
+    final performanceLevels =
+        profiles.map((p) => p.overallPerformance.performanceScore).toList();
+
+    final experienceBalance = 100.0 -
+        _calculateVariance(experienceLevels.map((e) => e.toDouble()).toList());
     final performanceBalance = 100.0 - _calculateVariance(performanceLevels);
-    
+
     return (experienceBalance + performanceBalance) / 2.0;
   }
 
   static double _calculateVariance(List<double> values) {
     if (values.isEmpty) return 0.0;
-    
+
     final mean = values.reduce((a, b) => a + b) / values.length;
-    final variance = values.map((v) => math.pow(v - mean, 2)).reduce((a, b) => a + b) / values.length;
+    final variance =
+        values.map((v) => math.pow(v - mean, 2)).reduce((a, b) => a + b) /
+            values.length;
     return variance;
   }
 
@@ -673,7 +743,7 @@ class SchedulingOptimizationEngine {
   ) {
     // Different strategies for each alternative
     List<ServerPerformanceProfile> selected;
-    
+
     switch (alternativeIndex) {
       case 0: // Reliability-focused
         selected = availableProfiles.toList()
@@ -683,21 +753,28 @@ class SchedulingOptimizationEngine {
         selected = _selectExperienceBalancedTeam(availableProfiles, targetSize);
         break;
       case 2: // High-potential focused
-        selected = availableProfiles.where((p) => p.overallPerformance.performanceScore > 70.0).toList()
-          ..sort((a, b) => b.overallPerformance.performanceScore.compareTo(a.overallPerformance.performanceScore));
+        selected = availableProfiles
+            .where((p) => p.overallPerformance.performanceScore > 70.0)
+            .toList()
+          ..sort((a, b) => b.overallPerformance.performanceScore
+              .compareTo(a.overallPerformance.performanceScore));
         break;
       default:
         selected = availableProfiles.toList();
     }
-    
-    final teamServers = selected.take(targetSize).map((p) => p.serverId).toList();
+
+    final teamServers =
+        selected.take(targetSize).map((p) => p.serverId).toList();
     final teamProfiles = selected.take(targetSize).toList();
-    
+
     return TeamRecommendation(
       servers: teamServers,
       teamProfiles: teamProfiles,
-      averagePerformance: teamProfiles.isNotEmpty 
-          ? teamProfiles.map((p) => p.overallPerformance.performanceScore).reduce((a, b) => a + b) / teamProfiles.length
+      averagePerformance: teamProfiles.isNotEmpty
+          ? teamProfiles
+                  .map((p) => p.overallPerformance.performanceScore)
+                  .reduce((a, b) => a + b) /
+              teamProfiles.length
           : 0.0,
       teamSynergy: _calculateTeamSynergy(teamProfiles),
       balanceScore: _calculateTeamBalance(teamProfiles),
@@ -708,21 +785,29 @@ class SchedulingOptimizationEngine {
     List<ServerPerformanceProfile> profiles,
     int targetSize,
   ) {
-    final experienced = profiles.where((p) => p.overallPerformance.daysEmployed > 120).toList();
-    final intermediate = profiles.where((p) => p.overallPerformance.daysEmployed > 60 && p.overallPerformance.daysEmployed <= 120).toList();
-    final newer = profiles.where((p) => p.overallPerformance.daysEmployed <= 60).toList();
-    
+    final experienced =
+        profiles.where((p) => p.overallPerformance.daysEmployed > 120).toList();
+    final intermediate = profiles
+        .where((p) =>
+            p.overallPerformance.daysEmployed > 60 &&
+            p.overallPerformance.daysEmployed <= 120)
+        .toList();
+    final newer =
+        profiles.where((p) => p.overallPerformance.daysEmployed <= 60).toList();
+
     final selected = <ServerPerformanceProfile>[];
-    
+
     // Try to balance experience levels
-    final experiencedCount = math.min(experienced.length, (targetSize * 0.4).ceil());
-    final intermediateCount = math.min(intermediate.length, (targetSize * 0.4).ceil());
+    final experiencedCount =
+        math.min(experienced.length, (targetSize * 0.4).ceil());
+    final intermediateCount =
+        math.min(intermediate.length, (targetSize * 0.4).ceil());
     final newerCount = targetSize - experiencedCount - intermediateCount;
-    
+
     selected.addAll(experienced.take(experiencedCount));
     selected.addAll(intermediate.take(intermediateCount));
     selected.addAll(newer.take(math.max(0, newerCount)));
-    
+
     // Fill remaining slots if needed
     while (selected.length < targetSize) {
       for (final profile in profiles) {
@@ -733,7 +818,7 @@ class SchedulingOptimizationEngine {
       }
       if (selected.length == profiles.length) break;
     }
-    
+
     return selected;
   }
 
@@ -743,7 +828,7 @@ class SchedulingOptimizationEngine {
   ) async {
     final appState = AppState();
     final shifts = appState.history;
-    
+
     return PerformanceCalculator.calculateServerPerformance(
       serverId: serverId,
       startDate: period.start,
@@ -761,9 +846,11 @@ class SchedulingOptimizationEngine {
     final efficiency = performance.metrics.rawEfficiency;
     final consistency = performance.metrics.consistencyScore;
     final experience = performance.daysEmployed;
-    
-    final capacityScore = (efficiency / 10 * 0.4) + (consistency / 100 * 0.3) + (math.min(experience / 180, 1.0) * 0.3);
-    
+
+    final capacityScore = (efficiency / 10 * 0.4) +
+        (consistency / 100 * 0.3) +
+        (math.min(experience / 180, 1.0) * 0.3);
+
     if (capacityScore > 0.8) return WorkloadCapacity.high;
     if (capacityScore > 0.6) return WorkloadCapacity.medium;
     return WorkloadCapacity.low;
@@ -784,16 +871,18 @@ class SchedulingOptimizationEngine {
   ) {
     final workload = _calculateCurrentWorkload(serverId, AppState().history);
     final fatigue = _calculateFatigueLevel(serverId, AppState().history);
-    
+
     var daysNeeded = 1; // Minimum one day off
     if (workload > 0.8 || fatigue > 0.6) daysNeeded = 2;
     if (workload > 0.9 || fatigue > 0.8) daysNeeded = 3;
-    
+
     return RestRecommendations(
       daysNeeded: daysNeeded,
-      reason: fatigue > 0.6 ? 'High fatigue levels detected' : 
-              workload > 0.8 ? 'High workload requires additional rest' : 
-              'Standard rest period',
+      reason: fatigue > 0.6
+          ? 'High fatigue levels detected'
+          : workload > 0.8
+              ? 'High workload requires additional rest'
+              : 'Standard rest period',
     );
   }
 
@@ -808,54 +897,66 @@ class SchedulingOptimizationEngine {
     }
   }
 
-  static SchedulingPriority _calculateSchedulingPriority(ServerPerformanceData performance) {
+  static SchedulingPriority _calculateSchedulingPriority(
+      ServerPerformanceData performance) {
     if (performance.performanceScore > 85.0) return SchedulingPriority.high;
     if (performance.performanceScore > 70.0) return SchedulingPriority.medium;
     return SchedulingPriority.low;
   }
 
-  static List<String> _identifyServerStrengths(ServerPerformanceData performance) {
+  static List<String> _identifyServerStrengths(
+      ServerPerformanceData performance) {
     final strengths = <String>[];
-    
-    if (performance.metrics.rawEfficiency > 7.0) strengths.add('High efficiency');
-    if (performance.metrics.consistencyScore > 80.0) strengths.add('Consistent performance');
-    if (performance.performanceScore > 85.0) strengths.add('Overall excellence');
-    if (performance.daysEmployed > 120) strengths.add('Experienced team member');
-    
+
+    if (performance.metrics.rawEfficiency > 7.0)
+      strengths.add('High efficiency');
+    if (performance.metrics.consistencyScore > 80.0)
+      strengths.add('Consistent performance');
+    if (performance.performanceScore > 85.0)
+      strengths.add('Overall excellence');
+    if (performance.daysEmployed > 120)
+      strengths.add('Experienced team member');
+
     return strengths;
   }
 
-  static List<String> _identifyDevelopmentAreas(ServerPerformanceData performance) {
+  static List<String> _identifyDevelopmentAreas(
+      ServerPerformanceData performance) {
     final areas = <String>[];
-    
-    if (performance.metrics.rawEfficiency < 5.0) areas.add('Efficiency improvement needed');
-    if (performance.metrics.consistencyScore < 70.0) areas.add('Consistency development');
-    if (performance.performanceScore < 70.0) areas.add('Overall performance enhancement');
-    
+
+    if (performance.metrics.rawEfficiency < 5.0)
+      areas.add('Efficiency improvement needed');
+    if (performance.metrics.consistencyScore < 70.0)
+      areas.add('Consistency development');
+    if (performance.performanceScore < 70.0)
+      areas.add('Overall performance enhancement');
+
     return areas;
   }
 
-  static List<String> _generateServerSchedulingNotes(ServerPerformanceData performance) {
+  static List<String> _generateServerSchedulingNotes(
+      ServerPerformanceData performance) {
     final notes = <String>[];
-    
+
     if (performance.daysEmployed < 30) {
       notes.add('New server - consider pairing with experienced team members');
     }
-    
+
     if (performance.metrics.consistencyScore > 90.0) {
       notes.add('Highly reliable - excellent for consistent scheduling');
     }
-    
+
     if (performance.performanceScore > 95.0) {
       notes.add('Top performer - consider for leadership opportunities');
     }
-    
+
     return notes;
   }
 
-  static List<SchedulingConflict> _detectTeamPerformanceConflicts(TeamRecommendation team) {
+  static List<SchedulingConflict> _detectTeamPerformanceConflicts(
+      TeamRecommendation team) {
     final conflicts = <SchedulingConflict>[];
-    
+
     // Check for team balance issues
     if (team.balanceScore < 50.0) {
       conflicts.add(SchedulingConflict(
@@ -869,7 +970,7 @@ class SchedulingOptimizationEngine {
         ],
       ));
     }
-    
+
     // Check for low team synergy
     if (team.teamSynergy < 60.0) {
       conflicts.add(SchedulingConflict(
@@ -883,7 +984,7 @@ class SchedulingOptimizationEngine {
         ],
       ));
     }
-    
+
     return conflicts;
   }
 
@@ -893,28 +994,33 @@ class SchedulingOptimizationEngine {
 
   static String _generateTeamSizeAnalysis(Map<int, double> analysis) {
     if (analysis.isEmpty) return 'Limited historical data available';
-    
-    final bestSize = analysis.entries.reduce((a, b) => a.value > b.value ? a : b);
+
+    final bestSize =
+        analysis.entries.reduce((a, b) => a.value > b.value ? a : b);
     return 'Historical data shows team size ${bestSize.key} performs best with ${bestSize.value.toStringAsFixed(1)} average efficiency';
   }
 
-  static List<String> _generateTeamSizeRecommendations(int optimalSize, WorkloadProjection workload) {
+  static List<String> _generateTeamSizeRecommendations(
+      int optimalSize, WorkloadProjection workload) {
     final recommendations = <String>[];
-    
+
     recommendations.add('Recommended team size: $optimalSize servers');
-    
+
     switch (workload) {
       case WorkloadProjection.high:
-        recommendations.add('High workload expected - consider having backup servers available');
+        recommendations.add(
+            'High workload expected - consider having backup servers available');
         break;
       case WorkloadProjection.low:
-        recommendations.add('Lower workload projected - opportunity for training newer servers');
+        recommendations.add(
+            'Lower workload projected - opportunity for training newer servers');
         break;
       case WorkloadProjection.medium:
-        recommendations.add('Standard workload expected - maintain regular team composition');
+        recommendations.add(
+            'Standard workload expected - maintain regular team composition');
         break;
     }
-    
+
     return recommendations;
   }
 }
@@ -1065,8 +1171,13 @@ class RestRecommendations {
 }
 
 enum ShiftType { lunch, dinner }
+
 enum WorkloadProjection { low, medium, high }
+
 enum WorkloadCapacity { low, medium, high }
+
 enum SchedulingPriority { low, medium, high }
+
 enum ConflictType { overScheduling, teamBalance, teamSynergy, performance }
+
 enum ConflictSeverity { low, medium, high }

@@ -65,7 +65,8 @@ class NPSQuickFiltersWidget extends StatelessWidget {
           filterService.setDateRangePreset(DateRangePreset.today);
           onFilterChanged?.call();
         },
-        isActive: filterService.currentCriteria.datePreset == DateRangePreset.today,
+        isActive:
+            filterService.currentCriteria.datePreset == DateRangePreset.today,
       ),
       QuickFilter(
         label: 'This Week',
@@ -74,7 +75,8 @@ class NPSQuickFiltersWidget extends StatelessWidget {
           filterService.setDateRangePreset(DateRangePreset.lastWeek);
           onFilterChanged?.call();
         },
-        isActive: filterService.currentCriteria.datePreset == DateRangePreset.lastWeek,
+        isActive: filterService.currentCriteria.datePreset ==
+            DateRangePreset.lastWeek,
       ),
       QuickFilter(
         label: 'Detractors',
@@ -84,7 +86,8 @@ class NPSQuickFiltersWidget extends StatelessWidget {
           filterService.updateCriteria(scoreCategory: ScoreCategory.detractors);
           onFilterChanged?.call();
         },
-        isActive: filterService.currentCriteria.scoreCategory == ScoreCategory.detractors,
+        isActive: filterService.currentCriteria.scoreCategory ==
+            ScoreCategory.detractors,
       ),
       QuickFilter(
         label: 'Promoters',
@@ -94,7 +97,8 @@ class NPSQuickFiltersWidget extends StatelessWidget {
           filterService.updateCriteria(scoreCategory: ScoreCategory.promoters);
           onFilterChanged?.call();
         },
-        isActive: filterService.currentCriteria.scoreCategory == ScoreCategory.promoters,
+        isActive: filterService.currentCriteria.scoreCategory ==
+            ScoreCategory.promoters,
       ),
       QuickFilter(
         label: 'With Feedback',
@@ -113,15 +117,16 @@ class NPSQuickFiltersWidget extends StatelessWidget {
           filterService.updateCriteria(minScore: 0, maxScore: 3);
           onFilterChanged?.call();
         },
-        isActive: filterService.currentCriteria.minScore == 0 && 
-                  filterService.currentCriteria.maxScore == 3,
+        isActive: filterService.currentCriteria.minScore == 0 &&
+            filterService.currentCriteria.maxScore == 3,
       ),
     ];
 
     return Wrap(
       spacing: 8,
       runSpacing: 8,
-      children: quickFilters.map((filter) => _buildQuickFilterChip(filter)).toList(),
+      children:
+          quickFilters.map((filter) => _buildQuickFilterChip(filter)).toList(),
     );
   }
 
@@ -133,9 +138,9 @@ class NPSQuickFiltersWidget extends StatelessWidget {
           Icon(
             filter.icon,
             size: 16,
-            color: filter.isActive 
-              ? Colors.white 
-              : (filter.color ?? Colors.grey[600]),
+            color: filter.isActive
+                ? Colors.white
+                : (filter.color ?? Colors.grey[600]),
           ),
           const SizedBox(width: 4),
           Text(filter.label),
@@ -147,9 +152,8 @@ class NPSQuickFiltersWidget extends StatelessWidget {
       selectedColor: filter.color ?? Colors.blue,
       checkmarkColor: Colors.white,
       labelStyle: TextStyle(
-        color: filter.isActive 
-          ? Colors.white 
-          : (filter.color ?? Colors.grey[700]),
+        color:
+            filter.isActive ? Colors.white : (filter.color ?? Colors.grey[700]),
         fontWeight: filter.isActive ? FontWeight.bold : FontWeight.normal,
       ),
     );

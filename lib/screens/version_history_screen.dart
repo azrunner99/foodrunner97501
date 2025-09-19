@@ -257,14 +257,22 @@ class VersionHistoryScreen extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  _buildStatRow('Total Development Time', '~3+ weeks intensive development'),
-                  _buildStatRow('Total Commits', '330+ commits (build number reflects commit count)'),
-                  _buildStatRow('Version Milestones', '5 major versions (Foundation → Team System → Gamification → Enhanced UX → Security Intelligence)'),
-                  _buildStatRow('Security Features', 'Enterprise-grade integrity monitoring with AI pattern recognition'),
-                  _buildStatRow('Visual Assets', '247+ (174 banners + 73 wallpapers + avatars)'),
-                  _buildStatRow('Platform Support', '6 platforms (iOS, Android, Web, Windows, macOS, Linux)'),
-                  _buildStatRow('Code Evolution', 'From 685 lines to comprehensive enterprise security system'),
-                  _buildStatRow('Features Added', '25+ documented features across 4 major revisions including advanced integrity monitoring'),
+                  _buildStatRow('Total Development Time',
+                      '~3+ weeks intensive development'),
+                  _buildStatRow('Total Commits',
+                      '330+ commits (build number reflects commit count)'),
+                  _buildStatRow('Version Milestones',
+                      '5 major versions (Foundation → Team System → Gamification → Enhanced UX → Security Intelligence)'),
+                  _buildStatRow('Security Features',
+                      'Enterprise-grade integrity monitoring with AI pattern recognition'),
+                  _buildStatRow('Visual Assets',
+                      '247+ (174 banners + 73 wallpapers + avatars)'),
+                  _buildStatRow('Platform Support',
+                      '6 platforms (iOS, Android, Web, Windows, macOS, Linux)'),
+                  _buildStatRow('Code Evolution',
+                      'From 685 lines to comprehensive enterprise security system'),
+                  _buildStatRow('Features Added',
+                      '25+ documented features across 4 major revisions including advanced integrity monitoring'),
                 ],
               ),
             ),
@@ -302,7 +310,8 @@ class VersionHistoryScreen extends StatelessWidget {
         collapsedBackgroundColor: Colors.transparent,
         iconColor: color,
         collapsedIconColor: color.withOpacity(0.7),
-        initiallyExpanded: version.contains("3.4.0"), // Only expand the latest version by default
+        initiallyExpanded: version
+            .contains("3.4.0"), // Only expand the latest version by default
         title: Container(
           width: double.infinity,
           padding: const EdgeInsets.all(20),
@@ -332,7 +341,8 @@ class VersionHistoryScreen extends StatelessWidget {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: color,
                       borderRadius: BorderRadius.circular(20),
@@ -377,24 +387,24 @@ class VersionHistoryScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 ...changes.map((change) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          change,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey.shade700,
-                            height: 1.4,
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              change,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey.shade700,
+                                height: 1.4,
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
-                    ],
-                  ),
-                )),
+                    )),
               ],
             ),
           ),

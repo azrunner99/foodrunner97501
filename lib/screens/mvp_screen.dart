@@ -70,7 +70,8 @@ class _MvpScreenState extends State<MvpScreen> {
     // Step 1: Select start date
     final DateTime? startDate = await showDatePicker(
       context: context,
-      initialDate: _customDateRange?.start ?? DateTime.now().subtract(const Duration(days: 30)),
+      initialDate: _customDateRange?.start ??
+          DateTime.now().subtract(const Duration(days: 30)),
       firstDate: DateTime(2020),
       lastDate: DateTime.now(),
       helpText: 'Select Start Date',
@@ -79,16 +80,16 @@ class _MvpScreenState extends State<MvpScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: Theme.of(context).colorScheme.copyWith(
-              primary: Colors.blue,
-            ),
+                  primary: Colors.blue,
+                ),
           ),
           child: child!,
         );
       },
     );
-    
+
     if (startDate == null) return;
-    
+
     // Step 2: Select end date
     final DateTime? endDate = await showDatePicker(
       context: context,
@@ -101,16 +102,16 @@ class _MvpScreenState extends State<MvpScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: Theme.of(context).colorScheme.copyWith(
-              primary: Colors.green,
-            ),
+                  primary: Colors.green,
+                ),
           ),
           child: child!,
         );
       },
     );
-    
+
     if (endDate == null) return;
-    
+
     // Set the custom date range
     setState(() {
       _customDateRange = DateTimeRange(start: startDate, end: endDate);
@@ -119,10 +120,12 @@ class _MvpScreenState extends State<MvpScreen> {
   }
 
   // Calculate runs for a server within a date range from shift history
-  int _calculateRunsInDateRange(AppState app, String serverId, DateTimeRange dateRange) {
+  int _calculateRunsInDateRange(
+      AppState app, String serverId, DateTimeRange dateRange) {
     int totalRuns = 0;
     for (final shift in app.history) {
-      if (shift.start.isAfter(dateRange.start) && shift.start.isBefore(dateRange.end.add(const Duration(days: 1)))) {
+      if (shift.start.isAfter(dateRange.start) &&
+          shift.start.isBefore(dateRange.end.add(const Duration(days: 1)))) {
         totalRuns += shift.counts[serverId] ?? 0;
       }
     }
@@ -130,10 +133,12 @@ class _MvpScreenState extends State<MvpScreen> {
   }
 
   // Calculate pizookie runs for a server within a date range from shift history
-  int _calculatePizookieRunsInDateRange(AppState app, String serverId, DateTimeRange dateRange) {
+  int _calculatePizookieRunsInDateRange(
+      AppState app, String serverId, DateTimeRange dateRange) {
     int totalPizookieRuns = 0;
     for (final shift in app.history) {
-      if (shift.start.isAfter(dateRange.start) && shift.start.isBefore(dateRange.end.add(const Duration(days: 1)))) {
+      if (shift.start.isAfter(dateRange.start) &&
+          shift.start.isBefore(dateRange.end.add(const Duration(days: 1)))) {
         totalPizookieRuns += shift.pizookieCounts[serverId] ?? 0;
       }
     }
@@ -144,7 +149,7 @@ class _MvpScreenState extends State<MvpScreen> {
   void _showSortPopup(BuildContext context) {
     final RenderBox renderBox = context.findRenderObject() as RenderBox;
     final offset = renderBox.localToGlobal(Offset.zero);
-    
+
     showMenu<SortOption>(
       context: context,
       position: RelativeRect.fromLTRB(
@@ -182,7 +187,7 @@ class _MvpScreenState extends State<MvpScreen> {
   void _showDateRangePopup(BuildContext context) {
     final RenderBox renderBox = context.findRenderObject() as RenderBox;
     final offset = renderBox.localToGlobal(Offset.zero);
-    
+
     showMenu<DateRangeOption>(
       context: context,
       position: RelativeRect.fromLTRB(
@@ -222,7 +227,8 @@ class _MvpScreenState extends State<MvpScreen> {
 
   // Get display text for date range bubble
   String _getDateRangeDisplayText() {
-    if (_currentDateRange == DateRangeOption.customRange && _customDateRange != null) {
+    if (_currentDateRange == DateRangeOption.customRange &&
+        _customDateRange != null) {
       return '${_customDateRange!.start.month}/${_customDateRange!.start.day} - ${_customDateRange!.end.month}/${_customDateRange!.end.day}';
     }
     return _currentDateRange.displayName;
@@ -248,23 +254,37 @@ class _MvpScreenState extends State<MvpScreen> {
             // All time - use profile allTimeRuns which includes current shift
             runs = app.profiles[s.id]?.allTimeRuns ?? 0;
             pizookieRuns = app.profiles[s.id]?.pizookieRuns ?? 0;
-            final totalAllTime = app.profiles.values.fold<int>(0, (a, b) => a + b.allTimeRuns);
-            final totalPizookie = app.profiles.values.fold<int>(0, (a, b) => a + b.pizookieRuns);
+            final totalAllTime =
+                app.profiles.values.fold<int>(0, (a, b) => a + b.allTimeRuns);
+            final totalPizookie =
+                app.profiles.values.fold<int>(0, (a, b) => a + b.pizookieRuns);
             pct = totalAllTime > 0 ? (runs * 100.0 / totalAllTime) : 0.0;
-            pizookieShare = totalPizookie > 0 ? (pizookieRuns * 100.0 / totalPizookie) : 0.0;
+            pizookieShare = totalPizookie > 0
+                ? (pizookieRuns * 100.0 / totalPizookie)
+                : 0.0;
           } else {
             // Date range filtering - calculate from shift history
             runs = _calculateRunsInDateRange(app, s.id, dateRange);
-            pizookieRuns = _calculatePizookieRunsInDateRange(app, s.id, dateRange);
-            
+            pizookieRuns =
+                _calculatePizookieRunsInDateRange(app, s.id, dateRange);
+
             // Calculate percentages for filtered period
-            final totalRunsInRange = servers.fold<int>(0, (sum, server) => 
-              sum + _calculateRunsInDateRange(app, server.id, dateRange));
-            final totalPizookieInRange = servers.fold<int>(0, (sum, server) => 
-              sum + _calculatePizookieRunsInDateRange(app, server.id, dateRange));
-            
-            pct = totalRunsInRange > 0 ? (runs * 100.0 / totalRunsInRange) : 0.0;
-            pizookieShare = totalPizookieInRange > 0 ? (pizookieRuns * 100.0 / totalPizookieInRange) : 0.0;
+            final totalRunsInRange = servers.fold<int>(
+                0,
+                (sum, server) =>
+                    sum + _calculateRunsInDateRange(app, server.id, dateRange));
+            final totalPizookieInRange = servers.fold<int>(
+                0,
+                (sum, server) =>
+                    sum +
+                    _calculatePizookieRunsInDateRange(
+                        app, server.id, dateRange));
+
+            pct =
+                totalRunsInRange > 0 ? (runs * 100.0 / totalRunsInRange) : 0.0;
+            pizookieShare = totalPizookieInRange > 0
+                ? (pizookieRuns * 100.0 / totalPizookieInRange)
+                : 0.0;
           }
 
           final shiftsAsMvp = app.profiles[s.id]?.shiftsAsMvp ?? 0;
@@ -272,7 +292,7 @@ class _MvpScreenState extends State<MvpScreen> {
           final bannerPath = app.profiles[s.id]?.bannerPath;
           final currentXp = app.profiles[s.id]?.points ?? 0;
           final level = app.profiles[s.id]?.level ?? 1;
-          
+
           return _Entry(
             name: s.name,
             runs: runs,
@@ -320,7 +340,8 @@ class _MvpScreenState extends State<MvpScreen> {
                   children: [
                     // Compact filter bubbles with labels
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0, vertical: 8.0),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -340,7 +361,8 @@ class _MvpScreenState extends State<MvpScreen> {
                               GestureDetector(
                                 onTap: () => _showSortPopup(context),
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 8),
                                   decoration: BoxDecoration(
                                     color: Colors.blue.withOpacity(0.1),
                                     border: Border.all(color: Colors.blue),
@@ -349,7 +371,8 @@ class _MvpScreenState extends State<MvpScreen> {
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Icon(Icons.sort, size: 16, color: Colors.blue),
+                                      Icon(Icons.sort,
+                                          size: 16, color: Colors.blue),
                                       const SizedBox(width: 4),
                                       Text(
                                         _currentSort.displayName,
@@ -360,16 +383,17 @@ class _MvpScreenState extends State<MvpScreen> {
                                         ),
                                       ),
                                       const SizedBox(width: 4),
-                                      Icon(Icons.arrow_drop_down, size: 16, color: Colors.blue),
+                                      Icon(Icons.arrow_drop_down,
+                                          size: 16, color: Colors.blue),
                                     ],
                                   ),
                                 ),
                               ),
                             ],
                           ),
-                          
+
                           const SizedBox(width: 20),
-                          
+
                           // Date range section
                           Column(
                             mainAxisSize: MainAxisSize.min,
@@ -386,7 +410,8 @@ class _MvpScreenState extends State<MvpScreen> {
                               GestureDetector(
                                 onTap: () => _showDateRangePopup(context),
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 8),
                                   decoration: BoxDecoration(
                                     color: Colors.green.withOpacity(0.1),
                                     border: Border.all(color: Colors.green),
@@ -395,7 +420,8 @@ class _MvpScreenState extends State<MvpScreen> {
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Icon(Icons.date_range, size: 16, color: Colors.green),
+                                      Icon(Icons.date_range,
+                                          size: 16, color: Colors.green),
                                       const SizedBox(width: 4),
                                       Text(
                                         _getDateRangeDisplayText(),
@@ -406,7 +432,8 @@ class _MvpScreenState extends State<MvpScreen> {
                                         ),
                                       ),
                                       const SizedBox(width: 4),
-                                      Icon(Icons.arrow_drop_down, size: 16, color: Colors.green),
+                                      Icon(Icons.arrow_drop_down,
+                                          size: 16, color: Colors.green),
                                     ],
                                   ),
                                 ),
@@ -431,15 +458,16 @@ class _MvpScreenState extends State<MvpScreen> {
                                     color: Colors.black.withOpacity(0.7),
                                     shape: BoxShape.circle,
                                   ),
-                                  child: Icon(Icons.emoji_events,
-                                      color: rank == 1
-                                          ? Colors.amber[700]
-                                          : rank == 2
-                                              ? Colors.grey[300]
-                                              : Colors.brown[400],
-                                      size: 28,
+                                  child: Icon(
+                                    Icons.emoji_events,
+                                    color: rank == 1
+                                        ? Colors.amber[700]
+                                        : rank == 2
+                                            ? Colors.grey[300]
+                                            : Colors.brown[400],
+                                    size: 28,
                                   ),
-                              )
+                                )
                               : Container(
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
@@ -479,7 +507,8 @@ class _MvpScreenState extends State<MvpScreen> {
     }
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 8.0), // Increased vertical padding
+      padding: const EdgeInsets.symmetric(
+          vertical: 6.0, horizontal: 8.0), // Increased vertical padding
       child: Stack(
         children: [
           // Banner background (if available)
@@ -495,7 +524,8 @@ class _MvpScreenState extends State<MvpScreen> {
                 ),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.6), // Darker overlay for better text readability
+                    color: Colors.black.withOpacity(
+                        0.6), // Darker overlay for better text readability
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
@@ -505,7 +535,9 @@ class _MvpScreenState extends State<MvpScreen> {
           Container(
             padding: const EdgeInsets.all(12.0), // Increased from 8.0
             decoration: BoxDecoration(
-              color: bannerImage == null ? null : null, // No background color if banner exists
+              color: bannerImage == null
+                  ? null
+                  : null, // No background color if banner exists
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
@@ -522,115 +554,127 @@ class _MvpScreenState extends State<MvpScreen> {
                           fontSize: 28, // Increased from 22
                           fontWeight: FontWeight.bold,
                           color: bannerImage != null ? Colors.white : null,
-                          shadows: bannerImage != null ? [
-                            Shadow(
-                              blurRadius: 4,
-                              color: Colors.black,
-                              offset: Offset(2, 2),
-                            ),
-                            Shadow(
-                              blurRadius: 8,
-                              color: Colors.black.withOpacity(0.8),
-                              offset: Offset(0, 0),
-                            ),
-                          ] : null,
+                          shadows: bannerImage != null
+                              ? [
+                                  Shadow(
+                                    blurRadius: 4,
+                                    color: Colors.black,
+                                    offset: Offset(2, 2),
+                                  ),
+                                  Shadow(
+                                    blurRadius: 8,
+                                    color: Colors.black.withOpacity(0.8),
+                                    offset: Offset(0, 0),
+                                  ),
+                                ]
+                              : null,
                         ),
                       ),
                       Text(
-                        'All-time Runs: ${e.runs}', 
+                        'All-time Runs: ${e.runs}',
                         style: TextStyle(
                           fontSize: 16, // Increased from 12
                           color: bannerImage != null ? Colors.white : null,
-                          shadows: bannerImage != null ? [
-                            Shadow(
-                              blurRadius: 3,
-                              color: Colors.black,
-                              offset: Offset(1, 1),
-                            ),
-                            Shadow(
-                              blurRadius: 6,
-                              color: Colors.black.withOpacity(0.7),
-                              offset: Offset(0, 0),
-                            ),
-                          ] : null,
+                          shadows: bannerImage != null
+                              ? [
+                                  Shadow(
+                                    blurRadius: 3,
+                                    color: Colors.black,
+                                    offset: Offset(1, 1),
+                                  ),
+                                  Shadow(
+                                    blurRadius: 6,
+                                    color: Colors.black.withOpacity(0.7),
+                                    offset: Offset(0, 0),
+                                  ),
+                                ]
+                              : null,
                         ),
                       ),
                       Text(
-                        'Share: ${e.pct.toStringAsFixed(0)}%', 
+                        'Share: ${e.pct.toStringAsFixed(0)}%',
                         style: TextStyle(
                           fontSize: 16, // Increased from 12
                           color: bannerImage != null ? Colors.white : null,
-                          shadows: bannerImage != null ? [
-                            Shadow(
-                              blurRadius: 3,
-                              color: Colors.black,
-                              offset: Offset(1, 1),
-                            ),
-                            Shadow(
-                              blurRadius: 6,
-                              color: Colors.black.withOpacity(0.7),
-                              offset: Offset(0, 0),
-                            ),
-                          ] : null,
+                          shadows: bannerImage != null
+                              ? [
+                                  Shadow(
+                                    blurRadius: 3,
+                                    color: Colors.black,
+                                    offset: Offset(1, 1),
+                                  ),
+                                  Shadow(
+                                    blurRadius: 6,
+                                    color: Colors.black.withOpacity(0.7),
+                                    offset: Offset(0, 0),
+                                  ),
+                                ]
+                              : null,
                         ),
                       ),
                       const SizedBox(height: 12), // Increased from 8
                       Text(
-                        'Pizookie Runs: ${e.pizookieRuns}', 
+                        'Pizookie Runs: ${e.pizookieRuns}',
                         style: TextStyle(
                           fontSize: 16, // Increased from 12
                           color: bannerImage != null ? Colors.white : null,
-                          shadows: bannerImage != null ? [
-                            Shadow(
-                              blurRadius: 3,
-                              color: Colors.black,
-                              offset: Offset(1, 1),
-                            ),
-                            Shadow(
-                              blurRadius: 6,
-                              color: Colors.black.withOpacity(0.7),
-                              offset: Offset(0, 0),
-                            ),
-                          ] : null,
+                          shadows: bannerImage != null
+                              ? [
+                                  Shadow(
+                                    blurRadius: 3,
+                                    color: Colors.black,
+                                    offset: Offset(1, 1),
+                                  ),
+                                  Shadow(
+                                    blurRadius: 6,
+                                    color: Colors.black.withOpacity(0.7),
+                                    offset: Offset(0, 0),
+                                  ),
+                                ]
+                              : null,
                         ),
                       ),
                       Text(
-                        'Pizookie Share: ${e.pizookieShare.toStringAsFixed(0)}%', 
+                        'Pizookie Share: ${e.pizookieShare.toStringAsFixed(0)}%',
                         style: TextStyle(
                           fontSize: 16, // Increased from 12
                           color: bannerImage != null ? Colors.white : null,
-                          shadows: bannerImage != null ? [
-                            Shadow(
-                              blurRadius: 3,
-                              color: Colors.black,
-                              offset: Offset(1, 1),
-                            ),
-                            Shadow(
-                              blurRadius: 6,
-                              color: Colors.black.withOpacity(0.7),
-                              offset: Offset(0, 0),
-                            ),
-                          ] : null,
+                          shadows: bannerImage != null
+                              ? [
+                                  Shadow(
+                                    blurRadius: 3,
+                                    color: Colors.black,
+                                    offset: Offset(1, 1),
+                                  ),
+                                  Shadow(
+                                    blurRadius: 6,
+                                    color: Colors.black.withOpacity(0.7),
+                                    offset: Offset(0, 0),
+                                  ),
+                                ]
+                              : null,
                         ),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'MVP Awards: ${e.shiftsAsMvp}', 
+                        'MVP Awards: ${e.shiftsAsMvp}',
                         style: TextStyle(
                           fontSize: 16, // Increased from 12
                           color: bannerImage != null ? Colors.white : null,
-                          shadows: bannerImage != null ? [
-                            Shadow(
-                              blurRadius: 3,
-                              color: Colors.black,
-                              offset: Offset(1, 1),
-                            ),
-                            Shadow(
-                              blurRadius: 6,
-                              color: Colors.black.withOpacity(0.7),
-                              offset: Offset(0, 0),
-                            ),
-                          ] : null,
+                          shadows: bannerImage != null
+                              ? [
+                                  Shadow(
+                                    blurRadius: 3,
+                                    color: Colors.black,
+                                    offset: Offset(1, 1),
+                                  ),
+                                  Shadow(
+                                    blurRadius: 6,
+                                    color: Colors.black.withOpacity(0.7),
+                                    offset: Offset(0, 0),
+                                  ),
+                                ]
+                              : null,
                         ),
                       ),
                     ],
@@ -646,19 +690,22 @@ class _MvpScreenState extends State<MvpScreen> {
                       style: TextStyle(
                         fontSize: 16, // Increased from 12
                         fontWeight: FontWeight.bold,
-                        color: bannerImage != null ? Colors.white : Colors.black,
-                        shadows: bannerImage != null ? [
-                          Shadow(
-                            blurRadius: 2,
-                            color: Colors.black,
-                            offset: Offset(1, 1),
-                          ),
-                          Shadow(
-                            blurRadius: 4,
-                            color: Colors.black.withOpacity(0.7),
-                            offset: Offset(0, 0),
-                          ),
-                        ] : null,
+                        color:
+                            bannerImage != null ? Colors.white : Colors.black,
+                        shadows: bannerImage != null
+                            ? [
+                                Shadow(
+                                  blurRadius: 2,
+                                  color: Colors.black,
+                                  offset: Offset(1, 1),
+                                ),
+                                Shadow(
+                                  blurRadius: 4,
+                                  color: Colors.black.withOpacity(0.7),
+                                  offset: Offset(0, 0),
+                                ),
+                              ]
+                            : null,
                       ),
                     ),
                   ],
@@ -671,7 +718,8 @@ class _MvpScreenState extends State<MvpScreen> {
     );
   }
 
-  Future<Map<String, Map<String, String?>>> _loadAllAvatarsAndBanners(List servers) async {
+  Future<Map<String, Map<String, String?>>> _loadAllAvatarsAndBanners(
+      List servers) async {
     final prefs = await SharedPreferences.getInstance();
     final Map<String, String?> avatarMap = {};
     final Map<String, String?> bannerMap = {};
@@ -687,7 +735,7 @@ class _MvpScreenState extends State<MvpScreen> {
 
   Widget _buildAvatar(String? avatarPath, int level) {
     Widget avatarWidget;
-    
+
     if (avatarPath != null && avatarPath.isNotEmpty) {
       // Check if it's an asset path or a file path
       if (avatarPath.startsWith('assets/')) {

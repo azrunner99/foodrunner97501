@@ -1,19 +1,20 @@
 /// TRANSITION ENGINE - ISOLATED TRANSITION LOGIC
-/// 
+///
 /// This class contains ALL transition logic in isolation.
 /// NO other code should handle roster transitions.
 /// This ensures the core function is protected and testable.
+library;
 
 class TransitionEngine {
   // IMMUTABLE STATE - Never modify directly
   final Set<String> _lunchRoster;
   final Set<String> _dinnerRoster;
-  
+
   TransitionEngine({
     required Set<String> lunchRoster,
     required Set<String> dinnerRoster,
-  }) : _lunchRoster = Set.unmodifiable(lunchRoster),
-       _dinnerRoster = Set.unmodifiable(dinnerRoster);
+  })  : _lunchRoster = Set.unmodifiable(lunchRoster),
+        _dinnerRoster = Set.unmodifiable(dinnerRoster);
 
   /// Core transition logic - determines active servers for each phase
   TransitionResult calculateTransition({
@@ -21,7 +22,7 @@ class TransitionEngine {
     required Map<String, int> currentCounts,
   }) {
     _validateInputs(currentPhase, currentCounts);
-    
+
     switch (currentPhase) {
       case 'lunch':
         return _lunchPhase(currentCounts);
@@ -38,12 +39,12 @@ class TransitionEngine {
   TransitionResult _lunchPhase(Map<String, int> currentCounts) {
     final activeServers = Set<String>.from(_lunchRoster);
     final preservedCounts = Map<String, int>.from(currentCounts);
-    
+
     // Ensure dinner-only servers can't accumulate counts
     for (final serverId in _dinnerOnlyServers) {
       preservedCounts[serverId] = 0;
     }
-    
+
     return TransitionResult(
       activeServers: activeServers,
       preservedCounts: preservedCounts,
@@ -54,12 +55,12 @@ class TransitionEngine {
 
   /// TRANSITION PHASE: All servers are active for clicks
   TransitionResult _transitionPhase(Map<String, int> currentCounts) {
-    final activeServers = Set<String>()
+    final activeServers = <String>{}
       ..addAll(_lunchRoster)
       ..addAll(_dinnerRoster);
-    
+
     final preservedCounts = Map<String, int>.from(currentCounts);
-    
+
     return TransitionResult(
       activeServers: activeServers,
       preservedCounts: preservedCounts,
@@ -72,7 +73,7 @@ class TransitionEngine {
   TransitionResult _dinnerPhase(Map<String, int> currentCounts) {
     final activeServers = Set<String>.from(_dinnerRoster);
     final preservedCounts = <String, int>{};
-    
+
     // CRITICAL LOGIC: Count preservation rules
     for (final serverId in activeServers) {
       if (_dinnerOnlyServers.contains(serverId)) {
@@ -83,14 +84,14 @@ class TransitionEngine {
         preservedCounts[serverId] = 0;
       }
     }
-    
+
     return TransitionResult(
       activeServers: activeServers,
       preservedCounts: preservedCounts,
       phase: 'dinner',
       debugInfo: 'Dinner phase: ${activeServers.join(", ")} active, '
-                'preserved: ${_dinnerOnlyServers.join(", ")}, '
-                'reset: ${_bothShiftServers.join(", ")}',
+          'preserved: ${_dinnerOnlyServers.join(", ")}, '
+          'reset: ${_bothShiftServers.join(", ")}',
     );
   }
 
@@ -104,13 +105,15 @@ class TransitionEngine {
     if (!['lunch', 'transition', 'dinner'].contains(phase)) {
       throw ArgumentError('Invalid phase: $phase');
     }
-    
+
     if (_lunchRoster.isEmpty && _dinnerRoster.isEmpty) {
       throw StateError('Both rosters cannot be empty');
     }
-    
+
     // Validate all roster servers have count entries
-    final allServers = Set<String>()..addAll(_lunchRoster)..addAll(_dinnerRoster);
+    final allServers = <String>{}
+      ..addAll(_lunchRoster)
+      ..addAll(_dinnerRoster);
     for (final serverId in allServers) {
       if (!counts.containsKey(serverId)) {
         throw StateError('Missing count for server: $serverId');
@@ -120,12 +123,12 @@ class TransitionEngine {
 
   /// Debug information for troubleshooting
   Map<String, dynamic> get debugInfo => {
-    'lunchRoster': _lunchRoster.toList(),
-    'dinnerRoster': _dinnerRoster.toList(),
-    'lunchOnly': _lunchOnlyServers.toList(),
-    'dinnerOnly': _dinnerOnlyServers.toList(),
-    'bothShifts': _bothShiftServers.toList(),
-  };
+        'lunchRoster': _lunchRoster.toList(),
+        'dinnerRoster': _dinnerRoster.toList(),
+        'lunchOnly': _lunchOnlyServers.toList(),
+        'dinnerOnly': _dinnerOnlyServers.toList(),
+        'bothShifts': _bothShiftServers.toList(),
+      };
 }
 
 /// Immutable result from transition calculations

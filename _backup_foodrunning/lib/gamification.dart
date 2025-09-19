@@ -37,8 +37,8 @@ enum PowerUp { doublePoint, bonusFive, nothing }
 PowerUp rollPowerUp(Random r) {
   final p = r.nextDouble();
   if (p < 0.05) return PowerUp.doublePoint; // 5%
-  if (p < 0.08) return PowerUp.bonusFive;   // +5 about 3%
-  return PowerUp.nothing;                    // 92%
+  if (p < 0.08) return PowerUp.bonusFive; // +5 about 3%
+  return PowerUp.nothing; // 92%
 }
 
 class AchievementDef {
@@ -55,8 +55,10 @@ const achievementsCatalog = <AchievementDef>[
   AchievementDef('twenty_in_shift', 'Hustler', '20 runs in a single shift.'),
   AchievementDef('fifty_all_time', 'Workhorse', '50 runs all time.'),
   AchievementDef('hundred_all_time', 'Centurion', '100 runs all time.'),
-  AchievementDef('three_streak', 'On a Roll', '3 runs in a row without a break.'),
-  AchievementDef('five_streak', 'Steam Engine', '5 runs in a row without a break.'),
+  AchievementDef(
+      'three_streak', 'On a Roll', '3 runs in a row without a break.'),
+  AchievementDef(
+      'five_streak', 'Steam Engine', '5 runs in a row without a break.'),
   AchievementDef('mvp', 'MVP', 'Top runner for a shift.'),
   AchievementDef('team_goal', 'Closer', 'Team hit the shift goal.'),
   AchievementDef('night_owl', 'Night Owl', 'Logging runs after 11 PM.'),
@@ -170,4 +172,3 @@ const encouragements = <String>[
   "Your hustle is the Wi-Fi password: essential.",
   "BJ’s has 100+ menu items, but you’re the best one.",
 ];
-

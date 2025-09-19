@@ -7,6 +7,8 @@ import 'station_types_screen.dart';
 import '../widgets/wallpaper_background.dart';
 
 class UpdateRosterScreen extends StatefulWidget {
+  const UpdateRosterScreen({super.key});
+
   @override
   State<UpdateRosterScreen> createState() => _UpdateRosterScreenState();
 }
@@ -14,7 +16,8 @@ class UpdateRosterScreen extends StatefulWidget {
 class _UpdateRosterScreenState extends State<UpdateRosterScreen> {
   bool _unlocked = false;
   final _pinCtrl = TextEditingController();
-  final GlobalKey<_RosterBodyState> _rosterBodyKey = GlobalKey<_RosterBodyState>();
+  final GlobalKey<_RosterBodyState> _rosterBodyKey =
+      GlobalKey<_RosterBodyState>();
 
   @override
   void dispose() {
@@ -25,7 +28,7 @@ class _UpdateRosterScreenState extends State<UpdateRosterScreen> {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
-    
+
     if (!_unlocked) {
       return Scaffold(
         appBar: AppBar(
@@ -62,7 +65,8 @@ class _UpdateRosterScreenState extends State<UpdateRosterScreen> {
                 margin: const EdgeInsets.all(20),
                 elevation: 12,
                 shadowColor: Colors.red.withOpacity(0.3),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20)),
                 child: Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(20),
@@ -80,126 +84,127 @@ class _UpdateRosterScreenState extends State<UpdateRosterScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              Colors.red.shade600,
-                              Colors.red.shade400,
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Colors.red.shade600,
+                                Colors.red.shade400,
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.red.withOpacity(0.3),
+                                spreadRadius: 4,
+                                blurRadius: 12,
+                                offset: const Offset(0, 6),
+                              ),
                             ],
                           ),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.red.withOpacity(0.3),
-                              spreadRadius: 4,
-                              blurRadius: 12,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
+                          child: const Icon(
+                            Icons.lock,
+                            color: Colors.white,
+                            size: 40,
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.lock,
-                          color: Colors.white,
-                          size: 40,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Admin Access Required',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      const Text(
-                        'Enter PIN to modify server roster',
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: Colors.black54,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade50,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey.shade300),
-                        ),
-                        child: TextField(
-                          controller: _pinCtrl,
-                          obscureText: true,
-                          textAlign: TextAlign.center,
-                          readOnly: true,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            letterSpacing: 4,
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Admin Access Required',
+                          style: TextStyle(
+                            fontSize: 22,
                             fontWeight: FontWeight.bold,
-                          ),
-                          decoration: InputDecoration(
-                            hintText: 'Enter PIN',
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.all(16),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Colors.red.shade400, width: 2),
-                            ),
+                            color: Colors.black87,
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      _buildKeypad(),
-                      const SizedBox(height: 16),
-                      Container(
-                        width: double.infinity,
-                        height: 45,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.centerLeft,
-                            end: Alignment.centerRight,
-                            colors: [
-                              Colors.red.shade600,
-                              Colors.red.shade400,
-                            ],
+                        const SizedBox(height: 6),
+                        const Text(
+                          'Enter PIN to modify server roster',
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: Colors.black54,
                           ),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.red.withOpacity(0.3),
-                              spreadRadius: 2,
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
                         ),
-                        child: ElevatedButton(
-                          onPressed: () => _tryUnlock(),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            shadowColor: Colors.transparent,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                        const SizedBox(height: 20),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade300),
                           ),
-                          child: const Text(
-                            'Unlock',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
+                          child: TextField(
+                            controller: _pinCtrl,
+                            obscureText: true,
+                            textAlign: TextAlign.center,
+                            readOnly: true,
+                            style: const TextStyle(
+                              fontSize: 20,
+                              letterSpacing: 4,
                               fontWeight: FontWeight.bold,
                             ),
+                            decoration: InputDecoration(
+                              hintText: 'Enter PIN',
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.all(16),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                    color: Colors.red.shade400, width: 2),
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 16),
+                        _buildKeypad(),
+                        const SizedBox(height: 16),
+                        Container(
+                          width: double.infinity,
+                          height: 45,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                              colors: [
+                                Colors.red.shade600,
+                                Colors.red.shade400,
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.red.withOpacity(0.3),
+                                spreadRadius: 2,
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: ElevatedButton(
+                            onPressed: () => _tryUnlock(),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text(
+                              'Unlock',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
               ),
             ),
           ),
@@ -250,7 +255,8 @@ class _UpdateRosterScreenState extends State<UpdateRosterScreen> {
     if (_pinCtrl.text == AppState.adminPin) {
       setState(() => _unlocked = true);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Wrong PIN')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Wrong PIN')));
     }
   }
 
@@ -306,12 +312,8 @@ class _UpdateRosterScreenState extends State<UpdateRosterScreen> {
       child: ElevatedButton(
         onPressed: () => _onKeypadPressed(text),
         style: ElevatedButton.styleFrom(
-          backgroundColor: isSpecial 
-              ? Colors.grey.shade200 
-              : Colors.white,
-          foregroundColor: isSpecial 
-              ? Colors.grey.shade700 
-              : Colors.black87,
+          backgroundColor: isSpecial ? Colors.grey.shade200 : Colors.white,
+          foregroundColor: isSpecial ? Colors.grey.shade700 : Colors.black87,
           elevation: 2,
           shadowColor: Colors.red.withOpacity(0.2),
           shape: RoundedRectangleBorder(
@@ -341,11 +343,12 @@ class _UpdateRosterScreenState extends State<UpdateRosterScreen> {
         if (_pinCtrl.text.isNotEmpty) {
           _pinCtrl.text = _pinCtrl.text.substring(0, _pinCtrl.text.length - 1);
         }
-      } else if (_pinCtrl.text.length < 6) { // Limit PIN length
+      } else if (_pinCtrl.text.length < 6) {
+        // Limit PIN length
         _pinCtrl.text += value;
       }
     });
-    
+
     // Auto-unlock if PIN is complete
     if (_pinCtrl.text.length >= 4 && _pinCtrl.text == AppState.adminPin) {
       _tryUnlock();
@@ -404,25 +407,32 @@ class _RosterBodyState extends State<_RosterBody> {
 
   void _loadStoredData() async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     // Load station types
     stationTypes = await loadStationTypes();
-    
+
     // Load stored station assignments
     final lunchStationTypeJson = prefs.getString('lunchStationType') ?? '{}';
     final dinnerStationTypeJson = prefs.getString('dinnerStationType') ?? '{}';
-    final lunchStationSectionJson = prefs.getString('lunchStationSection') ?? '{}';
-    final dinnerStationSectionJson = prefs.getString('dinnerStationSection') ?? '{}';
-    
+    final lunchStationSectionJson =
+        prefs.getString('lunchStationSection') ?? '{}';
+    final dinnerStationSectionJson =
+        prefs.getString('dinnerStationSection') ?? '{}';
+
     setState(() {
-      lunchStationType = Map<String, String?>.from(json.decode(lunchStationTypeJson));
-      dinnerStationType = Map<String, String?>.from(json.decode(dinnerStationTypeJson));
-      lunchStationSection = Map<String, String?>.from(json.decode(lunchStationSectionJson));
-      dinnerStationSection = Map<String, String?>.from(json.decode(dinnerStationSectionJson));
-      
+      lunchStationType =
+          Map<String, String?>.from(json.decode(lunchStationTypeJson));
+      dinnerStationType =
+          Map<String, String?>.from(json.decode(dinnerStationTypeJson));
+      lunchStationSection =
+          Map<String, String?>.from(json.decode(lunchStationSectionJson));
+      dinnerStationSection =
+          Map<String, String?>.from(json.decode(dinnerStationSectionJson));
+
       // Initialize rosters from app state
       lunchRoster = List<String>.from(widget.app.todayPlan?.lunchRoster ?? []);
-      dinnerRoster = List<String>.from(widget.app.todayPlan?.dinnerRoster ?? []);
+      dinnerRoster =
+          List<String>.from(widget.app.todayPlan?.dinnerRoster ?? []);
     });
   }
 
@@ -433,8 +443,10 @@ class _RosterBodyState extends State<_RosterBody> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('lunchStationType', json.encode(lunchStationType));
     await prefs.setString('dinnerStationType', json.encode(dinnerStationType));
-    await prefs.setString('lunchStationSection', json.encode(lunchStationSection));
-    await prefs.setString('dinnerStationSection', json.encode(dinnerStationSection));
+    await prefs.setString(
+        'lunchStationSection', json.encode(lunchStationSection));
+    await prefs.setString(
+        'dinnerStationSection', json.encode(dinnerStationSection));
 
     // Sync teamColor assignments to AppState servers
     for (final s in widget.app.servers) {
@@ -445,14 +457,16 @@ class _RosterBodyState extends State<_RosterBody> {
     // CRITICAL FIX: Preserve existing counts if a shift is currently active
     // This prevents server totals from being reset to zero during live roster updates
     final shouldPreserveCounts = widget.app.shiftActive;
-    
+
     // Use CURRENT shift type, not intended shift type, for updating active roster
     final currentShift = widget.app.shiftType;
-    
+
     if (currentShift == 'Lunch') {
-      widget.app.updateActiveRoster(lunchRoster, preserveExistingCounts: shouldPreserveCounts);
+      widget.app.updateActiveRoster(lunchRoster,
+          preserveExistingCounts: shouldPreserveCounts);
     } else {
-      widget.app.updateActiveRoster(dinnerRoster, preserveExistingCounts: shouldPreserveCounts);
+      widget.app.updateActiveRoster(dinnerRoster,
+          preserveExistingCounts: shouldPreserveCounts);
     }
 
     // Persist servers and plan changes (ensures team colors survive restarts)
@@ -462,7 +476,7 @@ class _RosterBodyState extends State<_RosterBody> {
   @override
   Widget build(BuildContext context) {
     // Sync teamColor on server objects when switching between lunch/dinner
-    void _syncServerTeamColors() {
+    void syncServerTeamColors() {
       for (final s in widget.app.servers) {
         s.teamColor = isLunch ? lunchTeamColors[s.id] : dinnerTeamColors[s.id];
       }
@@ -472,10 +486,13 @@ class _RosterBodyState extends State<_RosterBody> {
     final roster = isLunch ? lunchRoster : dinnerRoster;
     final teamColors = isLunch ? lunchTeamColors : dinnerTeamColors;
     final serverStationType = isLunch ? lunchStationType : dinnerStationType;
-    final serverStationSection = isLunch ? lunchStationSection : dinnerStationSection;
+    final serverStationSection =
+        isLunch ? lunchStationSection : dinnerStationSection;
 
-    final assignedServers = widget.app.servers.where((s) => roster.contains(s.id)).toList();
-    final unassignedServers = widget.app.servers.where((s) => !roster.contains(s.id)).toList();
+    final assignedServers =
+        widget.app.servers.where((s) => roster.contains(s.id)).toList();
+    final unassignedServers =
+        widget.app.servers.where((s) => !roster.contains(s.id)).toList();
 
     // Sort assigned servers by station type order, then by section number within each station type
     assignedServers.sort((a, b) {
@@ -483,19 +500,19 @@ class _RosterBodyState extends State<_RosterBody> {
       final bStationType = serverStationType[b.id];
       final aSection = serverStationSection[a.id];
       final bSection = serverStationSection[b.id];
-      
+
       // Get the index of each station type in the stationTypes list
       // Check both name and abbreviation since either could be stored
-      final aStationIndex = stationTypes.indexWhere((st) => 
-        st.name == aStationType || st.abbreviation == aStationType);
-      final bStationIndex = stationTypes.indexWhere((st) => 
-        st.name == bStationType || st.abbreviation == bStationType);
-      
+      final aStationIndex = stationTypes.indexWhere(
+          (st) => st.name == aStationType || st.abbreviation == aStationType);
+      final bStationIndex = stationTypes.indexWhere(
+          (st) => st.name == bStationType || st.abbreviation == bStationType);
+
       // If both servers have station types, sort by station type order first
       if (aStationIndex != -1 && bStationIndex != -1) {
         final stationComparison = aStationIndex.compareTo(bStationIndex);
         if (stationComparison != 0) return stationComparison;
-        
+
         // Within the same station type, sort by section number
         final aSectionNum = int.tryParse(aSection ?? '0') ?? 0;
         final bSectionNum = int.tryParse(bSection ?? '0') ?? 0;
@@ -503,9 +520,10 @@ class _RosterBodyState extends State<_RosterBody> {
         if (sectionComparison != 0) return sectionComparison;
       }
       // If only one has a station type, prioritize the one with a station type
-      else if (aStationIndex != -1) return -1;
+      else if (aStationIndex != -1)
+        return -1;
       else if (bStationIndex != -1) return 1;
-      
+
       // If section numbers are the same (or both have no station type), sort by name
       return a.name.compareTo(b.name);
     });
@@ -552,12 +570,17 @@ class _RosterBodyState extends State<_RosterBody> {
                       child: GestureDetector(
                         onTap: () => setState(() => showTeams = !showTeams),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: showTeams ? Colors.purple[50] : Colors.transparent,
+                            color: showTeams
+                                ? Colors.purple[50]
+                                : Colors.transparent,
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                              color: showTeams ? Colors.purple[300]! : Colors.grey[300]!,
+                              color: showTeams
+                                  ? Colors.purple[300]!
+                                  : Colors.grey[300]!,
                               width: 1,
                             ),
                           ),
@@ -567,14 +590,18 @@ class _RosterBodyState extends State<_RosterBody> {
                               Icon(
                                 Icons.groups,
                                 size: 16,
-                                color: showTeams ? Colors.purple[600] : Colors.grey[600],
+                                color: showTeams
+                                    ? Colors.purple[600]
+                                    : Colors.grey[600],
                               ),
                               const SizedBox(width: 6),
                               Text(
                                 'Assign Teams',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w500,
-                                  color: showTeams ? Colors.purple[700] : Colors.grey[700],
+                                  color: showTeams
+                                      ? Colors.purple[700]
+                                      : Colors.grey[700],
                                   fontSize: 12,
                                 ),
                               ),
@@ -583,12 +610,16 @@ class _RosterBodyState extends State<_RosterBody> {
                                 width: 30,
                                 height: 16,
                                 decoration: BoxDecoration(
-                                  color: showTeams ? Colors.purple[400] : Colors.grey[300],
+                                  color: showTeams
+                                      ? Colors.purple[400]
+                                      : Colors.grey[300],
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: AnimatedAlign(
                                   duration: const Duration(milliseconds: 200),
-                                  alignment: showTeams ? Alignment.centerRight : Alignment.centerLeft,
+                                  alignment: showTeams
+                                      ? Alignment.centerRight
+                                      : Alignment.centerLeft,
                                   child: Container(
                                     width: 12,
                                     height: 12,
@@ -620,22 +651,28 @@ class _RosterBodyState extends State<_RosterBody> {
                               onTap: () {
                                 setState(() {
                                   isLunch = true;
-                                  _syncServerTeamColors();
+                                  syncServerTeamColors();
                                 });
                               },
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 200),
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 20, vertical: 12),
                                 decoration: BoxDecoration(
-                                  color: isLunch ? Colors.orange[400] : Colors.transparent,
+                                  color: isLunch
+                                      ? Colors.orange[400]
+                                      : Colors.transparent,
                                   borderRadius: BorderRadius.circular(8),
-                                  boxShadow: isLunch ? [
-                                    BoxShadow(
-                                      color: Colors.orange.withOpacity(0.3),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ] : [],
+                                  boxShadow: isLunch
+                                      ? [
+                                          BoxShadow(
+                                            color:
+                                                Colors.orange.withOpacity(0.3),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ]
+                                      : [],
                                 ),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
@@ -643,13 +680,17 @@ class _RosterBodyState extends State<_RosterBody> {
                                     Icon(
                                       Icons.wb_sunny,
                                       size: 20,
-                                      color: isLunch ? Colors.white : Colors.grey[600],
+                                      color: isLunch
+                                          ? Colors.white
+                                          : Colors.grey[600],
                                     ),
                                     const SizedBox(width: 8),
                                     Text(
                                       'Lunch',
                                       style: TextStyle(
-                                        color: isLunch ? Colors.white : Colors.grey[700],
+                                        color: isLunch
+                                            ? Colors.white
+                                            : Colors.grey[700],
                                         fontWeight: FontWeight.w600,
                                         fontSize: 16,
                                       ),
@@ -665,22 +706,28 @@ class _RosterBodyState extends State<_RosterBody> {
                               onTap: () {
                                 setState(() {
                                   isLunch = false;
-                                  _syncServerTeamColors();
+                                  syncServerTeamColors();
                                 });
                               },
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 200),
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 20, vertical: 12),
                                 decoration: BoxDecoration(
-                                  color: !isLunch ? Colors.indigo[400] : Colors.transparent,
+                                  color: !isLunch
+                                      ? Colors.indigo[400]
+                                      : Colors.transparent,
                                   borderRadius: BorderRadius.circular(8),
-                                  boxShadow: !isLunch ? [
-                                    BoxShadow(
-                                      color: Colors.indigo.withOpacity(0.3),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ] : [],
+                                  boxShadow: !isLunch
+                                      ? [
+                                          BoxShadow(
+                                            color:
+                                                Colors.indigo.withOpacity(0.3),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ]
+                                      : [],
                                 ),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
@@ -688,13 +735,17 @@ class _RosterBodyState extends State<_RosterBody> {
                                     Icon(
                                       Icons.nights_stay,
                                       size: 20,
-                                      color: !isLunch ? Colors.white : Colors.grey[600],
+                                      color: !isLunch
+                                          ? Colors.white
+                                          : Colors.grey[600],
                                     ),
                                     const SizedBox(width: 8),
                                     Text(
                                       'Dinner',
                                       style: TextStyle(
-                                        color: !isLunch ? Colors.white : Colors.grey[700],
+                                        color: !isLunch
+                                            ? Colors.white
+                                            : Colors.grey[700],
                                         fontWeight: FontWeight.w600,
                                         fontSize: 16,
                                       ),
@@ -710,7 +761,7 @@ class _RosterBodyState extends State<_RosterBody> {
                   ],
                 ),
               ),
-              
+
               // Assigned Servers Section
               if (assignedServers.isNotEmpty)
                 Container(
@@ -789,15 +840,18 @@ class _RosterBodyState extends State<_RosterBody> {
                               decoration: BoxDecoration(
                                 color: Colors.red[50],
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.red[200]!, width: 1),
+                                border: Border.all(
+                                    color: Colors.red[200]!, width: 1),
                               ),
                               child: TextButton(
                                 style: TextButton.styleFrom(
                                   backgroundColor: Colors.transparent,
                                   foregroundColor: Colors.red[600],
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 8),
                                   minimumSize: Size.zero,
-                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
                                 ),
                                 onPressed: () {
                                   setState(() {
@@ -821,7 +875,8 @@ class _RosterBodyState extends State<_RosterBody> {
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.clear_all, color: Colors.red[600], size: 16),
+                                    Icon(Icons.clear_all,
+                                        color: Colors.red[600], size: 16),
                                     const SizedBox(width: 6),
                                     Text(
                                       'Clear All',
@@ -853,9 +908,12 @@ class _RosterBodyState extends State<_RosterBody> {
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(6),
-                                  border: teamColor != null 
-                                    ? Border.all(color: _getTeamColorValue(teamColor), width: 2)
-                                    : Border.all(color: Colors.grey[200]!, width: 1),
+                                  border: teamColor != null
+                                      ? Border.all(
+                                          color: _getTeamColorValue(teamColor),
+                                          width: 2)
+                                      : Border.all(
+                                          color: Colors.grey[200]!, width: 1),
                                   boxShadow: [
                                     BoxShadow(
                                       color: Colors.black.withOpacity(0.03),
@@ -875,7 +933,8 @@ class _RosterBodyState extends State<_RosterBody> {
                                     });
                                   },
                                   child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 0),
                                     child: Row(
                                       children: [
                                         Expanded(
@@ -889,20 +948,27 @@ class _RosterBodyState extends State<_RosterBody> {
                                                   color: Colors.black87,
                                                 ),
                                               ),
-                                              if (serverStationSection[s.id] != null) ...[
+                                              if (serverStationSection[s.id] !=
+                                                  null) ...[
                                                 const SizedBox(width: 6),
                                                 Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 4,
+                                                      vertical: 1),
                                                   decoration: BoxDecoration(
                                                     color: Colors.grey[100],
-                                                    borderRadius: BorderRadius.circular(3),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            3),
                                                   ),
                                                   child: Text(
                                                     serverStationSection[s.id]!,
                                                     style: TextStyle(
                                                       fontSize: 11,
                                                       color: Colors.grey[700],
-                                                      fontWeight: FontWeight.w500,
+                                                      fontWeight:
+                                                          FontWeight.w500,
                                                     ),
                                                   ),
                                                 ),
@@ -1021,7 +1087,8 @@ class _RosterBodyState extends State<_RosterBody> {
                                 height: 80,
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(color: Colors.grey[300]!, width: 2),
+                                  border: Border.all(
+                                      color: Colors.grey[300]!, width: 2),
                                   boxShadow: [
                                     BoxShadow(
                                       color: Colors.black.withOpacity(0.1),
@@ -1035,19 +1102,25 @@ class _RosterBodyState extends State<_RosterBody> {
                                   child: Stack(
                                     children: [
                                       // Banner background
-                                      Container(
+                                      SizedBox(
                                         width: double.infinity,
                                         height: double.infinity,
-                                        child: widget.app.profiles[s.id]?.bannerPath != null
+                                        child: widget.app.profiles[s.id]
+                                                    ?.bannerPath !=
+                                                null
                                             ? Image.asset(
-                                                widget.app.profiles[s.id]!.bannerPath!,
+                                                widget.app.profiles[s.id]!
+                                                    .bannerPath!,
                                                 fit: BoxFit.cover,
-                                                errorBuilder: (context, error, stackTrace) {
+                                                errorBuilder: (context, error,
+                                                    stackTrace) {
                                                   return Container(
                                                     decoration: BoxDecoration(
                                                       gradient: LinearGradient(
-                                                        begin: Alignment.topLeft,
-                                                        end: Alignment.bottomRight,
+                                                        begin:
+                                                            Alignment.topLeft,
+                                                        end: Alignment
+                                                            .bottomRight,
                                                         colors: [
                                                           Colors.grey[400]!,
                                                           Colors.grey[500]!,
@@ -1096,23 +1169,35 @@ class _RosterBodyState extends State<_RosterBody> {
                                               dinnerRoster.add(s.id);
                                             }
                                           });
-                                          
+
                                           // Then show station type dialog
-                                          final selectedTypeName = await _showStationTypeDialog(context);
+                                          final selectedTypeName =
+                                              await _showStationTypeDialog(
+                                                  context);
                                           if (selectedTypeName != null) {
-                                            final selectedType = stationTypes.firstWhere((t) => t.name == selectedTypeName);
-                                            final selectedSection = await showDialog<String>(
+                                            final selectedType =
+                                                stationTypes.firstWhere((t) =>
+                                                    t.name == selectedTypeName);
+                                            final selectedSection =
+                                                await showDialog<String>(
                                               context: context,
                                               barrierDismissible: true,
                                               builder: (sectionContext) {
                                                 return Dialog(
-                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                                                  backgroundColor: Colors.transparent,
+                                                  shape: RoundedRectangleBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              24)),
+                                                  backgroundColor:
+                                                      Colors.transparent,
                                                   child: Container(
                                                     decoration: BoxDecoration(
-                                                      gradient: const LinearGradient(
-                                                        begin: Alignment.topLeft,
-                                                        end: Alignment.bottomRight,
+                                                      gradient:
+                                                          const LinearGradient(
+                                                        begin:
+                                                            Alignment.topLeft,
+                                                        end: Alignment
+                                                            .bottomRight,
                                                         colors: [
                                                           Color(0xFFF8FAFF),
                                                           Color(0xFFFFFFFF),
@@ -1120,69 +1205,120 @@ class _RosterBodyState extends State<_RosterBody> {
                                                         ],
                                                         stops: [0.0, 0.5, 1.0],
                                                       ),
-                                                      borderRadius: BorderRadius.circular(24),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              24),
                                                       boxShadow: [
                                                         BoxShadow(
-                                                          color: Colors.blue.withOpacity(0.08),
+                                                          color: Colors.blue
+                                                              .withOpacity(
+                                                                  0.08),
                                                           blurRadius: 25,
-                                                          offset: const Offset(0, 10),
+                                                          offset: const Offset(
+                                                              0, 10),
                                                         ),
                                                         BoxShadow(
-                                                          color: Colors.black.withOpacity(0.04),
+                                                          color: Colors.black
+                                                              .withOpacity(
+                                                                  0.04),
                                                           blurRadius: 10,
-                                                          offset: const Offset(0, 2),
+                                                          offset: const Offset(
+                                                              0, 2),
                                                         ),
                                                       ],
                                                       border: Border.all(
-                                                        color: Colors.white.withOpacity(0.2),
+                                                        color: Colors.white
+                                                            .withOpacity(0.2),
                                                         width: 1.5,
                                                       ),
                                                     ),
                                                     child: Padding(
-                                                      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 24),
+                                                      padding: const EdgeInsets
+                                                          .symmetric(
+                                                          vertical: 28,
+                                                          horizontal: 24),
                                                       child: Column(
-                                                        mainAxisSize: MainAxisSize.min,
-                                                        crossAxisAlignment: CrossAxisAlignment.center,
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .center,
                                                         children: [
                                                           Wrap(
                                                             spacing: 16,
                                                             runSpacing: 16,
-                                                            alignment: WrapAlignment.center,
-                                                            children: List.generate(selectedType.sections, (i) {
-                                                              final sectionLabel = '${selectedType.abbreviation} ${i + 1}';
+                                                            alignment:
+                                                                WrapAlignment
+                                                                    .center,
+                                                            children:
+                                                                List.generate(
+                                                                    selectedType
+                                                                        .sections,
+                                                                    (i) {
+                                                              final sectionLabel =
+                                                                  '${selectedType.abbreviation} ${i + 1}';
                                                               return Container(
                                                                 width: 140,
                                                                 height: 54,
-                                                                decoration: BoxDecoration(
-                                                                  gradient: const LinearGradient(
-                                                                    begin: Alignment.topLeft,
-                                                                    end: Alignment.bottomRight,
+                                                                decoration:
+                                                                    BoxDecoration(
+                                                                  gradient:
+                                                                      const LinearGradient(
+                                                                    begin: Alignment
+                                                                        .topLeft,
+                                                                    end: Alignment
+                                                                        .bottomRight,
                                                                     colors: [
-                                                                      Color(0xFF4FC3F7),
-                                                                      Color(0xFF29B6F6),
+                                                                      Color(
+                                                                          0xFF4FC3F7),
+                                                                      Color(
+                                                                          0xFF29B6F6),
                                                                     ],
                                                                   ),
-                                                                  borderRadius: BorderRadius.circular(18),
+                                                                  borderRadius:
+                                                                      BorderRadius
+                                                                          .circular(
+                                                                              18),
                                                                   boxShadow: [
                                                                     BoxShadow(
-                                                                      color: Colors.blue.withOpacity(0.15),
-                                                                      blurRadius: 8,
-                                                                      offset: const Offset(0, 4),
+                                                                      color: Colors
+                                                                          .blue
+                                                                          .withOpacity(
+                                                                              0.15),
+                                                                      blurRadius:
+                                                                          8,
+                                                                      offset:
+                                                                          const Offset(
+                                                                              0,
+                                                                              4),
                                                                     ),
                                                                   ],
                                                                 ),
                                                                 child: Material(
-                                                                  color: Colors.transparent,
-                                                                  child: InkWell(
-                                                                    borderRadius: BorderRadius.circular(18),
-                                                                    onTap: () => Navigator.pop(sectionContext, sectionLabel),
-                                                                    child: Center(
-                                                                      child: Text(
+                                                                  color: Colors
+                                                                      .transparent,
+                                                                  child:
+                                                                      InkWell(
+                                                                    borderRadius:
+                                                                        BorderRadius.circular(
+                                                                            18),
+                                                                    onTap: () =>
+                                                                        Navigator.pop(
+                                                                            sectionContext,
+                                                                            sectionLabel),
+                                                                    child:
+                                                                        Center(
+                                                                      child:
+                                                                          Text(
                                                                         sectionLabel,
-                                                                        style: const TextStyle(
-                                                                          color: Colors.white,
-                                                                          fontSize: 16,
-                                                                          fontWeight: FontWeight.w600,
+                                                                        style:
+                                                                            const TextStyle(
+                                                                          color:
+                                                                              Colors.white,
+                                                                          fontSize:
+                                                                              16,
+                                                                          fontWeight:
+                                                                              FontWeight.w600,
                                                                         ),
                                                                       ),
                                                                     ),
@@ -1191,30 +1327,51 @@ class _RosterBodyState extends State<_RosterBody> {
                                                               );
                                                             }),
                                                           ),
-                                                          const SizedBox(height: 12),
+                                                          const SizedBox(
+                                                              height: 12),
                                                           Container(
-                                                            width: double.infinity,
+                                                            width:
+                                                                double.infinity,
                                                             height: 54,
-                                                            decoration: BoxDecoration(
-                                                              color: Colors.grey[100],
-                                                              borderRadius: BorderRadius.circular(18),
-                                                              border: Border.all(
-                                                                color: Colors.grey[300]!,
+                                                            decoration:
+                                                                BoxDecoration(
+                                                              color: Colors
+                                                                  .grey[100],
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .circular(
+                                                                          18),
+                                                              border:
+                                                                  Border.all(
+                                                                color: Colors
+                                                                    .grey[300]!,
                                                                 width: 1.5,
                                                               ),
                                                             ),
                                                             child: Material(
-                                                              color: Colors.transparent,
+                                                              color: Colors
+                                                                  .transparent,
                                                               child: InkWell(
-                                                                borderRadius: BorderRadius.circular(18),
-                                                                onTap: () => Navigator.pop(sectionContext),
-                                                                child: const Center(
+                                                                borderRadius:
+                                                                    BorderRadius
+                                                                        .circular(
+                                                                            18),
+                                                                onTap: () =>
+                                                                    Navigator.pop(
+                                                                        sectionContext),
+                                                                child:
+                                                                    const Center(
                                                                   child: Text(
                                                                     'Cancel',
-                                                                    style: TextStyle(
-                                                                      color: Colors.black54,
-                                                                      fontSize: 16,
-                                                                      fontWeight: FontWeight.w500,
+                                                                    style:
+                                                                        TextStyle(
+                                                                      color: Colors
+                                                                          .black54,
+                                                                      fontSize:
+                                                                          16,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .w500,
                                                                     ),
                                                                   ),
                                                                 ),
@@ -1228,59 +1385,126 @@ class _RosterBodyState extends State<_RosterBody> {
                                                 );
                                               },
                                             );
-                                            
+
                                             if (selectedSection != null) {
                                               setState(() {
-                                                final serverStationType = isLunch ? lunchStationType : dinnerStationType;
-                                                final serverStationSection = isLunch ? lunchStationSection : dinnerStationSection;
-                                                serverStationType[s.id] = selectedTypeName;
-                                                serverStationSection[s.id] = selectedSection;
+                                                final serverStationType =
+                                                    isLunch
+                                                        ? lunchStationType
+                                                        : dinnerStationType;
+                                                final serverStationSection =
+                                                    isLunch
+                                                        ? lunchStationSection
+                                                        : dinnerStationSection;
+                                                serverStationType[s.id] =
+                                                    selectedTypeName;
+                                                serverStationSection[s.id] =
+                                                    selectedSection;
                                               });
-                                              
+
                                               if (showTeams) {
-                                                WidgetsBinding.instance.addPostFrameCallback((_) async {
-                                                  final selectedColor = await showDialog<String?>(
+                                                WidgetsBinding.instance
+                                                    .addPostFrameCallback(
+                                                        (_) async {
+                                                  final selectedColor =
+                                                      await showDialog<String?>(
                                                     context: context,
                                                     barrierDismissible: true,
                                                     builder: (colorContext) {
                                                       return Dialog(
-                                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                                                        backgroundColor: Theme.of(context).colorScheme.surface,
+                                                        shape: RoundedRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        24)),
+                                                        backgroundColor:
+                                                            Theme.of(context)
+                                                                .colorScheme
+                                                                .surface,
                                                         child: Padding(
-                                                          padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 24),
+                                                          padding:
+                                                              const EdgeInsets
+                                                                  .symmetric(
+                                                                  vertical: 28,
+                                                                  horizontal:
+                                                                      24),
                                                           child: Column(
-                                                            mainAxisSize: MainAxisSize.min,
-                                                            crossAxisAlignment: CrossAxisAlignment.center,
+                                                            mainAxisSize:
+                                                                MainAxisSize
+                                                                    .min,
+                                                            crossAxisAlignment:
+                                                                CrossAxisAlignment
+                                                                    .center,
                                                             children: [
-                                                              const Text('Select Team Color', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                                                              const SizedBox(height: 24),
+                                                              const Text(
+                                                                  'Select Team Color',
+                                                                  style: TextStyle(
+                                                                      fontSize:
+                                                                          22,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .bold)),
+                                                              const SizedBox(
+                                                                  height: 24),
                                                               Wrap(
                                                                 spacing: 16,
                                                                 runSpacing: 16,
-                                                                alignment: WrapAlignment.center,
-                                                                children: teamColorOptions.map((color) {
-                                                                  final teamColors = isLunch ? lunchTeamColors : dinnerTeamColors;
-                                                                  final isSelected = color == teamColors[s.id];
+                                                                alignment:
+                                                                    WrapAlignment
+                                                                        .center,
+                                                                children:
+                                                                    teamColorOptions
+                                                                        .map(
+                                                                            (color) {
+                                                                  final teamColors = isLunch
+                                                                      ? lunchTeamColors
+                                                                      : dinnerTeamColors;
+                                                                  final isSelected =
+                                                                      color ==
+                                                                          teamColors[
+                                                                              s.id];
                                                                   return GestureDetector(
-                                                                    onTap: () => Navigator.pop(colorContext, color),
-                                                                    child: Container(
+                                                                    onTap: () =>
+                                                                        Navigator.pop(
+                                                                            colorContext,
+                                                                            color),
+                                                                    child:
+                                                                        Container(
                                                                       width: 80,
-                                                                      height: 80,
-                                                                      decoration: BoxDecoration(
-                                                                        color: color == null ? Colors.grey.shade200 : _getTeamColorValue(color),
-                                                                        borderRadius: BorderRadius.circular(12),
-                                                                        border: Border.all(
-                                                                          color: isSelected ? Colors.blue : Colors.transparent,
-                                                                          width: 2,
+                                                                      height:
+                                                                          80,
+                                                                      decoration:
+                                                                          BoxDecoration(
+                                                                        color: color ==
+                                                                                null
+                                                                            ? Colors.grey.shade200
+                                                                            : _getTeamColorValue(color),
+                                                                        borderRadius:
+                                                                            BorderRadius.circular(12),
+                                                                        border:
+                                                                            Border.all(
+                                                                          color: isSelected
+                                                                              ? Colors.blue
+                                                                              : Colors.transparent,
+                                                                          width:
+                                                                              2,
                                                                         ),
                                                                       ),
-                                                                      child: Center(
-                                                                        child: Text(
-                                                                          color == null ? 'None' : color,
-                                                                          style: TextStyle(
-                                                                            fontSize: 16,
-                                                                            fontWeight: FontWeight.w500,
-                                                                            color: isSelected ? Colors.blue : Colors.white,
+                                                                      child:
+                                                                          Center(
+                                                                        child:
+                                                                            Text(
+                                                                          color ??
+                                                                              'None',
+                                                                          style:
+                                                                              TextStyle(
+                                                                            fontSize:
+                                                                                16,
+                                                                            fontWeight:
+                                                                                FontWeight.w500,
+                                                                            color: isSelected
+                                                                                ? Colors.blue
+                                                                                : Colors.white,
                                                                           ),
                                                                         ),
                                                                       ),
@@ -1288,10 +1512,14 @@ class _RosterBodyState extends State<_RosterBody> {
                                                                   );
                                                                 }).toList(),
                                                               ),
-                                                              const SizedBox(height: 12),
+                                                              const SizedBox(
+                                                                  height: 12),
                                                               TextButton(
-                                                                onPressed: () => Navigator.pop(colorContext),
-                                                                child: const Text('Cancel'),
+                                                                onPressed: () =>
+                                                                    Navigator.pop(
+                                                                        colorContext),
+                                                                child: const Text(
+                                                                    'Cancel'),
                                                               ),
                                                             ],
                                                           ),
@@ -1301,8 +1529,11 @@ class _RosterBodyState extends State<_RosterBody> {
                                                   );
                                                   if (selectedColor != null) {
                                                     setState(() {
-                                                      final teamColors = isLunch ? lunchTeamColors : dinnerTeamColors;
-                                                      teamColors[s.id] = selectedColor;
+                                                      final teamColors = isLunch
+                                                          ? lunchTeamColors
+                                                          : dinnerTeamColors;
+                                                      teamColors[s.id] =
+                                                          selectedColor;
                                                     });
                                                   }
                                                 });
@@ -1311,26 +1542,32 @@ class _RosterBodyState extends State<_RosterBody> {
                                           }
                                         },
                                         child: Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 16, vertical: 12),
                                           child: Row(
                                             children: [
                                               // Server name on the left
                                               Expanded(
                                                 child: Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                  mainAxisAlignment: MainAxisAlignment.center,
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
                                                   children: [
                                                     Text(
                                                       s.name,
                                                       style: const TextStyle(
                                                         color: Colors.white,
                                                         fontSize: 26,
-                                                        fontWeight: FontWeight.bold,
+                                                        fontWeight:
+                                                            FontWeight.bold,
                                                         shadows: [
                                                           Shadow(
-                                                            color: Colors.black54,
+                                                            color:
+                                                                Colors.black54,
                                                             blurRadius: 4,
-                                                            offset: Offset(1, 1),
+                                                            offset:
+                                                                Offset(1, 1),
                                                           ),
                                                         ],
                                                       ),
@@ -1350,33 +1587,49 @@ class _RosterBodyState extends State<_RosterBody> {
                                                   ),
                                                   boxShadow: [
                                                     BoxShadow(
-                                                      color: Colors.black.withOpacity(0.3),
+                                                      color: Colors.black
+                                                          .withOpacity(0.3),
                                                       blurRadius: 8,
-                                                      offset: const Offset(0, 2),
+                                                      offset:
+                                                          const Offset(0, 2),
                                                     ),
                                                   ],
                                                 ),
                                                 child: ClipOval(
-                                                  child: widget.app.profiles[s.id]?.avatarPath != null
+                                                  child: widget
+                                                              .app
+                                                              .profiles[s.id]
+                                                              ?.avatarPath !=
+                                                          null
                                                       ? Image.asset(
-                                                          widget.app.profiles[s.id]!.avatarPath!,
+                                                          widget
+                                                              .app
+                                                              .profiles[s.id]!
+                                                              .avatarPath!,
                                                           fit: BoxFit.cover,
-                                                          errorBuilder: (context, error, stackTrace) {
+                                                          errorBuilder:
+                                                              (context, error,
+                                                                  stackTrace) {
                                                             return Container(
-                                                              color: Colors.grey[300],
+                                                              color: Colors
+                                                                  .grey[300],
                                                               child: Icon(
-                                                                Icons.person_add,
-                                                                color: Colors.blue[600],
+                                                                Icons
+                                                                    .person_add,
+                                                                color: Colors
+                                                                    .blue[600],
                                                                 size: 30,
                                                               ),
                                                             );
                                                           },
                                                         )
                                                       : Container(
-                                                          color: Colors.grey[300],
+                                                          color:
+                                                              Colors.grey[300],
                                                           child: Icon(
                                                             Icons.person_add,
-                                                            color: Colors.blue[600],
+                                                            color: Colors
+                                                                .blue[600],
                                                             size: 30,
                                                           ),
                                                         ),
@@ -1415,7 +1668,8 @@ class _RosterBodyState extends State<_RosterBody> {
       barrierDismissible: true,
       builder: (BuildContext context) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           backgroundColor: Colors.transparent,
           child: Container(
             decoration: BoxDecoration(
@@ -1462,7 +1716,8 @@ class _RosterBodyState extends State<_RosterBody> {
                             ],
                           ),
                           borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: Colors.blue[300]!, width: 1.5),
+                          border:
+                              Border.all(color: Colors.blue[300]!, width: 1.5),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.blue.withOpacity(0.15),
@@ -1475,7 +1730,8 @@ class _RosterBodyState extends State<_RosterBody> {
                           color: Colors.transparent,
                           child: InkWell(
                             borderRadius: BorderRadius.circular(18),
-                            onTap: () => Navigator.pop(context, stationType.name),
+                            onTap: () =>
+                                Navigator.pop(context, stationType.name),
                             child: Center(
                               child: Text(
                                 stationType.name,

@@ -1,0 +1,37 @@
+{
+  "folders": [
+    { "path": "lib" },
+    { "path": "assets" }
+  ],
+  "settings": {
+    "search.exclude": {
+      "build": true,
+      ".dart_tool": true,
+      "android": true,
+      "ios": true,
+      "macos": true,
+      "windows": true,
+      "linux": true,
+      "web": true,
+      "_backup_foodrunning": true,
+      "backup foodrunning": true
+    },
+    "files.watcherExclude": {
+      "build/**": true,
+      ".dart_tool/**": true,
+      "android/**": true,
+      "ios/**": true,
+      "macos/**": true,
+      "windows/**": true,
+      "linux/**": true,
+      "web/**": true,
+      "_backup_foodrunning/**": true,
+      "backup foodrunning/**": true
+    },
+    "git.enabled": false,
+    "dart.onlyAnalyzeProjectsWithOpenFiles": true,
+    "window.restoreWindows": "none",
+    "workbench.startupEditor": "none",
+    "terminal.integrated.gpuAcceleration": "off"
+  }
+}

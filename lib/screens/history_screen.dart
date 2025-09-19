@@ -15,7 +15,13 @@ extension StringExt on String {
 extension DateTimeExt on DateTime {
   String _weekday(DateTime d) {
     const weekdays = [
-      'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday'
     ];
     return weekdays[d.weekday - 1];
   }
@@ -108,75 +114,75 @@ class _HistoryScreenState extends State<HistoryScreen> {
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  color: Colors.white.withOpacity(0.7),
-                ),
-                child: TableCalendar<ShiftRecord>(
-                  firstDay: DateTime.utc(2020, 1, 1),
-                  lastDay: DateTime.utc(2030, 12, 31),
-                  focusedDay: _focusedDay,
-                  calendarFormat: CalendarFormat.month,
-                  eventLoader: (day) {
-                    return appState.history
-                        .where((shift) => isSameDay(shift.start, day))
-                        .toList();
-                  },
-                  startingDayOfWeek: StartingDayOfWeek.monday,
-                  selectedDayPredicate: (day) {
-                    return isSameDay(_selectedDay, day);
-                  },
-                  onDaySelected: (selectedDay, focusedDay) {
-                    if (!isSameDay(_selectedDay, selectedDay)) {
-                      setState(() {
-                        _selectedDay = selectedDay;
-                        _focusedDay = focusedDay;
-                      });
-                    }
-                  },
-                  onPageChanged: (focusedDay) {
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              color: Colors.white.withOpacity(0.7),
+            ),
+            child: TableCalendar<ShiftRecord>(
+              firstDay: DateTime.utc(2020, 1, 1),
+              lastDay: DateTime.utc(2030, 12, 31),
+              focusedDay: _focusedDay,
+              calendarFormat: CalendarFormat.month,
+              eventLoader: (day) {
+                return appState.history
+                    .where((shift) => isSameDay(shift.start, day))
+                    .toList();
+              },
+              startingDayOfWeek: StartingDayOfWeek.monday,
+              selectedDayPredicate: (day) {
+                return isSameDay(_selectedDay, day);
+              },
+              onDaySelected: (selectedDay, focusedDay) {
+                if (!isSameDay(_selectedDay, selectedDay)) {
+                  setState(() {
+                    _selectedDay = selectedDay;
                     _focusedDay = focusedDay;
-                  },
-                  calendarStyle: CalendarStyle(
-                    outsideDaysVisible: false,
-                    markerDecoration: BoxDecoration(
-                      color: Colors.blue.shade400,
-                      shape: BoxShape.circle,
-                    ),
-                    selectedDecoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Colors.blue.shade400,
-                          Colors.blue.shade600,
-                        ],
-                      ),
-                      shape: BoxShape.circle,
-                    ),
-                    todayDecoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Colors.blue.shade200,
-                          Colors.blue.shade400,
-                        ],
-                      ),
-                      shape: BoxShape.circle,
-                    ),
+                  });
+                }
+              },
+              onPageChanged: (focusedDay) {
+                _focusedDay = focusedDay;
+              },
+              calendarStyle: CalendarStyle(
+                outsideDaysVisible: false,
+                markerDecoration: BoxDecoration(
+                  color: Colors.blue.shade400,
+                  shape: BoxShape.circle,
+                ),
+                selectedDecoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.blue.shade400,
+                      Colors.blue.shade600,
+                    ],
                   ),
-                  headerStyle: const HeaderStyle(
-                    formatButtonVisible: false,
-                    titleCentered: true,
-                    titleTextStyle: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
+                  shape: BoxShape.circle,
+                ),
+                todayDecoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.blue.shade200,
+                      Colors.blue.shade400,
+                    ],
                   ),
+                  shape: BoxShape.circle,
                 ),
               ),
+              headerStyle: const HeaderStyle(
+                formatButtonVisible: false,
+                titleCentered: true,
+                titleTextStyle: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -400,7 +406,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             end: Alignment.bottomRight,
                             colors: [
                               _getShiftTypeColor(shift.shiftType),
-                              _getShiftTypeColor(shift.shiftType).withOpacity(0.7),
+                              _getShiftTypeColor(shift.shiftType)
+                                  .withOpacity(0.7),
                             ],
                           ),
                           borderRadius: BorderRadius.circular(12),
@@ -437,8 +444,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
                                       colors: [
-                                        _getShiftTypeColor(shift.shiftType).withOpacity(0.2),
-                                        _getShiftTypeColor(shift.shiftType).withOpacity(0.3),
+                                        _getShiftTypeColor(shift.shiftType)
+                                            .withOpacity(0.2),
+                                        _getShiftTypeColor(shift.shiftType)
+                                            .withOpacity(0.3),
                                       ],
                                     ),
                                     borderRadius: BorderRadius.circular(20),
@@ -448,7 +457,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.bold,
-                                      color: _getShiftTypeColor(shift.shiftType),
+                                      color:
+                                          _getShiftTypeColor(shift.shiftType),
                                     ),
                                   ),
                                 ),
@@ -516,7 +526,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   String _weekday(DateTime d) {
     const weekdays = [
-      'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday'
     ];
     return weekdays[d.weekday - 1];
   }

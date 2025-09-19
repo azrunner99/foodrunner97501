@@ -10,17 +10,19 @@ class ClickInstancesDetailScreen extends StatefulWidget {
   final String timeframe;
 
   const ClickInstancesDetailScreen({
-    Key? key,
+    super.key,
     required this.server,
     required this.instanceCount,
     required this.timeframe,
-  }) : super(key: key);
+  });
 
   @override
-  State<ClickInstancesDetailScreen> createState() => _ClickInstancesDetailScreenState();
+  State<ClickInstancesDetailScreen> createState() =>
+      _ClickInstancesDetailScreenState();
 }
 
-class _ClickInstancesDetailScreenState extends State<ClickInstancesDetailScreen> {
+class _ClickInstancesDetailScreenState
+    extends State<ClickInstancesDetailScreen> {
   final Map<int, bool> _expandedStates = {};
 
   @override
@@ -34,7 +36,7 @@ class _ClickInstancesDetailScreenState extends State<ClickInstancesDetailScreen>
       body: Consumer<AppState>(
         builder: (context, app, _) {
           final instances = _generateClickInstances(app);
-          
+
           return Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -119,7 +121,8 @@ class _ClickInstancesDetailScreenState extends State<ClickInstancesDetailScreen>
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.warning, color: Colors.orange[600], size: 20),
+                            Icon(Icons.warning,
+                                color: Colors.orange[600], size: 20),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -136,7 +139,7 @@ class _ClickInstancesDetailScreenState extends State<ClickInstancesDetailScreen>
                     ],
                   ),
                 ),
-                
+
                 // Instances List
                 Expanded(
                   child: instances.isEmpty
@@ -187,7 +190,7 @@ class _ClickInstancesDetailScreenState extends State<ClickInstancesDetailScreen>
 
   Widget _buildInstanceCard(ClickInstance instance, int index) {
     final isExpanded = _expandedStates[index] ?? false;
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
@@ -220,7 +223,8 @@ class _ClickInstancesDetailScreenState extends State<ClickInstancesDetailScreen>
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: Colors.orange[100],
                         borderRadius: BorderRadius.circular(12),
@@ -339,7 +343,8 @@ class _ClickInstancesDetailScreenState extends State<ClickInstancesDetailScreen>
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.info_outline, size: 14, color: Colors.grey[600]),
+                      Icon(Icons.info_outline,
+                          size: 14, color: Colors.grey[600]),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
@@ -357,8 +362,8 @@ class _ClickInstancesDetailScreenState extends State<ClickInstancesDetailScreen>
                 AnimatedCrossFade(
                   firstChild: const SizedBox.shrink(),
                   secondChild: _buildClickDetailsList(instance),
-                  crossFadeState: isExpanded 
-                      ? CrossFadeState.showSecond 
+                  crossFadeState: isExpanded
+                      ? CrossFadeState.showSecond
                       : CrossFadeState.showFirst,
                   duration: const Duration(milliseconds: 300),
                 ),
@@ -404,7 +409,7 @@ class _ClickInstancesDetailScreenState extends State<ClickInstancesDetailScreen>
               itemBuilder: (context, index) {
                 final clickTime = instance.clickTimestamps[index];
                 final clickNumber = index + 1;
-                
+
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 2),
                   child: Row(
@@ -441,7 +446,7 @@ class _ClickInstancesDetailScreenState extends State<ClickInstancesDetailScreen>
                       const Spacer(),
                       if (index > 0)
                         Text(
-                          '+${_getTimeDifference(instance.clickTimestamps[index-1], clickTime)}s',
+                          '+${_getTimeDifference(instance.clickTimestamps[index - 1], clickTime)}s',
                           style: TextStyle(
                             fontSize: 11,
                             color: Colors.grey[500],
@@ -470,47 +475,48 @@ class _ClickInstancesDetailScreenState extends State<ClickInstancesDetailScreen>
     final millisecond = time.millisecond;
     final period = hour >= 12 ? 'PM' : 'AM';
     final displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
-    
-    return '${displayHour}:${minute.toString().padLeft(2, '0')}:${second.toString().padLeft(2, '0')}.${(millisecond ~/ 100)} $period';
+
+    return '$displayHour:${minute.toString().padLeft(2, '0')}:${second.toString().padLeft(2, '0')}.${(millisecond ~/ 100)} $period';
   }
 
   List<ClickInstance> _generateClickInstances(AppState app) {
     // For demonstration, generate some sample instances based on the count
     // In a real implementation, this would come from stored tap data analysis
-    
+
     final instances = <ClickInstance>[];
     final now = DateTime.now();
-    
+
     // Generate realistic instances based on the detected count
     for (int i = 0; i < widget.instanceCount && i < 10; i++) {
       final startTime = now.subtract(Duration(
         hours: i * 2 + 1,
         minutes: (i * 15) % 60,
       ));
-      
+
       final duration = 1 + (i % 3); // 1-3 minutes
       final clicksPerMinute = 4 + (i % 4); // 4-7 clicks per minute
       final totalClicks = duration * clicksPerMinute;
-      
+
       // Generate individual click timestamps
       final clickTimestamps = <DateTime>[];
       final endTime = startTime.add(Duration(minutes: duration));
       final totalDurationMs = endTime.difference(startTime).inMilliseconds;
-      
+
       for (int j = 0; j < totalClicks; j++) {
         // Generate clicks with realistic intervals (some clustering for high-speed detection)
         final baseInterval = totalDurationMs / totalClicks;
         final variance = baseInterval * 0.3; // 30% variance
-        final clickOffset = (baseInterval * j) + 
+        final clickOffset = (baseInterval * j) +
             (math.Random().nextDouble() * variance - variance / 2);
-        
-        final clickTime = startTime.add(Duration(milliseconds: clickOffset.round()));
+
+        final clickTime =
+            startTime.add(Duration(milliseconds: clickOffset.round()));
         clickTimestamps.add(clickTime);
       }
-      
+
       // Sort timestamps
       clickTimestamps.sort();
-      
+
       instances.add(ClickInstance(
         startTime: startTime,
         endTime: endTime,
@@ -520,10 +526,10 @@ class _ClickInstancesDetailScreenState extends State<ClickInstancesDetailScreen>
         clickTimestamps: clickTimestamps,
       ));
     }
-    
+
     // Sort by most recent first
     instances.sort((a, b) => b.startTime.compareTo(a.startTime));
-    
+
     return instances;
   }
 
@@ -532,8 +538,8 @@ class _ClickInstancesDetailScreenState extends State<ClickInstancesDetailScreen>
     final minute = time.minute;
     final period = hour >= 12 ? 'PM' : 'AM';
     final displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
-    
-    return '${displayHour}:${minute.toString().padLeft(2, '0')} $period';
+
+    return '$displayHour:${minute.toString().padLeft(2, '0')} $period';
   }
 }
 

@@ -8,36 +8,36 @@ import '../gamification.dart';
 
 class ServerLevelDetailScreen extends StatelessWidget {
   final int level;
-  
+
   const ServerLevelDetailScreen({super.key, required this.level});
 
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
-    
+
     // Get servers at this level
     final serversAtLevel = app.servers.where((server) {
       final profile = app.profiles[server.id];
       return profile?.level == level;
     }).toList();
-    
+
     // Sort by points (highest first)
     serversAtLevel.sort((a, b) {
       final profileA = app.profiles[a.id];
       final profileB = app.profiles[b.id];
       return (profileB?.points ?? 0).compareTo(profileA?.points ?? 0);
     });
-    
+
     // Get XP requirements for this level
     final levelXP = _getXpForLevel(level);
     final nextLevelXP = level < 150 ? _getXpForLevel(level + 1) : null;
-    
+
     // Get the level's gradient colors for theming
     final levelGradient = AppTheme.getLevelBubbleGradient(level);
     final levelColors = levelGradient.colors;
     final primaryColor = levelColors.first;
     final secondaryColor = levelColors.last;
-    
+
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -57,7 +57,8 @@ class ServerLevelDetailScreen extends StatelessWidget {
             children: [
               // Custom app bar with level theming
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
@@ -129,7 +130,7 @@ class ServerLevelDetailScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              
+
               // Enhanced level bubble with dynamic styling - Full width
               Container(
                 margin: const EdgeInsets.symmetric(vertical: 12),
@@ -158,7 +159,8 @@ class ServerLevelDetailScreen extends StatelessWidget {
                     // Main level bubble
                     Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 16, horizontal: 20),
                       decoration: BoxDecoration(
                         gradient: levelGradient,
                         border: Border(
@@ -229,10 +231,11 @@ class ServerLevelDetailScreen extends StatelessWidget {
                             ],
                           ),
                           const SizedBox(height: 12),
-                          
+
                           // XP info with enhanced styling
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(15),
@@ -279,12 +282,13 @@ class ServerLevelDetailScreen extends StatelessWidget {
                               ],
                             ),
                           ),
-                          
+
                           const SizedBox(height: 12),
-                          
+
                           // Server count with badge styling
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 10),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(20),
@@ -327,7 +331,7 @@ class ServerLevelDetailScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              
+
               // Server list with enhanced styling
               Expanded(
                 child: serversAtLevel.isEmpty
@@ -396,7 +400,7 @@ class ServerLevelDetailScreen extends StatelessWidget {
                           itemBuilder: (context, index) {
                             final server = serversAtLevel[index];
                             final profile = app.profiles[server.id];
-                            
+
                             return _buildServerCard(
                               server: server,
                               profile: profile,
@@ -425,7 +429,7 @@ class ServerLevelDetailScreen extends StatelessWidget {
     // Get profile information
     final avatarPath = profile?.avatarPath;
     final bannerPath = profile?.bannerPath;
-    
+
     ImageProvider? avatarImage;
     if (avatarPath != null && avatarPath.isNotEmpty) {
       if (avatarPath.startsWith('/') || avatarPath.contains(':')) {
@@ -434,7 +438,7 @@ class ServerLevelDetailScreen extends StatelessWidget {
         avatarImage = AssetImage(avatarPath);
       }
     }
-    
+
     ImageProvider? bannerImage;
     if (bannerPath != null && bannerPath.isNotEmpty) {
       if (bannerPath.startsWith('/') || bannerPath.contains(':')) {
@@ -448,15 +452,19 @@ class ServerLevelDetailScreen extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        border: rank <= 3 ? Border.all(
-          color: rank == 1 ? const Color(0xFFFFD700) : 
-                 rank == 2 ? const Color(0xFFC0C0C0) : 
-                 const Color(0xFFCD7F32),
-          width: 3,
-        ) : Border.all(
-          color: primaryColor.withOpacity(0.3),
-          width: 2,
-        ),
+        border: rank <= 3
+            ? Border.all(
+                color: rank == 1
+                    ? const Color(0xFFFFD700)
+                    : rank == 2
+                        ? const Color(0xFFC0C0C0)
+                        : const Color(0xFFCD7F32),
+                width: 3,
+              )
+            : Border.all(
+                color: primaryColor.withOpacity(0.3),
+                width: 2,
+              ),
         boxShadow: [
           BoxShadow(
             color: primaryColor.withOpacity(0.2),
@@ -472,7 +480,7 @@ class ServerLevelDetailScreen extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
-        child: Container(
+        child: SizedBox(
           height: 130,
           child: Stack(
             children: [
@@ -518,19 +526,29 @@ class ServerLevelDetailScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-              
+
               // Rank badge for all servers (top left)
               Positioned(
                 top: 8,
                 left: 8,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: rank == 1 ? [const Color(0xFFFFD700), const Color(0xFFFFA500)] : 
-                             rank == 2 ? [const Color(0xFFC0C0C0), const Color(0xFF9E9E9E)] : 
-                             rank == 3 ? [const Color(0xFFCD7F32), const Color(0xFF8D5524)] :
-                             [primaryColor, secondaryColor],
+                      colors: rank == 1
+                          ? [const Color(0xFFFFD700), const Color(0xFFFFA500)]
+                          : rank == 2
+                              ? [
+                                  const Color(0xFFC0C0C0),
+                                  const Color(0xFF9E9E9E)
+                                ]
+                              : rank == 3
+                                  ? [
+                                      const Color(0xFFCD7F32),
+                                      const Color(0xFF8D5524)
+                                    ]
+                                  : [primaryColor, secondaryColor],
                     ),
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
@@ -545,10 +563,13 @@ class ServerLevelDetailScreen extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        rank == 1 ? Icons.emoji_events : 
-                        rank == 2 ? Icons.military_tech : 
-                        rank == 3 ? Icons.workspace_premium :
-                        Icons.tag,
+                        rank == 1
+                            ? Icons.emoji_events
+                            : rank == 2
+                                ? Icons.military_tech
+                                : rank == 3
+                                    ? Icons.workspace_premium
+                                    : Icons.tag,
                         color: Colors.white,
                         size: 16,
                       ),
@@ -572,7 +593,7 @@ class ServerLevelDetailScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              
+
               // Enhanced server name with gradient text
               Positioned(
                 top: 12,
@@ -584,7 +605,8 @@ class ServerLevelDetailScreen extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.9),
                           borderRadius: BorderRadius.circular(15),
@@ -618,7 +640,7 @@ class ServerLevelDetailScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              
+
               // Level progression bar
               if (profile != null)
                 Positioned(
@@ -628,10 +650,12 @@ class ServerLevelDetailScreen extends StatelessWidget {
                   child: Container(
                     height: 20, // Twice as tall as before
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.9), // Much darker background
+                      color: Colors.black
+                          .withOpacity(0.9), // Much darker background
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color: Colors.white.withOpacity(0.8), // Stronger white border
+                        color: Colors.white
+                            .withOpacity(0.8), // Stronger white border
                         width: 2, // Thicker border
                       ),
                       boxShadow: [
@@ -659,10 +683,12 @@ class ServerLevelDetailScreen extends StatelessWidget {
                         ),
                         // Progress fill with enhanced visibility
                         FractionallySizedBox(
-                          widthFactor: profile.level < 150 
-                            ? (profile.points - _getXpForLevel(profile.level)) / 
-                              (_getXpForLevel(profile.level + 1) - _getXpForLevel(profile.level))
-                            : 1.0, // If max level, show full bar
+                          widthFactor: profile.level < 150
+                              ? (profile.points -
+                                      _getXpForLevel(profile.level)) /
+                                  (_getXpForLevel(profile.level + 1) -
+                                      _getXpForLevel(profile.level))
+                              : 1.0, // If max level, show full bar
                           child: Container(
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
@@ -693,15 +719,17 @@ class ServerLevelDetailScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-              
+
               // Enhanced XP info with themed styling
               if (profile != null)
                 Positioned(
-                  top: 85, // Moved further down to make room for taller progression bar
+                  top:
+                      85, // Moved further down to make room for taller progression bar
                   right: 16,
                   child: Container(
                     constraints: const BoxConstraints(maxWidth: 200),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
                       color: Colors.black.withOpacity(0.6),
                       borderRadius: BorderRadius.circular(12),
@@ -737,7 +765,7 @@ class ServerLevelDetailScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-              
+
               // Clean avatar without colored border
               Positioned(
                 bottom: 12,
@@ -783,9 +811,11 @@ class ServerLevelDetailScreen extends StatelessWidget {
                           bottom: -2,
                           right: -2,
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              gradient: AppTheme.getLevelBubbleGradient(profile.level),
+                              gradient: AppTheme.getLevelBubbleGradient(
+                                  profile.level),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(color: Colors.white, width: 2),
                               boxShadow: [
@@ -817,7 +847,7 @@ class ServerLevelDetailScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              
+
               // Floating accent elements
               Positioned(
                 top: 20,

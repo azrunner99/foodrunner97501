@@ -5,6 +5,8 @@ import '../app_state.dart';
 import '../widgets/wallpaper_background.dart';
 
 class ActiveRosterScreen extends StatefulWidget {
+  const ActiveRosterScreen({super.key});
+
   @override
   State<ActiveRosterScreen> createState() => _ActiveRosterScreenState();
 }
@@ -22,7 +24,7 @@ class _ActiveRosterScreenState extends State<ActiveRosterScreen> {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
-    
+
     if (!_unlocked) {
       return Scaffold(
         appBar: AppBar(
@@ -59,7 +61,8 @@ class _ActiveRosterScreenState extends State<ActiveRosterScreen> {
                 margin: const EdgeInsets.all(32),
                 elevation: 12,
                 shadowColor: Colors.red.withOpacity(0.3),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20)),
                 child: Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(20),
@@ -143,7 +146,8 @@ class _ActiveRosterScreenState extends State<ActiveRosterScreen> {
                             contentPadding: const EdgeInsets.all(16),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Colors.red.shade400, width: 2),
+                              borderSide: BorderSide(
+                                  color: Colors.red.shade400, width: 2),
                             ),
                           ),
                         ),
@@ -214,7 +218,8 @@ class _ActiveRosterScreenState extends State<ActiveRosterScreen> {
     if (_pinCtrl.text == AppState.adminPin) {
       setState(() => _unlocked = true);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Wrong PIN')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Wrong PIN')));
     }
   }
 
@@ -270,12 +275,8 @@ class _ActiveRosterScreenState extends State<ActiveRosterScreen> {
       child: ElevatedButton(
         onPressed: () => _onKeypadPressed(text),
         style: ElevatedButton.styleFrom(
-          backgroundColor: isSpecial 
-              ? Colors.grey.shade200 
-              : Colors.white,
-          foregroundColor: isSpecial 
-              ? Colors.grey.shade700 
-              : Colors.black87,
+          backgroundColor: isSpecial ? Colors.grey.shade200 : Colors.white,
+          foregroundColor: isSpecial ? Colors.grey.shade700 : Colors.black87,
           elevation: 2,
           shadowColor: Colors.red.withOpacity(0.2),
           shape: RoundedRectangleBorder(
@@ -305,11 +306,12 @@ class _ActiveRosterScreenState extends State<ActiveRosterScreen> {
         if (_pinCtrl.text.isNotEmpty) {
           _pinCtrl.text = _pinCtrl.text.substring(0, _pinCtrl.text.length - 1);
         }
-      } else if (_pinCtrl.text.length < 6) { // Limit PIN length
+      } else if (_pinCtrl.text.length < 6) {
+        // Limit PIN length
         _pinCtrl.text += value;
       }
     });
-    
+
     // Auto-unlock if PIN is complete
     if (_pinCtrl.text.length >= 4 && _pinCtrl.text == AppState.adminPin) {
       _tryUnlock(context.read<AppState>());
@@ -390,13 +392,15 @@ class _RosterBodyState extends State<_RosterBody> {
                 return Card(
                   margin: const EdgeInsets.symmetric(vertical: 6),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     child: Row(
                       children: [
                         Expanded(
                           child: Text(
                             s.name,
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                            style: const TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.w600),
                           ),
                         ),
                         Checkbox(

@@ -38,7 +38,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 icon: const Icon(Icons.emoji_events),
                 tooltip: 'MVP Rankings',
                 onPressed: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const MvpScreen()));
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const MvpScreen()));
                 },
               ),
               IconButton(
@@ -67,7 +68,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     }
                   },
                   icon: const Icon(Icons.restore, color: Colors.white),
-                  label: const Text('Resume', style: TextStyle(color: Colors.white)),
+                  label: const Text('Resume',
+                      style: TextStyle(color: Colors.white)),
                 ),
               if (app.shiftActive)
                 TextButton.icon(
@@ -83,13 +85,15 @@ class _HomeScreenState extends State<HomeScreen> {
                     );
                   },
                   icon: const Icon(Icons.stop_circle, color: Colors.white),
-                  label: const Text('End', style: TextStyle(color: Colors.white)),
+                  label:
+                      const Text('End', style: TextStyle(color: Colors.white)),
                 )
               else
                 TextButton.icon(
                   onPressed: () => Navigator.pushNamed(context, '/start_shift'),
                   icon: const Icon(Icons.play_circle, color: Colors.white),
-                  label: const Text('Start', style: TextStyle(color: Colors.white)),
+                  label: const Text('Start',
+                      style: TextStyle(color: Colors.white)),
                 ),
             ],
           ),
@@ -193,7 +197,8 @@ class _ActiveShiftGridNoScroll extends StatelessWidget {
       builder: (context, box) {
         final n = working.length.clamp(0, 100);
         if (n == 0) {
-          return const Center(child: Text('No servers selected for this shift.'));
+          return const Center(
+              child: Text('No servers selected for this shift.'));
         }
 
         final w = box.maxWidth;
@@ -243,8 +248,10 @@ class _ActiveShiftGridNoScroll extends StatelessWidget {
             final allTime = app.allTimeFor(s.id);
             final ratio = shiftCount / maxShift;
             final color = _bandColor(ratio);
-            final textColor = color.computeLuminance() < 0.5 ? Colors.white : Colors.black87;
-            final shiftPct = teamTotal > 0 ? (shiftCount * 100.0 / teamTotal) : 0.0;
+            final textColor =
+                color.computeLuminance() < 0.5 ? Colors.white : Colors.black87;
+            final shiftPct =
+                teamTotal > 0 ? (shiftCount * 100.0 / teamTotal) : 0.0;
 
             return GestureDetector(
               onTap: () {
@@ -252,12 +259,15 @@ class _ActiveShiftGridNoScroll extends StatelessWidget {
                 SystemSound.play(SystemSoundType.click);
                 app.increment(s.id);
 
-                final showWords = app.settings.enableGamification && app.settings.showEncouragement;
+                final showWords = app.settings.enableGamification &&
+                    app.settings.showEncouragement;
                 if (showWords) {
-                  final msg = encouragements[Random().nextInt(encouragements.length)];
+                  final msg =
+                      encouragements[Random().nextInt(encouragements.length)];
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      duration: const Duration(seconds: 3), // 3 seconds as requested
+                      duration:
+                          const Duration(seconds: 3), // 3 seconds as requested
                       content: Text(msg),
                     ),
                   );
@@ -279,20 +289,36 @@ class _ActiveShiftGridNoScroll extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(s.name,
-                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                  fontWeight: FontWeight.w700, color: textColor, fontSize: 22)),
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineSmall
+                                ?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: textColor,
+                                    fontSize: 22)),
                         const SizedBox(height: 6),
                         Text('This shift: $shiftCount',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(color: textColor)),
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(color: textColor)),
                         const SizedBox(height: 2),
                         Text('Shift %: ${shiftPct.toStringAsFixed(1)}%',
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(color: textColor)),
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleSmall
+                                ?.copyWith(color: textColor)),
                         const SizedBox(height: 2),
                         Text('All-time: $allTime',
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(color: textColor)),
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleSmall
+                                ?.copyWith(color: textColor)),
                         const SizedBox(height: 6),
                         Text('Tap = +1   •   Long-press = −1',
-                            style: TextStyle(fontSize: 12, color: textColor.withOpacity(0.85))),
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: textColor.withOpacity(0.85))),
                       ],
                     ),
                   ),
@@ -311,6 +337,6 @@ class _ActiveShiftGridNoScroll extends StatelessWidget {
     if (r >= 0.60) return const Color(0xFF43A047); // green
     if (r >= 0.30) return const Color(0xFFFBC02D); // yellow
     if (r >= 0.10) return const Color(0xFFEF5350); // light red
-    return const Color(0xFFB71C1C);                // deep red
+    return const Color(0xFFB71C1C); // deep red
   }
 }

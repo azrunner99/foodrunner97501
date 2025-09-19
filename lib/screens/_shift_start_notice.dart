@@ -3,16 +3,15 @@ import '../app_state.dart';
 
 class ShiftStartNotice extends StatelessWidget {
   final AppState app;
-  const ShiftStartNotice({required this.app});
+  const ShiftStartNotice({super.key, required this.app});
 
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-  final wd = AppState.weekday(now);
-    final open = app.hours.openMinutes[wd] ?? 11 * 60;
-    final openHour = open ~/ 60;
-    final openMin = open % 60;
-    final openTime = TimeOfDay(hour: openHour, minute: openMin);
+    final businessDate = AppState.businessDate(now);
+    final wd = businessDate.weekday;
+    final interval = app.businessDayInterval(businessDate, wd);
+    final openTime = TimeOfDay(hour: interval.start.hour, minute: interval.start.minute);
     final formatted = openTime.format(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -21,7 +20,8 @@ class ShiftStartNotice extends StatelessWidget {
         const SizedBox(width: 8),
         Text(
           'Shift starts at $formatted',
-          style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.blueGrey),
+          style: const TextStyle(
+              fontWeight: FontWeight.w600, color: Colors.blueGrey),
         ),
       ],
     );

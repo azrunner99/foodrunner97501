@@ -53,7 +53,9 @@ class _ServerNPSScreenState extends State<ServerNPSScreen> {
               Tab(icon: Icon(Icons.dashboard), text: 'Analytics'),
               Tab(icon: Icon(Icons.dns), text: 'Servers'),
               Tab(icon: Icon(Icons.feedback), text: 'Feedback'),
-              Tab(icon: Icon(Icons.calendar_month), text: 'Monthly NPS Data Entry'),
+              Tab(
+                  icon: Icon(Icons.calendar_month),
+                  text: 'Monthly NPS Data Entry'),
             ],
             labelColor: Colors.orange.shade800,
             unselectedLabelColor: Colors.orange.shade400,

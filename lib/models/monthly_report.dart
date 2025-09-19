@@ -1,7 +1,8 @@
 /// Data model for NPS monthly reports
-/// 
+///
 /// This model represents pre-calculated monthly NPS reports that aggregate
 /// feedback data and provide performance metrics for each server.
+library;
 
 /// Represents feedback counts for different time periods
 class FeedbackCounts {
@@ -92,14 +93,14 @@ class NPSMonthlyReport {
       serverId: map['server_id'] as int,
       reportMonth: map['report_month'] as int,
       reportYear: map['report_year'] as int,
-      allTimeNpsPercentage: map['all_time_nps_percentage'] != null 
-          ? (map['all_time_nps_percentage'] as num).toDouble() 
+      allTimeNpsPercentage: map['all_time_nps_percentage'] != null
+          ? (map['all_time_nps_percentage'] as num).toDouble()
           : null,
-      threeMonthNpsPercentage: map['three_month_nps_percentage'] != null 
-          ? (map['three_month_nps_percentage'] as num).toDouble() 
+      threeMonthNpsPercentage: map['three_month_nps_percentage'] != null
+          ? (map['three_month_nps_percentage'] as num).toDouble()
           : null,
-      oneMonthNpsPercentage: map['one_month_nps_percentage'] != null 
-          ? (map['one_month_nps_percentage'] as num).toDouble() 
+      oneMonthNpsPercentage: map['one_month_nps_percentage'] != null
+          ? (map['one_month_nps_percentage'] as num).toDouble()
           : null,
       allTimeSales: (map['all_time_sales'] as num?)?.toDouble() ?? 0.0,
       allTimeTableCount: map['all_time_table_count'] as int? ?? 0,
@@ -118,8 +119,8 @@ class NPSMonthlyReport {
         maybe: map['all_time_feedback_maybe'] as int? ?? 0,
         no: map['all_time_feedback_no'] as int? ?? 0,
       ),
-      generatedAt: map['generated_at'] != null 
-          ? DateTime.parse(map['generated_at'] as String) 
+      generatedAt: map['generated_at'] != null
+          ? DateTime.parse(map['generated_at'] as String)
           : null,
       dataAsOfDate: DateTime.parse(map['data_as_of_date'] as String),
     );
@@ -174,8 +175,10 @@ class NPSMonthlyReport {
       reportMonth: reportMonth ?? this.reportMonth,
       reportYear: reportYear ?? this.reportYear,
       allTimeNpsPercentage: allTimeNpsPercentage ?? this.allTimeNpsPercentage,
-      threeMonthNpsPercentage: threeMonthNpsPercentage ?? this.threeMonthNpsPercentage,
-      oneMonthNpsPercentage: oneMonthNpsPercentage ?? this.oneMonthNpsPercentage,
+      threeMonthNpsPercentage:
+          threeMonthNpsPercentage ?? this.threeMonthNpsPercentage,
+      oneMonthNpsPercentage:
+          oneMonthNpsPercentage ?? this.oneMonthNpsPercentage,
       allTimeSales: allTimeSales ?? this.allTimeSales,
       allTimeTableCount: allTimeTableCount ?? this.allTimeTableCount,
       monthFeedback: monthFeedback ?? this.monthFeedback,
@@ -209,15 +212,26 @@ class NPSMonthlyReport {
   /// Get the month and year as a formatted string
   String get formattedMonth {
     final month = reportMonth % 100;
-    return '${reportYear}-${month.toString().padLeft(2, '0')}';
+    return '$reportYear-${month.toString().padLeft(2, '0')}';
   }
 
   /// Get the month name
   String get monthName {
     final month = reportMonth % 100;
     const monthNames = [
-      '', 'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      '',
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December'
     ];
     return monthNames[month];
   }
@@ -229,7 +243,7 @@ class NPSMonthlyReport {
     }
 
     final difference = oneMonthNpsPercentage! - threeMonthNpsPercentage!;
-    
+
     if (difference > 5.0) {
       return PerformanceTrend.improving;
     } else if (difference < -5.0) {
@@ -276,23 +290,23 @@ class NPSMonthlyReport {
   /// Get data quality score (0-100)
   int get dataQualityScore {
     int score = 0;
-    
+
     // Base score for having data
     if (allTimeFeedback.total > 0) score += 20;
-    
+
     // Bonus for sample size
     if (allTimeFeedback.total >= 10) score += 20;
     if (allTimeFeedback.total >= 50) score += 10;
     if (allTimeFeedback.total >= 100) score += 10;
-    
+
     // Bonus for recent data
     if (monthFeedback.total > 0) score += 15;
     if (threeMonthFeedback.total >= 5) score += 15;
-    
+
     // Bonus for having sales data
     if (allTimeSales > 0) score += 5;
     if (allTimeTableCount > 0) score += 5;
-    
+
     return score.clamp(0, 100);
   }
 
@@ -301,7 +315,8 @@ class NPSMonthlyReport {
     if (oneMonthNpsPercentage != null && monthFeedback.hasSignificantSample) {
       return oneMonthNpsPercentage;
     }
-    if (threeMonthNpsPercentage != null && threeMonthFeedback.hasSignificantSample) {
+    if (threeMonthNpsPercentage != null &&
+        threeMonthFeedback.hasSignificantSample) {
       return threeMonthNpsPercentage;
     }
     return allTimeNpsPercentage;
@@ -346,10 +361,10 @@ enum PerformanceTrend {
 /// Enumeration for NPS rating categories
 enum NPSRating {
   excellent, // 50+
-  good,      // 0 to 49
-  poor,      // -1 to -49
-  critical,  // -50 or below
-  none,      // No data
+  good, // 0 to 49
+  poor, // -1 to -49
+  critical, // -50 or below
+  none, // No data
 }
 
 extension NPSRatingExtension on NPSRating {

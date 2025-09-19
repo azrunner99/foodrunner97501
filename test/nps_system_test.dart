@@ -1,5 +1,5 @@
 /// Unit tests for the NPS system models and database operations
-/// 
+///
 /// These tests verify the functionality of the Server NPS system components.
 
 import 'package:flutter_test/flutter_test.dart';
@@ -40,7 +40,8 @@ void main() {
         hireDate: DateTime(2024, 1, 1),
       );
       expect(invalidServer1.isValid(), isFalse);
-      expect(invalidServer1.getValidationErrors(), contains('Server name cannot be empty'));
+      expect(invalidServer1.getValidationErrors(),
+          contains('Server name cannot be empty'));
 
       // Invalid server - future hire date
       final invalidServer2 = NPSServer(
@@ -48,7 +49,8 @@ void main() {
         hireDate: DateTime.now().add(const Duration(days: 30)),
       );
       expect(invalidServer2.isValid(), isFalse);
-      expect(invalidServer2.getValidationErrors(), contains('Hire date cannot be in the future'));
+      expect(invalidServer2.getValidationErrors(),
+          contains('Hire date cannot be in the future'));
     });
 
     test('should calculate tenure correctly', () {
@@ -126,7 +128,8 @@ void main() {
         salesAmount: -10.00,
       );
       expect(invalidFeedback1.isValid(), isFalse);
-      expect(invalidFeedback1.getValidationErrors(), contains('Sales amount cannot be negative'));
+      expect(invalidFeedback1.getValidationErrors(),
+          contains('Sales amount cannot be negative'));
 
       // Invalid feedback - future date
       final invalidFeedback2 = NPSFeedback(
@@ -135,7 +138,8 @@ void main() {
         feedbackDate: DateTime.now().add(const Duration(days: 2)),
       );
       expect(invalidFeedback2.isValid(), isFalse);
-      expect(invalidFeedback2.getValidationErrors(), contains('Feedback date cannot be in the future'));
+      expect(invalidFeedback2.getValidationErrors(),
+          contains('Feedback date cannot be in the future'));
     });
 
     test('should calculate NPS impact correctly', () {
@@ -162,9 +166,12 @@ void main() {
 
       expect(reconstructedFeedback.id, equals(originalFeedback.id));
       expect(reconstructedFeedback.serverId, equals(originalFeedback.serverId));
-      expect(reconstructedFeedback.feedbackType, equals(originalFeedback.feedbackType));
-      expect(reconstructedFeedback.salesAmount, equals(originalFeedback.salesAmount));
-      expect(reconstructedFeedback.shiftPeriod, equals(originalFeedback.shiftPeriod));
+      expect(reconstructedFeedback.feedbackType,
+          equals(originalFeedback.feedbackType));
+      expect(reconstructedFeedback.salesAmount,
+          equals(originalFeedback.salesAmount));
+      expect(reconstructedFeedback.shiftPeriod,
+          equals(originalFeedback.shiftPeriod));
     });
   });
 
@@ -241,7 +248,8 @@ void main() {
         allTimeFeedback: FeedbackCounts(),
         dataAsOfDate: DateTime(2024, 6, 30),
       );
-      expect(improvingReport.performanceTrend, equals(PerformanceTrend.improving));
+      expect(
+          improvingReport.performanceTrend, equals(PerformanceTrend.improving));
 
       // Declining trend (1-month < 3-month)
       final decliningReport = NPSMonthlyReport(
@@ -255,7 +263,8 @@ void main() {
         allTimeFeedback: FeedbackCounts(),
         dataAsOfDate: DateTime(2024, 6, 30),
       );
-      expect(decliningReport.performanceTrend, equals(PerformanceTrend.declining));
+      expect(
+          decliningReport.performanceTrend, equals(PerformanceTrend.declining));
 
       // Stable trend (small difference)
       final stableReport = NPSMonthlyReport(
@@ -310,7 +319,8 @@ void main() {
       expect(NPSCalculator.formatNPSScore(50.0), equals('+50.0'));
       expect(NPSCalculator.formatNPSScore(-25.5), equals('-25.5'));
       expect(NPSCalculator.formatNPSScore(0.0), equals('0.0'));
-      expect(NPSCalculator.formatNPSScore(50.0, includeSign: false), equals('50.0'));
+      expect(NPSCalculator.formatNPSScore(50.0, includeSign: false),
+          equals('50.0'));
     });
 
     test('should validate NPS scores correctly', () {

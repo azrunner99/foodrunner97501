@@ -8,6 +8,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../lib/main.dart';
 import '../lib/app_state.dart';
@@ -15,10 +16,11 @@ import '../lib/storage.dart';
 
 void main() {
   testWidgets('Food Runs App loads correctly', (WidgetTester tester) async {
-    // Initialize storage for testing
+    // Initialize bindings and mock storage for testing
+    WidgetsFlutterBinding.ensureInitialized();
+    SharedPreferences.setMockInitialValues(<String, Object>{});
     await Storage.init();
-    final appState = AppState();
-    await appState.load();
+  final appState = AppState();
 
     // Build our app and trigger a frame.
     await tester.pumpWidget(

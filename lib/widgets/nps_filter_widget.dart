@@ -15,7 +15,7 @@ class NPSFilterWidget extends StatefulWidget {
   State<NPSFilterWidget> createState() => _NPSFilterWidgetState();
 }
 
-class _NPSFilterWidgetState extends State<NPSFilterWidget> 
+class _NPSFilterWidgetState extends State<NPSFilterWidget>
     with TickerProviderStateMixin {
   late TabController _tabController;
   final TextEditingController _keywordController = TextEditingController();
@@ -48,7 +48,8 @@ class _NPSFilterWidgetState extends State<NPSFilterWidget>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildHeader(filterService),
-              if (filterService.hasActiveFilters) _buildActiveFiltersChips(filterService),
+              if (filterService.hasActiveFilters)
+                _buildActiveFiltersChips(filterService),
               _buildFilterTabs(),
               SizedBox(
                 height: 400,
@@ -89,7 +90,7 @@ class _NPSFilterWidgetState extends State<NPSFilterWidget>
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const Spacer(),
-          if (filterService.hasActiveFilters) 
+          if (filterService.hasActiveFilters)
             Chip(
               label: Text('${filterService.activeFilterCount} active'),
               backgroundColor: Theme.of(context).primaryColor,
@@ -107,7 +108,8 @@ class _NPSFilterWidgetState extends State<NPSFilterWidget>
     if (criteria.datePreset != null) {
       chips.add(_buildFilterChip(
         'Date: ${_getDatePresetLabel(criteria.datePreset!)}',
-        () => filterService.updateCriteria(datePreset: null, startDate: null, endDate: null),
+        () => filterService.updateCriteria(
+            datePreset: null, startDate: null, endDate: null),
       ));
     }
 
@@ -184,18 +186,21 @@ class _NPSFilterWidgetState extends State<NPSFilterWidget>
 
   Widget _buildDateTimeFilters(NPSFilterService filterService) {
     final criteria = filterService.currentCriteria;
-    
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Date Range Presets', style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text('Date Range Presets',
+              style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             runSpacing: 4,
-            children: DateRangePreset.values.where((p) => p != DateRangePreset.custom).map((preset) {
+            children: DateRangePreset.values
+                .where((p) => p != DateRangePreset.custom)
+                .map((preset) {
               final isSelected = criteria.datePreset == preset;
               return FilterChip(
                 label: Text(_getDatePresetLabel(preset)),
@@ -210,7 +215,8 @@ class _NPSFilterWidgetState extends State<NPSFilterWidget>
             }).toList(),
           ),
           const SizedBox(height: 16),
-          const Text('Custom Date Range', style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text('Custom Date Range',
+              style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -223,7 +229,8 @@ class _NPSFilterWidgetState extends State<NPSFilterWidget>
                       border: OutlineInputBorder(),
                     ),
                     child: Text(
-                      criteria.startDate?.toString().substring(0, 10) ?? 'Select date',
+                      criteria.startDate?.toString().substring(0, 10) ??
+                          'Select date',
                       style: TextStyle(
                         color: criteria.startDate != null ? null : Colors.grey,
                       ),
@@ -241,7 +248,8 @@ class _NPSFilterWidgetState extends State<NPSFilterWidget>
                       border: OutlineInputBorder(),
                     ),
                     child: Text(
-                      criteria.endDate?.toString().substring(0, 10) ?? 'Select date',
+                      criteria.endDate?.toString().substring(0, 10) ??
+                          'Select date',
                       style: TextStyle(
                         color: criteria.endDate != null ? null : Colors.grey,
                       ),
@@ -258,13 +266,14 @@ class _NPSFilterWidgetState extends State<NPSFilterWidget>
 
   Widget _buildScoreFilters(NPSFilterService filterService) {
     final criteria = filterService.currentCriteria;
-    
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Score Categories', style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text('Score Categories',
+              style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
@@ -284,7 +293,8 @@ class _NPSFilterWidgetState extends State<NPSFilterWidget>
             }).toList(),
           ),
           const SizedBox(height: 16),
-          const Text('Custom Score Range', style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text('Custom Score Range',
+              style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -294,10 +304,11 @@ class _NPSFilterWidgetState extends State<NPSFilterWidget>
                     labelText: 'Min Score',
                     border: OutlineInputBorder(),
                   ),
-                  value: criteria.minScore,
-                  items: List.generate(11, (index) => 
-                    DropdownMenuItem(value: index, child: Text(index.toString()))
-                  ),
+                  initialValue: criteria.minScore,
+                  items: List.generate(
+                      11,
+                      (index) => DropdownMenuItem(
+                          value: index, child: Text(index.toString()))),
                   onChanged: (value) {
                     filterService.updateCriteria(minScore: value);
                     widget.onFiltersChanged?.call();
@@ -311,10 +322,11 @@ class _NPSFilterWidgetState extends State<NPSFilterWidget>
                     labelText: 'Max Score',
                     border: OutlineInputBorder(),
                   ),
-                  value: criteria.maxScore,
-                  items: List.generate(11, (index) => 
-                    DropdownMenuItem(value: index, child: Text(index.toString()))
-                  ),
+                  initialValue: criteria.maxScore,
+                  items: List.generate(
+                      11,
+                      (index) => DropdownMenuItem(
+                          value: index, child: Text(index.toString()))),
                   onChanged: (value) {
                     filterService.updateCriteria(maxScore: value);
                     widget.onFiltersChanged?.call();
@@ -334,39 +346,43 @@ class _NPSFilterWidgetState extends State<NPSFilterWidget>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Server Selection', style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text('Server Selection',
+              style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Expanded(
             child: Consumer<NPSProvider>(
               builder: (context, npsProvider, child) {
                 final servers = npsProvider.servers;
                 final criteria = filterService.currentCriteria;
-                
+
                 if (servers.isEmpty) {
                   return const Center(
                     child: Text('No servers available'),
                   );
                 }
-                
+
                 return ListView.builder(
                   itemCount: servers.length,
                   itemBuilder: (context, index) {
                     final server = servers[index];
                     final serverId = server.id.toString();
-                    final isSelected = criteria.selectedServerIds.contains(serverId);
-                    
+                    final isSelected =
+                        criteria.selectedServerIds.contains(serverId);
+
                     return CheckboxListTile(
                       title: Text(server.name),
                       subtitle: Text('ID: ${server.id}'),
                       value: isSelected,
                       onChanged: (selected) {
-                        final newSelection = List<String>.from(criteria.selectedServerIds);
+                        final newSelection =
+                            List<String>.from(criteria.selectedServerIds);
                         if (selected == true) {
                           newSelection.add(serverId);
                         } else {
                           newSelection.remove(serverId);
                         }
-                        filterService.updateCriteria(selectedServerIds: newSelection);
+                        filterService.updateCriteria(
+                            selectedServerIds: newSelection);
                         widget.onFiltersChanged?.call();
                       },
                     );
@@ -382,13 +398,14 @@ class _NPSFilterWidgetState extends State<NPSFilterWidget>
 
   Widget _buildAdvancedFilters(NPSFilterService filterService) {
     final criteria = filterService.currentCriteria;
-    
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Feedback Filters', style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text('Feedback Filters',
+              style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -420,7 +437,8 @@ class _NPSFilterWidgetState extends State<NPSFilterWidget>
             ],
           ),
           const SizedBox(height: 16),
-          const Text('Feedback Keywords', style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text('Feedback Keywords',
+              style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           TextField(
             controller: _keywordController,
@@ -432,10 +450,12 @@ class _NPSFilterWidgetState extends State<NPSFilterWidget>
                 onPressed: () {
                   final keyword = _keywordController.text.trim();
                   if (keyword.isNotEmpty) {
-                    final newKeywords = List<String>.from(criteria.feedbackKeywords);
+                    final newKeywords =
+                        List<String>.from(criteria.feedbackKeywords);
                     if (!newKeywords.contains(keyword)) {
                       newKeywords.add(keyword);
-                      filterService.updateCriteria(feedbackKeywords: newKeywords);
+                      filterService.updateCriteria(
+                          feedbackKeywords: newKeywords);
                       widget.onFiltersChanged?.call();
                     }
                     _keywordController.clear();
@@ -446,7 +466,8 @@ class _NPSFilterWidgetState extends State<NPSFilterWidget>
             onSubmitted: (value) {
               final keyword = value.trim();
               if (keyword.isNotEmpty) {
-                final newKeywords = List<String>.from(criteria.feedbackKeywords);
+                final newKeywords =
+                    List<String>.from(criteria.feedbackKeywords);
                 if (!newKeywords.contains(keyword)) {
                   newKeywords.add(keyword);
                   filterService.updateCriteria(feedbackKeywords: newKeywords);
@@ -466,7 +487,8 @@ class _NPSFilterWidgetState extends State<NPSFilterWidget>
                   label: Text(keyword),
                   deleteIcon: const Icon(Icons.close, size: 16),
                   onDeleted: () {
-                    final newKeywords = List<String>.from(criteria.feedbackKeywords);
+                    final newKeywords =
+                        List<String>.from(criteria.feedbackKeywords);
                     newKeywords.remove(keyword);
                     filterService.updateCriteria(feedbackKeywords: newKeywords);
                     widget.onFiltersChanged?.call();
@@ -492,20 +514,20 @@ class _NPSFilterWidgetState extends State<NPSFilterWidget>
       child: Row(
         children: [
           ElevatedButton.icon(
-            onPressed: filterService.hasActiveFilters 
-              ? () {
-                  filterService.resetFilters();
-                  widget.onFiltersChanged?.call();
-                }
-              : null,
+            onPressed: filterService.hasActiveFilters
+                ? () {
+                    filterService.resetFilters();
+                    widget.onFiltersChanged?.call();
+                  }
+                : null,
             icon: const Icon(Icons.clear_all),
             label: const Text('Clear All'),
           ),
           const SizedBox(width: 8),
           ElevatedButton.icon(
-            onPressed: filterService.hasActiveFilters 
-              ? () => _showSavePresetDialog(context, filterService)
-              : null,
+            onPressed: filterService.hasActiveFilters
+                ? () => _showSavePresetDialog(context, filterService)
+                : null,
             icon: const Icon(Icons.save),
             label: const Text('Save Preset'),
           ),
@@ -520,29 +542,33 @@ class _NPSFilterWidgetState extends State<NPSFilterWidget>
     );
   }
 
-  void _selectDate(BuildContext context, bool isStartDate, NPSFilterService filterService) async {
-    final initialDate = isStartDate 
-      ? filterService.currentCriteria.startDate ?? DateTime.now()
-      : filterService.currentCriteria.endDate ?? DateTime.now();
-      
+  void _selectDate(BuildContext context, bool isStartDate,
+      NPSFilterService filterService) async {
+    final initialDate = isStartDate
+        ? filterService.currentCriteria.startDate ?? DateTime.now()
+        : filterService.currentCriteria.endDate ?? DateTime.now();
+
     final pickedDate = await showDatePicker(
       context: context,
       initialDate: initialDate,
       firstDate: DateTime(2020),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
-    
+
     if (pickedDate != null) {
       if (isStartDate) {
-        filterService.updateCriteria(startDate: pickedDate, datePreset: DateRangePreset.custom);
+        filterService.updateCriteria(
+            startDate: pickedDate, datePreset: DateRangePreset.custom);
       } else {
-        filterService.updateCriteria(endDate: pickedDate, datePreset: DateRangePreset.custom);
+        filterService.updateCriteria(
+            endDate: pickedDate, datePreset: DateRangePreset.custom);
       }
       widget.onFiltersChanged?.call();
     }
   }
 
-  void _showSavePresetDialog(BuildContext context, NPSFilterService filterService) {
+  void _showSavePresetDialog(
+      BuildContext context, NPSFilterService filterService) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -595,7 +621,8 @@ class _NPSFilterWidgetState extends State<NPSFilterWidget>
     );
   }
 
-  void _showPresetsDialog(BuildContext context, NPSFilterService filterService) {
+  void _showPresetsDialog(
+      BuildContext context, NPSFilterService filterService) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -605,7 +632,8 @@ class _NPSFilterWidgetState extends State<NPSFilterWidget>
           height: 400,
           child: Column(
             children: [
-              const Text('Default Presets', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('Default Presets',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               Expanded(
                 child: ListView.builder(
                   itemCount: filterService.getDefaultPresets().length,
@@ -628,7 +656,8 @@ class _NPSFilterWidgetState extends State<NPSFilterWidget>
               ),
               if (filterService.savedPresets.isNotEmpty) ...[
                 const Divider(),
-                const Text('Saved Presets', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text('Saved Presets',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
                 Expanded(
                   child: ListView.builder(
                     itemCount: filterService.savedPresets.length,

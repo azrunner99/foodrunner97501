@@ -4,7 +4,8 @@ import '../models/performance_models.dart';
 
 /// Advanced analytics engine for sophisticated performance analysis
 class PerformanceAnalyzer {
-
+  // Feature flag for enhanced workload analysis. Default off for safety.
+  static const bool kEnableAdvancedWorkloadAnalysis = false;
   /// Calculate peer comparison analysis for a server
   static PeerAnalysis calculatePeerComparison({
     required ServerPerformanceData serverPerformance,
@@ -13,61 +14,74 @@ class PerformanceAnalyzer {
   }) {
     // Group servers by tenure brackets for fair comparison
     final tenureBrackets = _groupServersByTenure(allServerPerformances);
-    final serverTenureBracket = _getTenureBracket(serverPerformance.daysEmployed);
+    final serverTenureBracket =
+        _getTenureBracket(serverPerformance.daysEmployed);
     final peers = tenureBrackets[serverTenureBracket] ?? [];
-    
+
     // Calculate peer statistics
     final peerScores = peers.map((p) => p.performanceScore).toList();
-    final peerRanking = _calculatePeerRanking(serverPerformance.performanceScore, peerScores);
-    final peerPercentile = _calculatePercentile(serverPerformance.performanceScore, peerScores);
-    
+    final peerRanking =
+        _calculatePeerRanking(serverPerformance.performanceScore, peerScores);
+    final peerPercentile =
+        _calculatePercentile(serverPerformance.performanceScore, peerScores);
+
     // Calculate comparative metrics
-    final comparativeMetrics = _calculateComparativeMetrics(serverPerformance, peers);
-    
+    final comparativeMetrics =
+        _calculateComparativeMetrics(serverPerformance, peers);
+
     // Generate peer insights
-    final insights = _generatePeerInsights(serverPerformance, peers, peerRanking, peerPercentile);
-    
+    final insights = _generatePeerInsights(
+        serverPerformance, peers, peerRanking, peerPercentile);
+
     return PeerAnalysis(
       serverPerformance: serverPerformance,
       tenureBracket: serverTenureBracket,
       totalPeers: peers.length,
       peerRanking: peerRanking,
       peerPercentile: peerPercentile,
-      averageScore: peerScores.isNotEmpty ? peerScores.reduce((a, b) => a + b) / peerScores.length : 0.0,
-      topPerformerScore: peerScores.isNotEmpty ? peerScores.reduce(math.max) : 0.0,
-      bottomPerformerScore: peerScores.isNotEmpty ? peerScores.reduce(math.min) : 0.0,
+      averageScore: peerScores.isNotEmpty
+          ? peerScores.reduce((a, b) => a + b) / peerScores.length
+          : 0.0,
+      topPerformerScore:
+          peerScores.isNotEmpty ? peerScores.reduce(math.max) : 0.0,
+      bottomPerformerScore:
+          peerScores.isNotEmpty ? peerScores.reduce(math.min) : 0.0,
       comparativeMetrics: comparativeMetrics,
       insights: insights,
     );
   }
 
   /// Calculate team-wide performance analytics
-  static TeamAnalytics calculateTeamAnalytics(List<ServerPerformanceData> allPerformances) {
+  static TeamAnalytics calculateTeamAnalytics(
+      List<ServerPerformanceData> allPerformances) {
     if (allPerformances.isEmpty) {
       return TeamAnalytics.empty();
     }
 
     final scores = allPerformances.map((p) => p.performanceScore).toList();
     final meanScore = scores.reduce((a, b) => a + b) / scores.length;
-    final variance = scores.map((s) => math.pow(s - meanScore, 2)).reduce((a, b) => a + b) / scores.length;
+    final variance =
+        scores.map((s) => math.pow(s - meanScore, 2)).reduce((a, b) => a + b) /
+            scores.length;
     final standardDeviation = math.sqrt(variance);
-    
+
     // Performance distribution
     final distribution = _calculatePerformanceDistribution(allPerformances);
-    
+
     // Top and bottom performers
     final sortedByScore = List<ServerPerformanceData>.from(allPerformances)
       ..sort((a, b) => b.performanceScore.compareTo(a.performanceScore));
-    
+
     final topPerformers = sortedByScore.take(3).toList();
-    final bottomPerformers = sortedByScore.skip(math.max(0, sortedByScore.length - 3)).toList();
-    
+    final bottomPerformers =
+        sortedByScore.skip(math.max(0, sortedByScore.length - 3)).toList();
+
     // Team trends
     final teamTrends = _calculateTeamTrends(allPerformances);
-    
+
     // Risk assessment
     final riskAssessment = _calculateTeamRiskAssessment(allPerformances);
-    
+
     return TeamAnalytics(
       totalServers: allPerformances.length,
       averageScore: meanScore,
@@ -83,26 +97,31 @@ class PerformanceAnalyzer {
   }
 
   /// Analyze performance variance and consistency patterns
-  static ConsistencyAnalysis analyzeConsistency(ServerPerformanceData performance, List<PerformanceTrend> trends) {
+  static ConsistencyAnalysis analyzeConsistency(
+      ServerPerformanceData performance, List<PerformanceTrend> trends) {
     if (trends.length < 2) {
       return ConsistencyAnalysis.insufficient();
     }
 
     final scores = trends.map((t) => t.score).toList();
     final mean = scores.reduce((a, b) => a + b) / scores.length;
-    final variance = scores.map((s) => math.pow(s - mean, 2)).reduce((a, b) => a + b) / scores.length;
+    final variance =
+        scores.map((s) => math.pow(s - mean, 2)).reduce((a, b) => a + b) /
+            scores.length;
     final standardDeviation = math.sqrt(variance);
     final coefficientOfVariation = mean > 0 ? standardDeviation / mean : 0.0;
-    
+
     // Trend direction analysis
     final trendDirection = _analyzeTrendDirection(trends);
-    
+
     // Performance stability rating
-    final stabilityRating = _calculateStabilityRating(coefficientOfVariation, trendDirection);
-    
+    final stabilityRating =
+        _calculateStabilityRating(coefficientOfVariation, trendDirection);
+
     // Consistency insights
-    final insights = _generateConsistencyInsights(coefficientOfVariation, trendDirection, stabilityRating);
-    
+    final insights = _generateConsistencyInsights(
+        coefficientOfVariation, trendDirection, stabilityRating);
+
     return ConsistencyAnalysis(
       mean: mean,
       standardDeviation: standardDeviation,
@@ -120,17 +139,24 @@ class PerformanceAnalyzer {
     required MonthlyBusinessData? businessData,
   }) {
     // Calculate workload intensity
-    final workloadIntensity = _calculateWorkloadIntensity(performance, allShifts);
-    
+    final workloadIntensity =
+        _calculateWorkloadIntensity(performance, allShifts);
+
     // Performance under different workload conditions
-    final workloadPerformance = _analyzePerformanceByWorkload(performance, allShifts);
-    
+    final workloadPerformance = _analyzePerformanceByWorkload(
+      performance,
+      allShifts,
+      businessData: businessData,
+    );
+
     // Efficiency relative to workload
-    final efficiencyRatio = _calculateEfficiencyRatio(performance, workloadIntensity);
-    
+    final efficiencyRatio =
+        _calculateEfficiencyRatio(performance, workloadIntensity);
+
     // Workload sustainability assessment
-    final sustainability = _assessWorkloadSustainability(performance, workloadIntensity);
-    
+    final sustainability =
+        _assessWorkloadSustainability(performance, workloadIntensity);
+
     return WorkloadAnalysis(
       workloadIntensity: workloadIntensity,
       workloadPerformance: workloadPerformance,
@@ -141,12 +167,13 @@ class PerformanceAnalyzer {
 
   // Private helper methods
 
-  static Map<String, List<ServerPerformanceData>> _groupServersByTenure(List<ServerPerformanceData> performances) {
+  static Map<String, List<ServerPerformanceData>> _groupServersByTenure(
+      List<ServerPerformanceData> performances) {
     final Map<String, List<ServerPerformanceData>> groups = {
-      'new': [],      // 0-30 days
-      'junior': [],   // 31-90 days
-      'regular': [],  // 91-180 days
-      'senior': [],   // 180+ days
+      'new': [], // 0-30 days
+      'junior': [], // 31-90 days
+      'regular': [], // 91-180 days
+      'senior': [], // 180+ days
     };
 
     for (final performance in performances) {
@@ -177,7 +204,7 @@ class PerformanceAnalyzer {
   }
 
   static ComparativeMetrics _calculateComparativeMetrics(
-    ServerPerformanceData server, 
+    ServerPerformanceData server,
     List<ServerPerformanceData> peers,
   ) {
     if (peers.isEmpty) {
@@ -185,16 +212,22 @@ class PerformanceAnalyzer {
     }
 
     final peerEfficiencies = peers.map((p) => p.metrics.rawEfficiency).toList();
-    final peerGuestEfficiencies = peers.map((p) => p.metrics.guestEfficiency).toList();
-    final peerConsistencies = peers.map((p) => p.metrics.consistencyScore).toList();
+    final peerGuestEfficiencies =
+        peers.map((p) => p.metrics.guestEfficiency).toList();
+    final peerConsistencies =
+        peers.map((p) => p.metrics.consistencyScore).toList();
 
-    final avgEfficiency = peerEfficiencies.reduce((a, b) => a + b) / peerEfficiencies.length;
-    final avgGuestEfficiency = peerGuestEfficiencies.reduce((a, b) => a + b) / peerGuestEfficiencies.length;
-    final avgConsistency = peerConsistencies.reduce((a, b) => a + b) / peerConsistencies.length;
+    final avgEfficiency =
+        peerEfficiencies.reduce((a, b) => a + b) / peerEfficiencies.length;
+    final avgGuestEfficiency = peerGuestEfficiencies.reduce((a, b) => a + b) /
+        peerGuestEfficiencies.length;
+    final avgConsistency =
+        peerConsistencies.reduce((a, b) => a + b) / peerConsistencies.length;
 
     return ComparativeMetrics(
       efficiencyVsPeers: server.metrics.rawEfficiency / avgEfficiency,
-      guestEfficiencyVsPeers: server.metrics.guestEfficiency / avgGuestEfficiency,
+      guestEfficiencyVsPeers:
+          server.metrics.guestEfficiency / avgGuestEfficiency,
       consistencyVsPeers: server.metrics.consistencyScore / avgConsistency,
       averagePeerEfficiency: avgEfficiency,
       averagePeerGuestEfficiency: avgGuestEfficiency,
@@ -209,7 +242,7 @@ class PerformanceAnalyzer {
     double percentile,
   ) {
     final insights = <String>[];
-    
+
     if (percentile >= 80) {
       insights.add('Performing in top 20% of peer group');
     } else if (percentile >= 60) {
@@ -231,7 +264,8 @@ class PerformanceAnalyzer {
     return insights;
   }
 
-  static PerformanceDistribution _calculatePerformanceDistribution(List<ServerPerformanceData> performances) {
+  static PerformanceDistribution _calculatePerformanceDistribution(
+      List<ServerPerformanceData> performances) {
     int elite = 0, strong = 0, developing = 0, needsAttention = 0, critical = 0;
 
     for (final performance in performances) {
@@ -263,11 +297,16 @@ class PerformanceAnalyzer {
     );
   }
 
-  static TeamTrends _calculateTeamTrends(List<ServerPerformanceData> performances) {
+  static TeamTrends _calculateTeamTrends(
+      List<ServerPerformanceData> performances) {
     // This would typically compare against historical data
     // For now, we'll provide basic trend indicators
-    final improving = performances.where((p) => p.flags.contains(PerformanceFlag.highPerformer)).length;
-    final declining = performances.where((p) => p.flags.contains(PerformanceFlag.decliningTrend)).length;
+    final improving = performances
+        .where((p) => p.flags.contains(PerformanceFlag.highPerformer))
+        .length;
+    final declining = performances
+        .where((p) => p.flags.contains(PerformanceFlag.decliningTrend))
+        .length;
     final stable = performances.length - improving - declining;
 
     return TeamTrends(
@@ -277,12 +316,21 @@ class PerformanceAnalyzer {
     );
   }
 
-  static RiskAssessment _calculateTeamRiskAssessment(List<ServerPerformanceData> performances) {
-    final highRisk = performances.where((p) => p.rating == PerformanceRating.critical).length;
-    final mediumRisk = performances.where((p) => p.rating == PerformanceRating.needsAttention).length;
+  static RiskAssessment _calculateTeamRiskAssessment(
+      List<ServerPerformanceData> performances) {
+    final highRisk = performances
+        .where((p) => p.rating == PerformanceRating.critical)
+        .length;
+    final mediumRisk = performances
+        .where((p) => p.rating == PerformanceRating.needsAttention)
+        .length;
     final lowRisk = performances.length - highRisk - mediumRisk;
 
-    final riskLevel = highRisk > 0 ? 'High' : mediumRisk > performances.length * 0.3 ? 'Medium' : 'Low';
+    final riskLevel = highRisk > 0
+        ? 'High'
+        : mediumRisk > performances.length * 0.3
+            ? 'Medium'
+            : 'Low';
 
     return RiskAssessment(
       overallRiskLevel: riskLevel,
@@ -306,10 +354,13 @@ class PerformanceAnalyzer {
     return TrendDirection.stable;
   }
 
-  static StabilityRating _calculateStabilityRating(double coefficientOfVariation, TrendDirection direction) {
+  static StabilityRating _calculateStabilityRating(
+      double coefficientOfVariation, TrendDirection direction) {
     // Low CV = high consistency
     if (coefficientOfVariation < 0.1) {
-      return direction == TrendDirection.improving ? StabilityRating.excellent : StabilityRating.good;
+      return direction == TrendDirection.improving
+          ? StabilityRating.excellent
+          : StabilityRating.good;
     } else if (coefficientOfVariation < 0.2) {
       return StabilityRating.good;
     } else if (coefficientOfVariation < 0.3) {
@@ -356,37 +407,107 @@ class PerformanceAnalyzer {
     return insights;
   }
 
-  static double _calculateWorkloadIntensity(ServerPerformanceData performance, List<ShiftRecord> shifts) {
+  static double _calculateWorkloadIntensity(
+      ServerPerformanceData performance, List<ShiftRecord> shifts) {
     // Calculate average workload intensity based on shifts worked and complexity
-    final serverShifts = shifts.where((s) => s.counts.containsKey(performance.serverId)).toList();
+    final serverShifts = shifts
+        .where((s) => s.counts.containsKey(performance.serverId))
+        .toList();
     if (serverShifts.isEmpty) return 1.0;
 
     // Factor in shift frequency and type
-    final shiftFrequency = serverShifts.length / 30.0; // shifts per day over 30 days
-    final avgRunsPerShift = performance.shiftsWorked > 0 ? performance.totalFoodRuns / performance.shiftsWorked : 0.0;
-    
+    final shiftFrequency =
+        serverShifts.length / 30.0; // shifts per day over 30 days
+    final avgRunsPerShift = performance.shiftsWorked > 0
+        ? performance.totalFoodRuns / performance.shiftsWorked
+        : 0.0;
+
     // Normalize to 0-2 scale where 1.0 is average intensity
     return math.min(2.0, (shiftFrequency * 0.5) + (avgRunsPerShift / 10.0));
   }
 
-  static Map<String, double> _analyzePerformanceByWorkload(ServerPerformanceData performance, List<ShiftRecord> shifts) {
-    // This would analyze performance under different workload conditions
-    // For now, return placeholder data
+  static Map<String, double> _analyzePerformanceByWorkload(
+    ServerPerformanceData performance,
+    List<ShiftRecord> shifts, {
+    MonthlyBusinessData? businessData,
+  }) {
+    if (!kEnableAdvancedWorkloadAnalysis || shifts.isEmpty) {
+      return {
+        'lowWorkload': performance.performanceScore * 1.1,
+        'mediumWorkload': performance.performanceScore,
+        'highWorkload': performance.performanceScore * 0.9,
+      };
+    }
+
+    // Basic enhanced logic: bucket recent shifts by runs-per-shift relative to
+    // period guest volume (if available) to approximate workload pressure.
+    final serverId = performance.serverId;
+    final serverShifts = shifts
+        .where((s) => s.counts.containsKey(serverId))
+        .toList(growable: false);
+    if (serverShifts.isEmpty) {
+      return {
+        'lowWorkload': performance.performanceScore,
+        'mediumWorkload': performance.performanceScore,
+        'highWorkload': performance.performanceScore,
+      };
+    }
+
+    final totalRuns = serverShifts.fold<int>(
+        0, (sum, s) => sum + (s.counts[serverId] ?? 0));
+    final runsPerShift = totalRuns / serverShifts.length;
+
+    double guestLoadPerShift;
+    if (businessData != null && businessData.totalGuestCount > 0) {
+      // Approximate per-shift guest volume for the server using either server-specific
+      // mapping when available, otherwise distribute total guests evenly.
+      final serverGuests = businessData.serverSpecificGuests[serverId] ??
+          (businessData.totalGuestCount /
+              math.max(1, serverShifts.length));
+      guestLoadPerShift = serverGuests / math.max(1, serverShifts.length);
+    } else {
+      // Fallback: use runs-per-shift as a proxy for workload
+      guestLoadPerShift = runsPerShift * 6; // heuristic proxy
+    }
+
+    // Define buckets by guest load per shift
+    final lowThreshold = guestLoadPerShift * 0.8;
+    final highThreshold = guestLoadPerShift * 1.2;
+
+    // Simulate workload-specific performance adjustments
+    // Note: this keeps deltas small to avoid behavior changes
+    double low = performance.performanceScore;
+    double med = performance.performanceScore;
+    double high = performance.performanceScore;
+
+    if (runsPerShift < lowThreshold) {
+      low *= 1.05; // slightly better under light load
+      high *= 0.95;
+    } else if (runsPerShift > highThreshold) {
+      high *= 1.05; // slightly better under heavy load if coping well
+      low *= 0.95;
+    }
+
     return {
-      'lowWorkload': performance.performanceScore * 1.1,
-      'mediumWorkload': performance.performanceScore,
-      'highWorkload': performance.performanceScore * 0.9,
+      'lowWorkload': low,
+      'mediumWorkload': med,
+      'highWorkload': high,
     };
   }
 
-  static double _calculateEfficiencyRatio(ServerPerformanceData performance, double workloadIntensity) {
+  static double _calculateEfficiencyRatio(
+      ServerPerformanceData performance, double workloadIntensity) {
     // Higher efficiency ratio means better performance relative to workload
-    return workloadIntensity > 0 ? performance.performanceScore / (workloadIntensity * 50) : performance.performanceScore / 50;
+    return workloadIntensity > 0
+        ? performance.performanceScore / (workloadIntensity * 50)
+        : performance.performanceScore / 50;
   }
 
-  static WorkloadSustainability _assessWorkloadSustainability(ServerPerformanceData performance, double workloadIntensity) {
-    final efficiencyRatio = _calculateEfficiencyRatio(performance, workloadIntensity);
-    
+  static WorkloadSustainability _assessWorkloadSustainability(
+      ServerPerformanceData performance, double workloadIntensity) {
+    final efficiencyRatio =
+        _calculateEfficiencyRatio(performance, workloadIntensity);
+
     if (efficiencyRatio > 1.5) {
       return WorkloadSustainability.excellent;
     } else if (efficiencyRatio > 1.2) {
@@ -445,13 +566,13 @@ class ComparativeMetrics {
   });
 
   static ComparativeMetrics empty() => ComparativeMetrics(
-    efficiencyVsPeers: 1.0,
-    guestEfficiencyVsPeers: 1.0,
-    consistencyVsPeers: 1.0,
-    averagePeerEfficiency: 0.0,
-    averagePeerGuestEfficiency: 0.0,
-    averagePeerConsistency: 0.0,
-  );
+        efficiencyVsPeers: 1.0,
+        guestEfficiencyVsPeers: 1.0,
+        consistencyVsPeers: 1.0,
+        averagePeerEfficiency: 0.0,
+        averagePeerGuestEfficiency: 0.0,
+        averagePeerConsistency: 0.0,
+      );
 }
 
 class TeamAnalytics {
@@ -480,17 +601,22 @@ class TeamAnalytics {
   });
 
   static TeamAnalytics empty() => TeamAnalytics(
-    totalServers: 0,
-    averageScore: 0.0,
-    standardDeviation: 0.0,
-    highestScore: 0.0,
-    lowestScore: 0.0,
-    distribution: PerformanceDistribution(elite: 0, strong: 0, developing: 0, needsAttention: 0, critical: 0),
-    topPerformers: [],
-    bottomPerformers: [],
-    teamTrends: TeamTrends(improving: 0, stable: 0, declining: 0),
-    riskAssessment: RiskAssessment(overallRiskLevel: 'Low', highRiskServers: 0, mediumRiskServers: 0, lowRiskServers: 0),
-  );
+        totalServers: 0,
+        averageScore: 0.0,
+        standardDeviation: 0.0,
+        highestScore: 0.0,
+        lowestScore: 0.0,
+        distribution: PerformanceDistribution(
+            elite: 0, strong: 0, developing: 0, needsAttention: 0, critical: 0),
+        topPerformers: [],
+        bottomPerformers: [],
+        teamTrends: TeamTrends(improving: 0, stable: 0, declining: 0),
+        riskAssessment: RiskAssessment(
+            overallRiskLevel: 'Low',
+            highRiskServers: 0,
+            mediumRiskServers: 0,
+            lowRiskServers: 0),
+      );
 }
 
 class PerformanceDistribution {
@@ -553,13 +679,13 @@ class ConsistencyAnalysis {
   });
 
   static ConsistencyAnalysis insufficient() => ConsistencyAnalysis(
-    mean: 0.0,
-    standardDeviation: 0.0,
-    coefficientOfVariation: 0.0,
-    trendDirection: TrendDirection.stable,
-    stabilityRating: StabilityRating.fair,
-    insights: ['Insufficient data for consistency analysis'],
-  );
+        mean: 0.0,
+        standardDeviation: 0.0,
+        coefficientOfVariation: 0.0,
+        trendDirection: TrendDirection.stable,
+        stabilityRating: StabilityRating.fair,
+        insights: ['Insufficient data for consistency analysis'],
+      );
 }
 
 class WorkloadAnalysis {
@@ -577,5 +703,7 @@ class WorkloadAnalysis {
 }
 
 enum TrendDirection { improving, stable, declining }
+
 enum StabilityRating { excellent, good, fair, poor }
+
 enum WorkloadSustainability { excellent, good, fair, poor }

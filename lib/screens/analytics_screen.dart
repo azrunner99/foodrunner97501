@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../services/database_service.dart';
 
 class AnalyticsScreen extends StatefulWidget {
+  const AnalyticsScreen({super.key});
+
   @override
   _AnalyticsScreenState createState() => _AnalyticsScreenState();
 }
@@ -35,7 +37,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 final report = data[index];
                 return ListTile(
                   title: Text('Server ID: ${report['server_id']}'),
-                  subtitle: Text('Month: ${report['month']}\nNPS Score: ${report['nps_score']}\nFeedback Count: ${report['feedback_count']}'),
+                  subtitle: Text(
+                      'Month: ${report['month']}\nNPS Score: ${report['nps_score']}\nFeedback Count: ${report['feedback_count']}'),
                 );
               },
             );

@@ -1,6 +1,7 @@
 /// Data model for NPS feedback entries
-/// 
+///
 /// This model represents individual guest feedback responses about server performance.
+library;
 
 /// Enumeration for feedback types
 enum FeedbackType {
@@ -125,15 +126,15 @@ class NPSFeedback {
       serverId: map['server_id'] as int,
       feedbackType: FeedbackType.fromString(map['feedback_type'] as String),
       feedbackDate: DateTime.parse(map['feedback_date'] as String),
-      salesAmount: map['sales_amount'] != null 
-          ? (map['sales_amount'] as num).toDouble() 
+      salesAmount: map['sales_amount'] != null
+          ? (map['sales_amount'] as num).toDouble()
           : null,
       tableNumber: map['table_number'] as int?,
       shiftPeriod: ShiftPeriod.fromString(map['shift_period'] as String?),
       guestCount: map['guest_count'] as int?,
       notes: map['notes'] as String?,
-      createdAt: map['created_at'] != null 
-          ? DateTime.parse(map['created_at'] as String) 
+      createdAt: map['created_at'] != null
+          ? DateTime.parse(map['created_at'] as String)
           : null,
     );
   }
@@ -144,7 +145,8 @@ class NPSFeedback {
       if (id != null) 'id': id,
       'server_id': serverId,
       'feedback_type': feedbackType.value,
-      'feedback_date': feedbackDate.toIso8601String().split('T')[0], // Store as YYYY-MM-DD
+      'feedback_date':
+          feedbackDate.toIso8601String().split('T')[0], // Store as YYYY-MM-DD
       'sales_amount': salesAmount,
       'table_number': tableNumber,
       'shift_period': shiftPeriod?.value,
@@ -205,41 +207,41 @@ class NPSFeedback {
 
   /// Check if the feedback data is valid
   bool isValid() {
-    return serverId > 0 && 
-           feedbackDate.isBefore(DateTime.now().add(const Duration(days: 1))) &&
-           (salesAmount == null || salesAmount! >= 0) &&
-           (tableNumber == null || tableNumber! > 0) &&
-           (guestCount == null || guestCount! > 0);
+    return serverId > 0 &&
+        feedbackDate.isBefore(DateTime.now().add(const Duration(days: 1))) &&
+        (salesAmount == null || salesAmount! >= 0) &&
+        (tableNumber == null || tableNumber! > 0) &&
+        (guestCount == null || guestCount! > 0);
   }
 
   /// Get validation errors
   List<String> getValidationErrors() {
     final errors = <String>[];
-    
+
     if (serverId <= 0) {
       errors.add('Server ID must be positive');
     }
-    
+
     if (feedbackDate.isAfter(DateTime.now().add(const Duration(days: 1)))) {
       errors.add('Feedback date cannot be in the future');
     }
-    
+
     if (salesAmount != null && salesAmount! < 0) {
       errors.add('Sales amount cannot be negative');
     }
-    
+
     if (tableNumber != null && tableNumber! <= 0) {
       errors.add('Table number must be positive');
     }
-    
+
     if (guestCount != null && guestCount! <= 0) {
       errors.add('Guest count must be positive');
     }
-    
+
     if (notes != null && notes!.length > 500) {
       errors.add('Notes cannot exceed 500 characters');
     }
-    
+
     return errors;
   }
 
@@ -271,14 +273,14 @@ class NPSFeedback {
   /// Check if feedback is from a specific date
   bool isFromDate(DateTime date) {
     return feedbackDate.year == date.year &&
-           feedbackDate.month == date.month &&
-           feedbackDate.day == date.day;
+        feedbackDate.month == date.month &&
+        feedbackDate.day == date.day;
   }
 
   /// Check if feedback is within a date range
   bool isWithinDateRange(DateTime startDate, DateTime endDate) {
     return feedbackDate.isAfter(startDate.subtract(const Duration(days: 1))) &&
-           feedbackDate.isBefore(endDate.add(const Duration(days: 1)));
+        feedbackDate.isBefore(endDate.add(const Duration(days: 1)));
   }
 
   /// Get month key for this feedback (YYYYMM format)
@@ -305,22 +307,22 @@ class NPSFeedback {
 
   /// Check if this feedback has complete data
   bool get hasCompleteData {
-    return salesAmount != null && 
-           tableNumber != null && 
-           shiftPeriod != null && 
-           guestCount != null;
+    return salesAmount != null &&
+        tableNumber != null &&
+        shiftPeriod != null &&
+        guestCount != null;
   }
 
   /// Get feedback quality score (0-100) based on completeness
   int get qualityScore {
     int score = 50; // Base score for having basic feedback
-    
+
     if (salesAmount != null) score += 15;
     if (tableNumber != null) score += 10;
     if (shiftPeriod != null) score += 10;
     if (guestCount != null) score += 10;
     if (notes != null && notes!.trim().isNotEmpty) score += 5;
-    
+
     return score.clamp(0, 100);
   }
 }

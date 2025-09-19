@@ -14,7 +14,8 @@ class GamificationOptionsScreen extends StatelessWidget {
         children: [
           SwitchListTile(
             title: const Text('Enable Achievements & Streaks'),
-            subtitle: const Text('Turn off to disable all achievement and streak bonuses'),
+            subtitle: const Text(
+                'Turn off to disable all achievement and streak bonuses'),
             value: app.settings.gamificationEnabled,
             onChanged: (v) async {
               final newSettings = app.settings..gamificationEnabled = v;

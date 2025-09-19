@@ -5,7 +5,6 @@ import '../utils/trend_analyzer.dart';
 
 /// Performance visualization widgets using fl_chart
 class PerformanceChartWidgets {
-  
   /// Performance trend line chart with rolling averages
   static Widget performanceTrendChart({
     required PerformanceTrendAnalysis trendAnalysis,
@@ -49,7 +48,8 @@ class PerformanceChartWidgets {
                 reservedSize: 30,
                 interval: 5,
                 getTitlesWidget: (value, meta) {
-                  if (value.toInt() >= 0 && value.toInt() < trendAnalysis.dailyTrends.length) {
+                  if (value.toInt() >= 0 &&
+                      value.toInt() < trendAnalysis.dailyTrends.length) {
                     final date = trendAnalysis.dailyTrends[value.toInt()].date;
                     return Text(
                       '${date.month}/${date.day}',
@@ -88,7 +88,8 @@ class PerformanceChartWidgets {
               spots: trendAnalysis.dailyTrends
                   .asMap()
                   .entries
-                  .map((entry) => FlSpot(entry.key.toDouble(), entry.value.score))
+                  .map((entry) =>
+                      FlSpot(entry.key.toDouble(), entry.value.score))
                   .toList(),
               isCurved: true,
               gradient: LinearGradient(
@@ -104,8 +105,10 @@ class PerformanceChartWidgets {
                 show: true,
                 gradient: LinearGradient(
                   colors: [
-                    _getTrendColor(trendAnalysis.trendDirection).withOpacity(0.1),
-                    _getTrendColor(trendAnalysis.trendDirection).withOpacity(0.0),
+                    _getTrendColor(trendAnalysis.trendDirection)
+                        .withOpacity(0.1),
+                    _getTrendColor(trendAnalysis.trendDirection)
+                        .withOpacity(0.0),
                   ],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
@@ -160,7 +163,7 @@ class PerformanceChartWidgets {
     required BuildContext context,
     double? size,
   }) {
-    return Container(
+    return SizedBox(
       width: size ?? 200,
       height: size ?? 200,
       child: PieChart(
@@ -222,16 +225,23 @@ class PerformanceChartWidgets {
                 showTitles: true,
                 getTitlesWidget: (double value, TitleMeta meta) {
                   if (value.toInt() < performanceData.length) {
-                    final serverName = performanceData.keys.elementAt(value.toInt());
+                    final serverName =
+                        performanceData.keys.elementAt(value.toInt());
                     final isCurrentServer = serverName == currentServerId;
                     return Padding(
                       padding: const EdgeInsets.only(top: 8.0),
                       child: Text(
-                        serverName.length > 10 ? '${serverName.substring(0, 8)}...' : serverName,
+                        serverName.length > 10
+                            ? '${serverName.substring(0, 8)}...'
+                            : serverName,
                         style: TextStyle(
-                          color: isCurrentServer ? Theme.of(context).primaryColor : Colors.grey,
+                          color: isCurrentServer
+                              ? Theme.of(context).primaryColor
+                              : Colors.grey,
                           fontSize: 10,
-                          fontWeight: isCurrentServer ? FontWeight.bold : FontWeight.normal,
+                          fontWeight: isCurrentServer
+                              ? FontWeight.bold
+                              : FontWeight.normal,
                         ),
                       ),
                     );
@@ -262,31 +272,30 @@ class PerformanceChartWidgets {
               .asMap()
               .entries
               .map((entry) {
-                final index = entry.key;
-                final serverName = entry.value;
-                final score = performanceData[serverName]!;
-                final isCurrentServer = serverName == currentServerId;
-                
-                return BarChartGroupData(
-                  x: index,
-                  barRods: [
-                    BarChartRodData(
-                      toY: score,
-                      color: isCurrentServer 
-                          ? Theme.of(context).primaryColor
-                          : _getPerformanceColor(score),
-                      width: 20,
-                      borderRadius: BorderRadius.circular(4),
-                      backDrawRodData: BackgroundBarChartRodData(
-                        show: true,
-                        toY: _getMaxValue(performanceData.values.toList()) * 1.2,
-                        color: Colors.grey.withOpacity(0.1),
-                      ),
-                    ),
-                  ],
-                );
-              })
-              .toList(),
+            final index = entry.key;
+            final serverName = entry.value;
+            final score = performanceData[serverName]!;
+            final isCurrentServer = serverName == currentServerId;
+
+            return BarChartGroupData(
+              x: index,
+              barRods: [
+                BarChartRodData(
+                  toY: score,
+                  color: isCurrentServer
+                      ? Theme.of(context).primaryColor
+                      : _getPerformanceColor(score),
+                  width: 20,
+                  borderRadius: BorderRadius.circular(4),
+                  backDrawRodData: BackgroundBarChartRodData(
+                    show: true,
+                    toY: _getMaxValue(performanceData.values.toList()) * 1.2,
+                    color: Colors.grey.withOpacity(0.1),
+                  ),
+                ),
+              ],
+            );
+          }).toList(),
         ),
       ),
     );
@@ -298,7 +307,7 @@ class PerformanceChartWidgets {
     required BuildContext context,
     double? size,
   }) {
-    return Container(
+    return SizedBox(
       width: size ?? 250,
       height: size ?? 250,
       child: RadarChart(
@@ -308,7 +317,16 @@ class PerformanceChartWidgets {
           titlePositionPercentageOffset: 0.2,
           titleTextStyle: const TextStyle(color: Colors.grey, fontSize: 10),
           getTitle: (index, angle) {
-            final dayNames = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+            final dayNames = [
+              '',
+              'Mon',
+              'Tue',
+              'Wed',
+              'Thu',
+              'Fri',
+              'Sat',
+              'Sun'
+            ];
             final dayIndex = index + 1;
             if (dayIndex < dayNames.length) {
               return RadarChartTitle(text: dayNames[dayIndex]);
@@ -395,8 +413,9 @@ class PerformanceChartWidgets {
         itemCount: monthlyData.length,
         itemBuilder: (context, index) {
           final entry = monthlyData.entries.elementAt(index);
-          final intensity = _normalizeValue(entry.value, monthlyData.values.toList());
-          
+          final intensity =
+              _normalizeValue(entry.value, monthlyData.values.toList());
+
           return Container(
             decoration: BoxDecoration(
               color: Theme.of(context).primaryColor.withOpacity(intensity),
@@ -409,7 +428,8 @@ class PerformanceChartWidgets {
                 children: [
                   Text(
                     entry.key,
-                    style: const TextStyle(fontSize: 8, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                        fontSize: 8, fontWeight: FontWeight.bold),
                   ),
                   Text(
                     entry.value.toStringAsFixed(0),
@@ -463,7 +483,8 @@ class PerformanceChartWidgets {
     return Colors.red;
   }
 
-  static List<PieChartSectionData> _buildPieChartSections(Map<PerformanceRating, int> distribution) {
+  static List<PieChartSectionData> _buildPieChartSections(
+      Map<PerformanceRating, int> distribution) {
     final total = distribution.values.fold<int>(0, (sum, count) => sum + count);
     if (total == 0) return [];
 
@@ -491,7 +512,8 @@ class PerformanceChartWidgets {
     }).toList();
   }
 
-  static List<RadarEntry> _buildRadarDataEntries(Map<int, double> dayOfWeekPatterns) {
+  static List<RadarEntry> _buildRadarDataEntries(
+      Map<int, double> dayOfWeekPatterns) {
     final entries = <RadarEntry>[];
     for (int day = 1; day <= 7; day++) {
       final value = dayOfWeekPatterns[day] ?? 0.0;
@@ -508,7 +530,7 @@ class PerformanceChartWidgets {
     required BuildContext context,
   }) {
     final normalizedValue = (value.abs() / maxValue).clamp(0.0, 1.0);
-    
+
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -642,22 +664,22 @@ class PerformanceInsightsWidget extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         ...recentAnomalies.map((anomaly) => Padding(
-          padding: const EdgeInsets.only(bottom: 2),
-          child: Text(
-            '${anomaly.date.month}/${anomaly.date.day}: ${_getAnomalyDescription(anomaly)}',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
-          ),
-        )),
+              padding: const EdgeInsets.only(bottom: 2),
+              child: Text(
+                '${anomaly.date.month}/${anomaly.date.day}: ${_getAnomalyDescription(anomaly)}',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                ),
+              ),
+            )),
       ],
     );
   }
 
   Widget _buildPredictions(BuildContext context) {
     final predictions = trendAnalysis.predictions;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -682,9 +704,18 @@ class PerformanceInsightsWidget extends StatelessWidget {
     final seasonal = seasonalAnalysis!;
     final bestDay = seasonal.dayOfWeekPatterns.entries
         .reduce((a, b) => a.value > b.value ? a : b);
-    
-    final dayNames = ['', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-    
+
+    final dayNames = [
+      '',
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday'
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -727,9 +758,12 @@ class PerformanceInsightsWidget extends StatelessWidget {
     }
   }
 
-  String _getTrendDescription(TrendDirection direction, TrendMomentum momentum) {
-    final directionText = direction.name.replaceFirst(direction.name[0], direction.name[0].toUpperCase());
-    final momentumText = momentum.name.replaceFirst(momentum.name[0], momentum.name[0].toUpperCase());
+  String _getTrendDescription(
+      TrendDirection direction, TrendMomentum momentum) {
+    final directionText = direction.name
+        .replaceFirst(direction.name[0], direction.name[0].toUpperCase());
+    final momentumText = momentum.name
+        .replaceFirst(momentum.name[0], momentum.name[0].toUpperCase());
     return '$directionText ($momentumText momentum)';
   }
 

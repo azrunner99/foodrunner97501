@@ -310,7 +310,8 @@ class AppFeaturesScreen extends StatelessWidget {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const VersionHistoryScreen(),
+                              builder: (context) =>
+                                  const VersionHistoryScreen(),
                             ),
                           );
                         },
@@ -370,7 +371,8 @@ class AppFeaturesScreen extends StatelessWidget {
         collapsedBackgroundColor: Colors.transparent,
         iconColor: color,
         collapsedIconColor: color.withOpacity(0.7),
-        initiallyExpanded: title.contains("Core Shift Management"), // Only expand the first category by default
+        initiallyExpanded: title.contains(
+            "Core Shift Management"), // Only expand the first category by default
         title: Container(
           width: double.infinity,
           padding: const EdgeInsets.all(20),
@@ -419,34 +421,36 @@ class AppFeaturesScreen extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: features.map((feature) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      margin: const EdgeInsets.only(top: 6),
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: color,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        feature,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey.shade700,
-                          height: 1.4,
+              children: features
+                  .map((feature) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              margin: const EdgeInsets.only(top: 6),
+                              width: 6,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                color: color,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                feature,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey.shade700,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ),
-                  ],
-                ),
-              )).toList(),
+                      ))
+                  .toList(),
             ),
           ),
         ],

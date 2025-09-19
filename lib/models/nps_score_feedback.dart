@@ -1,6 +1,7 @@
 /// Data model for Net Promoter Score feedback entries
-/// 
+///
 /// This model represents individual guest NPS responses with numerical scores (0-10).
+library;
 
 /// Represents an individual NPS feedback entry with numerical score
 class NPSScoreFeedback {
@@ -37,8 +38,8 @@ class NPSScoreFeedback {
       guestCount: map['guest_count'] as int?,
       email: map['email'] as String?,
       guestName: map['guest_name'] as String?,
-      createdAt: map['created_at'] != null 
-          ? DateTime.parse(map['created_at'] as String) 
+      createdAt: map['created_at'] != null
+          ? DateTime.parse(map['created_at'] as String)
           : null,
     );
   }

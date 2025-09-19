@@ -115,7 +115,8 @@ class AppError {
 
 /// Centralized error handling service
 class ErrorHandlingService {
-  static final ErrorHandlingService _instance = ErrorHandlingService._internal();
+  static final ErrorHandlingService _instance =
+      ErrorHandlingService._internal();
   factory ErrorHandlingService() => _instance;
   ErrorHandlingService._internal();
 
@@ -128,14 +129,15 @@ class ErrorHandlingService {
   /// Log an error
   void logError(AppError error) {
     _errorLog.insert(0, error);
-    
+
     // Keep log size manageable
     if (_errorLog.length > _maxLogSize) {
       _errorLog.removeRange(_maxLogSize, _errorLog.length);
     }
 
     // Print to console for debugging
-    debugPrint('[${error.severity.name.toUpperCase()}] ${error.code}: ${error.message}');
+    debugPrint(
+        '[${error.severity.name.toUpperCase()}] ${error.code}: ${error.message}');
     if (error.technicalDetails != null) {
       debugPrint('Technical Details: ${error.technicalDetails}');
     }
@@ -169,7 +171,8 @@ class ErrorHandlingService {
       technicalDetails: e.toString(),
       severity: ErrorSeverity.critical,
       category: ErrorCategory.database,
-      userAction: 'Please restart the application. If the problem persists, contact support.',
+      userAction:
+          'Please restart the application. If the problem persists, contact support.',
       originalException: e,
     );
     logError(error);
@@ -184,7 +187,8 @@ class ErrorHandlingService {
       technicalDetails: e.toString(),
       severity: ErrorSeverity.error,
       category: ErrorCategory.database,
-      userAction: 'Please try again. If the problem continues, restart the application.',
+      userAction:
+          'Please try again. If the problem continues, restart the application.',
       originalException: e,
     );
     logError(error);
@@ -212,7 +216,8 @@ class ErrorHandlingService {
   AppError handleValidationError(List<String> validationErrors) {
     final error = AppError.create(
       code: 'VALIDATION_FAILED',
-      message: 'Please correct the following issues:\n${validationErrors.join('\n')}',
+      message:
+          'Please correct the following issues:\n${validationErrors.join('\n')}',
       technicalDetails: 'Validation errors: ${validationErrors.join(', ')}',
       severity: ErrorSeverity.warning,
       category: ErrorCategory.validation,
@@ -270,11 +275,14 @@ class ErrorHandlingService {
   AppError handleServerWithFeedbackDeletionError(String serverName) {
     final error = AppError.create(
       code: 'SERVER_HAS_FEEDBACK',
-      message: 'Cannot delete server "$serverName" because it has feedback records',
-      technicalDetails: 'Attempted to delete server with existing feedback: $serverName',
+      message:
+          'Cannot delete server "$serverName" because it has feedback records',
+      technicalDetails:
+          'Attempted to delete server with existing feedback: $serverName',
       severity: ErrorSeverity.error,
       category: ErrorCategory.business,
-      userAction: 'Archive the server instead of deleting it to preserve feedback history.',
+      userAction:
+          'Archive the server instead of deleting it to preserve feedback history.',
     );
     logError(error);
     return error;
@@ -287,10 +295,12 @@ class ErrorHandlingService {
     final error = AppError.create(
       code: 'INACTIVE_SERVER_FEEDBACK',
       message: 'Cannot submit feedback for inactive server "$serverName"',
-      technicalDetails: 'Attempted to submit feedback for inactive server: $serverName',
+      technicalDetails:
+          'Attempted to submit feedback for inactive server: $serverName',
       severity: ErrorSeverity.error,
       category: ErrorCategory.business,
-      userAction: 'Please select an active server or reactivate this server first.',
+      userAction:
+          'Please select an active server or reactivate this server first.',
     );
     logError(error);
     return error;
@@ -300,8 +310,10 @@ class ErrorHandlingService {
   AppError handleFeedbackDateError(DateTime attemptedDate) {
     final error = AppError.create(
       code: 'INVALID_FEEDBACK_DATE',
-      message: 'Invalid feedback date: ${attemptedDate.toString().split(' ')[0]}',
-      technicalDetails: 'Feedback date cannot be in the future or too far in the past',
+      message:
+          'Invalid feedback date: ${attemptedDate.toString().split(' ')[0]}',
+      technicalDetails:
+          'Feedback date cannot be in the future or too far in the past',
       severity: ErrorSeverity.error,
       category: ErrorCategory.validation,
       userAction: 'Please select a valid date within the allowed range.',

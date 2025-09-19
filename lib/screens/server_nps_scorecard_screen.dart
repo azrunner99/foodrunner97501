@@ -6,7 +6,8 @@ class ServerNPSScorecardScreen extends StatefulWidget {
   const ServerNPSScorecardScreen({super.key});
 
   @override
-  State<ServerNPSScorecardScreen> createState() => _ServerNPSScorecardScreenState();
+  State<ServerNPSScorecardScreen> createState() =>
+      _ServerNPSScorecardScreenState();
 }
 
 class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
@@ -33,9 +34,9 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
 
       final npsProvider = context.read<NPSProvider>();
       await npsProvider.initialize();
-      
+
       final months = await npsProvider.database.getAvailableReportMonths();
-      
+
       setState(() {
         _availableMonths = months;
         // Set the first month as selected, using a unique key
@@ -75,14 +76,13 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
 
   List<Map<String, dynamic>> _getSortedServerData() {
     final sortedData = List<Map<String, dynamic>>.from(_serverNPSData);
-    
+
     switch (_sortBy) {
       case 'name':
-        sortedData.sort((a, b) => 
-          (a['server_name'] ?? '').toString().toLowerCase().compareTo(
-            (b['server_name'] ?? '').toString().toLowerCase()
-          )
-        );
+        sortedData.sort((a, b) => (a['server_name'] ?? '')
+            .toString()
+            .toLowerCase()
+            .compareTo((b['server_name'] ?? '').toString().toLowerCase()));
         break;
       case 'all_time_nps':
         sortedData.sort((a, b) {
@@ -115,13 +115,13 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
         });
         break;
     }
-    
+
     return sortedData;
   }
 
   Future<void> _loadServerNPSData() async {
     if (_selectedMonthKey == null) return;
-    
+
     try {
       setState(() {
         _isLoadingServerData = true;
@@ -135,8 +135,9 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
       final reportMonth = selectedMonth['report_month'] as int;
       final reportYear = selectedMonth['report_year'] as int;
 
-      final serverData = await npsProvider.getServerNPSDataForMonth(reportMonth, reportYear);
-      
+      final serverData =
+          await npsProvider.getServerNPSDataForMonth(reportMonth, reportYear);
+
       setState(() {
         _serverNPSData = serverData;
         _isLoadingServerData = false;
@@ -152,7 +153,7 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
   String _formatMonthYear(Map<String, dynamic> monthData) {
     final reportMonth = monthData['report_month'] as int;
     final reportYear = monthData['report_year'] as int;
-    
+
     // Extract month and year from YYYYMM format if needed
     int month, year;
     if (reportMonth > 12) {
@@ -164,17 +165,27 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
       month = reportMonth;
       year = reportYear;
     }
-    
+
     final monthNames = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December'
     ];
-    
+
     // Ensure month is in valid range (1-12)
     if (month < 1 || month > 12) {
       return 'Invalid Date';
     }
-    
+
     return '${monthNames[month - 1]} $year';
   }
 
@@ -187,15 +198,23 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
   Color _getNPSColor(dynamic value) {
     if (value == null) return Colors.grey;
     final percentage = value as double;
-    
+
     // Enhanced 8-tier color system with distinct visual differences
-    if (percentage >= 95.0) return const Color(0xFF0F7B0F); // Rich emerald green - Outstanding (95-100%)
-    if (percentage >= 90.0) return const Color(0xFF228B22); // Forest green - Excellent (90-94.9%)
-    if (percentage >= 85.0) return const Color(0xFF32CD32); // Lime green - Very Good (85-89.9%)
-    if (percentage >= 80.0) return const Color(0xFF7CFC00); // Lawn green - Good (80-84.9%)
-    if (percentage >= 75.0) return const Color(0xFFFFA500); // Orange - Developing (75-79.9%)
-    if (percentage >= 70.0) return const Color(0xFFFF4500); // Orange red - Growing (70-74.9%)
-    if (percentage >= 60.0) return const Color(0xFFDC143C); // Crimson - Learning (60-69.9%)
+    if (percentage >= 95.0)
+      return const Color(
+          0xFF0F7B0F); // Rich emerald green - Outstanding (95-100%)
+    if (percentage >= 90.0)
+      return const Color(0xFF228B22); // Forest green - Excellent (90-94.9%)
+    if (percentage >= 85.0)
+      return const Color(0xFF32CD32); // Lime green - Very Good (85-89.9%)
+    if (percentage >= 80.0)
+      return const Color(0xFF7CFC00); // Lawn green - Good (80-84.9%)
+    if (percentage >= 75.0)
+      return const Color(0xFFFFA500); // Orange - Developing (75-79.9%)
+    if (percentage >= 70.0)
+      return const Color(0xFFFF4500); // Orange red - Growing (70-74.9%)
+    if (percentage >= 60.0)
+      return const Color(0xFFDC143C); // Crimson - Learning (60-69.9%)
     return const Color(0xFF8B0000); // Dark red - Building (below 60%)
   }
 
@@ -205,7 +224,8 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
     return percentage >= 95.0;
   }
 
-  Widget _buildColorLegendItem(Color color, String label, {bool showTrophy = false}) {
+  Widget _buildColorLegendItem(Color color, String label,
+      {bool showTrophy = false}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -370,12 +390,13 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
                                   ),
                                   const SizedBox(height: 12),
                                   DropdownButtonFormField<String>(
-                                    value: _selectedMonthKey,
+                                    initialValue: _selectedMonthKey,
                                     decoration: const InputDecoration(
                                       labelText: 'Month',
                                       border: OutlineInputBorder(),
                                       prefixIcon: Icon(Icons.calendar_month),
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                                      contentPadding: EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 16),
                                     ),
                                     isDense: false,
                                     items: _availableMonths.isNotEmpty
@@ -384,20 +405,27 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
                                             return DropdownMenuItem<String>(
                                               value: key,
                                               child: Padding(
-                                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        vertical: 4),
                                                 child: Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                  mainAxisSize: MainAxisSize.min,
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
                                                   children: [
                                                     Text(
                                                       _formatMonthYear(month),
-                                                      style: const TextStyle(fontWeight: FontWeight.bold),
+                                                      style: const TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.bold),
                                                     ),
                                                     Text(
                                                       '${month['server_count']} servers reported',
                                                       style: TextStyle(
                                                         fontSize: 12,
-                                                        color: Colors.grey.shade600,
+                                                        color: Colors
+                                                            .grey.shade600,
                                                       ),
                                                     ),
                                                   ],
@@ -408,7 +436,8 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
                                         : [
                                             const DropdownMenuItem<String>(
                                               value: null,
-                                              child: Text('No months available'),
+                                              child:
+                                                  Text('No months available'),
                                             ),
                                           ],
                                     onChanged: _availableMonths.isNotEmpty
@@ -427,7 +456,7 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
                             ),
                           ),
                           const SizedBox(height: 20),
-                          
+
                           // Sort Options
                           if (_selectedMonthKey != null) ...[
                             Card(
@@ -445,10 +474,11 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
                                     const SizedBox(width: 16),
                                     Expanded(
                                       child: DropdownButtonFormField<String>(
-                                        value: _sortBy,
+                                        initialValue: _sortBy,
                                         decoration: const InputDecoration(
                                           border: OutlineInputBorder(),
-                                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                          contentPadding: EdgeInsets.symmetric(
+                                              horizontal: 12, vertical: 8),
                                           isDense: true,
                                         ),
                                         items: const [
@@ -484,16 +514,16 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
                             ),
                             const SizedBox(height: 16),
                           ],
-                          
+
                           // Server NPS Data Table
                           if (_selectedMonthKey != null) ...[
                             Builder(
                               builder: (context) {
                                 final selectedMonth = _getSelectedMonthData();
                                 return Text(
-                                  selectedMonth != null 
-                                    ? 'Server NPS Results - ${_formatMonthYear(selectedMonth)}'
-                                    : 'Server NPS Results',
+                                  selectedMonth != null
+                                      ? 'Server NPS Results - ${_formatMonthYear(selectedMonth)}'
+                                      : 'Server NPS Results',
                                   style: const TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
@@ -502,10 +532,11 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
                               },
                             ),
                             const SizedBox(height: 12),
-                            
+
                             // Color Coding Legend
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 8),
                               decoration: BoxDecoration(
                                 color: Colors.grey.shade50,
                                 borderRadius: BorderRadius.circular(8),
@@ -517,13 +548,20 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      _buildColorLegendItem(const Color(0xFF0F7B0F), '95%+ Outstanding'),
+                                      _buildColorLegendItem(
+                                          const Color(0xFF0F7B0F),
+                                          '95%+ Outstanding'),
                                       const SizedBox(width: 4),
-                                      _buildColorLegendItem(const Color(0xFF228B22), '90%+ Excellent'),
+                                      _buildColorLegendItem(
+                                          const Color(0xFF228B22),
+                                          '90%+ Excellent'),
                                       const SizedBox(width: 4),
-                                      _buildColorLegendItem(const Color(0xFF32CD32), '85%+ Very Good'),
+                                      _buildColorLegendItem(
+                                          const Color(0xFF32CD32),
+                                          '85%+ Very Good'),
                                       const SizedBox(width: 4),
-                                      _buildColorLegendItem(const Color(0xFF7CFC00), '80%+ Good'),
+                                      _buildColorLegendItem(
+                                          const Color(0xFF7CFC00), '80%+ Good'),
                                     ],
                                   ),
                                   const SizedBox(height: 4),
@@ -531,9 +569,13 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      _buildColorLegendItem(const Color(0xFFFFA500), '75%+ Developing'),
+                                      _buildColorLegendItem(
+                                          const Color(0xFFFFA500),
+                                          '75%+ Developing'),
                                       const SizedBox(width: 4),
-                                      _buildColorLegendItem(const Color(0xFFFF4500), '70%+ Growing'),
+                                      _buildColorLegendItem(
+                                          const Color(0xFFFF4500),
+                                          '70%+ Growing'),
                                     ],
                                   ),
                                   const SizedBox(height: 4),
@@ -541,16 +583,20 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      _buildColorLegendItem(const Color(0xFFDC143C), '60%+ Learning'),
+                                      _buildColorLegendItem(
+                                          const Color(0xFFDC143C),
+                                          '60%+ Learning'),
                                       const SizedBox(width: 4),
-                                      _buildColorLegendItem(const Color(0xFF8B0000), '<60% Building'),
+                                      _buildColorLegendItem(
+                                          const Color(0xFF8B0000),
+                                          '<60% Building'),
                                     ],
                                   ),
                                 ],
                               ),
                             ),
                             const SizedBox(height: 12),
-                            
+
                             if (_isLoadingServerData)
                               const Center(
                                 child: Padding(
@@ -584,7 +630,9 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
                                             topLeft: Radius.circular(12),
                                             topRight: Radius.circular(12),
                                           ),
-                                          border: Border.all(color: Colors.grey.shade300, width: 2),
+                                          border: Border.all(
+                                              color: Colors.grey.shade300,
+                                              width: 2),
                                         ),
                                         padding: const EdgeInsets.all(12),
                                         child: const Row(
@@ -639,8 +687,11 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
                                       Expanded(
                                         child: Container(
                                           decoration: BoxDecoration(
-                                            border: Border.all(color: Colors.grey.shade300, width: 2),
-                                            borderRadius: const BorderRadius.only(
+                                            border: Border.all(
+                                                color: Colors.grey.shade300,
+                                                width: 2),
+                                            borderRadius:
+                                                const BorderRadius.only(
                                               bottomLeft: Radius.circular(12),
                                               bottomRight: Radius.circular(12),
                                             ),
@@ -648,24 +699,36 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
                                           child: SingleChildScrollView(
                                             padding: const EdgeInsets.all(8),
                                             child: Column(
-                                              children: _getSortedServerData().map((serverData) {
+                                              children: _getSortedServerData()
+                                                  .map((serverData) {
                                                 return Container(
-                                                  margin: const EdgeInsets.only(bottom: 12),
+                                                  margin: const EdgeInsets.only(
+                                                      bottom: 12),
                                                   decoration: BoxDecoration(
-                                                    border: Border.all(color: Colors.grey.shade200),
-                                                    borderRadius: BorderRadius.circular(8),
+                                                    border: Border.all(
+                                                        color: Colors
+                                                            .grey.shade200),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            8),
                                                   ),
-                                                  padding: const EdgeInsets.all(16),
+                                                  padding:
+                                                      const EdgeInsets.all(16),
                                                   child: Row(
                                                     children: [
                                                       Expanded(
                                                         flex: 3,
                                                         child: Text(
-                                                          serverData['server_name'] ?? 'Unknown',
-                                                          style: const TextStyle(
-                                                            fontWeight: FontWeight.w800,
+                                                          serverData[
+                                                                  'server_name'] ??
+                                                              'Unknown',
+                                                          style:
+                                                              const TextStyle(
+                                                            fontWeight:
+                                                                FontWeight.w800,
                                                             fontSize: 18,
-                                                            color: Color(0xFF2C3E50),
+                                                            color: Color(
+                                                                0xFF2C3E50),
                                                             letterSpacing: 0.5,
                                                           ),
                                                         ),
@@ -673,23 +736,40 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
                                                       Expanded(
                                                         flex: 2,
                                                         child: Container(
-                                                          padding: const EdgeInsets.symmetric(
+                                                          padding:
+                                                              const EdgeInsets
+                                                                  .symmetric(
                                                             horizontal: 10,
                                                             vertical: 8,
                                                           ),
-                                                          decoration: BoxDecoration(
-                                                            color: _getNPSColor(serverData['all_time_nps_percentage'])
-                                                                .withOpacity(0.15),
-                                                            borderRadius: BorderRadius.circular(12),
+                                                          decoration:
+                                                              BoxDecoration(
+                                                            color: _getNPSColor(
+                                                                    serverData[
+                                                                        'all_time_nps_percentage'])
+                                                                .withOpacity(
+                                                                    0.15),
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        12),
                                                             border: Border.all(
-                                                              color: _getNPSColor(serverData['all_time_nps_percentage']),
+                                                              color: _getNPSColor(
+                                                                  serverData[
+                                                                      'all_time_nps_percentage']),
                                                               width: 2,
                                                             ),
                                                             boxShadow: [
                                                               BoxShadow(
-                                                                color: _getNPSColor(serverData['all_time_nps_percentage']).withOpacity(0.3),
+                                                                color: _getNPSColor(
+                                                                        serverData[
+                                                                            'all_time_nps_percentage'])
+                                                                    .withOpacity(
+                                                                        0.3),
                                                                 blurRadius: 2,
-                                                                offset: const Offset(0, 1),
+                                                                offset:
+                                                                    const Offset(
+                                                                        0, 1),
                                                               ),
                                                             ],
                                                           ),
@@ -697,35 +777,58 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
                                                             children: [
                                                               Center(
                                                                 child: Text(
-                                                                  _formatNPSPercentage(serverData['all_time_nps_percentage']),
-                                                                  style: TextStyle(
-                                                                    color: Colors.white,
-                                                                    fontWeight: FontWeight.w900,
-                                                                    fontSize: 16,
+                                                                  _formatNPSPercentage(
+                                                                      serverData[
+                                                                          'all_time_nps_percentage']),
+                                                                  style:
+                                                                      TextStyle(
+                                                                    color: Colors
+                                                                        .white,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w900,
+                                                                    fontSize:
+                                                                        16,
                                                                     shadows: [
                                                                       Shadow(
-                                                                        offset: const Offset(1.0, 1.0),
-                                                                        blurRadius: 2.0,
-                                                                        color: _getNPSColor(serverData['all_time_nps_percentage']).withOpacity(0.9),
+                                                                        offset: const Offset(
+                                                                            1.0,
+                                                                            1.0),
+                                                                        blurRadius:
+                                                                            2.0,
+                                                                        color: _getNPSColor(serverData['all_time_nps_percentage'])
+                                                                            .withOpacity(0.9),
                                                                       ),
                                                                       Shadow(
-                                                                        offset: const Offset(-0.5, -0.5),
-                                                                        blurRadius: 1.0,
-                                                                        color: Colors.black.withOpacity(0.5),
+                                                                        offset: const Offset(
+                                                                            -0.5,
+                                                                            -0.5),
+                                                                        blurRadius:
+                                                                            1.0,
+                                                                        color: Colors
+                                                                            .black
+                                                                            .withOpacity(0.5),
                                                                       ),
                                                                     ],
                                                                   ),
-                                                                  textAlign: TextAlign.center,
+                                                                  textAlign:
+                                                                      TextAlign
+                                                                          .center,
                                                                 ),
                                                               ),
-                                                              if (_isTopPerformer(serverData['all_time_nps_percentage']))
+                                                              if (_isTopPerformer(
+                                                                  serverData[
+                                                                      'all_time_nps_percentage']))
                                                                 Positioned(
                                                                   top: 2,
                                                                   left: 2,
                                                                   child: Icon(
-                                                                    Icons.emoji_events,
+                                                                    Icons
+                                                                        .emoji_events,
                                                                     size: 14,
-                                                                    color: Colors.amber.shade400,
+                                                                    color: Colors
+                                                                        .amber
+                                                                        .shade400,
                                                                   ),
                                                                 ),
                                                             ],
@@ -735,23 +838,40 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
                                                       Expanded(
                                                         flex: 2,
                                                         child: Container(
-                                                          padding: const EdgeInsets.symmetric(
+                                                          padding:
+                                                              const EdgeInsets
+                                                                  .symmetric(
                                                             horizontal: 10,
                                                             vertical: 8,
                                                           ),
-                                                          decoration: BoxDecoration(
-                                                            color: _getNPSColor(serverData['three_month_nps_percentage'])
-                                                                .withOpacity(0.15),
-                                                            borderRadius: BorderRadius.circular(12),
+                                                          decoration:
+                                                              BoxDecoration(
+                                                            color: _getNPSColor(
+                                                                    serverData[
+                                                                        'three_month_nps_percentage'])
+                                                                .withOpacity(
+                                                                    0.15),
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        12),
                                                             border: Border.all(
-                                                              color: _getNPSColor(serverData['three_month_nps_percentage']),
+                                                              color: _getNPSColor(
+                                                                  serverData[
+                                                                      'three_month_nps_percentage']),
                                                               width: 2,
                                                             ),
                                                             boxShadow: [
                                                               BoxShadow(
-                                                                color: _getNPSColor(serverData['three_month_nps_percentage']).withOpacity(0.3),
+                                                                color: _getNPSColor(
+                                                                        serverData[
+                                                                            'three_month_nps_percentage'])
+                                                                    .withOpacity(
+                                                                        0.3),
                                                                 blurRadius: 2,
-                                                                offset: const Offset(0, 1),
+                                                                offset:
+                                                                    const Offset(
+                                                                        0, 1),
                                                               ),
                                                             ],
                                                           ),
@@ -759,35 +879,58 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
                                                             children: [
                                                               Center(
                                                                 child: Text(
-                                                                  _formatNPSPercentage(serverData['three_month_nps_percentage']),
-                                                                  style: TextStyle(
-                                                                    color: Colors.white,
-                                                                    fontWeight: FontWeight.w900,
-                                                                    fontSize: 16,
+                                                                  _formatNPSPercentage(
+                                                                      serverData[
+                                                                          'three_month_nps_percentage']),
+                                                                  style:
+                                                                      TextStyle(
+                                                                    color: Colors
+                                                                        .white,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w900,
+                                                                    fontSize:
+                                                                        16,
                                                                     shadows: [
                                                                       Shadow(
-                                                                        offset: const Offset(1.0, 1.0),
-                                                                        blurRadius: 2.0,
-                                                                        color: _getNPSColor(serverData['three_month_nps_percentage']).withOpacity(0.9),
+                                                                        offset: const Offset(
+                                                                            1.0,
+                                                                            1.0),
+                                                                        blurRadius:
+                                                                            2.0,
+                                                                        color: _getNPSColor(serverData['three_month_nps_percentage'])
+                                                                            .withOpacity(0.9),
                                                                       ),
                                                                       Shadow(
-                                                                        offset: const Offset(-0.5, -0.5),
-                                                                        blurRadius: 1.0,
-                                                                        color: Colors.black.withOpacity(0.5),
+                                                                        offset: const Offset(
+                                                                            -0.5,
+                                                                            -0.5),
+                                                                        blurRadius:
+                                                                            1.0,
+                                                                        color: Colors
+                                                                            .black
+                                                                            .withOpacity(0.5),
                                                                       ),
                                                                     ],
                                                                   ),
-                                                                  textAlign: TextAlign.center,
+                                                                  textAlign:
+                                                                      TextAlign
+                                                                          .center,
                                                                 ),
                                                               ),
-                                                              if (_isTopPerformer(serverData['three_month_nps_percentage']))
+                                                              if (_isTopPerformer(
+                                                                  serverData[
+                                                                      'three_month_nps_percentage']))
                                                                 Positioned(
                                                                   top: 2,
                                                                   left: 2,
                                                                   child: Icon(
-                                                                    Icons.emoji_events,
+                                                                    Icons
+                                                                        .emoji_events,
                                                                     size: 14,
-                                                                    color: Colors.amber.shade400,
+                                                                    color: Colors
+                                                                        .amber
+                                                                        .shade400,
                                                                   ),
                                                                 ),
                                                             ],
@@ -797,23 +940,40 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
                                                       Expanded(
                                                         flex: 2,
                                                         child: Container(
-                                                          padding: const EdgeInsets.symmetric(
+                                                          padding:
+                                                              const EdgeInsets
+                                                                  .symmetric(
                                                             horizontal: 10,
                                                             vertical: 8,
                                                           ),
-                                                          decoration: BoxDecoration(
-                                                            color: _getNPSColor(serverData['one_month_nps_percentage'])
-                                                                .withOpacity(0.15),
-                                                            borderRadius: BorderRadius.circular(12),
+                                                          decoration:
+                                                              BoxDecoration(
+                                                            color: _getNPSColor(
+                                                                    serverData[
+                                                                        'one_month_nps_percentage'])
+                                                                .withOpacity(
+                                                                    0.15),
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        12),
                                                             border: Border.all(
-                                                              color: _getNPSColor(serverData['one_month_nps_percentage']),
+                                                              color: _getNPSColor(
+                                                                  serverData[
+                                                                      'one_month_nps_percentage']),
                                                               width: 2,
                                                             ),
                                                             boxShadow: [
                                                               BoxShadow(
-                                                                color: _getNPSColor(serverData['one_month_nps_percentage']).withOpacity(0.3),
+                                                                color: _getNPSColor(
+                                                                        serverData[
+                                                                            'one_month_nps_percentage'])
+                                                                    .withOpacity(
+                                                                        0.3),
                                                                 blurRadius: 2,
-                                                                offset: const Offset(0, 1),
+                                                                offset:
+                                                                    const Offset(
+                                                                        0, 1),
                                                               ),
                                                             ],
                                                           ),
@@ -821,35 +981,58 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
                                                             children: [
                                                               Center(
                                                                 child: Text(
-                                                                  _formatNPSPercentage(serverData['one_month_nps_percentage']),
-                                                                  style: TextStyle(
-                                                                    color: Colors.white,
-                                                                    fontWeight: FontWeight.w900,
-                                                                    fontSize: 16,
+                                                                  _formatNPSPercentage(
+                                                                      serverData[
+                                                                          'one_month_nps_percentage']),
+                                                                  style:
+                                                                      TextStyle(
+                                                                    color: Colors
+                                                                        .white,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w900,
+                                                                    fontSize:
+                                                                        16,
                                                                     shadows: [
                                                                       Shadow(
-                                                                        offset: const Offset(1.0, 1.0),
-                                                                        blurRadius: 2.0,
-                                                                        color: _getNPSColor(serverData['one_month_nps_percentage']).withOpacity(0.9),
+                                                                        offset: const Offset(
+                                                                            1.0,
+                                                                            1.0),
+                                                                        blurRadius:
+                                                                            2.0,
+                                                                        color: _getNPSColor(serverData['one_month_nps_percentage'])
+                                                                            .withOpacity(0.9),
                                                                       ),
                                                                       Shadow(
-                                                                        offset: const Offset(-0.5, -0.5),
-                                                                        blurRadius: 1.0,
-                                                                        color: Colors.black.withOpacity(0.5),
+                                                                        offset: const Offset(
+                                                                            -0.5,
+                                                                            -0.5),
+                                                                        blurRadius:
+                                                                            1.0,
+                                                                        color: Colors
+                                                                            .black
+                                                                            .withOpacity(0.5),
                                                                       ),
                                                                     ],
                                                                   ),
-                                                                  textAlign: TextAlign.center,
+                                                                  textAlign:
+                                                                      TextAlign
+                                                                          .center,
                                                                 ),
                                                               ),
-                                                              if (_isTopPerformer(serverData['one_month_nps_percentage']))
+                                                              if (_isTopPerformer(
+                                                                  serverData[
+                                                                      'one_month_nps_percentage']))
                                                                 Positioned(
                                                                   top: 2,
                                                                   left: 2,
                                                                   child: Icon(
-                                                                    Icons.emoji_events,
+                                                                    Icons
+                                                                        .emoji_events,
                                                                     size: 14,
-                                                                    color: Colors.amber.shade400,
+                                                                    color: Colors
+                                                                        .amber
+                                                                        .shade400,
                                                                   ),
                                                                 ),
                                                             ],

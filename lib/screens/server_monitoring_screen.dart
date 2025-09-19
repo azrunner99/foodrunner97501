@@ -5,7 +5,7 @@ import '../widgets/wallpaper_background.dart';
 import '../models.dart';
 
 class ServerMonitoringScreen extends StatefulWidget {
-  ServerMonitoringScreen({super.key});
+  const ServerMonitoringScreen({super.key});
 
   @override
   State<ServerMonitoringScreen> createState() => _ServerMonitoringScreenState();
@@ -13,11 +13,11 @@ class ServerMonitoringScreen extends StatefulWidget {
 
 class _ServerMonitoringScreenState extends State<ServerMonitoringScreen> {
   String _selectedTimeFrame = 'Today';
-  
+
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
-    
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Server Monitoring'),
@@ -88,14 +88,19 @@ class _ServerMonitoringScreenState extends State<ServerMonitoringScreen> {
       ),
       child: Row(
         children: [
-          for (final timeFrame in ['Today', 'Last 3 Days', 'Last Week', 'Last Month'])
+          for (final timeFrame in [
+            'Today',
+            'Last 3 Days',
+            'Last Week',
+            'Last Month'
+          ])
             Expanded(
               child: GestureDetector(
                 onTap: () => setState(() => _selectedTimeFrame = timeFrame),
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   decoration: BoxDecoration(
-                    color: _selectedTimeFrame == timeFrame 
+                    color: _selectedTimeFrame == timeFrame
                         ? Colors.blue.shade500
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(12),
@@ -104,8 +109,8 @@ class _ServerMonitoringScreenState extends State<ServerMonitoringScreen> {
                     timeFrame,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: _selectedTimeFrame == timeFrame 
-                          ? Colors.white 
+                      color: _selectedTimeFrame == timeFrame
+                          ? Colors.white
                           : Colors.blue.shade700,
                       fontWeight: FontWeight.w600,
                       fontSize: 13,
@@ -121,7 +126,7 @@ class _ServerMonitoringScreenState extends State<ServerMonitoringScreen> {
 
   Widget _buildQuickInsights(AppState app) {
     final insights = _calculateQuickInsights(app);
-    
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -208,7 +213,8 @@ class _ServerMonitoringScreenState extends State<ServerMonitoringScreen> {
     );
   }
 
-  Widget _buildInsightCard(String label, String value, Color color, IconData icon) {
+  Widget _buildInsightCard(
+      String label, String value, Color color, IconData icon) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -272,7 +278,7 @@ class _ServerMonitoringScreenState extends State<ServerMonitoringScreen> {
     final duration = DateTime.now().difference(app.shiftStart!);
     final hours = duration.inHours;
     final minutes = duration.inMinutes % 60;
-    
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -304,7 +310,8 @@ class _ServerMonitoringScreenState extends State<ServerMonitoringScreen> {
               ),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.green.shade500,
                   borderRadius: BorderRadius.circular(20),
@@ -344,7 +351,7 @@ class _ServerMonitoringScreenState extends State<ServerMonitoringScreen> {
 
   Widget _buildServerPerformanceList(AppState app) {
     final serverStats = _calculateServerStats(app);
-    
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.9),
@@ -389,7 +396,7 @@ class _ServerMonitoringScreenState extends State<ServerMonitoringScreen> {
               ),
             )
           else
-            ...serverStats.map((stat) => _buildServerStatRow(stat)).toList(),
+            ...serverStats.map((stat) => _buildServerStatRow(stat)),
           const SizedBox(height: 12),
         ],
       ),
@@ -398,7 +405,7 @@ class _ServerMonitoringScreenState extends State<ServerMonitoringScreen> {
 
   Widget _buildServerStatRow(Map<String, dynamic> stat) {
     final status = _getServerStatus(stat['runs'] as int);
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       padding: const EdgeInsets.all(16),
@@ -471,7 +478,7 @@ class _ServerMonitoringScreenState extends State<ServerMonitoringScreen> {
 
   Widget _buildActivityPatterns(AppState app) {
     final patterns = _calculateActivityPatterns(app);
-    
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -530,7 +537,8 @@ class _ServerMonitoringScreenState extends State<ServerMonitoringScreen> {
     );
   }
 
-  Widget _buildPatternInsight(String title, String value, IconData icon, Color color) {
+  Widget _buildPatternInsight(
+      String title, String value, IconData icon, Color color) {
     return Row(
       children: [
         Container(
@@ -571,24 +579,27 @@ class _ServerMonitoringScreenState extends State<ServerMonitoringScreen> {
     final shifts = _getShiftsForTimeFrame(app);
     final serverCounts = <String, int>{};
     int totalRuns = 0;
-    
+
     for (final shift in shifts) {
       for (final entry in shift.counts.entries) {
         serverCounts[entry.key] = (serverCounts[entry.key] ?? 0) + entry.value;
         totalRuns += entry.value;
       }
     }
-    
+
     final activeServers = serverCounts.keys.length;
-    final avgRunsPerServer = activeServers > 0 ? (totalRuns / activeServers).round() : 0;
-    
+    final avgRunsPerServer =
+        activeServers > 0 ? (totalRuns / activeServers).round() : 0;
+
     String? topPerformer;
     if (serverCounts.isNotEmpty) {
-      final topEntry = serverCounts.entries.reduce((a, b) => a.value > b.value ? a : b);
-      final server = app.servers.firstWhere((s) => s.id == topEntry.key, orElse: () => Server(id: '', name: 'Unknown'));
+      final topEntry =
+          serverCounts.entries.reduce((a, b) => a.value > b.value ? a : b);
+      final server = app.servers.firstWhere((s) => s.id == topEntry.key,
+          orElse: () => Server(id: '', name: 'Unknown'));
       topPerformer = server.name;
     }
-    
+
     return {
       'activeServers': activeServers,
       'totalRuns': totalRuns,
@@ -601,7 +612,7 @@ class _ServerMonitoringScreenState extends State<ServerMonitoringScreen> {
     final shifts = _getShiftsForTimeFrame(app);
     final serverCounts = <String, int>{};
     final serverLastActivity = <String, DateTime>{};
-    
+
     for (final shift in shifts) {
       for (final entry in shift.counts.entries) {
         serverCounts[entry.key] = (serverCounts[entry.key] ?? 0) + entry.value;
@@ -610,14 +621,14 @@ class _ServerMonitoringScreenState extends State<ServerMonitoringScreen> {
         }
       }
     }
-    
+
     final stats = <Map<String, dynamic>>[];
     for (final entry in serverCounts.entries) {
       final server = app.servers.firstWhere(
-        (s) => s.id == entry.key, 
+        (s) => s.id == entry.key,
         orElse: () => Server(id: entry.key, name: 'Unknown Server'),
       );
-      
+
       stats.add({
         'id': entry.key,
         'name': server.name,
@@ -625,10 +636,10 @@ class _ServerMonitoringScreenState extends State<ServerMonitoringScreen> {
         'lastActivity': serverLastActivity[entry.key],
       });
     }
-    
+
     // Sort by runs (descending)
     stats.sort((a, b) => (b['runs'] as int).compareTo(a['runs'] as int));
-    
+
     return stats;
   }
 
@@ -636,33 +647,39 @@ class _ServerMonitoringScreenState extends State<ServerMonitoringScreen> {
     final shifts = _getShiftsForTimeFrame(app);
     final serverCounts = <String, int>{};
     final needsAttention = <String>[];
-    
+
     for (final shift in shifts) {
       for (final entry in shift.counts.entries) {
         serverCounts[entry.key] = (serverCounts[entry.key] ?? 0) + entry.value;
       }
     }
-    
+
     // Calculate patterns
     final totalRuns = serverCounts.values.fold(0, (sum, runs) => sum + runs);
-    final totalHours = shifts.isNotEmpty ? shifts.length * 4 : 1; // Estimate 4 hours per shift
-    final avgRunsPerHour = totalHours > 0 ? (totalRuns / totalHours).round() : 0;
-    
+    final totalHours =
+        shifts.isNotEmpty ? shifts.length * 4 : 1; // Estimate 4 hours per shift
+    final avgRunsPerHour =
+        totalHours > 0 ? (totalRuns / totalHours).round() : 0;
+
     String? topPerformerName;
     if (serverCounts.isNotEmpty) {
-      final topEntry = serverCounts.entries.reduce((a, b) => a.value > b.value ? a : b);
-      final server = app.servers.firstWhere((s) => s.id == topEntry.key, orElse: () => Server(id: '', name: 'Unknown'));
+      final topEntry =
+          serverCounts.entries.reduce((a, b) => a.value > b.value ? a : b);
+      final server = app.servers.firstWhere((s) => s.id == topEntry.key,
+          orElse: () => Server(id: '', name: 'Unknown'));
       topPerformerName = server.name;
     }
-    
+
     // Find servers that need attention (low activity)
     for (final entry in serverCounts.entries) {
-      if (entry.value < 3) { // Less than 3 runs needs attention
-        final server = app.servers.firstWhere((s) => s.id == entry.key, orElse: () => Server(id: '', name: 'Unknown'));
+      if (entry.value < 3) {
+        // Less than 3 runs needs attention
+        final server = app.servers.firstWhere((s) => s.id == entry.key,
+            orElse: () => Server(id: '', name: 'Unknown'));
         needsAttention.add(server.name);
       }
     }
-    
+
     return {
       'avgRunsPerHour': avgRunsPerHour,
       'topPerformerName': topPerformerName,
@@ -673,14 +690,15 @@ class _ServerMonitoringScreenState extends State<ServerMonitoringScreen> {
   List<ShiftRecord> _getShiftsForTimeFrame(AppState app) {
     final now = DateTime.now();
     final shifts = app.history;
-    
+
     switch (_selectedTimeFrame) {
       case 'Today':
-        return shifts.where((s) => 
-          s.start.year == now.year && 
-          s.start.month == now.month && 
-          s.start.day == now.day
-        ).toList();
+        return shifts
+            .where((s) =>
+                s.start.year == now.year &&
+                s.start.month == now.month &&
+                s.start.day == now.day)
+            .toList();
       case 'Last 3 Days':
         final threeDaysAgo = now.subtract(const Duration(days: 3));
         return shifts.where((s) => s.start.isAfter(threeDaysAgo)).toList();
@@ -715,10 +733,10 @@ class _ServerMonitoringScreenState extends State<ServerMonitoringScreen> {
 
   String _formatLastActivity(DateTime? time) {
     if (time == null) return 'Never';
-    
+
     final now = DateTime.now();
     final diff = now.difference(time);
-    
+
     if (diff.inMinutes < 60) {
       return '${diff.inMinutes}m ago';
     } else if (diff.inHours < 24) {

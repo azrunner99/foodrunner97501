@@ -17,7 +17,8 @@ class ServerPerformanceScreen extends StatefulWidget {
   const ServerPerformanceScreen({super.key});
 
   @override
-  State<ServerPerformanceScreen> createState() => _ServerPerformanceScreenState();
+  State<ServerPerformanceScreen> createState() =>
+      _ServerPerformanceScreenState();
 }
 
 class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
@@ -26,7 +27,7 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
   List<ServerPerformanceData> _performanceData = [];
   MonthlyBusinessData? _currentBusinessData;
   bool _showDataEntryPrompt = false;
-  
+
   // Advanced analytics data
   Map<String, PerformanceTrendAnalysis> _trendAnalyses = {};
   TeamAnalytics? _teamAnalytics;
@@ -49,23 +50,24 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
 
   Future<void> _loadPerformanceData() async {
     setState(() => _isLoading = true);
-    
+
     try {
       final app = context.read<AppState>();
       final npsProvider = context.read<NPSProvider>();
       final endDate = DateTime.now();
       final startDate = _getStartDateForTimeframe(endDate, _selectedTimeframe);
-      
+
       // Get shifts for the selected period
       final shifts = app.history.where((shift) {
-        return shift.start.isAfter(startDate.subtract(const Duration(days: 1))) &&
-               shift.start.isBefore(endDate.add(const Duration(days: 1)));
+        return shift.start
+                .isAfter(startDate.subtract(const Duration(days: 1))) &&
+            shift.start.isBefore(endDate.add(const Duration(days: 1)));
       }).toList();
 
       // Get business data for the current month
       final monthKey = Storage.generateMonthKey(DateTime.now());
       final businessDataMap = await Storage.getMonthlyBusinessData(monthKey);
-      _currentBusinessData = businessDataMap != null 
+      _currentBusinessData = businessDataMap != null
           ? MonthlyBusinessData.fromMap(businessDataMap)
           : null;
 
@@ -74,18 +76,19 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
       final trendAnalyses = <String, PerformanceTrendAnalysis>{};
       final peerAnalyses = <String, PeerAnalysis>{};
       final seasonalAnalyses = <String, SeasonalAnalysis>{};
-      
+
       // Load NPS history for performance calculations with NPSProvider
       final npsHistory = await PerformanceCalculator.loadNPSHistory(
         startDate: startDate,
         endDate: endDate,
         npsProvider: npsProvider,
       );
-      
+
       for (final server in app.servers) {
         // Use actual hire date or default to 6 months ago for servers without hire date
-        final hireDate = server.hireDate ?? DateTime.now().subtract(const Duration(days: 180));
-        
+        final hireDate = server.hireDate ??
+            DateTime.now().subtract(const Duration(days: 180));
+
         final performance = PerformanceCalculator.calculateServerPerformance(
           serverId: server.id,
           startDate: startDate,
@@ -96,9 +99,9 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
           npsHistory: npsHistory,
           totalServerCount: app.servers.length,
         );
-        
+
         performanceDataList.add(performance);
-        
+
         // Generate trend analysis
         final trendAnalysis = TrendAnalyzer.analyzePerformanceTrends(
           serverId: server.id,
@@ -106,7 +109,7 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
           analysisWindowDays: _getAnalysisWindowDays(_selectedTimeframe),
         );
         trendAnalyses[server.id] = trendAnalysis;
-        
+
         // Generate seasonal analysis
         final seasonalAnalysis = TrendAnalyzer.analyzeSeasonalPatterns(
           serverId: server.id,
@@ -116,52 +119,87 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
         seasonalAnalyses[server.id] = seasonalAnalysis;
       }
 
-      // Generate team analytics
+      // Sort by performance score (highest first) and keep a copy for consistent analytics
+      final sortedByScore =
+          List<ServerPerformanceData>.from(performanceDataList)
+            ..sort((a, b) => b.performanceScore.compareTo(a.performanceScore));
+
+      // Generate team analytics using sorted data for top/bottom performers
       TeamAnalytics? teamAnalytics;
-      if (performanceDataList.isNotEmpty) {
-        final scores = performanceDataList.map((p) => p.performanceScore).toList();
+      if (sortedByScore.isNotEmpty) {
+        final scores = sortedByScore.map((p) => p.performanceScore).toList();
         final meanScore = scores.reduce((a, b) => a + b) / scores.length;
-        final variance = scores.map((s) => (s - meanScore) * (s - meanScore)).reduce((a, b) => a + b) / scores.length;
+        final variance = scores
+                .map((s) => (s - meanScore) * (s - meanScore))
+                .reduce((a, b) => a + b) /
+            scores.length;
         final standardDeviation = math.sqrt(variance);
-        
+
         teamAnalytics = TeamAnalytics(
-          totalServers: performanceDataList.length,
+          totalServers: sortedByScore.length,
           averageScore: meanScore,
           standardDeviation: standardDeviation,
           highestScore: scores.reduce((a, b) => a > b ? a : b),
           lowestScore: scores.reduce((a, b) => a < b ? a : b),
           distribution: PerformanceDistribution(
-            elite: performanceDataList.where((p) => p.rating == PerformanceRating.elite).length,
-            strong: performanceDataList.where((p) => p.rating == PerformanceRating.strong).length,
-            developing: performanceDataList.where((p) => p.rating == PerformanceRating.developing).length,
-            needsAttention: performanceDataList.where((p) => p.rating == PerformanceRating.needsAttention).length,
-            critical: performanceDataList.where((p) => p.rating == PerformanceRating.critical).length,
+            elite: sortedByScore
+                .where((p) => p.rating == PerformanceRating.elite)
+                .length,
+            strong: sortedByScore
+                .where((p) => p.rating == PerformanceRating.strong)
+                .length,
+            developing: sortedByScore
+                .where((p) => p.rating == PerformanceRating.developing)
+                .length,
+            needsAttention: sortedByScore
+                .where((p) => p.rating == PerformanceRating.needsAttention)
+                .length,
+            critical: sortedByScore
+                .where((p) => p.rating == PerformanceRating.critical)
+                .length,
           ),
-          topPerformers: performanceDataList.take(3).toList(),
-          bottomPerformers: performanceDataList.skip(performanceDataList.length > 3 ? performanceDataList.length - 3 : 0).toList(),
-          teamTrends: TeamTrends(improving: 0, stable: performanceDataList.length, declining: 0),
+          topPerformers: sortedByScore.take(3).toList(),
+          bottomPerformers: sortedByScore
+              .skip(sortedByScore.length > 3 ? sortedByScore.length - 3 : 0)
+              .toList(),
+          teamTrends: TeamTrends(
+              improving: 0, stable: sortedByScore.length, declining: 0),
           riskAssessment: RiskAssessment(
             overallRiskLevel: 'Low',
-            highRiskServers: performanceDataList.where((p) => p.rating == PerformanceRating.critical).length,
-            mediumRiskServers: performanceDataList.where((p) => p.rating == PerformanceRating.needsAttention).length,
-            lowRiskServers: performanceDataList.where((p) => p.rating != PerformanceRating.critical && p.rating != PerformanceRating.needsAttention).length,
+            highRiskServers: sortedByScore
+                .where((p) => p.rating == PerformanceRating.critical)
+                .length,
+            mediumRiskServers: sortedByScore
+                .where((p) => p.rating == PerformanceRating.needsAttention)
+                .length,
+            lowRiskServers: sortedByScore
+                .where((p) =>
+                    p.rating != PerformanceRating.critical &&
+                    p.rating != PerformanceRating.needsAttention)
+                .length,
           ),
         );
       }
 
-      // Generate peer analyses
+      // Generate peer analyses using sorted rankings
       for (final server in app.servers) {
-        final serverPerformance = performanceDataList.firstWhere(
+        final serverPerformance = sortedByScore.firstWhere(
           (p) => p.serverId == server.id,
-          orElse: () => performanceDataList.first,
+          orElse: () => sortedByScore.first,
         );
-        
+        final rankIndex =
+            sortedByScore.indexWhere((p) => p.serverId == server.id);
+        final ranking = rankIndex >= 0 ? rankIndex + 1 : sortedByScore.length;
+        final percentile = rankIndex >= 0
+            ? ((sortedByScore.length - rankIndex) / sortedByScore.length) * 100
+            : 0.0;
+
         final peerAnalysis = PeerAnalysis(
           serverPerformance: serverPerformance,
           tenureBracket: 'regular', // Simplified
-          totalPeers: performanceDataList.length,
-          peerRanking: performanceDataList.indexWhere((p) => p.serverId == server.id) + 1,
-          peerPercentile: ((performanceDataList.length - performanceDataList.indexWhere((p) => p.serverId == server.id)) / performanceDataList.length) * 100,
+          totalPeers: sortedByScore.length,
+          peerRanking: ranking,
+          peerPercentile: percentile,
           averageScore: teamAnalytics?.averageScore ?? 0.0,
           topPerformerScore: teamAnalytics?.highestScore ?? 0.0,
           bottomPerformerScore: teamAnalytics?.lowestScore ?? 0.0,
@@ -171,11 +209,8 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
         peerAnalyses[server.id] = peerAnalysis;
       }
 
-      // Sort by performance score (highest first)
-      performanceDataList.sort((a, b) => b.performanceScore.compareTo(a.performanceScore));
-
       setState(() {
-        _performanceData = performanceDataList;
+        _performanceData = sortedByScore;
         _trendAnalyses = trendAnalyses;
         _teamAnalytics = teamAnalytics;
         _peerAnalyses = peerAnalyses;
@@ -324,7 +359,8 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
                     color: Colors.orange.shade700,
                   ),
                 ),
-                const Text('Guest counts and sales data needed for accurate performance analysis'),
+                const Text(
+                    'Guest counts and sales data needed for accurate performance analysis'),
               ],
             ),
           ),
@@ -346,7 +382,8 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          const Text('Timeframe: ', style: TextStyle(fontWeight: FontWeight.w600)),
+          const Text('Timeframe: ',
+              style: TextStyle(fontWeight: FontWeight.w600)),
           Expanded(
             child: DropdownButton<String>(
               value: _selectedTimeframe,
@@ -381,7 +418,7 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
     if (_performanceData.isEmpty) {
       return _buildEmptyState();
     }
-    
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -400,23 +437,25 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
                   ..._performanceData.take(3).map((performance) {
                     final trendAnalysis = _trendAnalyses[performance.serverId];
                     if (trendAnalysis == null) return const SizedBox();
-                    
+
                     final server = context.read<AppState>().servers.firstWhere(
-                      (s) => s.id == performance.serverId,
-                      orElse: () => Server(id: performance.serverId, name: 'Unknown'),
-                    );
-                    
+                          (s) => s.id == performance.serverId,
+                          orElse: () =>
+                              Server(id: performance.serverId, name: 'Unknown'),
+                        );
+
                     return Column(
                       children: [
                         ListTile(
                           title: Text(server.name),
-                          subtitle: Text('${trendAnalysis.trendDirection.name.toUpperCase()} trend'),
+                          subtitle: Text(
+                              '${trendAnalysis.trendDirection.name.toUpperCase()} trend'),
                           trailing: Text(
                             '${(trendAnalysis.confidence * 100).toStringAsFixed(0)}% confidence',
                             style: TextStyle(color: Colors.grey[600]),
                           ),
                         ),
-                        Container(
+                        SizedBox(
                           height: 200,
                           child: PerformanceChartWidgets.performanceTrendChart(
                             trendAnalysis: trendAnalysis,
@@ -450,16 +489,16 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
                   const SizedBox(height: 16),
                   ..._seasonalAnalyses.entries.take(2).map((entry) {
                     final server = context.read<AppState>().servers.firstWhere(
-                      (s) => s.id == entry.key,
-                      orElse: () => Server(id: entry.key, name: 'Unknown'),
-                    );
-                    
+                          (s) => s.id == entry.key,
+                          orElse: () => Server(id: entry.key, name: 'Unknown'),
+                        );
+
                     return Column(
                       children: [
                         ListTile(
                           title: Text('${server.name} - Weekly Pattern'),
                         ),
-                        Container(
+                        SizedBox(
                           height: 200,
                           child: PerformanceChartWidgets.weeklyPatternChart(
                             dayOfWeekPatterns: entry.value.dayOfWeekPatterns,
@@ -483,7 +522,7 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
     if (_teamAnalytics == null) {
       return _buildEmptyState();
     }
-    
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -535,7 +574,8 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
                         'Risk Level',
                         _teamAnalytics!.riskAssessment.overallRiskLevel,
                         Icons.warning,
-                        _getRiskColor(_teamAnalytics!.riskAssessment.overallRiskLevel),
+                        _getRiskColor(
+                            _teamAnalytics!.riskAssessment.overallRiskLevel),
                       ),
                     ),
                   ],
@@ -544,9 +584,9 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
             ),
           ),
         ),
-        
+
         const SizedBox(height: 16),
-        
+
         // Performance Distribution
         Card(
           child: Padding(
@@ -559,15 +599,20 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 16),
-                Container(
+                SizedBox(
                   height: 200,
                   child: PerformanceChartWidgets.performanceDistributionChart(
                     distribution: {
-                      PerformanceRating.elite: _teamAnalytics!.distribution.elite,
-                      PerformanceRating.strong: _teamAnalytics!.distribution.strong,
-                      PerformanceRating.developing: _teamAnalytics!.distribution.developing,
-                      PerformanceRating.needsAttention: _teamAnalytics!.distribution.needsAttention,
-                      PerformanceRating.critical: _teamAnalytics!.distribution.critical,
+                      PerformanceRating.elite:
+                          _teamAnalytics!.distribution.elite,
+                      PerformanceRating.strong:
+                          _teamAnalytics!.distribution.strong,
+                      PerformanceRating.developing:
+                          _teamAnalytics!.distribution.developing,
+                      PerformanceRating.needsAttention:
+                          _teamAnalytics!.distribution.needsAttention,
+                      PerformanceRating.critical:
+                          _teamAnalytics!.distribution.critical,
                     },
                     context: context,
                   ),
@@ -576,9 +621,9 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
             ),
           ),
         ),
-        
+
         const SizedBox(height: 16),
-        
+
         // Peer Comparisons
         if (_peerAnalyses.isNotEmpty)
           Card(
@@ -594,14 +639,15 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
                   const SizedBox(height: 16),
                   ..._peerAnalyses.entries.take(5).map((entry) {
                     final server = context.read<AppState>().servers.firstWhere(
-                      (s) => s.id == entry.key,
-                      orElse: () => Server(id: entry.key, name: 'Unknown'),
-                    );
+                          (s) => s.id == entry.key,
+                          orElse: () => Server(id: entry.key, name: 'Unknown'),
+                        );
                     final peerAnalysis = entry.value;
-                    
+
                     return ListTile(
                       title: Text(server.name),
-                      subtitle: Text('Rank ${peerAnalysis.peerRanking} of ${peerAnalysis.totalPeers}'),
+                      subtitle: Text(
+                          'Rank ${peerAnalysis.peerRanking} of ${peerAnalysis.totalPeers}'),
                       trailing: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -611,7 +657,8 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
                           ),
                           Text(
                             'percentile',
-                            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.grey[600]),
                           ),
                         ],
                       ),
@@ -629,7 +676,7 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
     if (_performanceData.isEmpty) {
       return _buildEmptyState();
     }
-    
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -645,23 +692,30 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 16),
-                Container(
+                SizedBox(
                   height: 300,
                   child: PerformanceChartWidgets.performanceComparisonChart(
                     performanceData: Map.fromEntries(
                       _performanceData.map((p) {
-                        final server = context.read<AppState>().servers.firstWhere(
-                          (s) => s.id == p.serverId,
-                          orElse: () => Server(id: p.serverId, name: 'Unknown'),
-                        );
+                        final server =
+                            context.read<AppState>().servers.firstWhere(
+                                  (s) => s.id == p.serverId,
+                                  orElse: () =>
+                                      Server(id: p.serverId, name: 'Unknown'),
+                                );
                         return MapEntry(server.name, p.performanceScore);
                       }),
                     ),
-                    currentServerId: _performanceData.isNotEmpty ? 
-                      context.read<AppState>().servers.firstWhere(
-                        (s) => s.id == _performanceData.first.serverId,
-                        orElse: () => Server(id: '', name: ''),
-                      ).name : '',
+                    currentServerId: _performanceData.isNotEmpty
+                        ? context
+                            .read<AppState>()
+                            .servers
+                            .firstWhere(
+                              (s) => s.id == _performanceData.first.serverId,
+                              orElse: () => Server(id: '', name: ''),
+                            )
+                            .name
+                        : '',
                     context: context,
                   ),
                 ),
@@ -669,9 +723,9 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
             ),
           ),
         ),
-        
+
         const SizedBox(height: 16),
-        
+
         // Performance Velocity Indicators
         if (_trendAnalyses.isNotEmpty) ...[
           Card(
@@ -687,25 +741,28 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
                   const SizedBox(height: 16),
                   ..._trendAnalyses.entries.take(3).map((entry) {
                     final server = context.read<AppState>().servers.firstWhere(
-                      (s) => s.id == entry.key,
-                      orElse: () => Server(id: entry.key, name: 'Unknown'),
-                    );
-                    
+                          (s) => s.id == entry.key,
+                          orElse: () => Server(id: entry.key, name: 'Unknown'),
+                        );
+
                     // Calculate velocity from trend data
                     final velocity = TrendAnalyzer.calculatePerformanceVelocity(
-                      entry.value.dailyTrends.map((d) => PerformanceTrend(
-                        date: d.date,
-                        score: d.score,
-                        foodRuns: d.totalRuns,
-                        shifts: d.shiftsWorked,
-                      )).toList(),
+                      entry.value.dailyTrends
+                          .map((d) => PerformanceTrend(
+                                date: d.date,
+                                score: d.score,
+                                foodRuns: d.totalRuns,
+                                shifts: d.shiftsWorked,
+                              ))
+                          .toList(),
                     );
-                    
+
                     return Column(
                       children: [
                         ListTile(
                           title: Text(server.name),
-                          subtitle: Text('Velocity Category: ${velocity.category.name}'),
+                          subtitle: Text(
+                              'Velocity Category: ${velocity.category.name}'),
                         ),
                         PerformanceChartWidgets.performanceVelocityIndicator(
                           velocity: velocity,
@@ -720,14 +777,14 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
             ),
           ),
         ],
-        
+
         const SizedBox(height: 16),
-        
+
         // Performance Insights
         if (_trendAnalyses.isNotEmpty) ...[
           ..._trendAnalyses.entries.take(2).map((entry) {
             final seasonalAnalysis = _seasonalAnalyses[entry.key];
-            
+
             return Column(
               children: [
                 PerformanceInsightsWidget(
@@ -743,7 +800,8 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
     );
   }
 
-  Widget _buildAnalyticsMetric(String label, String value, IconData icon, Color color) {
+  Widget _buildAnalyticsMetric(
+      String label, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(12),
       margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -832,18 +890,20 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
       itemBuilder: (context, index) {
         final performance = _performanceData[index];
         final server = context.read<AppState>().servers.firstWhere(
-          (s) => s.id == performance.serverId,
-          orElse: () => Server(id: performance.serverId, name: 'Unknown Server'),
-        );
-        
+              (s) => s.id == performance.serverId,
+              orElse: () =>
+                  Server(id: performance.serverId, name: 'Unknown Server'),
+            );
+
         return _buildPerformanceCard(server, performance, index + 1);
       },
     );
   }
 
-  Widget _buildPerformanceCard(Server server, ServerPerformanceData performance, int rank) {
+  Widget _buildPerformanceCard(
+      Server server, ServerPerformanceData performance, int rank) {
     final rankColor = _getRankColor(rank);
-    
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 4,
@@ -923,19 +983,29 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  _buildMetricChip('Runs', '${performance.totalFoodRuns}', Icons.local_dining),
-                  const SizedBox(width: 8),
-                  _buildMetricChip('Shifts', '${performance.shiftsWorked}', Icons.schedule),
+                  _buildMetricChip('Runs', '${performance.totalFoodRuns}',
+                      Icons.local_dining),
                   const SizedBox(width: 8),
                   _buildMetricChip(
-                    'Avg/Shift', 
-                    performance.shiftsWorked > 0 
-                        ? (performance.totalFoodRuns / performance.shiftsWorked).toStringAsFixed(1)
-                        : '0.0', 
+                      'Shifts', '${performance.shiftsWorked}', Icons.schedule),
+                  const SizedBox(width: 8),
+                  _buildMetricChip(
+                    'Avg/Shift',
+                    performance.shiftsWorked > 0
+                        ? (performance.totalFoodRuns / performance.shiftsWorked)
+                            .toStringAsFixed(1)
+                        : '—',
                     Icons.trending_up,
                   ),
                 ],
               ),
+              if (performance.shiftsWorked == 0) ...[
+                const SizedBox(height: 6),
+                Text(
+                  'No shifts in selected timeframe',
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                ),
+              ],
               if (performance.flags.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Wrap(
@@ -1000,7 +1070,8 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
     return Colors.red.shade900;
   }
 
-  void _showPerformanceDetails(Server server, ServerPerformanceData performance) {
+  void _showPerformanceDetails(
+      Server server, ServerPerformanceData performance) {
     // Navigate to the dedicated Server Performance Profile Screen
     Navigator.push(
       context,

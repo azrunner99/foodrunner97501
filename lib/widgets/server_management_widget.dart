@@ -6,9 +6,9 @@ import '../providers/nps_provider.dart';
 /// Dialog for adding or editing a server
 class ServerManagementDialog extends StatefulWidget {
   final NPSServer? server; // null for adding, non-null for editing
-  
+
   const ServerManagementDialog({super.key, this.server});
-  
+
   @override
   State<ServerManagementDialog> createState() => _ServerManagementDialogState();
 }
@@ -17,11 +17,11 @@ class _ServerManagementDialogState extends State<ServerManagementDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _hireDateController = TextEditingController();
-  
+
   bool _isActive = true;
   DateTime? _selectedHireDate;
   bool _isLoading = false;
-  
+
   @override
   void initState() {
     super.initState();
@@ -33,18 +33,18 @@ class _ServerManagementDialogState extends State<ServerManagementDialog> {
       _isActive = widget.server!.active;
     }
   }
-  
+
   @override
   void dispose() {
     _nameController.dispose();
     _hireDateController.dispose();
     super.dispose();
   }
-  
+
   String _formatDate(DateTime date) {
     return '${date.month}/${date.day}/${date.year}';
   }
-  
+
   Future<void> _selectHireDate() async {
     final selectedDate = await showDatePicker(
       context: context,
@@ -53,7 +53,7 @@ class _ServerManagementDialogState extends State<ServerManagementDialog> {
       lastDate: DateTime.now(),
       helpText: 'Select hire date',
     );
-    
+
     if (selectedDate != null) {
       setState(() {
         _selectedHireDate = selectedDate;
@@ -61,19 +61,19 @@ class _ServerManagementDialogState extends State<ServerManagementDialog> {
       });
     }
   }
-  
+
   Future<void> _saveServer() async {
     if (!_formKey.currentState!.validate() || _selectedHireDate == null) {
       return;
     }
-    
+
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       final npsProvider = Provider.of<NPSProvider>(context, listen: false);
-      
+
       if (widget.server == null) {
         // Adding new server
         final newServer = NPSServer(
@@ -81,7 +81,7 @@ class _ServerManagementDialogState extends State<ServerManagementDialog> {
           hireDate: _selectedHireDate!,
           active: _isActive,
         );
-        
+
         final success = await npsProvider.addServer(newServer);
         if (success) {
           if (mounted) {
@@ -97,7 +97,8 @@ class _ServerManagementDialogState extends State<ServerManagementDialog> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(npsProvider.errorMessage ?? 'Failed to add server'),
+                content:
+                    Text(npsProvider.errorMessage ?? 'Failed to add server'),
                 backgroundColor: Colors.red,
               ),
             );
@@ -111,7 +112,7 @@ class _ServerManagementDialogState extends State<ServerManagementDialog> {
           active: _isActive,
           updatedAt: DateTime.now(),
         );
-        
+
         final success = await npsProvider.updateServer(updatedServer);
         if (success) {
           if (mounted) {
@@ -127,7 +128,8 @@ class _ServerManagementDialogState extends State<ServerManagementDialog> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(npsProvider.errorMessage ?? 'Failed to update server'),
+                content:
+                    Text(npsProvider.errorMessage ?? 'Failed to update server'),
                 backgroundColor: Colors.red,
               ),
             );
@@ -142,11 +144,11 @@ class _ServerManagementDialogState extends State<ServerManagementDialog> {
       }
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.server != null;
-    
+
     return AlertDialog(
       title: Text(isEditing ? 'Edit Server' : 'Add New Server'),
       content: Form(
@@ -226,9 +228,11 @@ class _ServerManagementDialogState extends State<ServerManagementDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: _isLoading ? null : () {
-            Navigator.of(context).pop(false);
-          },
+          onPressed: _isLoading
+              ? null
+              : () {
+                  Navigator.of(context).pop(false);
+                },
           child: const Text('Cancel'),
         ),
         ElevatedButton(
@@ -249,7 +253,7 @@ class _ServerManagementDialogState extends State<ServerManagementDialog> {
 /// Widget for managing servers in the admin interface
 class ServerManagementWidget extends StatelessWidget {
   const ServerManagementWidget({super.key});
-  
+
   @override
   Widget build(BuildContext context) {
     return Consumer<NPSProvider>(
@@ -259,7 +263,7 @@ class ServerManagementWidget extends StatelessWidget {
             child: CircularProgressIndicator(),
           );
         }
-        
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -360,9 +364,9 @@ class ServerManagementWidget extends StatelessWidget {
 /// List tile widget for displaying server information
 class ServerListTile extends StatelessWidget {
   final NPSServer server;
-  
+
   const ServerListTile({super.key, required this.server});
-  
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -400,8 +404,9 @@ class ServerListTile extends StatelessWidget {
         ),
         trailing: PopupMenuButton<String>(
           onSelected: (value) async {
-            final npsProvider = Provider.of<NPSProvider>(context, listen: false);
-            
+            final npsProvider =
+                Provider.of<NPSProvider>(context, listen: false);
+
             switch (value) {
               case 'edit':
                 final result = await showDialog<bool>(
@@ -473,11 +478,11 @@ class ServerListTile extends StatelessWidget {
       ),
     );
   }
-  
+
   String _formatDate(DateTime date) {
     return '${date.month}/${date.day}/${date.year}';
   }
-  
+
   Future<bool?> _showArchiveConfirmation(BuildContext context) {
     return showDialog<bool>(
       context: context,
@@ -502,7 +507,7 @@ class ServerListTile extends StatelessWidget {
       ),
     );
   }
-  
+
   Future<bool?> _showDeleteConfirmation(BuildContext context) {
     return showDialog<bool>(
       context: context,

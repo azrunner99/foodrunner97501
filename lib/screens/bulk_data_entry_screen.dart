@@ -24,14 +24,14 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
   final _formKey = GlobalKey<FormState>();
   final _guestCountController = TextEditingController();
   final _salesController = TextEditingController();
-  
+
   // Server-specific data controllers
   final Map<String, TextEditingController> _serverGuestControllers = {};
   final Map<String, TextEditingController> _serverSalesControllers = {};
   final Map<String, TextEditingController> _npsAllTimeControllers = {};
   final Map<String, TextEditingController> _npsThreeMonthControllers = {};
   final Map<String, TextEditingController> _npsOneMonthControllers = {};
-  
+
   int _selectedTabIndex = 0;
   DateTime _selectedStartDate = DateTime.now();
   DateTime _selectedEndDate = DateTime.now();
@@ -60,17 +60,19 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
   void _initializeControllers() {
     final appState = context.read<AppState>();
     final servers = appState.servers;
-    
+
     // Initialize with existing data if available
     if (widget.existingBusinessData != null) {
-      _guestCountController.text = widget.existingBusinessData!.totalGuestCount.toStringAsFixed(0);
-      _salesController.text = widget.existingBusinessData!.totalSales.toStringAsFixed(2);
+      _guestCountController.text =
+          widget.existingBusinessData!.totalGuestCount.toStringAsFixed(0);
+      _salesController.text =
+          widget.existingBusinessData!.totalSales.toStringAsFixed(2);
     }
-    
+
     // Add listeners to track changes
     _guestCountController.addListener(_onDataChanged);
     _salesController.addListener(_onDataChanged);
-    
+
     // Initialize server-specific controllers
     for (final server in servers) {
       _serverGuestControllers[server.id] = TextEditingController();
@@ -78,24 +80,28 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
       _npsAllTimeControllers[server.id] = TextEditingController();
       _npsThreeMonthControllers[server.id] = TextEditingController();
       _npsOneMonthControllers[server.id] = TextEditingController();
-      
+
       // Add listeners to server controllers
       _serverGuestControllers[server.id]!.addListener(_onDataChanged);
       _serverSalesControllers[server.id]!.addListener(_onDataChanged);
       _npsAllTimeControllers[server.id]!.addListener(_onDataChanged);
       _npsThreeMonthControllers[server.id]!.addListener(_onDataChanged);
       _npsOneMonthControllers[server.id]!.addListener(_onDataChanged);
-      
+
       // Load existing server-specific data if available
       if (widget.existingBusinessData != null) {
-        final existingGuests = widget.existingBusinessData!.serverSpecificGuests[server.id];
-        final existingSales = widget.existingBusinessData!.serverSpecificSales[server.id];
-        
+        final existingGuests =
+            widget.existingBusinessData!.serverSpecificGuests[server.id];
+        final existingSales =
+            widget.existingBusinessData!.serverSpecificSales[server.id];
+
         if (existingGuests != null) {
-          _serverGuestControllers[server.id]!.text = existingGuests.toStringAsFixed(0);
+          _serverGuestControllers[server.id]!.text =
+              existingGuests.toStringAsFixed(0);
         }
         if (existingSales != null) {
-          _serverSalesControllers[server.id]!.text = existingSales.toStringAsFixed(2);
+          _serverSalesControllers[server.id]!.text =
+              existingSales.toStringAsFixed(2);
         }
       }
     }
@@ -130,7 +136,7 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
   @override
   Widget build(BuildContext context) {
     final servers = context.watch<AppState>().servers;
-    
+
     return WillPopScope(
       onWillPop: _onWillPop,
       child: Scaffold(
@@ -167,7 +173,7 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
         ),
         floatingActionButton: _isLoading
             ? null
-            : Container(
+            : SizedBox(
                 width: 180,
                 height: 56,
                 child: FloatingActionButton.extended(
@@ -187,234 +193,26 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
               ),
         floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
         body: WallpaperBackground(
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.black.withOpacity(0.1),
-                Colors.black.withOpacity(0.3),
-              ],
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withOpacity(0.1),
+                  Colors.black.withOpacity(0.3),
+                ],
+              ),
             ),
-          ),
-          child: Column(
-            children: [
-              // Date Range Selection
-              Container(
-                margin: const EdgeInsets.all(16),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.9),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.calendar_month, color: Colors.blue),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Data Entry Period',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey.shade700,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: InkWell(
-                                  onTap: _selectStartDate,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                                    decoration: BoxDecoration(
-                                      border: Border.all(color: Colors.grey.shade400),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(_formatDate(_selectedStartDate)),
-                                  ),
-                                ),
-                              ),
-                              const Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 8),
-                                child: Text('to'),
-                              ),
-                              Expanded(
-                                child: InkWell(
-                                  onTap: _selectEndDate,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                                    decoration: BoxDecoration(
-                                      border: Border.all(color: Colors.grey.shade400),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(_formatDate(_selectedEndDate)),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              
-              // Existing Data Warning
-              if (_existingDataWarnings.isNotEmpty)
+            child: Column(
+              children: [
+                // Date Range Selection
                 Container(
-                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.orange.shade300),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.warning, color: Colors.orange.shade700),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Existing Data Found',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.orange.shade700,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              _existingDataWarnings.join(', '),
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.orange.shade600,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Saving will prompt you to overwrite existing data.',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              
-              // Tab Selector
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.9),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: InkWell(
-                        onTap: () => setState(() => _selectedTabIndex = 0),
-                        borderRadius: const BorderRadius.only(topLeft: Radius.circular(12)),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          decoration: BoxDecoration(
-                            border: Border(
-                              bottom: BorderSide(
-                                color: _selectedTabIndex == 0 ? Colors.blue : Colors.transparent,
-                                width: 3,
-                              ),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.restaurant,
-                                color: _selectedTabIndex == 0 ? Colors.blue : Colors.grey,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Restaurant Totals',
-                                style: TextStyle(
-                                  color: _selectedTabIndex == 0 ? Colors.blue : Colors.grey,
-                                  fontWeight: _selectedTabIndex == 0 ? FontWeight.bold : FontWeight.normal,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: InkWell(
-                        onTap: () => setState(() => _selectedTabIndex = 1),
-                        borderRadius: const BorderRadius.only(topRight: Radius.circular(12)),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          decoration: BoxDecoration(
-                            border: Border(
-                              bottom: BorderSide(
-                                color: _selectedTabIndex == 1 ? Colors.blue : Colors.transparent,
-                                width: 3,
-                              ),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.people,
-                                color: _selectedTabIndex == 1 ? Colors.blue : Colors.grey,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Individual Servers',
-                                style: TextStyle(
-                                  color: _selectedTabIndex == 1 ? Colors.blue : Colors.grey,
-                                  fontWeight: _selectedTabIndex == 1 ? FontWeight.bold : FontWeight.normal,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              
-              // Tab Content
-              Expanded(
-                child: Container(
-                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  margin: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.9),
-                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.1),
@@ -423,14 +221,248 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
                       ),
                     ],
                   ),
-                  child: _selectedTabIndex == 0
-                      ? _buildRestaurantTotalsTab()
-                      : _buildIndividualServersTab(servers),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.calendar_month, color: Colors.blue),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Data Entry Period',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: InkWell(
+                                    onTap: _selectStartDate,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 8, horizontal: 12),
+                                      decoration: BoxDecoration(
+                                        border: Border.all(
+                                            color: Colors.grey.shade400),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child:
+                                          Text(_formatDate(_selectedStartDate)),
+                                    ),
+                                  ),
+                                ),
+                                const Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 8),
+                                  child: Text('to'),
+                                ),
+                                Expanded(
+                                  child: InkWell(
+                                    onTap: _selectEndDate,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 8, horizontal: 12),
+                                      decoration: BoxDecoration(
+                                        border: Border.all(
+                                            color: Colors.grey.shade400),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child:
+                                          Text(_formatDate(_selectedEndDate)),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+
+                // Existing Data Warning
+                if (_existingDataWarnings.isNotEmpty)
+                  Container(
+                    margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.orange.shade300),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.warning, color: Colors.orange.shade700),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Existing Data Found',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.orange.shade700,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _existingDataWarnings.join(', '),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.orange.shade600,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Saving will prompt you to overwrite existing data.',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                // Tab Selector
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.9),
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(12)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => setState(() => _selectedTabIndex = 0),
+                          borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(12)),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            decoration: BoxDecoration(
+                              border: Border(
+                                bottom: BorderSide(
+                                  color: _selectedTabIndex == 0
+                                      ? Colors.blue
+                                      : Colors.transparent,
+                                  width: 3,
+                                ),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.restaurant,
+                                  color: _selectedTabIndex == 0
+                                      ? Colors.blue
+                                      : Colors.grey,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Restaurant Totals',
+                                  style: TextStyle(
+                                    color: _selectedTabIndex == 0
+                                        ? Colors.blue
+                                        : Colors.grey,
+                                    fontWeight: _selectedTabIndex == 0
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => setState(() => _selectedTabIndex = 1),
+                          borderRadius: const BorderRadius.only(
+                              topRight: Radius.circular(12)),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            decoration: BoxDecoration(
+                              border: Border(
+                                bottom: BorderSide(
+                                  color: _selectedTabIndex == 1
+                                      ? Colors.blue
+                                      : Colors.transparent,
+                                  width: 3,
+                                ),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.people,
+                                  color: _selectedTabIndex == 1
+                                      ? Colors.blue
+                                      : Colors.grey,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Individual Servers',
+                                  style: TextStyle(
+                                    color: _selectedTabIndex == 1
+                                        ? Colors.blue
+                                        : Colors.grey,
+                                    fontWeight: _selectedTabIndex == 1
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Tab Content
+                Expanded(
+                  child: Container(
+                    margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.9),
+                      borderRadius: const BorderRadius.vertical(
+                          bottom: Radius.circular(12)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: _selectedTabIndex == 0
+                        ? _buildRestaurantTotalsTab()
+                        : _buildIndividualServersTab(servers),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
         ),
       ),
     );
@@ -445,7 +477,8 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Save entered data?'),
-        content: const Text('You have unsaved changes. Do you want to save your data before leaving?'),
+        content: const Text(
+            'You have unsaved changes. Do you want to save your data before leaving?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false), // Don't save
@@ -508,19 +541,19 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
             Text(
               'Restaurant-Wide Metrics',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Colors.green.shade700,
-              ),
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green.shade700,
+                  ),
             ),
             const SizedBox(height: 8),
             Text(
               'Enter overall restaurant performance data for the selected period',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey.shade600,
-              ),
+                    color: Colors.grey.shade600,
+                  ),
             ),
             const SizedBox(height: 24),
-            
+
             // Guest count input
             TextFormField(
               controller: _guestCountController,
@@ -545,7 +578,7 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
               },
             ),
             const SizedBox(height: 20),
-            
+
             // Sales input
             TextFormField(
               controller: _salesController,
@@ -557,7 +590,8 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
                 filled: true,
                 fillColor: Colors.grey.shade50,
               ),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Please enter sales amount';
@@ -570,7 +604,7 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
               },
             ),
             const SizedBox(height: 24),
-            
+
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -606,19 +640,18 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
           Text(
             'Individual Server Data',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Colors.orange.shade700,
-            ),
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange.shade700,
+                ),
           ),
           const SizedBox(height: 8),
           Text(
             'Enter detailed performance data for each server',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey.shade600,
-            ),
+                  color: Colors.grey.shade600,
+                ),
           ),
           const SizedBox(height: 16),
-          
           Expanded(
             child: ListView.builder(
               itemCount: servers.length,
@@ -666,7 +699,9 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
                   radius: 24,
                   backgroundColor: Colors.blue.shade100,
                   child: Text(
-                    server.name.isNotEmpty ? server.name.substring(0, 1).toUpperCase() : '?',
+                    server.name.isNotEmpty
+                        ? server.name.substring(0, 1).toUpperCase()
+                        : '?',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 18,
@@ -700,7 +735,7 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            
+
             // Performance metrics row
             Row(
               children: [
@@ -728,13 +763,14 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
                       border: OutlineInputBorder(),
                       isDense: true,
                     ),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 16),
-            
+
             // NPS scores section
             Text(
               'NPS Scores',
@@ -816,10 +852,11 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
       // Use the user-selected date range, not widget.initialMonth
       final startDate = _selectedStartDate;
       final endDate = _selectedEndDate;
-      
+
       // Check if we need to handle multiple months or a custom date range
-      final isMultiMonth = startDate.month != endDate.month || startDate.year != endDate.year;
-      
+      final isMultiMonth =
+          startDate.month != endDate.month || startDate.year != endDate.year;
+
       if (isMultiMonth) {
         // Handle date range spanning multiple months
         await _saveDateRangeData(startDate, endDate);
@@ -831,11 +868,13 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Data saved successfully for ${_formatDate(startDate)} to ${_formatDate(endDate)}!'),
+            content: Text(
+                'Data saved successfully for ${_formatDate(startDate)} to ${_formatDate(endDate)}!'),
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.of(context).pop(true); // Return true to indicate data was saved
+        Navigator.of(context)
+            .pop(true); // Return true to indicate data was saved
       }
     } catch (e) {
       if (mounted) {
@@ -854,17 +893,18 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
   }
 
   Future<void> _saveSingleMonthData(DateTime monthDate) async {
-    final monthKey = '${monthDate.year}-${monthDate.month.toString().padLeft(2, '0')}';
-    
+    final monthKey =
+        '${monthDate.year}-${monthDate.month.toString().padLeft(2, '0')}';
+
     // Collect server-specific data first
     final Map<String, double> serverGuests = {};
     final Map<String, double> serverSales = {};
-    
+
     for (final entry in _serverGuestControllers.entries) {
       final serverId = entry.key;
       final guestText = entry.value.text;
       final salesText = _serverSalesControllers[serverId]!.text;
-      
+
       if (guestText.isNotEmpty) {
         serverGuests[serverId] = double.parse(guestText);
       }
@@ -872,7 +912,7 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
         serverSales[serverId] = double.parse(salesText);
       }
     }
-    
+
     // Check for existing data and confirm overwrite if needed
     final existingData = await Storage.getMonthlyBusinessData(monthKey);
     if (existingData != null && mounted) {
@@ -891,13 +931,14 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
           validated: true,
           entryDate: DateTime.now(),
         );
-        final mergedData = await _mergeBusinessData(existingBusinessData, newBusinessData);
+        final mergedData =
+            await _mergeBusinessData(existingBusinessData, newBusinessData);
         await Storage.saveMonthlyBusinessData(monthKey, mergedData.toMap());
         return; // Merge complete, exit method
       }
       // If decision == 'overwrite', continue with normal save
     }
-    
+
     // Create business data
     final businessData = MonthlyBusinessData(
       month: monthDate,
@@ -908,21 +949,23 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
       validated: true,
       entryDate: DateTime.now(),
     );
-    
+
     // Save business data
     await Storage.saveMonthlyBusinessData(monthKey, businessData.toMap());
-    
+
     // Save NPS data for each server with scores
     for (final serverId in _npsAllTimeControllers.keys) {
       final allTimeText = _npsAllTimeControllers[serverId]!.text;
       final threeMonthText = _npsThreeMonthControllers[serverId]!.text;
       final oneMonthText = _npsOneMonthControllers[serverId]!.text;
-      
-      if (allTimeText.isNotEmpty || threeMonthText.isNotEmpty || oneMonthText.isNotEmpty) {
+
+      if (allTimeText.isNotEmpty ||
+          threeMonthText.isNotEmpty ||
+          oneMonthText.isNotEmpty) {
         final allTimeScore = double.tryParse(allTimeText) ?? 0.0;
         final threeMonthScore = double.tryParse(threeMonthText) ?? allTimeScore;
         final oneMonthScore = double.tryParse(oneMonthText) ?? threeMonthScore;
-        
+
         // Create NPSData for this server
         final npsData = NPSData(
           serverId: serverId,
@@ -940,7 +983,7 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
           guestComments: [],
           lastUpdated: DateTime.now(),
         );
-        
+
         // Save NPS data using the storage box
         final npsKey = '${monthKey}_nps_$serverId';
         await Storage.enhancedBusinessDataBox.put(npsKey, npsData.toMap());
@@ -951,25 +994,26 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
   Future<void> _saveDateRangeData(DateTime startDate, DateTime endDate) async {
     // For now, distribute the data proportionally across the months in the range
     // This is a simplified implementation - could be enhanced for more complex scenarios
-    
+
     final months = <DateTime>[];
     DateTime current = DateTime(startDate.year, startDate.month, 1);
     final end = DateTime(endDate.year, endDate.month, 1);
-    
+
     while (current.isBefore(end) || current == end) {
       months.add(current);
       current = DateTime(current.year, current.month + 1, 1);
     }
-    
+
     // Distribute the totals across the months proportionally
     final totalGuests = double.tryParse(_guestCountController.text) ?? 0.0;
     final totalSales = double.tryParse(_salesController.text) ?? 0.0;
     final guestsPerMonth = totalGuests / months.length;
     final salesPerMonth = totalSales / months.length;
-    
+
     for (final month in months) {
       // Check for existing data
-      final monthKey = '${month.year}-${month.month.toString().padLeft(2, '0')}';
+      final monthKey =
+          '${month.year}-${month.month.toString().padLeft(2, '0')}';
       final existingData = await Storage.getMonthlyBusinessData(monthKey);
       if (existingData != null && mounted) {
         final decision = await _confirmDataOverwrite(month);
@@ -978,7 +1022,7 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
         }
         // Note: For date range data, we don't support merge - only overwrite or cancel
       }
-      
+
       // Create proportional business data for this month
       final businessData = MonthlyBusinessData(
         month: month,
@@ -989,7 +1033,7 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
         validated: true,
         entryDate: DateTime.now(),
       );
-      
+
       await Storage.saveMonthlyBusinessData(monthKey, businessData.toMap());
     }
   }
@@ -997,15 +1041,15 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
   Future<String?> _confirmDataOverwrite(DateTime month) async {
     final monthKey = Storage.generateMonthKey(month);
     final existingData = await Storage.getMonthlyBusinessData(monthKey);
-    
+
     if (existingData == null) return 'proceed'; // No conflict
-    
+
     final existingGuests = existingData['totalGuestCount']?.toString() ?? '0';
     final existingSales = existingData['totalSales']?.toString() ?? '0';
-    final existingEntryDate = existingData['entryDate'] != null 
+    final existingEntryDate = existingData['entryDate'] != null
         ? DateTime.parse(existingData['entryDate']).toString().substring(0, 16)
         : 'Unknown';
-    
+
     final result = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
@@ -1026,7 +1070,8 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('• Guests: $existingGuests'),
-                  Text('• Sales: \$${double.parse(existingSales).toStringAsFixed(2)}'),
+                  Text(
+                      '• Sales: \$${double.parse(existingSales).toStringAsFixed(2)}'),
                   Text('• Entered: $existingEntryDate'),
                 ],
               ),
@@ -1053,8 +1098,9 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
     );
     return result;
   }
-  
-  Future<MonthlyBusinessData> _mergeBusinessData(MonthlyBusinessData existing, MonthlyBusinessData newData) async {
+
+  Future<MonthlyBusinessData> _mergeBusinessData(
+      MonthlyBusinessData existing, MonthlyBusinessData newData) async {
     // For guest count and sales, we'll add them together (assuming they're complementary)
     // In a real app, you might want more sophisticated merging logic
     return MonthlyBusinessData(
@@ -1076,38 +1122,52 @@ class _BulkDataEntryScreenState extends State<BulkDataEntryScreen> {
 
   String _getMonthName(DateTime date) {
     const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December'
     ];
     return '${months[date.month - 1]} ${date.year}';
   }
 
   Future<void> _checkExistingDataWarning() async {
     // Get comprehensive summary of existing data for the date range
-    final summary = await Storage.getDateRangeDataSummary(_selectedStartDate, _selectedEndDate);
+    final summary = await Storage.getDateRangeDataSummary(
+        _selectedStartDate, _selectedEndDate);
     final warnings = <String>[];
-    
+
     if (summary['monthsWithData'] > 0) {
       final monthsWithData = summary['monthsWithData'] as int;
       final totalMonths = summary['monthsInRange'] as int;
-      
+
       if (monthsWithData == totalMonths) {
         warnings.add('All months in selected range already have data');
       } else {
-        warnings.add('$monthsWithData of $totalMonths months already have data');
+        warnings
+            .add('$monthsWithData of $totalMonths months already have data');
       }
-      
+
       // Add specific month details
-      final monthDetails = summary['monthDetails'] as Map<String, Map<String, dynamic>>;
+      final monthDetails =
+          summary['monthDetails'] as Map<String, Map<String, dynamic>>;
       for (final entry in monthDetails.entries) {
         final monthKey = entry.key;
         final details = entry.value;
         final guests = details['guests']?.toString() ?? '0';
         final sales = details['sales']?.toString() ?? '0';
-        warnings.add('$monthKey: $guests guests, \$${double.parse(sales).toStringAsFixed(0)} sales');
+        warnings.add(
+            '$monthKey: $guests guests, \$${double.parse(sales).toStringAsFixed(0)} sales');
       }
     }
-    
+
     setState(() {
       _existingDataWarnings = warnings;
     });

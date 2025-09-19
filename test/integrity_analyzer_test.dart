@@ -70,13 +70,15 @@ void main() {
       ];
 
       // Test velocity analysis
-      final velocityRisk = TimestampIntegrityAnalyzer.analyzeClickVelocity(timestamps);
+      final velocityRisk =
+          TimestampIntegrityAnalyzer.analyzeClickVelocity(timestamps);
       expect(velocityRisk, isA<double>());
       expect(velocityRisk, greaterThanOrEqualTo(0.0));
       expect(velocityRisk, lessThanOrEqualTo(100.0));
 
       // Test mechanical consistency analysis
-      final signature = TimestampIntegrityAnalyzer.analyzeMechanicalConsistency(timestamps);
+      final signature =
+          TimestampIntegrityAnalyzer.analyzeMechanicalConsistency(timestamps);
       expect(signature.meanInterval, isA<double>());
       expect(signature.coefficientOfVariation, isA<double>());
       expect(signature.isMechanical, isA<bool>());
@@ -96,16 +98,16 @@ void main() {
         now,
         now.add(Duration(seconds: 30)),
         now.add(Duration(seconds: 60)),
-        
+
         // Legitimate 2-item run (2 clicks ~300ms apart)
         now.add(Duration(seconds: 90)),
         now.add(Duration(milliseconds: 90300)),
-        
+
         // Legitimate 3-item run (3 clicks ~400ms apart)
         now.add(Duration(seconds: 120)),
         now.add(Duration(milliseconds: 120400)),
         now.add(Duration(milliseconds: 120800)),
-        
+
         // More normal single clicks
         now.add(Duration(seconds: 150)),
         now.add(Duration(seconds: 180)),
@@ -123,47 +125,56 @@ void main() {
       );
 
       // Should NOT trigger alerts for legitimate behavior
-      final timestampAlerts = assessment.alerts.where((alert) => 
-        alert.title.contains('Burst') || 
-        alert.title.contains('Velocity') || 
-        alert.title.contains('Pattern')
-      ).toList();
+      final timestampAlerts = assessment.alerts
+          .where((alert) =>
+              alert.title.contains('Burst') ||
+              alert.title.contains('Velocity') ||
+              alert.title.contains('Pattern'))
+          .toList();
 
-      expect(timestampAlerts.isEmpty, isTrue, 
-        reason: 'Legitimate 2-3 item runs should NOT trigger alerts');
+      expect(timestampAlerts.isEmpty, isTrue,
+          reason: 'Legitimate 2-3 item runs should NOT trigger alerts');
       expect(assessment.riskLevel, isNot(RiskLevel.red),
-        reason: 'Legitimate patterns should not result in high risk');
+          reason: 'Legitimate patterns should not result in high risk');
     });
 
-    test('Proportional analysis detects dishonest vs honest multi-clicking', () {
+    test('Proportional analysis detects dishonest vs honest multi-clicking',
+        () {
       final now = DateTime.now();
-      
+
       // Honest pattern: Mostly single clicks with occasional legitimate 2-3 item runs
       final honestTimestamps = [
         // Single clicks
         now, now.add(Duration(seconds: 30)), now.add(Duration(seconds: 60)),
         now.add(Duration(seconds: 90)), now.add(Duration(seconds: 120)),
-        
+
         // Legitimate 2-item run
-        now.add(Duration(seconds: 150)), now.add(Duration(milliseconds: 150400)),
-        
+        now.add(Duration(seconds: 150)),
+        now.add(Duration(milliseconds: 150400)),
+
         // More single clicks
         now.add(Duration(seconds: 180)), now.add(Duration(seconds: 210)),
         now.add(Duration(seconds: 240)), now.add(Duration(seconds: 270)),
-        
+
         // Legitimate 3-item run
-        now.add(Duration(seconds: 300)), now.add(Duration(milliseconds: 300400)),
+        now.add(Duration(seconds: 300)),
+        now.add(Duration(milliseconds: 300400)),
         now.add(Duration(milliseconds: 300800)),
-        
+
         // More single clicks
         now.add(Duration(seconds: 330)), now.add(Duration(seconds: 360)),
         now.add(Duration(seconds: 390)), now.add(Duration(seconds: 420)),
       ];
-      
+
       final honestAssessment = IntegrityAnalyzer.analyzeServer(
         serverId: 'honest_server',
         serverName: 'Honest Server',
-        clickBins: {'1': 18, '2': 3, '3': 1, '4+': 0}, // Realistic honest pattern
+        clickBins: {
+          '1': 18,
+          '2': 3,
+          '3': 1,
+          '4+': 0
+        }, // Realistic honest pattern
         totalRuns: 1200,
         allServers: testServers,
         allServerCounts: testServerCounts,
@@ -177,21 +188,23 @@ void main() {
         now, now.add(Duration(milliseconds: 200)),
         now.add(Duration(seconds: 20)), now.add(Duration(milliseconds: 20200)),
         now.add(Duration(seconds: 40)), now.add(Duration(milliseconds: 40200)),
-        
-        // 3-click events (more dishonest extras)  
+
+        // 3-click events (more dishonest extras)
         now.add(Duration(seconds: 60)), now.add(Duration(milliseconds: 60200)),
         now.add(Duration(milliseconds: 60400)),
         now.add(Duration(seconds: 80)), now.add(Duration(milliseconds: 80200)),
         now.add(Duration(milliseconds: 80400)),
-        
+
         // Even some 4+ click events (clear abuse)
-        now.add(Duration(seconds: 100)), now.add(Duration(milliseconds: 100200)),
-        now.add(Duration(milliseconds: 100400)), now.add(Duration(milliseconds: 100600)),
-        
+        now.add(Duration(seconds: 100)),
+        now.add(Duration(milliseconds: 100200)),
+        now.add(Duration(milliseconds: 100400)),
+        now.add(Duration(milliseconds: 100600)),
+
         // Single clicks are rare
         now.add(Duration(seconds: 120)), now.add(Duration(seconds: 140)),
       ];
-      
+
       final dishonestAssessment = IntegrityAnalyzer.analyzeServer(
         serverId: 'dishonest_server',
         serverName: 'Dishonest Server',
@@ -204,24 +217,32 @@ void main() {
       );
 
       // Verify honest pattern doesn't trigger proportional alerts
-      final honestProportionalAlerts = honestAssessment.alerts.where((alert) => 
-        alert.title.contains('Multi-Click') || alert.title.contains('Frequency')
-      ).toList();
-      
-      expect(honestProportionalAlerts.isEmpty, isTrue, 
-        reason: 'Honest servers with occasional legitimate multi-clicks should NOT trigger proportional alerts');
+      final honestProportionalAlerts = honestAssessment.alerts
+          .where((alert) =>
+              alert.title.contains('Multi-Click') ||
+              alert.title.contains('Frequency'))
+          .toList();
+
+      expect(honestProportionalAlerts.isEmpty, isTrue,
+          reason:
+              'Honest servers with occasional legitimate multi-clicks should NOT trigger proportional alerts');
 
       // Verify dishonest pattern DOES trigger proportional alerts
-      final dishonestProportionalAlerts = dishonestAssessment.alerts.where((alert) => 
-        alert.title.contains('Multi-Click') || alert.title.contains('Frequency')
-      ).toList();
-      
-      expect(dishonestProportionalAlerts.isNotEmpty, isTrue, 
-        reason: 'Dishonest servers with excessive multi-clicking should trigger proportional alerts');
-      
+      final dishonestProportionalAlerts = dishonestAssessment.alerts
+          .where((alert) =>
+              alert.title.contains('Multi-Click') ||
+              alert.title.contains('Frequency'))
+          .toList();
+
+      expect(dishonestProportionalAlerts.isNotEmpty, isTrue,
+          reason:
+              'Dishonest servers with excessive multi-clicking should trigger proportional alerts');
+
       // Verify risk levels reflect the difference
-      expect(dishonestAssessment.riskScore, greaterThan(honestAssessment.riskScore),
-        reason: 'Dishonest proportional patterns should result in higher risk scores');
+      expect(dishonestAssessment.riskScore,
+          greaterThan(honestAssessment.riskScore),
+          reason:
+              'Dishonest proportional patterns should result in higher risk scores');
     });
   });
 }

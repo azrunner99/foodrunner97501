@@ -7,7 +7,7 @@ import '../providers/nps_provider.dart';
 /// Widget for capturing guest feedback about servers
 class FeedbackEntryWidget extends StatefulWidget {
   const FeedbackEntryWidget({super.key});
-  
+
   @override
   State<FeedbackEntryWidget> createState() => _FeedbackEntryWidgetState();
 }
@@ -18,13 +18,13 @@ class _FeedbackEntryWidgetState extends State<FeedbackEntryWidget> {
   final _tableNumberController = TextEditingController();
   final _guestCountController = TextEditingController();
   final _notesController = TextEditingController();
-  
+
   NPSServer? _selectedServer;
   FeedbackType? _selectedFeedbackType;
   DateTime _feedbackDate = DateTime.now();
   ShiftPeriod? _selectedShiftPeriod;
   bool _isSubmitting = false;
-  
+
   @override
   void dispose() {
     _salesAmountController.dispose();
@@ -33,7 +33,7 @@ class _FeedbackEntryWidgetState extends State<FeedbackEntryWidget> {
     _notesController.dispose();
     super.dispose();
   }
-  
+
   Future<void> _selectFeedbackDate() async {
     final selectedDate = await showDatePicker(
       context: context,
@@ -42,19 +42,19 @@ class _FeedbackEntryWidgetState extends State<FeedbackEntryWidget> {
       lastDate: DateTime.now(),
       helpText: 'Select feedback date',
     );
-    
+
     if (selectedDate != null) {
       setState(() {
         _feedbackDate = selectedDate;
       });
     }
   }
-  
+
   Future<void> _submitFeedback() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
-    
+
     if (_selectedServer == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -64,7 +64,7 @@ class _FeedbackEntryWidgetState extends State<FeedbackEntryWidget> {
       );
       return;
     }
-    
+
     if (_selectedFeedbackType == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -74,14 +74,14 @@ class _FeedbackEntryWidgetState extends State<FeedbackEntryWidget> {
       );
       return;
     }
-    
+
     setState(() {
       _isSubmitting = true;
     });
-    
+
     try {
       final npsProvider = Provider.of<NPSProvider>(context, listen: false);
-      
+
       final feedback = NPSFeedback(
         serverId: _selectedServer!.id!,
         feedbackType: _selectedFeedbackType!,
@@ -100,9 +100,9 @@ class _FeedbackEntryWidgetState extends State<FeedbackEntryWidget> {
             ? _notesController.text.trim()
             : null,
       );
-      
+
       final success = await npsProvider.submitFeedback(feedback);
-      
+
       if (success) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -117,7 +117,8 @@ class _FeedbackEntryWidgetState extends State<FeedbackEntryWidget> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(npsProvider.errorMessage ?? 'Failed to submit feedback'),
+              content:
+                  Text(npsProvider.errorMessage ?? 'Failed to submit feedback'),
               backgroundColor: Colors.red,
             ),
           );
@@ -131,7 +132,7 @@ class _FeedbackEntryWidgetState extends State<FeedbackEntryWidget> {
       }
     }
   }
-  
+
   void _resetForm() {
     setState(() {
       _selectedServer = null;
@@ -145,13 +146,13 @@ class _FeedbackEntryWidgetState extends State<FeedbackEntryWidget> {
     });
     _formKey.currentState?.reset();
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Consumer<NPSProvider>(
       builder: (context, npsProvider, child) {
         final activeServers = npsProvider.activeServers;
-        
+
         return Card(
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -168,10 +169,10 @@ class _FeedbackEntryWidgetState extends State<FeedbackEntryWidget> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Server Selection
                   DropdownButtonFormField<NPSServer>(
-                    value: _selectedServer,
+                    initialValue: _selectedServer,
                     decoration: const InputDecoration(
                       labelText: 'Server *',
                       border: OutlineInputBorder(),
@@ -195,7 +196,7 @@ class _FeedbackEntryWidgetState extends State<FeedbackEntryWidget> {
                     },
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Feedback Question and Response
                   const Text(
                     'Would you like to have the same server again?',
@@ -246,7 +247,7 @@ class _FeedbackEntryWidgetState extends State<FeedbackEntryWidget> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Feedback Date
                   Row(
                     children: [
@@ -264,7 +265,7 @@ class _FeedbackEntryWidgetState extends State<FeedbackEntryWidget> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Optional Fields
                   const Text(
                     'Additional Information (Optional)',
@@ -274,7 +275,7 @@ class _FeedbackEntryWidgetState extends State<FeedbackEntryWidget> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  
+
                   Row(
                     children: [
                       Expanded(
@@ -286,7 +287,8 @@ class _FeedbackEntryWidgetState extends State<FeedbackEntryWidget> {
                             prefixText: '\$',
                             border: OutlineInputBorder(),
                           ),
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
                           validator: (value) {
                             if (value != null && value.trim().isNotEmpty) {
                               final amount = double.tryParse(value.trim());
@@ -322,12 +324,12 @@ class _FeedbackEntryWidgetState extends State<FeedbackEntryWidget> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  
+
                   Row(
                     children: [
                       Expanded(
                         child: DropdownButtonFormField<ShiftPeriod>(
-                          value: _selectedShiftPeriod,
+                          initialValue: _selectedShiftPeriod,
                           decoration: const InputDecoration(
                             labelText: 'Shift Period',
                             border: OutlineInputBorder(),
@@ -369,7 +371,7 @@ class _FeedbackEntryWidgetState extends State<FeedbackEntryWidget> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  
+
                   TextFormField(
                     controller: _notesController,
                     decoration: const InputDecoration(
@@ -381,7 +383,7 @@ class _FeedbackEntryWidgetState extends State<FeedbackEntryWidget> {
                     maxLength: 500,
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Submit and Reset Buttons
                   Row(
                     children: [
@@ -435,7 +437,7 @@ class _FeedbackEntryWidgetState extends State<FeedbackEntryWidget> {
       },
     );
   }
-  
+
   String _formatDate(DateTime date) {
     return '${date.month}/${date.day}/${date.year}';
   }
@@ -444,13 +446,13 @@ class _FeedbackEntryWidgetState extends State<FeedbackEntryWidget> {
 /// Widget for displaying recent feedback entries
 class RecentFeedbackWidget extends StatelessWidget {
   const RecentFeedbackWidget({super.key});
-  
+
   @override
   Widget build(BuildContext context) {
     return Consumer<NPSProvider>(
       builder: (context, npsProvider, child) {
         final recentFeedback = npsProvider.recentFeedback;
-        
+
         return Card(
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -502,8 +504,9 @@ class RecentFeedbackWidget extends StatelessWidget {
                       itemCount: recentFeedback.length,
                       itemBuilder: (context, index) {
                         final feedback = recentFeedback[index];
-                        final server = npsProvider.getServerById(feedback.serverId);
-                        
+                        final server =
+                            npsProvider.getServerById(feedback.serverId);
+
                         return FeedbackListTile(
                           feedback: feedback,
                           serverName: server?.name ?? 'Unknown Server',
@@ -524,13 +527,13 @@ class RecentFeedbackWidget extends StatelessWidget {
 class FeedbackListTile extends StatelessWidget {
   final NPSFeedback feedback;
   final String serverName;
-  
+
   const FeedbackListTile({
     super.key,
     required this.feedback,
     required this.serverName,
   });
-  
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -581,7 +584,7 @@ class FeedbackListTile extends StatelessWidget {
       ),
     );
   }
-  
+
   Color _getFeedbackColor(FeedbackType type) {
     switch (type) {
       case FeedbackType.yes:
@@ -592,7 +595,7 @@ class FeedbackListTile extends StatelessWidget {
         return Colors.red;
     }
   }
-  
+
   IconData _getFeedbackIcon(FeedbackType type) {
     switch (type) {
       case FeedbackType.yes:
@@ -603,7 +606,7 @@ class FeedbackListTile extends StatelessWidget {
         return Icons.thumb_down;
     }
   }
-  
+
   String _formatDate(DateTime date) {
     return '${date.month}/${date.day}/${date.year}';
   }

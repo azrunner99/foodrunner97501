@@ -11,31 +11,33 @@ class ServerIntegrityProfileScreen extends StatefulWidget {
   final IntegrityAssessment assessment;
 
   const ServerIntegrityProfileScreen({
-    Key? key,
+    super.key,
     required this.server,
     required this.assessment,
-  }) : super(key: key);
+  });
 
   @override
-  State<ServerIntegrityProfileScreen> createState() => _ServerIntegrityProfileScreenState();
+  State<ServerIntegrityProfileScreen> createState() =>
+      _ServerIntegrityProfileScreenState();
 }
 
-class _ServerIntegrityProfileScreenState extends State<ServerIntegrityProfileScreen> {
+class _ServerIntegrityProfileScreenState
+    extends State<ServerIntegrityProfileScreen> {
   String selectedTimeframe = 'Today';
   Timer? _refreshTimer;
-  
+
   @override
   void initState() {
     super.initState();
     _startRefreshTimer();
   }
-  
+
   @override
   void dispose() {
     _refreshTimer?.cancel();
     super.dispose();
   }
-  
+
   void _startRefreshTimer() {
     _refreshTimer?.cancel();
     if (selectedTimeframe == 'Current Shift') {
@@ -44,15 +46,15 @@ class _ServerIntegrityProfileScreenState extends State<ServerIntegrityProfileScr
       });
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
     final profile = app.profiles[widget.server.id];
-    
+
     // Generate assessment based on selected timeframe
     final assessment = _getAssessmentForTimeframe(app);
-    
+
     return Scaffold(
       appBar: AppBar(
         title: Text('${widget.server.name} - Audit Server Profile'),
@@ -103,20 +105,21 @@ class _ServerIntegrityProfileScreenState extends State<ServerIntegrityProfileScr
   IntegrityAssessment _generateCurrentShiftAssessment(AppState app) {
     final serverId = widget.server.id;
     final profile = app.profiles[serverId];
-    
+
     // Get current shift data
     final currentShiftRuns = app.currentCounts[serverId] ?? 0;
-    
+
     // Calculate current shift risk factors
     final riskFactors = <String>[];
     var riskScore = 0.0;
-    
+
     // Analyze current shift patterns
     if (currentShiftRuns > 15) {
-      riskFactors.add('High activity during current shift (${currentShiftRuns} runs)');
+      riskFactors
+          .add('High activity during current shift ($currentShiftRuns runs)');
       riskScore += 20;
     }
-    
+
     if (profile != null) {
       final avgSpeed = profile.avgSecondsBetweenRuns;
       if (avgSpeed < 30) {
@@ -124,7 +127,7 @@ class _ServerIntegrityProfileScreenState extends State<ServerIntegrityProfileScr
         riskScore += 25;
       }
     }
-    
+
     // Generate current shift alerts
     final alerts = <Alert>[];
     if (currentShiftRuns > 20) {
@@ -136,7 +139,7 @@ class _ServerIntegrityProfileScreenState extends State<ServerIntegrityProfileScr
         timestamp: DateTime.now(),
       ));
     }
-    
+
     // Create risk level based on score
     RiskLevel riskLevel;
     if (riskScore >= 70) {
@@ -148,7 +151,7 @@ class _ServerIntegrityProfileScreenState extends State<ServerIntegrityProfileScr
     } else {
       riskLevel = RiskLevel.green;
     }
-    
+
     return IntegrityAssessment(
       serverId: serverId,
       serverName: widget.server.name,
@@ -177,8 +180,8 @@ class _ServerIntegrityProfileScreenState extends State<ServerIntegrityProfileScr
           children: [
             CircleAvatar(
               radius: 40,
-              backgroundImage: profile?.avatarPath != null 
-                  ? AssetImage(profile!.avatarPath!) 
+              backgroundImage: profile?.avatarPath != null
+                  ? AssetImage(profile!.avatarPath!)
                   : const AssetImage('assets/avatars/image001.png'),
             ),
             const SizedBox(width: 20),
@@ -225,7 +228,8 @@ class _ServerIntegrityProfileScreenState extends State<ServerIntegrityProfileScr
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
+                        Icon(Icons.calendar_today,
+                            size: 16, color: Colors.grey[600]),
                         const SizedBox(width: 4),
                         Text(
                           'Hire Date: ${profile!.hireDate}',
@@ -250,7 +254,7 @@ class _ServerIntegrityProfileScreenState extends State<ServerIntegrityProfileScr
     final app = context.watch<AppState>();
     final isShiftActive = app.shiftActive;
     final shiftType = app.shiftType;
-    
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -314,8 +318,7 @@ class _ServerIntegrityProfileScreenState extends State<ServerIntegrityProfileScr
                                 }
                               },
                             ),
-                          ))
-                      .toList(),
+                          )),
                 ],
               ),
             ),
@@ -443,7 +446,7 @@ class _ServerIntegrityProfileScreenState extends State<ServerIntegrityProfileScr
       {'name': 'Timing Patterns', 'score': 90, 'weight': 25},
       {'name': 'Peer Comparison', 'score': 80, 'weight': 20},
     ];
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -453,17 +456,21 @@ class _ServerIntegrityProfileScreenState extends State<ServerIntegrityProfileScr
         ),
         const SizedBox(height: 12),
         ...breakdowns.map((item) => _buildScoreBreakdownItem(
-          item['name'] as String,
-          item['score'] as int,
-          item['weight'] as int,
-        )).toList(),
+              item['name'] as String,
+              item['score'] as int,
+              item['weight'] as int,
+            )),
       ],
     );
   }
 
   Widget _buildScoreBreakdownItem(String name, int score, int weight) {
-    final color = score >= 80 ? Colors.green : score >= 60 ? Colors.orange : Colors.red;
-    
+    final color = score >= 80
+        ? Colors.green
+        : score >= 60
+            ? Colors.orange
+            : Colors.red;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
@@ -485,7 +492,7 @@ class _ServerIntegrityProfileScreenState extends State<ServerIntegrityProfileScr
           ),
           const SizedBox(width: 8),
           Text(
-            '${score}%',
+            '$score%',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w500,
@@ -493,7 +500,7 @@ class _ServerIntegrityProfileScreenState extends State<ServerIntegrityProfileScr
             ),
           ),
           Text(
-            ' (${weight}%)',
+            ' ($weight%)',
             style: TextStyle(
               fontSize: 10,
               color: Colors.grey[600],
@@ -544,7 +551,8 @@ class _ServerIntegrityProfileScreenState extends State<ServerIntegrityProfileScr
                 ),
               )
             else
-              ...assessment.riskFactors.map((factor) => _buildRiskFactorItem(factor)).toList(),
+              ...assessment.riskFactors
+                  .map((factor) => _buildRiskFactorItem(factor)),
           ],
         ),
       ),
@@ -553,9 +561,10 @@ class _ServerIntegrityProfileScreenState extends State<ServerIntegrityProfileScr
 
   Widget _buildRiskFactorItem(String factor) {
     // Check if this is a clickable 4+ clicks per minute factor
-    final isClickableFactor = factor.toLowerCase().contains('4+ clicks per minute detected');
+    final isClickableFactor =
+        factor.toLowerCase().contains('4+ clicks per minute detected');
     final instanceCount = _extractInstanceCount(factor);
-    
+
     Widget cardContent = Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
@@ -564,29 +573,29 @@ class _ServerIntegrityProfileScreenState extends State<ServerIntegrityProfileScr
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.orange[200]!),
         // Add elevation and shadow for clickable items
-        boxShadow: isClickableFactor ? [
-          BoxShadow(
-            color: Colors.orange.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ] : null,
+        boxShadow: isClickableFactor
+            ? [
+                BoxShadow(
+                  color: Colors.orange.withOpacity(0.1),
+                  spreadRadius: 1,
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ]
+            : null,
       ),
       child: Row(
         children: [
-          Icon(
-            isClickableFactor ? Icons.touch_app : Icons.info, 
-            color: Colors.orange[600], 
-            size: 16
-          ),
+          Icon(isClickableFactor ? Icons.touch_app : Icons.info,
+              color: Colors.orange[600], size: 16),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               factor,
               style: TextStyle(
                 fontSize: 14,
-                fontWeight: isClickableFactor ? FontWeight.w600 : FontWeight.normal,
+                fontWeight:
+                    isClickableFactor ? FontWeight.w600 : FontWeight.normal,
               ),
             ),
           ),
@@ -612,7 +621,7 @@ class _ServerIntegrityProfileScreenState extends State<ServerIntegrityProfileScr
         ),
       );
     }
-    
+
     return cardContent;
   }
 
@@ -622,13 +631,13 @@ class _ServerIntegrityProfileScreenState extends State<ServerIntegrityProfileScr
     if (match != null) {
       return int.tryParse(match.group(1) ?? '0') ?? 0;
     }
-    
+
     // Fallback: look for just a number before "instances"
     final fallbackMatch = RegExp(r'(\d+) instances?').firstMatch(factor);
     if (fallbackMatch != null) {
       return int.tryParse(fallbackMatch.group(1) ?? '0') ?? 0;
     }
-    
+
     return 3; // Default fallback value
   }
 
@@ -644,7 +653,7 @@ class _ServerIntegrityProfileScreenState extends State<ServerIntegrityProfileScr
 
   Widget _buildClickPatternAnalysis(IntegrityAssessment assessment) {
     final clickData = assessment.clickData;
-    
+
     return Card(
       elevation: 6,
       shadowColor: Colors.purple.withOpacity(0.3),
@@ -683,7 +692,8 @@ class _ServerIntegrityProfileScreenState extends State<ServerIntegrityProfileScr
                     const Expanded(
                       child: Text(
                         'Click Pattern Analysis',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                     ),
                     Container(
@@ -751,7 +761,8 @@ class _ServerIntegrityProfileScreenState extends State<ServerIntegrityProfileScr
     );
   }
 
-  Widget _buildClickStatCard(String label, String value, IconData icon, Color color) {
+  Widget _buildClickStatCard(
+      String label, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -804,10 +815,26 @@ class _ServerIntegrityProfileScreenState extends State<ServerIntegrityProfileScr
     }
 
     final data = [
-      {'label': '1 click', 'value': clickData.singleClickMinutes, 'color': Colors.green},
-      {'label': '2 clicks', 'value': clickData.doubleClickMinutes, 'color': Colors.yellow[700]!},
-      {'label': '3 clicks', 'value': clickData.tripleClickMinutes, 'color': Colors.orange},
-      {'label': '4+ clicks', 'value': clickData.quadPlusClickMinutes, 'color': Colors.red},
+      {
+        'label': '1 click',
+        'value': clickData.singleClickMinutes,
+        'color': Colors.green
+      },
+      {
+        'label': '2 clicks',
+        'value': clickData.doubleClickMinutes,
+        'color': Colors.yellow[700]!
+      },
+      {
+        'label': '3 clicks',
+        'value': clickData.tripleClickMinutes,
+        'color': Colors.orange
+      },
+      {
+        'label': '4+ clicks',
+        'value': clickData.quadPlusClickMinutes,
+        'color': Colors.red
+      },
     ];
 
     return Column(
@@ -828,7 +855,8 @@ class _ServerIntegrityProfileScreenState extends State<ServerIntegrityProfileScr
                 child: LinearProgressIndicator(
                   value: percentage,
                   backgroundColor: Colors.grey[300],
-                  valueColor: AlwaysStoppedAnimation<Color>(item['color'] as Color),
+                  valueColor:
+                      AlwaysStoppedAnimation<Color>(item['color'] as Color),
                 ),
               ),
               const SizedBox(width: 8),
@@ -883,7 +911,8 @@ class _ServerIntegrityProfileScreenState extends State<ServerIntegrityProfileScr
                 ),
               )
             else
-              ...assessment.alerts.map((alert) => _buildAlertHistoryItem(alert)).toList(),
+              ...assessment.alerts
+                  .map((alert) => _buildAlertHistoryItem(alert)),
           ],
         ),
       ),
@@ -893,7 +922,7 @@ class _ServerIntegrityProfileScreenState extends State<ServerIntegrityProfileScr
   Widget _buildAlertHistoryItem(Alert alert) {
     Color alertColor;
     IconData alertIcon;
-    
+
     switch (alert.level) {
       case AlertLevel.low:
         alertColor = Colors.yellow[700]!;
@@ -931,7 +960,8 @@ class _ServerIntegrityProfileScreenState extends State<ServerIntegrityProfileScr
               children: [
                 Text(
                   alert.title,
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600, fontSize: 14),
                 ),
                 Text(
                   alert.message,
@@ -956,7 +986,7 @@ class _ServerIntegrityProfileScreenState extends State<ServerIntegrityProfileScr
   String _formatTime(DateTime time) {
     final now = DateTime.now();
     final difference = now.difference(time);
-    
+
     if (difference.inMinutes < 60) {
       return '${difference.inMinutes} minutes ago';
     } else if (difference.inHours < 24) {

@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import 'dart:math';
-import 'dart:typed_data';
 
 /// Encryption algorithms supported
 enum EncryptionAlgorithm {
@@ -132,9 +131,10 @@ class NPSEncryptionService extends ChangeNotifier {
 
   /// Generate new encryption key
   EncryptionKey _generateKey() {
-    final keyId = 'key_${DateTime.now().millisecondsSinceEpoch}_${_random.nextInt(1000)}';
+    final keyId =
+        'key_${DateTime.now().millisecondsSinceEpoch}_${_random.nextInt(1000)}';
     final keyData = _generateRandomBytes(32); // 256-bit key
-    
+
     return EncryptionKey(
       id: keyId,
       algorithm: _config.defaultAlgorithm.name,
@@ -165,7 +165,7 @@ class NPSEncryptionService extends ChangeNotifier {
 
     final key = _activeKey!;
     final plaintextBytes = utf8.encode(plaintext);
-    
+
     switch (_config.defaultAlgorithm) {
       case EncryptionAlgorithm.aes256:
         return _encryptAES(plaintextBytes, key);
@@ -178,11 +178,12 @@ class NPSEncryptionService extends ChangeNotifier {
   Future<String> decryptString(EncryptedData encryptedData) async {
     final key = _keys[encryptedData.keyId];
     if (key == null) {
-      throw EncryptionException('Encryption key not found: ${encryptedData.keyId}');
+      throw EncryptionException(
+          'Encryption key not found: ${encryptedData.keyId}');
     }
 
     Uint8List decryptedBytes;
-    
+
     switch (encryptedData.algorithm) {
       case 'aes256':
         decryptedBytes = _decryptAES(encryptedData, key);
@@ -191,7 +192,8 @@ class NPSEncryptionService extends ChangeNotifier {
         decryptedBytes = _decryptXOR(encryptedData, key);
         break;
       default:
-        throw EncryptionException('Unsupported algorithm: ${encryptedData.algorithm}');
+        throw EncryptionException(
+            'Unsupported algorithm: ${encryptedData.algorithm}');
     }
 
     return utf8.decode(decryptedBytes);
@@ -201,7 +203,7 @@ class NPSEncryptionService extends ChangeNotifier {
   EncryptedData _encryptXOR(Uint8List plaintext, EncryptionKey key) {
     final encrypted = Uint8List(plaintext.length);
     final keyBytes = key.keyData;
-    
+
     for (int i = 0; i < plaintext.length; i++) {
       encrypted[i] = plaintext[i] ^ keyBytes[i % keyBytes.length];
     }
@@ -222,9 +224,10 @@ class NPSEncryptionService extends ChangeNotifier {
   Uint8List _decryptXOR(EncryptedData encryptedData, EncryptionKey key) {
     final decrypted = Uint8List(encryptedData.encryptedBytes.length);
     final keyBytes = key.keyData;
-    
+
     for (int i = 0; i < encryptedData.encryptedBytes.length; i++) {
-      decrypted[i] = encryptedData.encryptedBytes[i] ^ keyBytes[i % keyBytes.length];
+      decrypted[i] =
+          encryptedData.encryptedBytes[i] ^ keyBytes[i % keyBytes.length];
     }
 
     // Verify checksum if available
@@ -245,10 +248,11 @@ class NPSEncryptionService extends ChangeNotifier {
     final iv = _generateRandomBytes(16); // AES block size
     final encrypted = Uint8List(plaintext.length);
     final keyBytes = key.keyData;
-    
+
     // Simulate AES with XOR + IV
     for (int i = 0; i < plaintext.length; i++) {
-      encrypted[i] = plaintext[i] ^ keyBytes[i % keyBytes.length] ^ iv[i % iv.length];
+      encrypted[i] =
+          plaintext[i] ^ keyBytes[i % keyBytes.length] ^ iv[i % iv.length];
     }
 
     final checksum = _calculateChecksum(plaintext);
@@ -272,10 +276,12 @@ class NPSEncryptionService extends ChangeNotifier {
     final decrypted = Uint8List(encryptedData.encryptedBytes.length);
     final keyBytes = key.keyData;
     final iv = encryptedData.iv!;
-    
+
     // Simulate AES with XOR + IV
     for (int i = 0; i < encryptedData.encryptedBytes.length; i++) {
-      decrypted[i] = encryptedData.encryptedBytes[i] ^ keyBytes[i % keyBytes.length] ^ iv[i % iv.length];
+      decrypted[i] = encryptedData.encryptedBytes[i] ^
+          keyBytes[i % keyBytes.length] ^
+          iv[i % iv.length];
     }
 
     // Verify checksum
@@ -301,7 +307,7 @@ class NPSEncryptionService extends ChangeNotifier {
   /// Encrypt map/object data
   Future<Map<String, dynamic>> encryptMap(Map<String, dynamic> data) async {
     final encryptedMap = <String, dynamic>{};
-    
+
     for (final entry in data.entries) {
       if (_shouldEncryptField(entry.key) && entry.value is String) {
         final encrypted = await encryptString(entry.value as String);
@@ -313,16 +319,16 @@ class NPSEncryptionService extends ChangeNotifier {
         encryptedMap[entry.key] = entry.value;
       }
     }
-    
+
     return encryptedMap;
   }
 
   /// Decrypt map/object data
   Future<Map<String, dynamic>> decryptMap(Map<String, dynamic> data) async {
     final decryptedMap = <String, dynamic>{};
-    
+
     for (final entry in data.entries) {
-      if (entry.value is Map<String, dynamic> && 
+      if (entry.value is Map<String, dynamic> &&
           entry.value['_encrypted'] == true) {
         final encryptedData = EncryptedData.fromJson(entry.value['_data']);
         decryptedMap[entry.key] = await decryptString(encryptedData);
@@ -330,15 +336,14 @@ class NPSEncryptionService extends ChangeNotifier {
         decryptedMap[entry.key] = entry.value;
       }
     }
-    
+
     return decryptedMap;
   }
 
   /// Check if field should be encrypted
   bool _shouldEncryptField(String fieldName) {
-    return _config.sensitiveFields.any((field) => 
-      fieldName.toLowerCase().contains(field.toLowerCase())
-    );
+    return _config.sensitiveFields
+        .any((field) => fieldName.toLowerCase().contains(field.toLowerCase()));
   }
 
   /// Rotate encryption key
@@ -346,7 +351,7 @@ class NPSEncryptionService extends ChangeNotifier {
     final newKey = _generateKey();
     _keys[newKey.id] = newKey;
     _activeKey = newKey;
-    
+
     // Mark old keys as inactive (keep for decryption)
     for (final key in _keys.values) {
       if (key.id != newKey.id) {
@@ -362,7 +367,7 @@ class NPSEncryptionService extends ChangeNotifier {
         _keys[key.id] = updatedKey;
       }
     }
-    
+
     notifyListeners();
   }
 
@@ -377,7 +382,7 @@ class NPSEncryptionService extends ChangeNotifier {
     final activeKeys = _keys.values.where((k) => k.isActive).length;
     final expiredKeys = _keys.values.where((k) => k.isExpired).length;
     final totalKeys = _keys.length;
-    
+
     return {
       'total_keys': totalKeys,
       'active_keys': activeKeys,
@@ -395,18 +400,17 @@ class NPSEncryptionService extends ChangeNotifier {
 
   /// Clean up expired keys (admin function)
   int cleanupExpiredKeys() {
-    final expiredKeys = _keys.values
-        .where((k) => k.isExpired && !k.isActive)
-        .toList();
-    
+    final expiredKeys =
+        _keys.values.where((k) => k.isExpired && !k.isActive).toList();
+
     for (final key in expiredKeys) {
       _keys.remove(key.id);
     }
-    
+
     if (expiredKeys.isNotEmpty) {
       notifyListeners();
     }
-    
+
     return expiredKeys.length;
   }
 
@@ -416,7 +420,7 @@ class NPSEncryptionService extends ChangeNotifier {
     if (key == null) {
       throw EncryptionException('Key not found: $keyId');
     }
-    
+
     return {
       'id': key.id,
       'algorithm': key.algorithm,
@@ -439,28 +443,30 @@ class NPSEncryptionService extends ChangeNotifier {
       isActive: keyData['isActive'] ?? false,
       metadata: keyData['metadata'] ?? {},
     );
-    
+
     _keys[key.id] = key;
     notifyListeners();
   }
 
   /// Test encryption/decryption with sample data
   Future<Map<String, dynamic>> testEncryption() async {
-    final testData = 'This is sensitive NPS feedback data that should be encrypted.';
+    final testData =
+        'This is sensitive NPS feedback data that should be encrypted.';
     final startTime = DateTime.now();
-    
+
     try {
       // Encrypt
       final encrypted = await encryptString(testData);
       final encryptTime = DateTime.now().difference(startTime).inMicroseconds;
-      
+
       // Decrypt
       final decryptStart = DateTime.now();
       final decrypted = await decryptString(encrypted);
-      final decryptTime = DateTime.now().difference(decryptStart).inMicroseconds;
-      
+      final decryptTime =
+          DateTime.now().difference(decryptStart).inMicroseconds;
+
       final success = decrypted == testData;
-      
+
       return {
         'success': success,
         'original_length': testData.length,

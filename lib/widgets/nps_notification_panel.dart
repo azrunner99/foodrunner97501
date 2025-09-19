@@ -52,7 +52,7 @@ class _NPSNotificationPanelState extends State<NPSNotificationPanel> {
 
   Widget _buildHeader() {
     final unreadCount = _notificationService.unreadCount;
-    
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -154,7 +154,8 @@ class _NPSNotificationPanelState extends State<NPSNotificationPanel> {
                   selected: _filterType == NotificationType.criticalNPSScore,
                   onSelected: (selected) {
                     setState(() {
-                      _filterType = selected ? NotificationType.criticalNPSScore : null;
+                      _filterType =
+                          selected ? NotificationType.criticalNPSScore : null;
                     });
                   },
                 ),
@@ -163,16 +164,20 @@ class _NPSNotificationPanelState extends State<NPSNotificationPanel> {
                   selected: _filterType == NotificationType.lowNPSScore,
                   onSelected: (selected) {
                     setState(() {
-                      _filterType = selected ? NotificationType.lowNPSScore : null;
+                      _filterType =
+                          selected ? NotificationType.lowNPSScore : null;
                     });
                   },
                 ),
                 FilterChip(
                   label: const Text('Feedback'),
-                  selected: _filterType == NotificationType.newFeedbackSubmission,
+                  selected:
+                      _filterType == NotificationType.newFeedbackSubmission,
                   onSelected: (selected) {
                     setState(() {
-                      _filterType = selected ? NotificationType.newFeedbackSubmission : null;
+                      _filterType = selected
+                          ? NotificationType.newFeedbackSubmission
+                          : null;
                     });
                   },
                 ),
@@ -209,7 +214,9 @@ class _NPSNotificationPanelState extends State<NPSNotificationPanel> {
               ),
               const SizedBox(height: 16),
               Text(
-                _showOnlyUnread ? 'No unread notifications' : 'No notifications',
+                _showOnlyUnread
+                    ? 'No unread notifications'
+                    : 'No notifications',
                 style: TextStyle(
                   color: Colors.grey.shade600,
                   fontSize: 16,
@@ -263,7 +270,8 @@ class _NPSNotificationPanelState extends State<NPSNotificationPanel> {
               child: Text(
                 notification.title,
                 style: TextStyle(
-                  fontWeight: notification.isRead ? FontWeight.normal : FontWeight.bold,
+                  fontWeight:
+                      notification.isRead ? FontWeight.normal : FontWeight.bold,
                 ),
               ),
             ),
@@ -279,7 +287,9 @@ class _NPSNotificationPanelState extends State<NPSNotificationPanel> {
         subtitle: Text(
           notification.message,
           style: TextStyle(
-            color: notification.isRead ? Colors.grey.shade600 : Colors.grey.shade800,
+            color: notification.isRead
+                ? Colors.grey.shade600
+                : Colors.grey.shade800,
           ),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
@@ -314,7 +324,7 @@ class _NPSNotificationPanelState extends State<NPSNotificationPanel> {
   Widget _buildPriorityIndicator(NotificationPriority priority) {
     IconData icon;
     Color color;
-    
+
     switch (priority) {
       case NotificationPriority.low:
         icon = Icons.flag;
@@ -333,7 +343,7 @@ class _NPSNotificationPanelState extends State<NPSNotificationPanel> {
         color = Colors.red.shade700;
         break;
     }
-    
+
     return Icon(
       icon,
       size: 16,
@@ -343,22 +353,23 @@ class _NPSNotificationPanelState extends State<NPSNotificationPanel> {
 
   List<NPSNotification> _getFilteredNotifications() {
     var notifications = _notificationService.notifications;
-    
+
     if (_filterType != null) {
-      notifications = notifications.where((n) => n.type == _filterType).toList();
+      notifications =
+          notifications.where((n) => n.type == _filterType).toList();
     }
-    
+
     if (_showOnlyUnread) {
       notifications = notifications.where((n) => !n.isRead).toList();
     }
-    
+
     return notifications;
   }
 
   String _formatTime(DateTime timestamp) {
     final now = DateTime.now();
     final difference = now.difference(timestamp);
-    
+
     if (difference.inMinutes < 1) {
       return 'Now';
     } else if (difference.inHours < 1) {

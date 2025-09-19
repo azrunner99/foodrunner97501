@@ -9,19 +9,19 @@ enum MessageCategory {
   consistencyBased,
   achievementBased,
   competitiveBased,
-  
+
   // Emotional Categories
   motivational,
   celebratory,
   encouraging,
   challenging,
-  
+
   // Contextual Categories
   timeOfDay,
   dayOfWeek,
   businessLevel,
   seasonal,
-  
+
   // Psychological Categories
   identityReinforcing,
   goalOriented,
@@ -46,27 +46,28 @@ enum MessageContext {
 /// Message repetition tracking
 class MessageHistory {
   final String serverId;
-  final List<String> recentMessages;          // Last 50 messages
-  final Map<String, DateTime> lastUsed;       // Message -> timestamp
-  final Map<String, int> usageCount;          // Message -> total uses
-  final Map<String, double> engagementScore;  // Message -> engagement rating
-  
+  final List<String> recentMessages; // Last 50 messages
+  final Map<String, DateTime> lastUsed; // Message -> timestamp
+  final Map<String, int> usageCount; // Message -> total uses
+  final Map<String, double> engagementScore; // Message -> engagement rating
+
   MessageHistory({
     required this.serverId,
     List<String>? recentMessages,
     Map<String, DateTime>? lastUsed,
     Map<String, int>? usageCount,
     Map<String, double>? engagementScore,
-  }) : recentMessages = recentMessages ?? [],
-       lastUsed = lastUsed ?? {},
-       usageCount = usageCount ?? {},
-       engagementScore = engagementScore ?? {};
+  })  : recentMessages = recentMessages ?? [],
+        lastUsed = lastUsed ?? {},
+        usageCount = usageCount ?? {},
+        engagementScore = engagementScore ?? {};
 
   Map<String, dynamic> toMap() {
     return {
       'serverId': serverId,
       'recentMessages': recentMessages,
-      'lastUsed': lastUsed.map((key, value) => MapEntry(key, value.toIso8601String())),
+      'lastUsed':
+          lastUsed.map((key, value) => MapEntry(key, value.toIso8601String())),
       'usageCount': usageCount,
       'engagementScore': engagementScore,
     };
@@ -76,9 +77,9 @@ class MessageHistory {
     return MessageHistory(
       serverId: map['serverId'] ?? '',
       recentMessages: List<String>.from(map['recentMessages'] ?? []),
-      lastUsed: (map['lastUsed'] as Map<String, dynamic>?)?.map(
-        (key, value) => MapEntry(key, DateTime.parse(value.toString()))
-      ) ?? {},
+      lastUsed: (map['lastUsed'] as Map<String, dynamic>?)?.map((key, value) =>
+              MapEntry(key, DateTime.parse(value.toString()))) ??
+          {},
       usageCount: Map<String, int>.from(map['usageCount'] ?? {}),
       engagementScore: Map<String, double>.from(map['engagementScore'] ?? {}),
     );
@@ -90,9 +91,9 @@ class MessageVarietyEngine {
   static const int _maxRecentMessages = 50;
   static const Duration _dailyRepeatProtection = Duration(days: 1);
   static const Duration _weeklyRepeatProtection = Duration(days: 7);
-  
+
   // Massive message collections organized by category
-  
+
   /// Speed-based messages (100+ variants)
   static const List<String> _speedMessages = [
     // Lightning Fast (25 variants)
@@ -121,7 +122,7 @@ class MessageVarietyEngine {
     "🎯 Precision pace! +{xp} XP!",
     "🎨 Creative speed! +{xp} XP bonus!",
     "🎵 Rhythm master! +{xp} XP!",
-    
+
     // Velocity Messages (25 variants)
     "🌟 Incredible velocity! +{xp} XP!",
     "💎 Diamond speed! +{xp} XP earned!",
@@ -148,7 +149,7 @@ class MessageVarietyEngine {
     "🦁 Lion speed! +{xp} XP!",
     "🐻 Bear pace! +{xp} XP bonus!",
     "🐼 Panda speed! +{xp} XP!",
-    
+
     // Momentum Messages (25 variants)
     "🌪️ Building momentum! +{xp} XP!",
     "🎢 Roller coaster pace! +{xp} XP!",
@@ -175,7 +176,7 @@ class MessageVarietyEngine {
     "🎾 Tennis pace! +{xp} XP earned!",
     "🏀 Basketball speed! +{xp} XP!",
     "⚽ Soccer pace! +{xp} XP bonus!",
-    
+
     // Power Messages (25 variants)
     "💪 Power speed! +{xp} XP!",
     "🔥 Fire power pace! +{xp} XP!",
@@ -232,7 +233,7 @@ class MessageVarietyEngine {
     "🎖️ DECORATED! +{xp} XP bonus!",
     "🏵️ HONORED! +{xp} XP!",
     "🥉 PODIUM FINISH! +{xp} XP earned!",
-    
+
     // Leadership (25 variants)
     "👑 LEADING THE PACK! +{xp} XP!",
     "🦅 SOARING HIGH! +{xp} XP earned!",
@@ -259,7 +260,7 @@ class MessageVarietyEngine {
     "🏆 TROPHY CASE! +{xp} XP!",
     "🥇 GOLD STANDARD! +{xp} XP bonus!",
     "🏅 MEDAL COLLECTION! +{xp} XP!",
-    
+
     // Victory (25 variants)
     "🎯 DIRECT HIT! +{xp} XP!",
     "🎪 CENTER RING! +{xp} XP earned!",
@@ -286,7 +287,7 @@ class MessageVarietyEngine {
     "🦄 UNICORN! +{xp} XP!",
     "🌟 CONSTELLATION! +{xp} XP bonus!",
     "⭐ GALAXY! +{xp} XP!",
-    
+
     // Superiority (25 variants)
     "🏆 UNBEATABLE! +{xp} XP!",
     "🥇 UNMATCHED! +{xp} XP earned!",
@@ -345,7 +346,7 @@ class MessageVarietyEngine {
     "🍯 HONEY SUCCESS! +{xp} XP bonus!",
   ];
 
-  /// Perfectionist messages (100+ variants) 
+  /// Perfectionist messages (100+ variants)
   static const List<String> _perfectionistMessages = [
     // Precision (25 variants)
     "✨ FLAWLESS EXECUTION! +{xp} XP!",
@@ -385,19 +386,19 @@ class MessageVarietyEngine {
   ) {
     // Determine message category based on personality
     final category = _selectMessageCategory(personality, achievement);
-    
+
     // Get candidate messages for the category
     final candidates = _getMessagesForCategory(category);
-    
+
     // Filter out recently used messages
     final filtered = _filterRecentMessages(candidates, history);
-    
+
     // Apply contextual modifications
     final contextual = _applyContextualModifications(filtered, context);
-    
+
     // Select final message with anti-repetition
     final selected = _selectWithVariety(contextual, history);
-    
+
     // Replace placeholders
     return _replacePlaceholders(selected, achievement);
   }
@@ -411,23 +412,24 @@ class MessageVarietyEngine {
     if (personality.dominantPatterns.contains(BehaviorPattern.speedDemon)) {
       return MessageCategory.speedBased;
     }
-    
+
     // Competitive sharks get competitive messages
-    if (personality.dominantPatterns.contains(BehaviorPattern.competitiveShark)) {
+    if (personality.dominantPatterns
+        .contains(BehaviorPattern.competitiveShark)) {
       return MessageCategory.competitiveBased;
     }
-    
+
     // Perfectionists get precision messages
     if (personality.dominantPatterns.contains(BehaviorPattern.perfectionist)) {
       return MessageCategory.consistencyBased;
     }
-    
+
     // Achievement-focused get achievement messages
     if (personality.traitScores[PersonalityTrait.achievement] != null &&
         personality.traitScores[PersonalityTrait.achievement]! > 0.7) {
       return MessageCategory.achievementBased;
     }
-    
+
     // Default to motivational
     return MessageCategory.motivational;
   }
@@ -454,24 +456,25 @@ class MessageVarietyEngine {
     MessageHistory history,
   ) {
     final now = DateTime.now();
-    
+
     return candidates.where((message) {
       // Check recent message list
       if (history.recentMessages.contains(message)) return false;
-      
+
       // Check daily repeat protection
       final lastUsed = history.lastUsed[message];
-      if (lastUsed != null && 
+      if (lastUsed != null &&
           now.difference(lastUsed) < _dailyRepeatProtection) {
         return false;
       }
-      
+
       return true;
     }).toList();
   }
 
   /// Replace placeholders in message
-  static String _replacePlaceholders(String message, MilestoneAchievement achievement) {
+  static String _replacePlaceholders(
+      String message, MilestoneAchievement achievement) {
     return message.replaceAll('{xp}', achievement.xpReward.toString());
   }
 
@@ -481,18 +484,19 @@ class MessageVarietyEngine {
     String selectedMessage,
   ) {
     final now = DateTime.now();
-    
+
     // Add to recent messages
     history.recentMessages.add(selectedMessage);
     if (history.recentMessages.length > _maxRecentMessages) {
       history.recentMessages.removeAt(0);
     }
-    
+
     // Update usage tracking
     history.lastUsed[selectedMessage] = now;
-    history.usageCount[selectedMessage] = (history.usageCount[selectedMessage] ?? 0) + 1;
+    history.usageCount[selectedMessage] =
+        (history.usageCount[selectedMessage] ?? 0) + 1;
   }
-  
+
   /// Dynamically determine message context based on current state
   static MessageContext determineContext({
     required DateTime currentTime,
@@ -503,7 +507,7 @@ class MessageVarietyEngine {
     final hour = currentTime.hour;
     final dayOfWeek = currentTime.weekday; // 1 = Monday, 7 = Sunday
     final isWeekend = dayOfWeek >= 6;
-    
+
     // Seasonal context takes priority
     if (seasonalEvent != null) {
       switch (seasonalEvent.toLowerCase()) {
@@ -516,14 +520,14 @@ class MessageVarietyEngine {
           return MessageContext.slowDay;
       }
     }
-    
+
     // Business level context
     if (currentBusinessLevel > 0.8) {
       return isWeekend ? MessageContext.weekendBusy : MessageContext.busyDay;
     } else if (currentBusinessLevel < 0.3) {
       return MessageContext.slowDay;
     }
-    
+
     // Time-based context
     if (hour >= 6 && hour < 11) {
       return MessageContext.morningRush;
@@ -537,7 +541,7 @@ class MessageVarietyEngine {
       return MessageContext.lateNight;
     }
   }
-  
+
   /// Enhanced contextual message modifications with time and business awareness
   static List<String> _applyContextualModifications(
     List<String> messages,
@@ -587,7 +591,7 @@ class MessageVarietyEngine {
         'Weekend wonder! ',
         '🎉 ',
       ],
-      
+
       // Business level modifiers
       'busyDay': [
         'Crushing the chaos! ',
@@ -604,9 +608,10 @@ class MessageVarietyEngine {
         '✨ ',
       ],
     };
-    
-    final modifiers = contextualModifiers[context.toString().split('.').last] ?? [''];
-    
+
+    final modifiers =
+        contextualModifiers[context.toString().split('.').last] ?? [''];
+
     return messages.map((message) {
       // 30% chance to apply contextual modifier
       if (math.Random().nextDouble() < 0.3 && modifiers.isNotEmpty) {
@@ -616,42 +621,42 @@ class MessageVarietyEngine {
       return message;
     }).toList();
   }
-  
+
   /// Enhanced message selection with seasonal and time-based variations
   static String _selectWithVariety(
     List<String> messages,
     MessageHistory history,
   ) {
     if (messages.isEmpty) return "🎯 MILESTONE ACHIEVED! +{xp} XP!";
-    
+
     // Weight selection based on historical engagement
     final weightedMessages = <String>[];
-    
+
     for (final message in messages) {
       final engagement = history.engagementScore[message] ?? 1.0;
       final usageCount = history.usageCount[message] ?? 0;
-      
+
       // Higher engagement = more likely to be selected
       // Lower usage count = more likely to be selected (variety)
       final weight = (engagement * 10 / (usageCount + 1)).round();
-      
+
       for (int i = 0; i < weight && i < 5; i++) {
         weightedMessages.add(message);
       }
     }
-    
+
     if (weightedMessages.isEmpty) {
       return messages[math.Random().nextInt(messages.length)];
     }
-    
+
     return weightedMessages[math.Random().nextInt(weightedMessages.length)];
   }
-  
+
   /// Simple method for basic flash messages without full personalization
   /// Returns one of 500+ unique messages with XP placeholders replaced
   static String getSimpleVarietyMessage(String messageType, int xpAmount) {
     List<String> messagePool;
-    
+
     switch (messageType.toLowerCase()) {
       case 'speed':
       case 'fast':
@@ -681,12 +686,13 @@ class MessageVarietyEngine {
           ..._perfectionistMessages,
         ];
     }
-    
+
     if (messagePool.isEmpty) {
       return "🎯 Amazing! +$xpAmount XP!";
     }
-    
-    final selectedMessage = messagePool[math.Random().nextInt(messagePool.length)];
+
+    final selectedMessage =
+        messagePool[math.Random().nextInt(messagePool.length)];
     return selectedMessage.replaceAll('{xp}', xpAmount.toString());
   }
 }

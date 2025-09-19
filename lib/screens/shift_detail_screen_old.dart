@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../app_state.dart';
@@ -15,7 +14,7 @@ class ShiftDetailScreen extends StatefulWidget {
 
 class _ShiftDetailScreenState extends State<ShiftDetailScreen>
     with TickerProviderStateMixin {
-  String _sortBy = 'xp'; // 'runs', 'pizookies', 'xp'
+  final String _sortBy = 'xp'; // 'runs', 'pizookies', 'xp'
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
@@ -45,14 +44,14 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
         return Scaffold(
           backgroundColor: Colors.grey.shade50,
           appBar: AppBar(
-            title: Text('${shift.shiftType} Shift'),
-            backgroundColor: _getShiftTypeColor(shift.shiftType),
+            title: Text('${widget.shift.shiftType} Shift'),
+            backgroundColor: _getShiftTypeColor(widget.shift.shiftType),
             foregroundColor: Colors.white,
             elevation: 0,
             actions: [
               IconButton(
                 icon: const Icon(Icons.delete),
-                onPressed: () => _confirmDelete(context, shift),
+                onPressed: () => _confirmDelete(context, widget.shift),
               ),
             ],
           ),
@@ -67,8 +66,9 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        _getShiftTypeColor(shift.shiftType),
-                        _getShiftTypeColor(shift.shiftType).withOpacity(0.8),
+                        _getShiftTypeColor(widget.shift.shiftType),
+                        _getShiftTypeColor(widget.shift.shiftType)
+                            .withOpacity(0.8),
                       ],
                     ),
                   ),
@@ -83,14 +83,14 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Icon(
-                            _getShiftTypeIcon(shift.shiftType),
+                            _getShiftTypeIcon(widget.shift.shiftType),
                             color: Colors.white,
                             size: 48,
                           ),
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          shift.shiftType,
+                          widget.shift.shiftType,
                           style: const TextStyle(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
@@ -99,7 +99,7 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          _weekday(shift.start),
+                          _weekday(widget.shift.start),
                           style: const TextStyle(
                             fontSize: 18,
                             color: Colors.white70,
@@ -107,7 +107,7 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          '${_hm(shift.start)} - ${_hm(shift.start.add(const Duration(hours: 8)))}',
+                          '${_hm(widget.shift.start)} - ${_hm(widget.shift.start.add(const Duration(hours: 8)))}',
                           style: const TextStyle(
                             fontSize: 16,
                             color: Colors.white70,
@@ -117,7 +117,7 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
                     ),
                   ),
                 ),
-                
+
                 // Stats cards
                 Padding(
                   padding: const EdgeInsets.all(16),
@@ -128,7 +128,7 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
                           Expanded(
                             child: _buildStatCard(
                               'Total Runs',
-                              '${_getTotalRuns(shift)}',
+                              '${_getTotalRuns(widget.shift)}',
                               Icons.play_arrow,
                               Colors.blue,
                             ),
@@ -137,7 +137,7 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
                           Expanded(
                             child: _buildStatCard(
                               'Active Servers',
-                              '${shift.counts.length}',
+                              '${widget.shift.counts.length}',
                               Icons.people,
                               Colors.green,
                             ),
@@ -145,7 +145,7 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
                         ],
                       ),
                       const SizedBox(height: 16),
-                      
+
                       // Server performance section
                       Card(
                         elevation: 4,
@@ -176,7 +176,7 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
                                 ],
                               ),
                               const SizedBox(height: 20),
-                              _buildServerList(appState, shift),
+                              _buildServerList(appState, widget.shift),
                             ],
                           ),
                         ),
@@ -192,7 +192,8 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+      String title, String value, IconData icon, Color color) {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(
@@ -276,11 +277,11 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
       separatorBuilder: (context, index) => const Divider(height: 1),
       itemBuilder: (context, index) {
         final entry = sortedCounts[index];
-        final server = appState.servers
-            .firstWhere((s) => s.id == entry.key, orElse: () => Server(
-              id: entry.key,
-              name: 'Unknown Server',
-            ));
+        final server = appState.servers.firstWhere((s) => s.id == entry.key,
+            orElse: () => Server(
+                  id: entry.key,
+                  name: 'Unknown Server',
+                ));
         final profile = appState.profiles[entry.key];
         final isTopPerformer = index == 0;
 
@@ -308,7 +309,7 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
                 ),
               CircleAvatar(
                 radius: 22,
-                backgroundImage: profile?.avatarPath != null 
+                backgroundImage: profile?.avatarPath != null
                     ? AssetImage(profile!.avatarPath!)
                     : const AssetImage('assets/avatars/image001.png'),
                 backgroundColor: Colors.grey.shade200,
@@ -324,9 +325,13 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
                           child: Text(
                             server.name,
                             style: TextStyle(
-                              fontWeight: isTopPerformer ? FontWeight.bold : FontWeight.w600,
+                              fontWeight: isTopPerformer
+                                  ? FontWeight.bold
+                                  : FontWeight.w600,
                               fontSize: 16,
-                              color: isTopPerformer ? Colors.amber.shade800 : Colors.black87,
+                              color: isTopPerformer
+                                  ? Colors.amber.shade800
+                                  : Colors.black87,
                             ),
                           ),
                         ),
@@ -505,7 +510,13 @@ class _ShiftDetailScreenState extends State<ShiftDetailScreen>
 
   String _weekday(DateTime d) {
     const weekdays = [
-      'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday'
     ];
     return weekdays[d.weekday - 1];
   }

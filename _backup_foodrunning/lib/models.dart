@@ -13,9 +13,9 @@ class Server {
 }
 
 class ShiftRecord {
-  final String id;               // generated id
-  final String label;            // e.g., "Lunch", "Dinner", "Other"
-  final String shiftType;        // "Lunch" | "Dinner" | "Other"
+  final String id; // generated id
+  final String label; // e.g., "Lunch", "Dinner", "Other"
+  final String shiftType; // "Lunch" | "Dinner" | "Other"
   final DateTime start;
   final Map<String, int> counts; // serverId -> runs
 

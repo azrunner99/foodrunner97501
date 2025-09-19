@@ -119,7 +119,7 @@ class _DataExportWidgetState extends State<DataExportWidget> {
 
   Widget _buildExportOptions(NPSProvider npsProvider) {
     final hasData = npsProvider.servers.isNotEmpty;
-    
+
     return Column(
       children: [
         _buildExportTile(
@@ -180,16 +180,16 @@ class _DataExportWidgetState extends State<DataExportWidget> {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: enabled 
-            ? (primary ? Colors.blue.shade100 : Colors.grey.shade100)
-            : Colors.grey.shade50,
+          color: enabled
+              ? (primary ? Colors.blue.shade100 : Colors.grey.shade100)
+              : Colors.grey.shade50,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(
           icon,
-          color: enabled 
-            ? (primary ? Colors.blue.shade600 : Colors.grey.shade600)
-            : Colors.grey.shade400,
+          color: enabled
+              ? (primary ? Colors.blue.shade600 : Colors.grey.shade600)
+              : Colors.grey.shade400,
           size: 24,
         ),
       ),
@@ -207,14 +207,14 @@ class _DataExportWidgetState extends State<DataExportWidget> {
         ),
       ),
       trailing: enabled
-        ? Icon(
-            Icons.download,
-            color: primary ? Colors.blue.shade600 : Colors.grey.shade400,
-          )
-        : Icon(
-            Icons.block,
-            color: Colors.grey.shade400,
-          ),
+          ? Icon(
+              Icons.download,
+              color: primary ? Colors.blue.shade600 : Colors.grey.shade400,
+            )
+          : Icon(
+              Icons.block,
+              color: Colors.grey.shade400,
+            ),
       onTap: enabled && !_isExporting ? onTap : null,
       enabled: enabled && !_isExporting,
       shape: RoundedRectangleBorder(
@@ -281,7 +281,8 @@ class _DataExportWidgetState extends State<DataExportWidget> {
       'Comprehensive Report',
       () async {
         final feedback = _generateSampleFeedback(); // Using sample data for now
-        final csvContent = await DataExportService.exportComprehensiveAnalyticsToCSV(
+        final csvContent =
+            await DataExportService.exportComprehensiveAnalyticsToCSV(
           npsProvider.servers,
           feedback,
         );
@@ -298,7 +299,8 @@ class _DataExportWidgetState extends State<DataExportWidget> {
       'Time Series Data',
       () async {
         final feedback = _generateSampleFeedback(); // Using sample data for now
-        final csvContent = await DataExportService.exportTimeSeriesDataToCSV(feedback);
+        final csvContent =
+            await DataExportService.exportTimeSeriesDataToCSV(feedback);
         await DataExportService.shareCSVFile(
           csvContent,
           'nps_time_series_${DateTime.now().millisecondsSinceEpoch}.csv',
@@ -320,7 +322,8 @@ class _DataExportWidgetState extends State<DataExportWidget> {
     );
   }
 
-  Future<void> _performExport(String exportType, Future<void> Function() exportFunction) async {
+  Future<void> _performExport(
+      String exportType, Future<void> Function() exportFunction) async {
     setState(() {
       _isExporting = true;
       _lastExportMessage = null;
@@ -335,7 +338,7 @@ class _DataExportWidgetState extends State<DataExportWidget> {
       setState(() {
         _lastExportMessage = 'Failed to export $exportType: ${e.toString()}';
       });
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -355,12 +358,12 @@ class _DataExportWidgetState extends State<DataExportWidget> {
   List<NPSScoreFeedback> _generateSampleFeedback() {
     final List<NPSScoreFeedback> sampleData = [];
     final now = DateTime.now();
-    
+
     // Generate sample feedback for the last 30 days
     for (int i = 0; i < 30; i++) {
       final date = now.subtract(Duration(days: i));
       final numResponses = (i % 3) + 1; // 1-3 responses per day
-      
+
       for (int j = 0; j < numResponses; j++) {
         sampleData.add(NPSScoreFeedback(
           id: (i * 10) + j,
@@ -372,7 +375,7 @@ class _DataExportWidgetState extends State<DataExportWidget> {
         ));
       }
     }
-    
+
     return sampleData;
   }
 }

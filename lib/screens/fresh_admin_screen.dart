@@ -23,7 +23,7 @@ class _FreshAdminScreenState extends State<FreshAdminScreen> {
   @override
   Widget build(BuildContext context) {
     print("🚨 DEBUG: FreshAdminScreen.build() called - NEW VERSION ACTIVE!");
-    
+
     final app = context.watch<AppState>();
     if (!_unlocked) {
       return Scaffold(
@@ -137,7 +137,8 @@ class _FreshAdminScreenState extends State<FreshAdminScreen> {
                           contentPadding: const EdgeInsets.all(16),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.red.shade400, width: 2),
+                            borderSide: BorderSide(
+                                color: Colors.red.shade400, width: 2),
                           ),
                         ),
                       ),
@@ -220,7 +221,8 @@ class _FreshAdminScreenState extends State<FreshAdminScreen> {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const ManageServersScreen()),
+                        MaterialPageRoute(
+                            builder: (_) => const ManageServersScreen()),
                       );
                     },
                   ),
@@ -241,7 +243,8 @@ class _FreshAdminScreenState extends State<FreshAdminScreen> {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const ServerAvatarSettingsScreen()),
+                        MaterialPageRoute(
+                            builder: (_) => const ServerAvatarSettingsScreen()),
                       );
                     },
                   ),
@@ -253,7 +256,8 @@ class _FreshAdminScreenState extends State<FreshAdminScreen> {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const ServerDashboardScreen()),
+                        MaterialPageRoute(
+                            builder: (_) => const ServerDashboardScreen()),
                       );
                     },
                   ),
@@ -265,7 +269,8 @@ class _FreshAdminScreenState extends State<FreshAdminScreen> {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const ServerPerformanceScreen()),
+                        MaterialPageRoute(
+                            builder: (_) => const ServerPerformanceScreen()),
                       );
                     },
                   ),
@@ -278,7 +283,8 @@ class _FreshAdminScreenState extends State<FreshAdminScreen> {
                       print("🚨 DEBUG: Navigating to Server NPS screen!");
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const ServerNPSScreen()),
+                        MaterialPageRoute(
+                            builder: (_) => const ServerNPSScreen()),
                       );
                     },
                   ),
@@ -290,7 +296,8 @@ class _FreshAdminScreenState extends State<FreshAdminScreen> {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const BackupManagerScreen()),
+                        MaterialPageRoute(
+                            builder: (_) => const BackupManagerScreen()),
                       );
                     },
                   ),
@@ -308,7 +315,8 @@ class _FreshAdminScreenState extends State<FreshAdminScreen> {
     if (_pinCtrl.text == AppState.adminPin) {
       setState(() => _unlocked = true);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Wrong PIN')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Wrong PIN')));
     }
   }
 
@@ -364,12 +372,8 @@ class _FreshAdminScreenState extends State<FreshAdminScreen> {
       child: ElevatedButton(
         onPressed: () => _onKeypadPressed(text),
         style: ElevatedButton.styleFrom(
-          backgroundColor: isSpecial 
-              ? Colors.grey.shade200 
-              : Colors.white,
-          foregroundColor: isSpecial 
-              ? Colors.grey.shade700 
-              : Colors.black87,
+          backgroundColor: isSpecial ? Colors.grey.shade200 : Colors.white,
+          foregroundColor: isSpecial ? Colors.grey.shade700 : Colors.black87,
           elevation: 2,
           shadowColor: Colors.red.withOpacity(0.2),
           shape: RoundedRectangleBorder(
@@ -399,11 +403,12 @@ class _FreshAdminScreenState extends State<FreshAdminScreen> {
         if (_pinCtrl.text.isNotEmpty) {
           _pinCtrl.text = _pinCtrl.text.substring(0, _pinCtrl.text.length - 1);
         }
-      } else if (_pinCtrl.text.length < 6) { // Limit PIN length
+      } else if (_pinCtrl.text.length < 6) {
+        // Limit PIN length
         _pinCtrl.text += value;
       }
     });
-    
+
     // Auto-unlock if PIN is complete
     if (_pinCtrl.text.length >= 4 && _pinCtrl.text == AppState.adminPin) {
       _tryUnlock(context.read<AppState>());
@@ -498,12 +503,12 @@ class _FreshAdminScreenState extends State<FreshAdminScreen> {
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: enabled 
+              color: enabled
                   ? Colors.red.shade50.withOpacity(0.5)
                   : Colors.grey.shade100.withOpacity(0.3),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: enabled 
+                color: enabled
                     ? Colors.red.withOpacity(0.3)
                     : Colors.grey.withOpacity(0.3),
                 width: 1,
@@ -514,9 +519,7 @@ class _FreshAdminScreenState extends State<FreshAdminScreen> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: enabled 
-                        ? Colors.red.shade600
-                        : Colors.grey.shade400,
+                    color: enabled ? Colors.red.shade600 : Colors.grey.shade400,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
@@ -535,7 +538,8 @@ class _FreshAdminScreenState extends State<FreshAdminScreen> {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: enabled ? Colors.black87 : Colors.grey.shade600,
+                          color:
+                              enabled ? Colors.black87 : Colors.grey.shade600,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -543,7 +547,8 @@ class _FreshAdminScreenState extends State<FreshAdminScreen> {
                         subtitle,
                         style: TextStyle(
                           fontSize: 14,
-                          color: enabled ? Colors.black54 : Colors.grey.shade500,
+                          color:
+                              enabled ? Colors.black54 : Colors.grey.shade500,
                         ),
                       ),
                     ],

@@ -29,29 +29,29 @@ void main() async {
   await Storage.init();
   final appState = AppState();
   await appState.load();
-  
+
   // Initialize NPS services
   final npsProvider = NPSProvider();
-  
+
   // Initialize NPSProvider with AppState to sync servers
   await npsProvider.initialize(appState: appState);
-  
+
   final npsFilterService = NPSFilterService();
   final npsBenchmarkingService = NPSBenchmarkingService();
-  
+
   // Initialize security services
   final npsSecurityService = NPSSecurityService();
   final npsEncryptionService = NPSEncryptionService();
   final npsAuditService = NPSAuditService();
   final npsGDPRService = NPSGDPRComplianceService();
-  
+
   // Initialize all services
   await npsBenchmarkingService.initialize();
   npsSecurityService.initialize();
   npsEncryptionService.initialize();
   npsAuditService.initialize();
   npsGDPRService.initialize();
-  
+
   runApp(MultiProvider(
     providers: [
       ChangeNotifierProvider(create: (_) => appState),
@@ -79,11 +79,14 @@ class FoodRunsApp extends StatelessWidget {
       theme: ThemeData(
         colorSchemeSeed: color,
         useMaterial3: true,
-        snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
+        snackBarTheme:
+            const SnackBarThemeData(behavior: SnackBarBehavior.floating),
       ),
       routes: {
-        '/': (_) => const HomeScreen(), // Restored: Normal home screen as default
-        '/home': (_) => const HomeScreen(), // Actual home screen for back navigation
+        '/': (_) =>
+            const HomeScreen(), // Restored: Normal home screen as default
+        '/home': (_) =>
+            const HomeScreen(), // Actual home screen for back navigation
         '/admin': (_) => const CleanAdminScreen(),
         '/assign': (_) => AssignServersScreen(),
         '/settings': (_) => const SettingsScreen(),

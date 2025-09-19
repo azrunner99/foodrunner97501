@@ -8,10 +8,10 @@ class WallpaperGalleryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
-    
+
     // List of available wallpapers - generated from image001.webp to image073.webp
     final wallpapers = <WallpaperOption>[];
-    
+
     // Generate wallpaper options from image001.webp to image073.webp
     for (int i = 1; i <= 73; i++) {
       final imageNumber = i.toString().padLeft(3, '0'); // 001, 002, etc.
@@ -21,7 +21,8 @@ class WallpaperGalleryScreen extends StatelessWidget {
           name: 'Wallpaper $i',
           description: 'Background pattern $i',
           assetPath: 'assets/wallpapers/image$imageNumber.webp',
-          preview: _buildPreviewFromAsset('assets/wallpapers/image$imageNumber.webp'),
+          preview: _buildPreviewFromAsset(
+              'assets/wallpapers/image$imageNumber.webp'),
         ),
       );
     }
@@ -45,7 +46,7 @@ class WallpaperGalleryScreen extends StatelessWidget {
           itemBuilder: (context, index) {
             final wallpaper = wallpapers[index];
             final isSelected = app.selectedWallpaper == wallpaper.id;
-            
+
             return GestureDetector(
               onTap: () {
                 _showWallpaperPreview(context, wallpaper, app);
@@ -54,18 +55,21 @@ class WallpaperGalleryScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: isSelected 
-                        ? Theme.of(context).primaryColor 
+                    color: isSelected
+                        ? Theme.of(context).primaryColor
                         : Colors.grey[300]!,
                     width: isSelected ? 3 : 1,
                   ),
-                  boxShadow: isSelected ? [
-                    BoxShadow(
-                      color: Theme.of(context).primaryColor.withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ] : null,
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color:
+                                Theme.of(context).primaryColor.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -89,8 +93,8 @@ class WallpaperGalleryScreen extends StatelessWidget {
                           ),
                         ),
                         child: const Icon(
-                          Icons.check, 
-                          color: Colors.white, 
+                          Icons.check,
+                          color: Colors.white,
                           size: 20,
                         ),
                       ),
@@ -104,7 +108,8 @@ class WallpaperGalleryScreen extends StatelessWidget {
     );
   }
 
-  void _showWallpaperPreview(BuildContext context, WallpaperOption wallpaper, AppState app) {
+  void _showWallpaperPreview(
+      BuildContext context, WallpaperOption wallpaper, AppState app) {
     showDialog(
       context: context,
       barrierDismissible: true,

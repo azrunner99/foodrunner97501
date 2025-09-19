@@ -6,7 +6,8 @@ class NPSTargetManagementWidget extends StatefulWidget {
   const NPSTargetManagementWidget({super.key});
 
   @override
-  State<NPSTargetManagementWidget> createState() => _NPSTargetManagementWidgetState();
+  State<NPSTargetManagementWidget> createState() =>
+      _NPSTargetManagementWidgetState();
 }
 
 class _NPSTargetManagementWidgetState extends State<NPSTargetManagementWidget> {
@@ -61,9 +62,9 @@ class _NPSTargetManagementWidgetState extends State<NPSTargetManagementWidget> {
         Text(
           'Performance Targets',
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).primaryColor,
-          ),
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).primaryColor,
+              ),
         ),
       ],
     );
@@ -71,15 +72,15 @@ class _NPSTargetManagementWidgetState extends State<NPSTargetManagementWidget> {
 
   Widget _buildExistingTargets(NPSBenchmarkingService service) {
     final targets = service.performanceTargets;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Current Targets',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+                fontWeight: FontWeight.bold,
+              ),
         ),
         const SizedBox(height: 12),
         if (targets.isEmpty)
@@ -103,22 +104,27 @@ class _NPSTargetManagementWidgetState extends State<NPSTargetManagementWidget> {
     );
   }
 
-  Widget _buildTargetCard(PerformanceTarget target, NPSBenchmarkingService service) {
+  Widget _buildTargetCard(
+      PerformanceTarget target, NPSBenchmarkingService service) {
     final daysUntilTarget = target.targetDate.difference(DateTime.now()).inDays;
     final isOverdue = daysUntilTarget < 0;
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: target.isActive 
-          ? (isOverdue ? Colors.red.withOpacity(0.1) : Colors.blue.withOpacity(0.1))
-          : Colors.grey.withOpacity(0.1),
+        color: target.isActive
+            ? (isOverdue
+                ? Colors.red.withOpacity(0.1)
+                : Colors.blue.withOpacity(0.1))
+            : Colors.grey.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: target.isActive 
-            ? (isOverdue ? Colors.red.withOpacity(0.3) : Colors.blue.withOpacity(0.3))
-            : Colors.grey.withOpacity(0.3),
+          color: target.isActive
+              ? (isOverdue
+                  ? Colors.red.withOpacity(0.3)
+                  : Colors.blue.withOpacity(0.3))
+              : Colors.grey.withOpacity(0.3),
         ),
       ),
       child: Column(
@@ -254,7 +260,8 @@ class _NPSTargetManagementWidgetState extends State<NPSTargetManagementWidget> {
     );
   }
 
-  Widget _buildTargetInfo(String label, String value, IconData icon, Color color) {
+  Widget _buildTargetInfo(
+      String label, String value, IconData icon, Color color) {
     return Column(
       children: [
         Icon(icon, color: color, size: 16),
@@ -343,19 +350,26 @@ class _NPSTargetManagementWidgetState extends State<NPSTargetManagementWidget> {
                     const SizedBox(width: 16),
                     Expanded(
                       child: DropdownButtonFormField<String>(
-                        value: _selectedCategory,
+                        initialValue: _selectedCategory,
                         decoration: const InputDecoration(
                           labelText: 'Category',
                           border: OutlineInputBorder(),
                         ),
                         items: const [
-                          DropdownMenuItem(value: 'Daily', child: Text('Daily')),
-                          DropdownMenuItem(value: 'Weekly', child: Text('Weekly')),
-                          DropdownMenuItem(value: 'Monthly', child: Text('Monthly')),
-                          DropdownMenuItem(value: 'Quarterly', child: Text('Quarterly')),
-                          DropdownMenuItem(value: 'Annual', child: Text('Annual')),
-                          DropdownMenuItem(value: 'Competitive', child: Text('Competitive')),
-                          DropdownMenuItem(value: 'Custom', child: Text('Custom')),
+                          DropdownMenuItem(
+                              value: 'Daily', child: Text('Daily')),
+                          DropdownMenuItem(
+                              value: 'Weekly', child: Text('Weekly')),
+                          DropdownMenuItem(
+                              value: 'Monthly', child: Text('Monthly')),
+                          DropdownMenuItem(
+                              value: 'Quarterly', child: Text('Quarterly')),
+                          DropdownMenuItem(
+                              value: 'Annual', child: Text('Annual')),
+                          DropdownMenuItem(
+                              value: 'Competitive', child: Text('Competitive')),
+                          DropdownMenuItem(
+                              value: 'Custom', child: Text('Custom')),
                         ],
                         onChanged: (value) {
                           setState(() {
@@ -413,7 +427,7 @@ class _NPSTargetManagementWidgetState extends State<NPSTargetManagementWidget> {
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365 * 3)),
     );
-    
+
     if (picked != null) {
       setState(() {
         _selectedDate = picked;
@@ -431,10 +445,10 @@ class _NPSTargetManagementWidgetState extends State<NPSTargetManagementWidget> {
         targetDate: _selectedDate,
         category: _selectedCategory,
       );
-      
+
       service.addPerformanceTarget(target);
       _clearForm();
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Target added successfully')),
       );
@@ -460,7 +474,7 @@ class _NPSTargetManagementWidgetState extends State<NPSTargetManagementWidget> {
       _selectedDate = target.targetDate;
       _selectedCategory = target.category;
     });
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -490,11 +504,11 @@ class _NPSTargetManagementWidgetState extends State<NPSTargetManagementWidget> {
                   isActive: target.isActive,
                   metadata: target.metadata,
                 );
-                
+
                 service.updatePerformanceTarget(target.id, updatedTarget);
                 _clearForm();
                 Navigator.of(context).pop();
-                
+
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Target updated successfully')),
                 );
@@ -545,9 +559,9 @@ class _NPSTargetManagementWidgetState extends State<NPSTargetManagementWidget> {
       isActive: !target.isActive,
       metadata: target.metadata,
     );
-    
+
     service.updatePerformanceTarget(target.id, updatedTarget);
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(

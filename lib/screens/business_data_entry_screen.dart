@@ -8,17 +8,19 @@ import '../storage.dart';
 
 class BusinessDataEntryScreen extends StatefulWidget {
   final DateTime? initialMonth;
-  
+
   const BusinessDataEntryScreen({
     super.key,
     this.initialMonth,
   });
 
   @override
-  State<BusinessDataEntryScreen> createState() => _BusinessDataEntryScreenState();
+  State<BusinessDataEntryScreen> createState() =>
+      _BusinessDataEntryScreenState();
 }
 
-class _BusinessDataEntryScreenState extends State<BusinessDataEntryScreen> with TickerProviderStateMixin {
+class _BusinessDataEntryScreenState extends State<BusinessDataEntryScreen>
+    with TickerProviderStateMixin {
   late TabController _tabController;
   late DateTime _selectedMonth;
   bool _isLoading = false;
@@ -27,20 +29,21 @@ class _BusinessDataEntryScreenState extends State<BusinessDataEntryScreen> with 
   // Business Data Controllers
   final _guestCountController = TextEditingController();
   final _salesController = TextEditingController();
-  
+
   // Server NPS Data
   final Map<String, TextEditingController> _npsControllers = {};
   final Map<String, TextEditingController> _responseCountControllers = {};
-  final Map<String, Map<String, TextEditingController>> _categoryControllers = {};
+  final Map<String, Map<String, TextEditingController>> _categoryControllers =
+      {};
   final Map<String, List<TextEditingController>> _commentControllers = {};
-  
+
   // Existing business data
   MonthlyBusinessData? _existingBusinessData;
   EnhancedMonthlyBusinessData? _existingEnhancedData;
-  
+
   final List<String> _npsCategories = [
     'Service Quality',
-    'Food Quality', 
+    'Food Quality',
     'Atmosphere',
     'Speed of Service',
     'Overall Experience',
@@ -66,26 +69,27 @@ class _BusinessDataEntryScreenState extends State<BusinessDataEntryScreen> with 
 
   void _initializeControllers() {
     final servers = context.read<AppState>().servers;
-    
+
     for (final server in servers) {
       // Main NPS score controller
       _npsControllers[server.id] = TextEditingController();
       _responseCountControllers[server.id] = TextEditingController();
-      
+
       // Category breakdown controllers
       _categoryControllers[server.id] = {};
       for (final category in _npsCategories) {
         _categoryControllers[server.id]![category] = TextEditingController();
       }
-      
+
       // Comment controllers (up to 3 comments per server)
-      _commentControllers[server.id] = List.generate(3, (index) => TextEditingController());
+      _commentControllers[server.id] =
+          List.generate(3, (index) => TextEditingController());
     }
-    
+
     // Add listeners for unsaved changes tracking
     _guestCountController.addListener(_markUnsavedChanges);
     _salesController.addListener(_markUnsavedChanges);
-    
+
     for (final controllers in _npsControllers.values) {
       controllers.addListener(_markUnsavedChanges);
     }
@@ -120,25 +124,27 @@ class _BusinessDataEntryScreenState extends State<BusinessDataEntryScreen> with 
 
   Future<void> _loadExistingData() async {
     setState(() => _isLoading = true);
-    
+
     try {
       final monthKey = Storage.generateMonthKey(_selectedMonth);
-      
+
       // Load existing business data
       final businessDataMap = await Storage.getMonthlyBusinessData(monthKey);
       if (businessDataMap != null) {
         _existingBusinessData = MonthlyBusinessData.fromMap(businessDataMap);
-        _guestCountController.text = _existingBusinessData!.totalGuestCount.toString();
+        _guestCountController.text =
+            _existingBusinessData!.totalGuestCount.toString();
         _salesController.text = _existingBusinessData!.totalSales.toString();
       }
-      
+
       // Load existing enhanced data (with NPS)
-      final enhancedDataMap = await Storage.getEnhancedMonthlyBusinessData(monthKey);
+      final enhancedDataMap =
+          await Storage.getEnhancedMonthlyBusinessData(monthKey);
       if (enhancedDataMap != null) {
-        _existingEnhancedData = EnhancedMonthlyBusinessData.fromMap(enhancedDataMap);
+        _existingEnhancedData =
+            EnhancedMonthlyBusinessData.fromMap(enhancedDataMap);
         _populateNPSData();
       }
-      
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -152,20 +158,21 @@ class _BusinessDataEntryScreenState extends State<BusinessDataEntryScreen> with 
 
   void _populateNPSData() {
     if (_existingEnhancedData == null) return;
-    
+
     for (final entry in _existingEnhancedData!.serverNPSData.entries) {
       final serverId = entry.key;
       final npsData = entry.value;
-      
+
       _npsControllers[serverId]?.text = npsData.monthlyScore.toStringAsFixed(1);
-      _responseCountControllers[serverId]?.text = npsData.responseCount.toString();
-      
+      _responseCountControllers[serverId]?.text =
+          npsData.responseCount.toString();
+
       // Populate category breakdowns
       for (final categoryEntry in npsData.categoryBreakdown.entries) {
-        _categoryControllers[serverId]?[categoryEntry.key]?.text = 
-          categoryEntry.value.toStringAsFixed(1);
+        _categoryControllers[serverId]?[categoryEntry.key]?.text =
+            categoryEntry.value.toStringAsFixed(1);
       }
-      
+
       // Populate comments
       for (int i = 0; i < npsData.guestComments.length && i < 3; i++) {
         _commentControllers[serverId]?[i].text = npsData.guestComments[i];
@@ -177,7 +184,8 @@ class _BusinessDataEntryScreenState extends State<BusinessDataEntryScreen> with 
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Business Data Entry - ${_getMonthDisplayName(_selectedMonth)}'),
+        title: Text(
+            'Business Data Entry - ${_getMonthDisplayName(_selectedMonth)}'),
         backgroundColor: Colors.green.shade700,
         foregroundColor: Colors.white,
         actions: [
@@ -265,7 +273,8 @@ class _BusinessDataEntryScreenState extends State<BusinessDataEntryScreen> with 
               onPressed: _saveAllData,
               backgroundColor: Colors.green.shade700,
               icon: const Icon(Icons.save, color: Colors.white),
-              label: const Text('Save All', style: TextStyle(color: Colors.white)),
+              label:
+                  const Text('Save All', style: TextStyle(color: Colors.white)),
             )
           : null,
     );
@@ -328,9 +337,12 @@ class _BusinessDataEntryScreenState extends State<BusinessDataEntryScreen> with 
                               color: Colors.blue.shade700,
                             ),
                           ),
-                          Text('Guests: ${_existingBusinessData!.totalGuestCount.toStringAsFixed(0)}'),
-                          Text('Sales: \$${_existingBusinessData!.totalSales.toStringAsFixed(2)}'),
-                          Text('Last Updated: ${_formatDateTime(_existingBusinessData!.entryDate)}'),
+                          Text(
+                              'Guests: ${_existingBusinessData!.totalGuestCount.toStringAsFixed(0)}'),
+                          Text(
+                              'Sales: \$${_existingBusinessData!.totalSales.toStringAsFixed(2)}'),
+                          Text(
+                              'Last Updated: ${_formatDateTime(_existingBusinessData!.entryDate)}'),
                         ],
                       ),
                     ),
@@ -348,7 +360,7 @@ class _BusinessDataEntryScreenState extends State<BusinessDataEntryScreen> with 
 
   Widget _buildNPSDataTab() {
     final servers = context.read<AppState>().servers;
-    
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -397,7 +409,8 @@ class _BusinessDataEntryScreenState extends State<BusinessDataEntryScreen> with 
           backgroundColor: Colors.green.shade700,
           child: Text(
             server.name.substring(0, 1).toUpperCase(),
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold),
           ),
         ),
         title: Text(
@@ -442,36 +455,38 @@ class _BusinessDataEntryScreenState extends State<BusinessDataEntryScreen> with 
                 ),
                 const SizedBox(height: 8),
                 ..._npsCategories.map((category) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: _buildNumberField(
-                    controller: _categoryControllers[server.id]![category]!,
-                    label: category,
-                    icon: Icons.category,
-                    hint: '0-100%',
-                    isInteger: false,
-                    maxValue: 100,
-                  ),
-                )),
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: _buildNumberField(
+                        controller: _categoryControllers[server.id]![category]!,
+                        label: category,
+                        icon: Icons.category,
+                        hint: '0-100%',
+                        isInteger: false,
+                        maxValue: 100,
+                      ),
+                    )),
                 const SizedBox(height: 16),
                 Text(
                   'Guest Comments',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 8),
-                ...List.generate(3, (index) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: TextFormField(
-                    controller: _commentControllers[server.id]![index],
-                    decoration: InputDecoration(
-                      labelText: 'Comment ${index + 1}',
-                      hintText: 'Enter guest feedback (optional)',
-                      border: const OutlineInputBorder(),
-                      prefixIcon: const Icon(Icons.comment),
-                    ),
-                    maxLines: 2,
-                    onChanged: (_) => _markUnsavedChanges(),
-                  ),
-                )),
+                ...List.generate(
+                    3,
+                    (index) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: TextFormField(
+                            controller: _commentControllers[server.id]![index],
+                            decoration: InputDecoration(
+                              labelText: 'Comment ${index + 1}',
+                              hintText: 'Enter guest feedback (optional)',
+                              border: const OutlineInputBorder(),
+                              prefixIcon: const Icon(Icons.comment),
+                            ),
+                            maxLines: 2,
+                            onChanged: (_) => _markUnsavedChanges(),
+                          ),
+                        )),
               ],
             ),
           ),
@@ -485,10 +500,10 @@ class _BusinessDataEntryScreenState extends State<BusinessDataEntryScreen> with 
     if (npsText.isEmpty) {
       return const Text('No NPS data entered');
     }
-    
+
     final score = double.tryParse(npsText) ?? 0.0;
     final category = _getNPSCategory(score);
-    
+
     return Row(
       children: [
         Text(category.emoji),
@@ -520,7 +535,7 @@ class _BusinessDataEntryScreenState extends State<BusinessDataEntryScreen> with 
     final guestCount = int.tryParse(_guestCountController.text) ?? 0;
     final sales = double.tryParse(_salesController.text) ?? 0.0;
     final avgSpend = guestCount > 0 ? sales / guestCount : 0.0;
-    
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -583,25 +598,25 @@ class _BusinessDataEntryScreenState extends State<BusinessDataEntryScreen> with 
     final servers = context.read<AppState>().servers;
     final npsScores = <double>[];
     var totalResponses = 0;
-    
+
     for (final server in servers) {
       final scoreText = _npsControllers[server.id]?.text ?? '';
       final responsesText = _responseCountControllers[server.id]?.text ?? '';
-      
+
       if (scoreText.isNotEmpty) {
         final score = double.tryParse(scoreText) ?? 0.0;
         if (score > 0) npsScores.add(score);
       }
-      
+
       if (responsesText.isNotEmpty) {
         totalResponses += int.tryParse(responsesText) ?? 0;
       }
     }
-    
-    final avgNPS = npsScores.isNotEmpty 
-        ? npsScores.reduce((a, b) => a + b) / npsScores.length 
+
+    final avgNPS = npsScores.isNotEmpty
+        ? npsScores.reduce((a, b) => a + b) / npsScores.length
         : 0.0;
-    
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -641,7 +656,9 @@ class _BusinessDataEntryScreenState extends State<BusinessDataEntryScreen> with 
                     'Servers with Data',
                     '${npsScores.length}/${servers.length}',
                     Icons.person_add,
-                    npsScores.length == servers.length ? Colors.green : Colors.orange,
+                    npsScores.length == servers.length
+                        ? Colors.green
+                        : Colors.orange,
                   ),
                 ),
                 Expanded(
@@ -749,12 +766,14 @@ class _BusinessDataEntryScreenState extends State<BusinessDataEntryScreen> with 
               )
             : null,
       ),
-      keyboardType: isInteger 
-          ? TextInputType.number 
+      keyboardType: isInteger
+          ? TextInputType.number
           : const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: [
-        if (isInteger) FilteringTextInputFormatter.digitsOnly
-        else FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+        if (isInteger)
+          FilteringTextInputFormatter.digitsOnly
+        else
+          FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
       ],
       onChanged: (value) {
         if (maxValue != null && value.isNotEmpty) {
@@ -770,19 +789,18 @@ class _BusinessDataEntryScreenState extends State<BusinessDataEntryScreen> with 
       },
       validator: (value) {
         if (value == null || value.isEmpty) return null;
-        
-        final numValue = isInteger 
-            ? int.tryParse(value) 
-            : double.tryParse(value);
-            
+
+        final numValue =
+            isInteger ? int.tryParse(value) : double.tryParse(value);
+
         if (numValue == null) {
           return 'Please enter a valid ${isInteger ? 'number' : 'decimal'}';
         }
-        
+
         if (maxValue != null && numValue > maxValue) {
           return 'Value cannot exceed ${maxValue.toStringAsFixed(0)}';
         }
-        
+
         return null;
       },
     );
@@ -791,8 +809,9 @@ class _BusinessDataEntryScreenState extends State<BusinessDataEntryScreen> with 
   Widget _buildCalculationsCard() {
     final guestCount = int.tryParse(_guestCountController.text) ?? 0;
     final sales = double.tryParse(_salesController.text) ?? 0.0;
-    final daysInMonth = _getDaysInMonth(_selectedMonth.year, _selectedMonth.month);
-    
+    final daysInMonth =
+        _getDaysInMonth(_selectedMonth.year, _selectedMonth.month);
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -804,15 +823,21 @@ class _BusinessDataEntryScreenState extends State<BusinessDataEntryScreen> with 
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 12),
-            _buildCalculationRow('Average Spend per Guest', guestCount > 0 
-                ? '\$${(sales / guestCount).toStringAsFixed(2)}'
-                : '\$0.00'),
-            _buildCalculationRow('Sales per Day', sales > 0 
-                ? '\$${(sales / daysInMonth).toStringAsFixed(2)}'
-                : '\$0.00'),
-            _buildCalculationRow('Guests per Day', guestCount > 0 
-                ? '${(guestCount / daysInMonth).toStringAsFixed(1)}'
-                : '0.0'),
+            _buildCalculationRow(
+                'Average Spend per Guest',
+                guestCount > 0
+                    ? '\$${(sales / guestCount).toStringAsFixed(2)}'
+                    : '\$0.00'),
+            _buildCalculationRow(
+                'Sales per Day',
+                sales > 0
+                    ? '\$${(sales / daysInMonth).toStringAsFixed(2)}'
+                    : '\$0.00'),
+            _buildCalculationRow(
+                'Guests per Day',
+                guestCount > 0
+                    ? (guestCount / daysInMonth).toStringAsFixed(1)
+                    : '0.0'),
           ],
         ),
       ),
@@ -839,7 +864,8 @@ class _BusinessDataEntryScreenState extends State<BusinessDataEntryScreen> with 
     );
   }
 
-  Widget _buildSummaryMetric(String label, String value, IconData icon, Color color) {
+  Widget _buildSummaryMetric(
+      String label, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(12),
       margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -877,8 +903,18 @@ class _BusinessDataEntryScreenState extends State<BusinessDataEntryScreen> with 
 
   String _getMonthDisplayName(DateTime month) {
     const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December'
     ];
     return '${months[month.month - 1]} ${month.year}';
   }
@@ -898,11 +934,11 @@ class _BusinessDataEntryScreenState extends State<BusinessDataEntryScreen> with 
   String _getDataQuality() {
     var score = 0;
     var maxScore = 5;
-    
+
     // Business data completeness
     if (_guestCountController.text.isNotEmpty) score++;
     if (_salesController.text.isNotEmpty) score++;
-    
+
     // NPS data completeness
     var hasNPSData = false;
     for (final controller in _npsControllers.values) {
@@ -912,17 +948,20 @@ class _BusinessDataEntryScreenState extends State<BusinessDataEntryScreen> with 
       }
     }
     if (hasNPSData) score++;
-    
+
     // Validation checks
     final guestCount = int.tryParse(_guestCountController.text) ?? 0;
     final sales = double.tryParse(_salesController.text) ?? 0.0;
     if (guestCount > 0 && sales > 0) score++;
-    
+
     // Consistency checks
-    if (guestCount > 0 && sales > 0 && (sales / guestCount) > 5 && (sales / guestCount) < 200) {
+    if (guestCount > 0 &&
+        sales > 0 &&
+        (sales / guestCount) > 5 &&
+        (sales / guestCount) < 200) {
       score++; // Reasonable average spend
     }
-    
+
     final percentage = (score / maxScore) * 100;
     if (percentage >= 80) return 'Excellent';
     if (percentage >= 60) return 'Good';
@@ -948,15 +987,15 @@ class _BusinessDataEntryScreenState extends State<BusinessDataEntryScreen> with 
 
   Future<void> _saveAllData() async {
     if (_isLoading) return;
-    
+
     setState(() => _isLoading = true);
-    
+
     try {
       await _saveBusinessData();
       await _saveNPSData();
-      
+
       setState(() => _hasUnsavedChanges = false);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -979,9 +1018,9 @@ class _BusinessDataEntryScreenState extends State<BusinessDataEntryScreen> with 
   Future<void> _saveBusinessData() async {
     final guestCount = int.tryParse(_guestCountController.text) ?? 0;
     final sales = double.tryParse(_salesController.text) ?? 0.0;
-    
+
     if (guestCount <= 0 || sales <= 0) return;
-    
+
     final businessData = MonthlyBusinessData(
       month: _selectedMonth,
       totalGuestCount: guestCount.toDouble(),
@@ -991,7 +1030,7 @@ class _BusinessDataEntryScreenState extends State<BusinessDataEntryScreen> with 
       validated: true,
       entryDate: DateTime.now(),
     );
-    
+
     final monthKey = Storage.generateMonthKey(_selectedMonth);
     await Storage.saveMonthlyBusinessData(monthKey, businessData.toMap());
   }
@@ -1001,27 +1040,28 @@ class _BusinessDataEntryScreenState extends State<BusinessDataEntryScreen> with 
     final serverNPSData = <String, NPSData>{};
     var totalNPS = 0.0;
     var npsCount = 0;
-    
+
     for (final server in servers) {
       final scoreText = _npsControllers[server.id]?.text ?? '';
       if (scoreText.isEmpty) continue;
-      
+
       final monthlyScore = double.tryParse(scoreText) ?? 0.0;
       if (monthlyScore <= 0) continue;
-      
-      final responseCount = int.tryParse(_responseCountControllers[server.id]?.text ?? '0') ?? 0;
-      
+
+      final responseCount =
+          int.tryParse(_responseCountControllers[server.id]?.text ?? '0') ?? 0;
+
       // Get category breakdown
       final categoryBreakdown = <String, double>{};
       for (final category in _npsCategories) {
         final categoryScore = double.tryParse(
-          _categoryControllers[server.id]?[category]?.text ?? '0'
-        ) ?? 0.0;
+                _categoryControllers[server.id]?[category]?.text ?? '0') ??
+            0.0;
         if (categoryScore > 0) {
           categoryBreakdown[category] = categoryScore;
         }
       }
-      
+
       // Get comments
       final comments = <String>[];
       for (final controller in _commentControllers[server.id] ?? []) {
@@ -1029,10 +1069,11 @@ class _BusinessDataEntryScreenState extends State<BusinessDataEntryScreen> with 
           comments.add(controller.text.trim());
         }
       }
-      
+
       // Calculate 3-month average (simplified - would need historical data)
-      final threeMonthAverage = monthlyScore; // TODO: Calculate from historical data
-      
+      final threeMonthAverage =
+          monthlyScore; // TODO: Calculate from historical data
+
       final npsData = NPSData(
         serverId: server.id,
         month: _selectedMonth,
@@ -1043,16 +1084,16 @@ class _BusinessDataEntryScreenState extends State<BusinessDataEntryScreen> with 
         guestComments: comments,
         lastUpdated: DateTime.now(),
       );
-      
+
       serverNPSData[server.id] = npsData;
       totalNPS += monthlyScore;
       npsCount++;
     }
-    
+
     if (serverNPSData.isNotEmpty) {
       final guestCount = int.tryParse(_guestCountController.text) ?? 0;
       final sales = double.tryParse(_salesController.text) ?? 0.0;
-      
+
       final enhancedData = EnhancedMonthlyBusinessData(
         month: _selectedMonth,
         totalGuests: guestCount,
@@ -1063,9 +1104,10 @@ class _BusinessDataEntryScreenState extends State<BusinessDataEntryScreen> with 
         serverSalesShare: {}, // TODO: Calculate from shift data
         lastUpdated: DateTime.now(),
       );
-      
+
       final monthKey = Storage.generateMonthKey(_selectedMonth);
-      await Storage.saveEnhancedMonthlyBusinessData(monthKey, enhancedData.toMap());
+      await Storage.saveEnhancedMonthlyBusinessData(
+          monthKey, enhancedData.toMap());
     }
   }
 
@@ -1079,7 +1121,8 @@ class _BusinessDataEntryScreenState extends State<BusinessDataEntryScreen> with 
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Clear All Data'),
-        content: const Text('Are you sure you want to clear all entered data? This action cannot be undone.'),
+        content: const Text(
+            'Are you sure you want to clear all entered data? This action cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -1091,7 +1134,8 @@ class _BusinessDataEntryScreenState extends State<BusinessDataEntryScreen> with 
               _performClearAll();
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Clear All', style: TextStyle(color: Colors.white)),
+            child:
+                const Text('Clear All', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -1101,7 +1145,7 @@ class _BusinessDataEntryScreenState extends State<BusinessDataEntryScreen> with 
   void _performClearAll() {
     _guestCountController.clear();
     _salesController.clear();
-    
+
     for (final controller in _npsControllers.values) {
       controller.clear();
     }
@@ -1118,7 +1162,7 @@ class _BusinessDataEntryScreenState extends State<BusinessDataEntryScreen> with 
         controller.clear();
       }
     }
-    
+
     setState(() => _hasUnsavedChanges = false);
   }
 
@@ -1175,7 +1219,8 @@ class _BusinessDataEntryScreenState extends State<BusinessDataEntryScreen> with 
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Unsaved Changes'),
-        content: const Text('You have unsaved changes. Would you like to save them now?'),
+        content: const Text(
+            'You have unsaved changes. Would you like to save them now?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),

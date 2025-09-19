@@ -6,11 +6,11 @@ class NPSNotificationTestPanel extends StatefulWidget {
   const NPSNotificationTestPanel({super.key});
 
   @override
-  State<NPSNotificationTestPanel> createState() => _NPSNotificationTestPanelState();
+  State<NPSNotificationTestPanel> createState() =>
+      _NPSNotificationTestPanelState();
 }
 
 class _NPSNotificationTestPanelState extends State<NPSNotificationTestPanel> {
-
   @override
   Widget build(BuildContext context) {
     return Card(

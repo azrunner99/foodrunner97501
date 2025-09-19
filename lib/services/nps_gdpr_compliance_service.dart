@@ -73,7 +73,8 @@ class ConsentRecord {
     return ConsentRecord(
       id: json['id'],
       userId: json['userId'],
-      consentType: ConsentType.values.firstWhere((t) => t.name == json['consentType']),
+      consentType:
+          ConsentType.values.firstWhere((t) => t.name == json['consentType']),
       granted: json['granted'],
       timestamp: DateTime.parse(json['timestamp']),
       version: json['version'],
@@ -172,8 +173,9 @@ class DataSubjectRequest {
     this.metadata = const {},
   });
 
-  bool get isOverdue => DateTime.now().isAfter(deadline) && status != 'completed';
-  
+  bool get isOverdue =>
+      DateTime.now().isAfter(deadline) && status != 'completed';
+
   Duration get timeRemaining => deadline.difference(DateTime.now());
 }
 
@@ -214,7 +216,8 @@ class DataBreachIncident {
 
   bool get requiresUserNotification {
     // Notify users if high risk to rights and freedoms
-    return severity == 'critical' || affectedDataTypes.contains('personal_identifiers');
+    return severity == 'critical' ||
+        affectedDataTypes.contains('personal_identifiers');
   }
 }
 
@@ -256,16 +259,19 @@ class NPSGDPRComplianceService extends ChangeNotifier {
   final List<DataSubjectRequest> _dataSubjectRequests = [];
   final List<DataBreachIncident> _dataBreaches = [];
   final List<PrivacyImpactAssessment> _privacyAssessments = [];
-  
+
   String _currentPrivacyPolicyVersion = '1.0';
   DateTime _lastDataProtectionReview = DateTime.now();
 
   // Getters
   List<ConsentRecord> get consentRecords => List.unmodifiable(_consentRecords);
-  List<RetentionPolicy> get retentionPolicies => List.unmodifiable(_retentionPolicies);
-  List<DataSubjectRequest> get dataSubjectRequests => List.unmodifiable(_dataSubjectRequests);
+  List<RetentionPolicy> get retentionPolicies =>
+      List.unmodifiable(_retentionPolicies);
+  List<DataSubjectRequest> get dataSubjectRequests =>
+      List.unmodifiable(_dataSubjectRequests);
   List<DataBreachIncident> get dataBreaches => List.unmodifiable(_dataBreaches);
-  List<PrivacyImpactAssessment> get privacyAssessments => List.unmodifiable(_privacyAssessments);
+  List<PrivacyImpactAssessment> get privacyAssessments =>
+      List.unmodifiable(_privacyAssessments);
   String get currentPrivacyPolicyVersion => _currentPrivacyPolicyVersion;
 
   /// Initialize GDPR compliance service
@@ -388,7 +394,8 @@ class NPSGDPRComplianceService extends ChangeNotifier {
       requestType: requestType,
       description: description,
       submissionDate: DateTime.now(),
-      deadline: DateTime.now().add(const Duration(days: 30)), // GDPR 30-day deadline
+      deadline:
+          DateTime.now().add(const Duration(days: 30)), // GDPR 30-day deadline
       status: 'pending',
       affectedDataCategories: affectedDataCategories,
       metadata: metadata,
@@ -401,7 +408,8 @@ class NPSGDPRComplianceService extends ChangeNotifier {
   }
 
   /// Process data subject request
-  Future<void> processDataSubjectRequest(String requestId, String status, {String? responseDetails}) async {
+  Future<void> processDataSubjectRequest(String requestId, String status,
+      {String? responseDetails}) async {
     final index = _dataSubjectRequests.indexWhere((r) => r.id == requestId);
     if (index != -1) {
       final request = _dataSubjectRequests[index];
@@ -415,7 +423,8 @@ class NPSGDPRComplianceService extends ChangeNotifier {
         deadline: request.deadline,
         status: status,
         responseDetails: responseDetails,
-        completedDate: status == 'completed' ? DateTime.now() : request.completedDate,
+        completedDate:
+            status == 'completed' ? DateTime.now() : request.completedDate,
         affectedDataCategories: request.affectedDataCategories,
         metadata: request.metadata,
       );
@@ -432,7 +441,8 @@ class NPSGDPRComplianceService extends ChangeNotifier {
       'user_id': userId,
       'export_date': DateTime.now().toIso8601String(),
       'data_categories': {
-        'consent_records': getUserConsents(userId).map((c) => c.toJson()).toList(),
+        'consent_records':
+            getUserConsents(userId).map((c) => c.toJson()).toList(),
         'nps_feedback': [], // Would fetch from NPS database
         'session_data': [], // Would fetch from session logs
         'profile_data': {}, // Would fetch from user profile
@@ -447,25 +457,31 @@ class NPSGDPRComplianceService extends ChangeNotifier {
   }
 
   /// Delete user data (for erasure requests)
-  Future<Map<String, dynamic>> deleteUserData(String userId, {List<String>? specificCategories}) async {
+  Future<Map<String, dynamic>> deleteUserData(String userId,
+      {List<String>? specificCategories}) async {
     var deletedItems = <String, int>{};
 
     // Delete consent records (except those required for legal compliance)
-    if (specificCategories == null || specificCategories.contains('consent_records')) {
+    if (specificCategories == null ||
+        specificCategories.contains('consent_records')) {
       final initialCount = _consentRecords.length;
-      _consentRecords.removeWhere((record) => 
-        record.userId == userId && 
-        record.consentType != ConsentType.dataProcessing // Keep processing consent for legal basis
-      );
+      _consentRecords.removeWhere((record) =>
+              record.userId == userId &&
+              record.consentType !=
+                  ConsentType
+                      .dataProcessing // Keep processing consent for legal basis
+          );
       deletedItems['consent_records'] = initialCount - _consentRecords.length;
     }
 
     // In a real implementation, would delete from all relevant databases
-    if (specificCategories == null || specificCategories.contains('feedback_data')) {
+    if (specificCategories == null ||
+        specificCategories.contains('feedback_data')) {
       deletedItems['feedback_data'] = 0; // Would delete NPS feedback
     }
 
-    if (specificCategories == null || specificCategories.contains('session_data')) {
+    if (specificCategories == null ||
+        specificCategories.contains('session_data')) {
       deletedItems['session_data'] = 0; // Would delete session logs
     }
 
@@ -504,12 +520,13 @@ class NPSGDPRComplianceService extends ChangeNotifier {
     );
 
     _dataBreaches.add(breach);
-    
+
     // Auto-schedule notifications if required
     if (breach.requiresRegulatorNotification) {
       // In production, would trigger automatic regulator notification
       if (kDebugMode) {
-        print('🚨 GDPR: High-risk data breach detected - regulator notification required within 72 hours');
+        print(
+            '🚨 GDPR: High-risk data breach detected - regulator notification required within 72 hours');
       }
     }
 
@@ -549,9 +566,8 @@ class NPSGDPRComplianceService extends ChangeNotifier {
           // Clean up old consent records as example
           final initialCount = _consentRecords.length;
           if (policy.category == DataCategory.sessionData) {
-            _consentRecords.removeWhere((record) => 
-              record.timestamp.isBefore(cutoffDate)
-            );
+            _consentRecords
+                .removeWhere((record) => record.timestamp.isBefore(cutoffDate));
             deletedCount = initialCount - _consentRecords.length;
           }
           break;
@@ -584,13 +600,19 @@ class NPSGDPRComplianceService extends ChangeNotifier {
     }
 
     // Data subject request statistics
-    final pendingRequests = _dataSubjectRequests.where((r) => r.status == 'pending').length;
-    final overdueRequests = _dataSubjectRequests.where((r) => r.isOverdue).length;
-    final completedRequests = _dataSubjectRequests.where((r) => r.status == 'completed').length;
+    final pendingRequests =
+        _dataSubjectRequests.where((r) => r.status == 'pending').length;
+    final overdueRequests =
+        _dataSubjectRequests.where((r) => r.isOverdue).length;
+    final completedRequests =
+        _dataSubjectRequests.where((r) => r.status == 'completed').length;
 
     // Data breach statistics
-    final recentBreaches = _dataBreaches.where((b) => b.discoveryDate.isAfter(last30Days)).length;
-    final highRiskBreaches = _dataBreaches.where((b) => b.severity == 'high' || b.severity == 'critical').length;
+    final recentBreaches =
+        _dataBreaches.where((b) => b.discoveryDate.isAfter(last30Days)).length;
+    final highRiskBreaches = _dataBreaches
+        .where((b) => b.severity == 'high' || b.severity == 'critical')
+        .length;
 
     return {
       'consent_statistics': consentStats,
@@ -599,7 +621,7 @@ class NPSGDPRComplianceService extends ChangeNotifier {
         'pending': pendingRequests,
         'overdue': overdueRequests,
         'completed': completedRequests,
-        'completion_rate': _dataSubjectRequests.isNotEmpty 
+        'completion_rate': _dataSubjectRequests.isNotEmpty
             ? (completedRequests / _dataSubjectRequests.length * 100).round()
             : 0,
       },
@@ -643,19 +665,22 @@ class NPSGDPRComplianceService extends ChangeNotifier {
 
     // Check for overdue data subject requests
     if (stats['data_subject_requests']['overdue'] > 0) {
-      recommendations.add('Address ${stats['data_subject_requests']['overdue']} overdue data subject requests immediately');
+      recommendations.add(
+          'Address ${stats['data_subject_requests']['overdue']} overdue data subject requests immediately');
     }
 
     // Check consent rates
     final consentStats = stats['consent_statistics'] as Map<String, int>;
     final totalUsers = 5; // Demo value
     if (consentStats['dataProcessing']! < totalUsers) {
-      recommendations.add('Ensure all users have provided data processing consent');
+      recommendations
+          .add('Ensure all users have provided data processing consent');
     }
 
     // Check for recent high-risk breaches
     if (stats['data_breaches']['high_risk'] > 0) {
-      recommendations.add('Review security measures following high-risk data breaches');
+      recommendations
+          .add('Review security measures following high-risk data breaches');
     }
 
     // General recommendations
@@ -677,19 +702,23 @@ class NPSGDPRComplianceService extends ChangeNotifier {
         'title': 'Review Data Retention Policies',
         'description': 'Audit current retention periods and update as needed',
         'priority': 'medium',
-        'due_date': DateTime.now().add(const Duration(days: 30)).toIso8601String(),
+        'due_date':
+            DateTime.now().add(const Duration(days: 30)).toIso8601String(),
       },
       {
         'title': 'Update Privacy Notice',
-        'description': 'Review and update privacy notice for clarity and completeness',
+        'description':
+            'Review and update privacy notice for clarity and completeness',
         'priority': 'low',
-        'due_date': DateTime.now().add(const Duration(days: 60)).toIso8601String(),
+        'due_date':
+            DateTime.now().add(const Duration(days: 60)).toIso8601String(),
       },
       {
         'title': 'Conduct Privacy Impact Assessment',
         'description': 'Assess privacy risks for new analytics features',
         'priority': 'high',
-        'due_date': DateTime.now().add(const Duration(days: 14)).toIso8601String(),
+        'due_date':
+            DateTime.now().add(const Duration(days: 14)).toIso8601String(),
       },
     ];
   }
@@ -707,21 +736,24 @@ class NPSGDPRComplianceService extends ChangeNotifier {
     final warnings = <String>[];
 
     // Check for overdue requests
-    final overdueRequests = _dataSubjectRequests.where((r) => r.isOverdue).length;
+    final overdueRequests =
+        _dataSubjectRequests.where((r) => r.isOverdue).length;
     if (overdueRequests > 0) {
       issues.add('$overdueRequests overdue data subject requests');
     }
 
     // Check for unreported breaches
-    final unreportedBreaches = _dataBreaches.where((b) => 
-      b.requiresRegulatorNotification && !b.regulatorNotified
-    ).length;
+    final unreportedBreaches = _dataBreaches
+        .where((b) => b.requiresRegulatorNotification && !b.regulatorNotified)
+        .length;
     if (unreportedBreaches > 0) {
-      issues.add('$unreportedBreaches high-risk breaches require regulator notification');
+      issues.add(
+          '$unreportedBreaches high-risk breaches require regulator notification');
     }
 
     // Check privacy policy age
-    final daysSinceReview = DateTime.now().difference(_lastDataProtectionReview).inDays;
+    final daysSinceReview =
+        DateTime.now().difference(_lastDataProtectionReview).inDays;
     if (daysSinceReview > 365) {
       warnings.add('Privacy policy not reviewed for over a year');
     }

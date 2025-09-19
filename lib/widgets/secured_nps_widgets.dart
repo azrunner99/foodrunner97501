@@ -29,15 +29,15 @@ class SecuredDataExportWidget extends StatelessWidget {
                   Text(
                     'Data Export Restricted',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     'You do not have permission to export data.',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey.shade600,
-                    ),
+                          color: Colors.grey.shade600,
+                        ),
                   ),
                 ],
               ),
@@ -97,9 +97,9 @@ class _SecuredExportWrapper extends StatelessWidget {
                 Text(
                   'Secured Export',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).primaryColor,
-                    fontWeight: FontWeight.bold,
-                  ),
+                        color: Theme.of(context).primaryColor,
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
                 const Spacer(),
                 if (encryption.config.encryptExports)
@@ -127,9 +127,9 @@ class _SecuredExportWrapper extends StatelessWidget {
             child: Text(
               'All export activities are logged and audited for security compliance.',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey.shade600,
-                fontStyle: FontStyle.italic,
-              ),
+                    color: Colors.grey.shade600,
+                    fontStyle: FontStyle.italic,
+                  ),
               textAlign: TextAlign.center,
             ),
           ),
@@ -181,13 +181,14 @@ class SecuredNotificationSummary extends StatelessWidget {
                     Text(
                       'Notifications',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
-                const Text('Secured notification summary - implementation pending'),
+                const Text(
+                    'Secured notification summary - implementation pending'),
               ],
             ),
           ),
@@ -200,7 +201,7 @@ class SecuredNotificationSummary extends StatelessWidget {
 /// Security-aware analytics widget wrapper
 class SecuredAnalyticsWidget extends StatelessWidget {
   final Widget child;
-  
+
   const SecuredAnalyticsWidget({
     super.key,
     required this.child,
@@ -227,16 +228,16 @@ class SecuredAnalyticsWidget extends StatelessWidget {
                   Text(
                     'Analytics Access Restricted',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey.shade600,
-                    ),
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey.shade600,
+                        ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'You do not have permission to view analytics data.',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey.shade600,
-                    ),
+                          color: Colors.grey.shade600,
+                        ),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -257,7 +258,10 @@ class SecuredAnalyticsWidget extends StatelessWidget {
           description: 'User accessed analytics dashboard',
           details: {
             'user_role': security.currentUser?.role.name,
-            'permissions': security.currentUser?.getAllPermissions().map((p) => p.name).toList(),
+            'permissions': security.currentUser
+                ?.getAllPermissions()
+                .map((p) => p.name)
+                .toList(),
           },
           ipAddress: security.currentSession?.ipAddress ?? 'unknown',
           userAgent: security.currentSession?.userAgent ?? 'unknown',
@@ -273,7 +277,7 @@ class SecuredAnalyticsWidget extends StatelessWidget {
 /// Security-aware benchmarking widget wrapper
 class SecuredBenchmarkingWidget extends StatelessWidget {
   final Widget child;
-  
+
   const SecuredBenchmarkingWidget({
     super.key,
     required this.child,
@@ -300,16 +304,16 @@ class SecuredBenchmarkingWidget extends StatelessWidget {
                   Text(
                     'Benchmarking Access Restricted',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey.shade600,
-                    ),
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey.shade600,
+                        ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'You do not have permission to view benchmarking data.',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey.shade600,
-                    ),
+                          color: Colors.grey.shade600,
+                        ),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -349,7 +353,7 @@ class SecurityUtils {
     String action,
   ) {
     final hasPermission = security.hasPermission(requiredPermission);
-    
+
     audit.log(
       userId: security.currentUser?.id ?? 'anonymous',
       userName: security.currentUser?.username ?? 'Anonymous',
@@ -358,14 +362,20 @@ class SecurityUtils {
       category: AuditCategory.authorization,
       action: action,
       resource: resource,
-      description: hasPermission 
+      description: hasPermission
           ? 'Access granted to $resource'
           : 'Access denied to $resource - insufficient permissions',
       success: hasPermission,
-      errorMessage: hasPermission ? null : 'Insufficient permissions: ${requiredPermission.name}',
+      errorMessage: hasPermission
+          ? null
+          : 'Insufficient permissions: ${requiredPermission.name}',
       details: {
         'required_permission': requiredPermission.name,
-        'user_permissions': security.currentUser?.getAllPermissions().map((p) => p.name).toList() ?? [],
+        'user_permissions': security.currentUser
+                ?.getAllPermissions()
+                .map((p) => p.name)
+                .toList() ??
+            [],
       },
       ipAddress: security.currentSession?.ipAddress ?? 'unknown',
       userAgent: security.currentSession?.userAgent ?? 'unknown',

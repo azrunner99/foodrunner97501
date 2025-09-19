@@ -64,17 +64,22 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     children: shiftsToday
                         .map((s) => ListTile(
                               leading: const Icon(Icons.event_available),
-                              title: Text('${s.shiftType} • ${s.label} • ${_hm(s.start)}'),
+                              title: Text(
+                                  '${s.shiftType} • ${s.label} • ${_hm(s.start)}'),
                               subtitle: Text('${s.counts.length} participants'),
                               trailing: PopupMenuButton<String>(
                                 onSelected: (value) async {
                                   if (value == 'delete') {
                                     final ok = await _confirmDelete(context);
                                     if (ok == true) {
-                                      await context.read<AppState>().deleteShift(s.id);
+                                      await context
+                                          .read<AppState>()
+                                          .deleteShift(s.id);
                                       if (mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('Shift deleted')),
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          const SnackBar(
+                                              content: Text('Shift deleted')),
                                         );
                                       }
                                     }
@@ -83,10 +88,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                   }
                                 },
                                 itemBuilder: (_) => const [
-                                  PopupMenuItem(value: 'view', child: Text('View')),
+                                  PopupMenuItem(
+                                      value: 'view', child: Text('View')),
                                   PopupMenuItem(
                                     value: 'delete',
-                                    child: Text('Delete', style: TextStyle(color: Colors.red)),
+                                    child: Text('Delete',
+                                        style: TextStyle(color: Colors.red)),
                                   ),
                                 ],
                               ),
@@ -94,10 +101,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               onLongPress: () async {
                                 final ok = await _confirmDelete(context);
                                 if (ok == true) {
-                                  await context.read<AppState>().deleteShift(s.id);
+                                  await context
+                                      .read<AppState>()
+                                      .deleteShift(s.id);
                                   if (mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Shift deleted')),
+                                      const SnackBar(
+                                          content: Text('Shift deleted')),
                                     );
                                   }
                                 }
@@ -118,10 +128,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Delete shift'),
-        content: const Text('This will remove the shift and recompute totals. Continue?'),
+        content: const Text(
+            'This will remove the shift and recompute totals. Continue?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Delete')),
         ],
       ),
     );
@@ -135,7 +150,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text('${s.shiftType} • ${s.label} • ${_ymd(s.start)} ${_hm(s.start)}'),
+        title: Text(
+            '${s.shiftType} • ${s.label} • ${_ymd(s.start)} ${_hm(s.start)}'),
         content: SizedBox(
           width: 360,
           child: Column(
@@ -144,14 +160,20 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 .map((e) => Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Expanded(child: Text(app.serverById(e.key)?.name ?? 'Unknown')),
+                        Expanded(
+                            child:
+                                Text(app.serverById(e.key)?.name ?? 'Unknown')),
                         Text(e.value.toString()),
                       ],
                     ))
                 .toList(),
           ),
         ),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'))
+        ],
       ),
     );
   }
@@ -192,7 +214,9 @@ class _CalendarTab extends StatelessWidget {
             lastDay: DateTime.utc(2100, 12, 31),
             focusedDay: selectedDay,
             selectedDayPredicate: (d) =>
-                d.year == selectedDay.year && d.month == selectedDay.month && d.day == selectedDay.day,
+                d.year == selectedDay.year &&
+                d.month == selectedDay.month &&
+                d.day == selectedDay.day,
             onDaySelected: (sel, foc) => onDaySelected(sel),
             calendarBuilders: CalendarBuilders(
               markerBuilder: (context, day, events) {
@@ -203,7 +227,9 @@ class _CalendarTab extends StatelessWidget {
                   alignment: Alignment.bottomCenter,
                   child: Padding(
                     padding: const EdgeInsets.only(bottom: 2),
-                    child: Text('$count', style: const TextStyle(fontSize: 10, color: Colors.teal)),
+                    child: Text('$count',
+                        style:
+                            const TextStyle(fontSize: 10, color: Colors.teal)),
                   ),
                 );
               },
@@ -234,7 +260,8 @@ class _ListTab extends StatelessWidget {
         final total = s.counts.values.fold<int>(0, (a, b) => a + b);
         return ListTile(
           leading: const Icon(Icons.event_note),
-          title: Text('${s.shiftType} • ${s.label} • ${_ymd(s.start)} ${_hm(s.start)}'),
+          title: Text(
+              '${s.shiftType} • ${s.label} • ${_ymd(s.start)} ${_hm(s.start)}'),
           subtitle: Text('Total runs: $total • ${s.counts.length} servers'),
           trailing: PopupMenuButton<String>(
             onSelected: (value) async {
@@ -249,13 +276,16 @@ class _ListTab extends StatelessWidget {
                   }
                 }
               } else {
-                final host = context.findAncestorStateOfType<_HistoryScreenState>();
+                final host =
+                    context.findAncestorStateOfType<_HistoryScreenState>();
                 host?._showShiftDialog(context, s);
               }
             },
             itemBuilder: (_) => const [
               PopupMenuItem(value: 'view', child: Text('View')),
-              PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: Colors.red))),
+              PopupMenuItem(
+                  value: 'delete',
+                  child: Text('Delete', style: TextStyle(color: Colors.red))),
             ],
           ),
           onTap: () {
@@ -283,10 +313,15 @@ class _ListTab extends StatelessWidget {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Delete shift'),
-        content: const Text('This will remove the shift and recompute totals. Continue?'),
+        content: const Text(
+            'This will remove the shift and recompute totals. Continue?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Delete')),
         ],
       ),
     );

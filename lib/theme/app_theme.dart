@@ -1,5 +1,6 @@
 /// Enhanced Theme System for Food Runs Counter
 /// Provides consistent, optimized, and beautiful theming across the entire app
+library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,33 +10,33 @@ class AppTheme {
   static const Color primaryColor = Color(0xFF00B4D8);
   static const Color primaryLight = Color(0xFF33C2E0);
   static const Color primaryDark = Color(0xFF0090A8);
-  
+
   // Secondary colors
   static const Color accentColor = Color(0xFFFF6B35);
   static const Color accentLight = Color(0xFFFF8760);
   static const Color accentDark = Color(0xFFE55A2B);
-  
+
   // Team colors (optimized for accessibility)
   static const Color teamBlue = Color(0xFF2196F3);
   static const Color teamPurple = Color(0xFF9C27B0);
   static const Color teamSilver = Color(0xFF757575);
-  
+
   // Status colors
   static const Color successColor = Color(0xFF4CAF50);
   static const Color warningColor = Color(0xFFFF9800);
   static const Color errorColor = Color(0xFFF44336);
   static const Color infoColor = Color(0xFF2196F3);
-  
+
   // Neutral colors
   static const Color backgroundColor = Color(0xFFF5F5F5);
   static const Color surfaceColor = Colors.white;
   static const Color cardColor = Colors.white;
-  
+
   // Text colors
   static const Color textPrimary = Color(0xFF212121);
   static const Color textSecondary = Color(0xFF757575);
   static const Color textHint = Color(0xFFBDBDBD);
-  
+
   // Create the main theme
   static ThemeData get lightTheme {
     return ThemeData(
@@ -49,7 +50,7 @@ class AppTheme {
         background: backgroundColor,
         error: errorColor,
       ),
-      
+
       // App Bar Theme
       appBarTheme: const AppBarTheme(
         centerTitle: true,
@@ -70,7 +71,7 @@ class AppTheme {
           size: 24,
         ),
       ),
-      
+
       // Card Theme
       cardTheme: CardThemeData(
         elevation: 4,
@@ -81,7 +82,7 @@ class AppTheme {
         color: cardColor,
         margin: const EdgeInsets.all(8),
       ),
-      
+
       // Elevated Button Theme
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -101,7 +102,7 @@ class AppTheme {
           ),
         ),
       ),
-      
+
       // Text Button Theme
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
@@ -119,7 +120,7 @@ class AppTheme {
           ),
         ),
       ),
-      
+
       // Outlined Button Theme
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
@@ -141,7 +142,7 @@ class AppTheme {
           ),
         ),
       ),
-      
+
       // Input Decoration Theme
       inputDecorationTheme: InputDecorationTheme(
         border: OutlineInputBorder(
@@ -173,7 +174,7 @@ class AppTheme {
           fontSize: 16,
         ),
       ),
-      
+
       // Snackbar Theme
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
@@ -190,7 +191,7 @@ class AppTheme {
         showCloseIcon: true,
         closeIconColor: Colors.white,
       ),
-      
+
       // Dialog Theme
       dialogTheme: const DialogThemeData(
         elevation: 8,
@@ -211,7 +212,7 @@ class AppTheme {
           height: 1.4,
         ),
       ),
-      
+
       // Bottom Sheet Theme
       bottomSheetTheme: const BottomSheetThemeData(
         elevation: 8,
@@ -223,7 +224,7 @@ class AppTheme {
         ),
         backgroundColor: surfaceColor,
       ),
-      
+
       // List Tile Theme
       listTileTheme: const ListTileThemeData(
         contentPadding: EdgeInsets.symmetric(
@@ -235,19 +236,19 @@ class AppTheme {
           borderRadius: BorderRadius.all(Radius.circular(8)),
         ),
       ),
-      
+
       // Icon Theme
       iconTheme: const IconThemeData(
         color: textSecondary,
         size: 24,
       ),
-      
+
       // Primary Icon Theme
       primaryIconTheme: const IconThemeData(
         color: Colors.white,
         size: 24,
       ),
-      
+
       // Text Theme
       textTheme: const TextTheme(
         displayLarge: TextStyle(
@@ -344,7 +345,7 @@ class AppTheme {
           letterSpacing: 1.5,
         ),
       ),
-      
+
       // Floating Action Button Theme
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
         backgroundColor: primaryColor,
@@ -353,54 +354,54 @@ class AppTheme {
         highlightElevation: 8,
         shape: CircleBorder(),
       ),
-      
+
       // Switch Theme
       switchTheme: SwitchThemeData(
-        thumbColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.selected)) {
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
             return primaryColor;
           }
           return Colors.grey.shade400;
         }),
-        trackColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.selected)) {
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
             return primaryColor.withOpacity(0.5);
           }
           return Colors.grey.shade300;
         }),
       ),
-      
+
       // Checkbox Theme
       checkboxTheme: CheckboxThemeData(
-        fillColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.selected)) {
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
             return primaryColor;
           }
           return Colors.transparent;
         }),
-        checkColor: MaterialStateProperty.all(Colors.white),
+        checkColor: WidgetStateProperty.all(Colors.white),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(4),
         ),
       ),
-      
+
       // Radio Theme
       radioTheme: RadioThemeData(
-        fillColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.selected)) {
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
             return primaryColor;
           }
           return Colors.grey.shade400;
         }),
       ),
-      
+
       // Progress Indicator Theme
       progressIndicatorTheme: const ProgressIndicatorThemeData(
         color: primaryColor,
         linearTrackColor: Colors.grey,
         circularTrackColor: Colors.grey,
       ),
-      
+
       // Divider Theme
       dividerTheme: DividerThemeData(
         color: Colors.grey.shade300,
@@ -409,44 +410,44 @@ class AppTheme {
       ),
     );
   }
-  
+
   // Utility methods for consistent styling
   static BoxDecoration get cardDecoration => BoxDecoration(
-    color: cardColor,
-    borderRadius: BorderRadius.circular(12),
-    boxShadow: [
-      BoxShadow(
-        color: Colors.black.withOpacity(0.1),
-        blurRadius: 4,
-        offset: const Offset(0, 2),
-      ),
-    ],
-  );
-  
+        color: cardColor,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      );
+
   static BoxDecoration get elevatedCardDecoration => BoxDecoration(
-    color: cardColor,
-    borderRadius: BorderRadius.circular(12),
-    boxShadow: [
-      BoxShadow(
-        color: Colors.black.withOpacity(0.15),
-        blurRadius: 8,
-        offset: const Offset(0, 4),
-      ),
-    ],
-  );
-  
+        color: cardColor,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      );
+
   static LinearGradient get primaryGradient => const LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [primaryLight, primaryColor, primaryDark],
-  );
-  
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [primaryLight, primaryColor, primaryDark],
+      );
+
   static LinearGradient get accentGradient => const LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [accentLight, accentColor, accentDark],
-  );
-  
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [accentLight, accentColor, accentDark],
+      );
+
   // Team-specific styling
   static Color getTeamColor(String team) {
     switch (team.toLowerCase()) {
@@ -460,7 +461,7 @@ class AppTheme {
         return Colors.grey;
     }
   }
-  
+
   static BoxDecoration getTeamDecoration(String team) {
     final color = getTeamColor(team);
     return BoxDecoration(
@@ -469,7 +470,7 @@ class AppTheme {
       border: Border.all(color: color, width: 2),
     );
   }
-  
+
   // Status-specific styling
   static Color getStatusColor(String status) {
     switch (status.toLowerCase()) {
@@ -491,7 +492,7 @@ class AppTheme {
         return textSecondary;
     }
   }
-  
+
   // Consistent spacing
   static const double spacingXs = 4.0;
   static const double spacingSm = 8.0;
@@ -499,7 +500,7 @@ class AppTheme {
   static const double spacingLg = 24.0;
   static const double spacingXl = 32.0;
   static const double spacingXxl = 48.0;
-  
+
   // Consistent border radius
   static const double radiusXs = 4.0;
   static const double radiusSm = 8.0;
@@ -507,14 +508,14 @@ class AppTheme {
   static const double radiusLg = 16.0;
   static const double radiusXl = 20.0;
   static const double radiusRound = 9999.0;
-  
+
   // Icon sizes
   static const double iconXs = 16.0;
   static const double iconSm = 20.0;
   static const double iconMd = 24.0;
   static const double iconLg = 32.0;
   static const double iconXl = 48.0;
-  
+
   // Level progression colors that represent advancement and achievement
   // Colors progressively darken within each tier as players approach the next level
   static Color getLevelBubbleColor(int level) {
@@ -523,17 +524,18 @@ class AppTheme {
     final baseColor = tierData['baseColor'] as Color;
     final tierStart = tierData['tierStart'] as int;
     final tierEnd = tierData['tierEnd'] as int;
-    
+
     // Calculate progression within the tier (0.0 to 1.0)
     final tierProgress = (level - tierStart) / (tierEnd - tierStart);
-    
+
     // Create extremely dramatic progression: start almost original color to very dark
     // This gives the most noticeable visual progression possible
-    final darkeningFactor = 0.005 + (tierProgress * 0.895); // 0.005 to 0.9 darkening
-    
+    final darkeningFactor =
+        0.005 + (tierProgress * 0.895); // 0.005 to 0.9 darkening
+
     return _darkenColor(baseColor, darkeningFactor);
   }
-  
+
   // Helper function to get tier information for a given level
   static Map<String, dynamic> _getLevelTierData(int level) {
     if (level <= 5) {
@@ -602,14 +604,14 @@ class AppTheme {
       };
     }
   }
-  
+
   // Helper function to darken a color by a given factor (0.0 = no change, 1.0 = black)
   static Color _darkenColor(Color color, double factor) {
     final hsl = HSLColor.fromColor(color);
     final darkenedLightness = (hsl.lightness * (1.0 - factor)).clamp(0.0, 1.0);
     return hsl.withLightness(darkenedLightness).toColor();
   }
-  
+
   // Level progression gradients with progressive darkening within each tier
   static LinearGradient getLevelBubbleGradient(int level) {
     // Get tier data and calculate progressive darkening
@@ -617,19 +619,20 @@ class AppTheme {
     final baseColor = tierData['baseColor'] as Color;
     final tierStart = tierData['tierStart'] as int;
     final tierEnd = tierData['tierEnd'] as int;
-    
+
     // Calculate progression within the tier (0.0 to 1.0)
     final tierProgress = (level - tierStart) / (tierEnd - tierStart);
-    
+
     // Create gradient with extremely dramatic progression from almost original to very dark
     // Light shade: start with almost no darkening to light darkening
     // Dark shade: start with slight darkening to extremely dark
-    final lightDarkeningFactor = 0.002 + (tierProgress * 0.348); // 0.002 to 0.35
-    final darkDarkeningFactor = 0.08 + (tierProgress * 0.87);    // 0.08 to 0.95
-    
+    final lightDarkeningFactor =
+        0.002 + (tierProgress * 0.348); // 0.002 to 0.35
+    final darkDarkeningFactor = 0.08 + (tierProgress * 0.87); // 0.08 to 0.95
+
     final lightColor = _darkenColor(baseColor, lightDarkeningFactor);
     final darkColor = _darkenColor(baseColor, darkDarkeningFactor);
-    
+
     return LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,

@@ -8,14 +8,13 @@ import 'advanced_analytics_service.dart';
 
 /// Service for exporting NPS data and analytics to various formats
 class DataExportService {
-
   /// Export NPS feedback data to CSV format
   static Future<String> exportFeedbackToCSV(
     List<NPSScoreFeedback> feedback,
     List<NPSServer> servers,
   ) async {
     final List<List<dynamic>> csvData = [];
-    
+
     // Add header row
     csvData.add([
       'Feedback ID',
@@ -45,7 +44,9 @@ class DataExportService {
         _getNPSCategory(feedbackItem.score),
         feedbackItem.comment,
         _formatDate(feedbackItem.submissionDate),
-        feedbackItem.createdAt != null ? _formatDate(feedbackItem.createdAt!) : 'N/A',
+        feedbackItem.createdAt != null
+            ? _formatDate(feedbackItem.createdAt!)
+            : 'N/A',
       ]);
     }
 
@@ -58,7 +59,7 @@ class DataExportService {
     List<NPSScoreFeedback> feedback,
   ) async {
     final List<List<dynamic>> csvData = [];
-    
+
     // Add header row
     csvData.add([
       'Server ID',
@@ -76,9 +77,10 @@ class DataExportService {
 
     // Calculate analytics for each server
     for (final server in servers) {
-      final serverFeedback = feedback.where((f) => f.serverId == (server.id ?? 0)).toList();
+      final serverFeedback =
+          feedback.where((f) => f.serverId == (server.id ?? 0)).toList();
       final analytics = _calculateServerAnalytics(serverFeedback);
-      
+
       csvData.add([
         server.id ?? 'N/A',
         server.name,
@@ -100,13 +102,13 @@ class DataExportService {
   /// Export comprehensive analytics report to CSV format
   static Future<String> exportComprehensiveAnalyticsToCSV(
     List<NPSServer> servers,
-    List<NPSScoreFeedback> feedback,
-    {
+    List<NPSScoreFeedback> feedback, {
     int daysBack = 30,
   }) async {
     final List<List<dynamic>> csvData = [];
-    final insights = AdvancedAnalyticsService.generateInsights(servers, feedback);
-    
+    final insights =
+        AdvancedAnalyticsService.generateInsights(servers, feedback);
+
     // Add metadata section
     csvData.addAll([
       ['Comprehensive NPS Analytics Report'],
@@ -131,7 +133,8 @@ class DataExportService {
 
     // Add server performance data
     for (final server in servers) {
-      final serverFeedback = feedback.where((f) => f.serverId == (server.id ?? 0)).toList();
+      final serverFeedback =
+          feedback.where((f) => f.serverId == (server.id ?? 0)).toList();
       final analytics = _calculateServerAnalytics(serverFeedback);
       csvData.add([
         server.name,
@@ -166,12 +169,11 @@ class DataExportService {
 
   /// Export time-series data for trend analysis
   static Future<String> exportTimeSeriesDataToCSV(
-    List<NPSScoreFeedback> feedback,
-    {
+    List<NPSScoreFeedback> feedback, {
     int daysBack = 30,
   }) async {
     final List<List<dynamic>> csvData = [];
-    
+
     // Add header row
     csvData.add([
       'Date',
@@ -202,7 +204,7 @@ class DataExportService {
       final dateKey = _formatDate(date);
       final dayFeedback = dailyData[dateKey] ?? [];
       final analytics = _calculateServerAnalytics(dayFeedback);
-      
+
       csvData.add([
         dateKey,
         _getDayOfWeek(date),
@@ -227,7 +229,7 @@ class DataExportService {
       final directory = await getApplicationDocumentsDirectory();
       final file = File('${directory.path}/$fileName');
       await file.writeAsString(csvContent);
-      
+
       await Share.shareXFiles(
         [XFile(file.path)],
         subject: 'NPS Analytics Export',
@@ -244,36 +246,41 @@ class DataExportService {
     List<NPSScoreFeedback> feedback,
   ) async {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    
+
     try {
       // Generate all export files
       final feedbackCSV = await exportFeedbackToCSV(feedback, servers);
       final analyticsCSV = await exportServerAnalyticsToCSV(servers, feedback);
-      final comprehensiveCSV = await exportComprehensiveAnalyticsToCSV(servers, feedback);
+      final comprehensiveCSV =
+          await exportComprehensiveAnalyticsToCSV(servers, feedback);
       final timeSeriesCSV = await exportTimeSeriesDataToCSV(feedback);
 
       // Save all files
       final directory = await getApplicationDocumentsDirectory();
-      
+
       final files = <XFile>[];
-      
+
       // Save feedback data
-      final feedbackFile = File('${directory.path}/nps_feedback_$timestamp.csv');
+      final feedbackFile =
+          File('${directory.path}/nps_feedback_$timestamp.csv');
       await feedbackFile.writeAsString(feedbackCSV);
       files.add(XFile(feedbackFile.path));
-      
+
       // Save analytics summary
-      final analyticsFile = File('${directory.path}/nps_analytics_$timestamp.csv');
+      final analyticsFile =
+          File('${directory.path}/nps_analytics_$timestamp.csv');
       await analyticsFile.writeAsString(analyticsCSV);
       files.add(XFile(analyticsFile.path));
-      
+
       // Save comprehensive report
-      final comprehensiveFile = File('${directory.path}/nps_comprehensive_report_$timestamp.csv');
+      final comprehensiveFile =
+          File('${directory.path}/nps_comprehensive_report_$timestamp.csv');
       await comprehensiveFile.writeAsString(comprehensiveCSV);
       files.add(XFile(comprehensiveFile.path));
-      
+
       // Save time series data
-      final timeSeriesFile = File('${directory.path}/nps_time_series_$timestamp.csv');
+      final timeSeriesFile =
+          File('${directory.path}/nps_time_series_$timestamp.csv');
       await timeSeriesFile.writeAsString(timeSeriesCSV);
       files.add(XFile(timeSeriesFile.path));
 
@@ -304,7 +311,8 @@ class DataExportService {
     return 'Detractor';
   }
 
-  static Map<String, dynamic> _calculateServerAnalytics(List<NPSScoreFeedback> feedback) {
+  static Map<String, dynamic> _calculateServerAnalytics(
+      List<NPSScoreFeedback> feedback) {
     if (feedback.isEmpty) {
       return {
         'totalResponses': 0,
@@ -320,10 +328,11 @@ class DataExportService {
     final promoters = feedback.where((f) => f.score >= 9).length;
     final passives = feedback.where((f) => f.score >= 7 && f.score <= 8).length;
     final detractors = feedback.where((f) => f.score <= 6).length;
-    
+
     final npsScore = ((promoters - detractors) / feedback.length) * 100;
-    final averageScore = feedback.map((f) => f.score).reduce((a, b) => a + b) / feedback.length;
-    
+    final averageScore =
+        feedback.map((f) => f.score).reduce((a, b) => a + b) / feedback.length;
+
     feedback.sort((a, b) => b.submissionDate.compareTo(a.submissionDate));
     final latestResponseDate = _formatDate(feedback.first.submissionDate);
 
@@ -338,29 +347,34 @@ class DataExportService {
     };
   }
 
-  static String _calculateTrend(List<NPSScoreFeedback> feedback, {int daysBack = 7}) {
+  static String _calculateTrend(List<NPSScoreFeedback> feedback,
+      {int daysBack = 7}) {
     if (feedback.length < 2) return 'Insufficient data';
-    
+
     final now = DateTime.now();
-    final recentFeedback = feedback.where((f) => 
-      f.submissionDate.isAfter(now.subtract(Duration(days: daysBack)))
-    ).toList();
-    
-    final olderFeedback = feedback.where((f) => 
-      f.submissionDate.isBefore(now.subtract(Duration(days: daysBack))) &&
-      f.submissionDate.isAfter(now.subtract(Duration(days: daysBack * 2)))
-    ).toList();
-    
-    if (recentFeedback.isEmpty || olderFeedback.isEmpty) return 'Insufficient data';
-    
+    final recentFeedback = feedback
+        .where((f) =>
+            f.submissionDate.isAfter(now.subtract(Duration(days: daysBack))))
+        .toList();
+
+    final olderFeedback = feedback
+        .where((f) =>
+            f.submissionDate.isBefore(now.subtract(Duration(days: daysBack))) &&
+            f.submissionDate
+                .isAfter(now.subtract(Duration(days: daysBack * 2))))
+        .toList();
+
+    if (recentFeedback.isEmpty || olderFeedback.isEmpty)
+      return 'Insufficient data';
+
     final recentNPS = _calculateServerAnalytics(recentFeedback)['npsScore'];
     final olderNPS = _calculateServerAnalytics(olderFeedback)['npsScore'];
-    
+
     final recentScore = double.tryParse(recentNPS.toString()) ?? 0;
     final olderScore = double.tryParse(olderNPS.toString()) ?? 0;
-    
+
     final change = recentScore - olderScore;
-    
+
     if (change > 5) return 'Improving';
     if (change < -5) return 'Declining';
     return 'Stable';

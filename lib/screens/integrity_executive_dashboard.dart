@@ -14,10 +14,12 @@ class IntegrityExecutiveDashboard extends StatefulWidget {
   const IntegrityExecutiveDashboard({super.key});
 
   @override
-  State<IntegrityExecutiveDashboard> createState() => _IntegrityExecutiveDashboardState();
+  State<IntegrityExecutiveDashboard> createState() =>
+      _IntegrityExecutiveDashboardState();
 }
 
-class _IntegrityExecutiveDashboardState extends State<IntegrityExecutiveDashboard> {
+class _IntegrityExecutiveDashboardState
+    extends State<IntegrityExecutiveDashboard> {
   String _selectedTimeframe = 'week';
   List<IntegrityAssessment> _assessments = [];
   Map<String, dynamic> _executiveMetrics = {};
@@ -33,17 +35,18 @@ class _IntegrityExecutiveDashboardState extends State<IntegrityExecutiveDashboar
   void _refreshDashboard() {
     final app = Provider.of<AppState>(context, listen: false);
     final servers = app.servers; // Remove the isArchived filter for now
-    
+
     // Generate assessments for all active servers
     _assessments = _generateExecutiveAssessments(app, servers);
-    
+
     // Calculate executive metrics
     _executiveMetrics = _calculateExecutiveMetrics(_assessments, servers);
-    
+
     setState(() {});
   }
 
-  List<IntegrityAssessment> _generateExecutiveAssessments(AppState app, List<Server> servers) {
+  List<IntegrityAssessment> _generateExecutiveAssessments(
+      AppState app, List<Server> servers) {
     final allServerCounts = <String, int>{};
     for (final server in servers) {
       allServerCounts[server.id] = _getServerRunCount(app, server.id);
@@ -52,7 +55,7 @@ class _IntegrityExecutiveDashboardState extends State<IntegrityExecutiveDashboar
     return servers.map((server) {
       final bins = _getServerIntegrityBins(app, server.id);
       final runCount = _getServerRunCount(app, server.id);
-      
+
       return IntegrityAnalyzer.analyzeServerAdvanced(
         serverId: server.id,
         serverName: server.name,
@@ -94,7 +97,8 @@ class _IntegrityExecutiveDashboardState extends State<IntegrityExecutiveDashboar
     }
   }
 
-  Map<String, dynamic> _calculateExecutiveMetrics(List<IntegrityAssessment> assessments, List<Server> servers) {
+  Map<String, dynamic> _calculateExecutiveMetrics(
+      List<IntegrityAssessment> assessments, List<Server> servers) {
     if (assessments.isEmpty) return {};
 
     final riskCounts = <RiskLevel, int>{
@@ -115,9 +119,10 @@ class _IntegrityExecutiveDashboardState extends State<IntegrityExecutiveDashboar
     int totalAlerts = 0;
 
     for (final assessment in assessments) {
-      riskCounts[assessment.riskLevel] = (riskCounts[assessment.riskLevel] ?? 0) + 1;
+      riskCounts[assessment.riskLevel] =
+          (riskCounts[assessment.riskLevel] ?? 0) + 1;
       totalRiskScore += assessment.riskScore;
-      
+
       for (final alert in assessment.alerts) {
         alertCounts[alert.level] = (alertCounts[alert.level] ?? 0) + 1;
         totalAlerts++;
@@ -125,13 +130,15 @@ class _IntegrityExecutiveDashboardState extends State<IntegrityExecutiveDashboar
     }
 
     final averageRiskScore = totalRiskScore / assessments.length;
-    final integrityHealthScore = 100 - (averageRiskScore * 0.8); // Convert to health score
+    final integrityHealthScore =
+        100 - (averageRiskScore * 0.8); // Convert to health score
 
     return {
       'integrityHealthScore': integrityHealthScore.clamp(0, 100),
       'averageRiskScore': averageRiskScore,
       'totalServers': servers.length,
-      'serversUnderInvestigation': riskCounts[RiskLevel.orange]! + riskCounts[RiskLevel.red]!,
+      'serversUnderInvestigation':
+          riskCounts[RiskLevel.orange]! + riskCounts[RiskLevel.red]!,
       'riskCounts': riskCounts,
       'alertCounts': alertCounts,
       'totalAlerts': totalAlerts,
@@ -144,74 +151,82 @@ class _IntegrityExecutiveDashboardState extends State<IntegrityExecutiveDashboar
     // Simplified false positive calculation based on risk patterns
     final flaggedServers = assessments.where((a) => a.riskScore > 30).length;
     final confirmedIssues = assessments.where((a) => a.riskScore > 70).length;
-    
+
     if (flaggedServers == 0) return 0.0;
-    
+
     final falsePositives = flaggedServers - confirmedIssues;
     return (falsePositives / flaggedServers * 100).clamp(0, 100);
   }
 
   List<String> _getTopRiskFactors(List<IntegrityAssessment> assessments) {
     final factorCounts = <String, int>{};
-    
+
     // Collect existing risk factors from assessments
     for (final assessment in assessments) {
       for (final factor in assessment.riskFactors) {
         factorCounts[factor] = (factorCounts[factor] ?? 0) + 1;
       }
     }
-    
+
     // Add comprehensive analysis-based risk factors
     final riskFactors = <String>[];
-    
+
     // Calculate high-risk servers
     final highRiskServers = assessments.where((a) => a.riskScore > 70).length;
     final totalServers = assessments.length;
-    
+
     if (highRiskServers > 0) {
       final percentage = ((highRiskServers / totalServers) * 100).round();
       riskFactors.add('High ratio of rapid-click minutes ($percentage.0%)');
     }
-    
+
     // Analyze click patterns
     final rapidClickInstances = assessments
-        .where((a) => a.riskFactors.any((f) => f.toLowerCase().contains('click')))
+        .where(
+            (a) => a.riskFactors.any((f) => f.toLowerCase().contains('click')))
         .length;
     if (rapidClickInstances > 0) {
-      riskFactors.add('4+ clicks per minute detected ($rapidClickInstances instances)');
+      riskFactors.add(
+          '4+ clicks per minute detected ($rapidClickInstances instances)');
     }
-    
+
     // Analyze unusual patterns
-    final unusualPatterns = assessments
-        .where((a) => a.riskScore > 50 && a.riskScore <= 70)
-        .length;
+    final unusualPatterns =
+        assessments.where((a) => a.riskScore > 50 && a.riskScore <= 70).length;
     if (unusualPatterns > 0) {
-      riskFactors.add('Unusual activity patterns detected ($unusualPatterns servers)');
+      riskFactors
+          .add('Unusual activity patterns detected ($unusualPatterns servers)');
     }
-    
+
     // Analyze volume spikes
     final volumeSpikes = assessments
-        .where((a) => a.riskFactors.any((f) => f.toLowerCase().contains('volume')))
+        .where(
+            (a) => a.riskFactors.any((f) => f.toLowerCase().contains('volume')))
         .length;
     if (volumeSpikes > 0) {
-      riskFactors.add('Volume spikes above normal thresholds ($volumeSpikes servers)');
+      riskFactors
+          .add('Volume spikes above normal thresholds ($volumeSpikes servers)');
     }
-    
+
     // Analyze session duration issues
     final sessionIssues = assessments
-        .where((a) => a.riskFactors.any((f) => f.toLowerCase().contains('session')))
+        .where((a) =>
+            a.riskFactors.any((f) => f.toLowerCase().contains('session')))
         .length;
     if (sessionIssues > 0) {
-      riskFactors.add('Extended session durations detected ($sessionIssues servers)');
+      riskFactors
+          .add('Extended session durations detected ($sessionIssues servers)');
     }
-    
+
     // Calculate statistical outliers
     final outliers = assessments.where((a) => a.riskScore > 80).length;
     if (outliers > 0) {
-      final avgRuns = assessments.map((a) => 100).reduce((a, b) => a + b) / assessments.length; // Simplified
-      riskFactors.add('Runs significantly above average (${outliers} vs ${avgRuns.toInt()})');
+      final avgRuns = assessments.map((a) => 100).reduce((a, b) => a + b) /
+          assessments.length; // Simplified
+      riskFactors.add(
+          'Runs significantly above average ($outliers vs ${avgRuns.toInt()})');
     }
-    
+
     // Return top 5 unique factors
     return riskFactors.take(5).toList();
   }
@@ -226,7 +241,7 @@ class _IntegrityExecutiveDashboardState extends State<IntegrityExecutiveDashboar
               children: [
                 // Executive Header
                 _buildExecutiveHeader(),
-                
+
                 // Main Dashboard Content
                 Expanded(
                   child: SingleChildScrollView(
@@ -235,9 +250,9 @@ class _IntegrityExecutiveDashboardState extends State<IntegrityExecutiveDashboar
                       children: [
                         // Integrity Health Overview
                         _buildIntegrityHealthCard(),
-                        
+
                         const SizedBox(height: 16),
-                        
+
                         // Risk Distribution and Alerts
                         LayoutBuilder(
                           builder: (context, constraints) {
@@ -262,19 +277,19 @@ class _IntegrityExecutiveDashboardState extends State<IntegrityExecutiveDashboar
                             }
                           },
                         ),
-                        
+
                         const SizedBox(height: 16),
-                        
+
                         // System Performance Metrics
                         _buildSystemPerformanceCard(),
-                        
+
                         const SizedBox(height: 16),
-                        
+
                         // Top Risk Factors
                         _buildTopRiskFactorsCard(),
-                        
+
                         const SizedBox(height: 16),
-                        
+
                         // Action Items and Recent Investigations
                         LayoutBuilder(
                           builder: (context, constraints) {
@@ -293,7 +308,8 @@ class _IntegrityExecutiveDashboardState extends State<IntegrityExecutiveDashboar
                                 children: [
                                   Expanded(child: _buildActionItemsCard()),
                                   const SizedBox(width: 16),
-                                  Expanded(child: _buildRecentInvestigationsCard()),
+                                  Expanded(
+                                      child: _buildRecentInvestigationsCard()),
                                 ],
                               );
                             }
@@ -329,7 +345,8 @@ class _IntegrityExecutiveDashboardState extends State<IntegrityExecutiveDashboar
           Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
+                icon:
+                    const Icon(Icons.arrow_back, color: Colors.white, size: 28),
                 onPressed: () => Navigator.pop(context),
               ),
               const SizedBox(width: 12),
@@ -359,29 +376,34 @@ class _IntegrityExecutiveDashboardState extends State<IntegrityExecutiveDashboar
               Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.search, color: Colors.white, size: 26),
+                    icon:
+                        const Icon(Icons.search, color: Colors.white, size: 26),
                     tooltip: 'Investigation Tools',
                     onPressed: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (context) => const IntegrityInvestigationTools(),
+                          builder: (context) =>
+                              const IntegrityInvestigationTools(),
                         ),
                       );
                     },
                   ),
                   IconButton(
-                    icon: const Icon(Icons.shield, color: Colors.white, size: 26),
+                    icon:
+                        const Icon(Icons.shield, color: Colors.white, size: 26),
                     tooltip: 'Compliance & Documentation',
                     onPressed: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (context) => const IntegrityComplianceScreen(),
+                          builder: (context) =>
+                              const IntegrityComplianceScreen(),
                         ),
                       );
                     },
                   ),
                   IconButton(
-                    icon: const Icon(Icons.refresh, color: Colors.white, size: 26),
+                    icon: const Icon(Icons.refresh,
+                        color: Colors.white, size: 26),
                     tooltip: 'Refresh Dashboard',
                     onPressed: _refreshDashboard,
                   ),
@@ -403,7 +425,8 @@ class _IntegrityExecutiveDashboardState extends State<IntegrityExecutiveDashboar
               const SizedBox(width: 12),
               // Timeframe Selector
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(20),
@@ -446,7 +469,7 @@ class _IntegrityExecutiveDashboardState extends State<IntegrityExecutiveDashboar
 
     Color healthColor = Colors.green;
     String healthStatus = 'Excellent';
-    
+
     if (health < 50) {
       healthColor = Colors.red;
       healthStatus = 'Critical';
@@ -486,13 +509,15 @@ class _IntegrityExecutiveDashboardState extends State<IntegrityExecutiveDashboar
                     alignment: Alignment.centerLeft,
                     child: Text(
                       'Integrity Health Overview',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: healthColor.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(16),
@@ -563,7 +588,8 @@ class _IntegrityExecutiveDashboardState extends State<IntegrityExecutiveDashboar
     );
   }
 
-  Widget _buildMetricItem(String label, String value, Color color, IconData icon) {
+  Widget _buildMetricItem(
+      String label, String value, Color color, IconData icon) {
     return Container(
       padding: const EdgeInsets.all(8),
       child: Column(
@@ -600,8 +626,9 @@ class _IntegrityExecutiveDashboardState extends State<IntegrityExecutiveDashboar
   }
 
   Widget _buildRiskDistributionCard() {
-    final riskCounts = _executiveMetrics['riskCounts'] as Map<RiskLevel, int>? ?? {};
-    
+    final riskCounts =
+        _executiveMetrics['riskCounts'] as Map<RiskLevel, int>? ?? {};
+
     return Card(
       elevation: 4,
       child: Padding(
@@ -639,28 +666,32 @@ class _IntegrityExecutiveDashboardState extends State<IntegrityExecutiveDashboar
         value: (riskCounts[RiskLevel.green] ?? 0).toDouble(),
         title: '${riskCounts[RiskLevel.green] ?? 0}',
         radius: 60,
-        titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+        titleStyle: const TextStyle(
+            fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
       ),
       PieChartSectionData(
         color: Colors.yellow[700],
         value: (riskCounts[RiskLevel.yellow] ?? 0).toDouble(),
         title: '${riskCounts[RiskLevel.yellow] ?? 0}',
         radius: 60,
-        titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+        titleStyle: const TextStyle(
+            fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
       ),
       PieChartSectionData(
         color: Colors.orange,
         value: (riskCounts[RiskLevel.orange] ?? 0).toDouble(),
         title: '${riskCounts[RiskLevel.orange] ?? 0}',
         radius: 60,
-        titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+        titleStyle: const TextStyle(
+            fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
       ),
       PieChartSectionData(
         color: Colors.red,
         value: (riskCounts[RiskLevel.red] ?? 0).toDouble(),
         title: '${riskCounts[RiskLevel.red] ?? 0}',
         radius: 60,
-        titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+        titleStyle: const TextStyle(
+            fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
       ),
     ];
 
@@ -677,10 +708,14 @@ class _IntegrityExecutiveDashboardState extends State<IntegrityExecutiveDashboar
   Widget _buildRiskLegend(Map<RiskLevel, int> riskCounts) {
     return Column(
       children: [
-        _buildLegendItem(Colors.green, 'Low Risk', riskCounts[RiskLevel.green] ?? 0),
-        _buildLegendItem(Colors.yellow[700]!, 'Medium Risk', riskCounts[RiskLevel.yellow] ?? 0),
-        _buildLegendItem(Colors.orange, 'High Risk', riskCounts[RiskLevel.orange] ?? 0),
-        _buildLegendItem(Colors.red, 'Critical Risk', riskCounts[RiskLevel.red] ?? 0),
+        _buildLegendItem(
+            Colors.green, 'Low Risk', riskCounts[RiskLevel.green] ?? 0),
+        _buildLegendItem(Colors.yellow[700]!, 'Medium Risk',
+            riskCounts[RiskLevel.yellow] ?? 0),
+        _buildLegendItem(
+            Colors.orange, 'High Risk', riskCounts[RiskLevel.orange] ?? 0),
+        _buildLegendItem(
+            Colors.red, 'Critical Risk', riskCounts[RiskLevel.red] ?? 0),
       ],
     );
   }
@@ -711,9 +746,10 @@ class _IntegrityExecutiveDashboardState extends State<IntegrityExecutiveDashboar
   }
 
   Widget _buildAlertsCard() {
-    final alertCounts = _executiveMetrics['alertCounts'] as Map<AlertLevel, int>? ?? {};
+    final alertCounts =
+        _executiveMetrics['alertCounts'] as Map<AlertLevel, int>? ?? {};
     final totalAlerts = _executiveMetrics['totalAlerts'] ?? 0;
-    
+
     return Card(
       elevation: 4,
       child: Padding(
@@ -731,9 +767,12 @@ class _IntegrityExecutiveDashboardState extends State<IntegrityExecutiveDashboar
                 ),
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: totalAlerts > 0 ? Colors.red.withOpacity(0.2) : Colors.green.withOpacity(0.2),
+                    color: totalAlerts > 0
+                        ? Colors.red.withOpacity(0.2)
+                        : Colors.green.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -871,7 +910,8 @@ class _IntegrityExecutiveDashboardState extends State<IntegrityExecutiveDashboar
     );
   }
 
-  Widget _buildPerformanceMetric(String title, String value, Color color, String subtitle) {
+  Widget _buildPerformanceMetric(
+      String title, String value, Color color, String subtitle) {
     return Container(
       width: 120,
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
@@ -926,8 +966,9 @@ class _IntegrityExecutiveDashboardState extends State<IntegrityExecutiveDashboar
   }
 
   Widget _buildTopRiskFactorsCard() {
-    final topFactors = _executiveMetrics['topRiskFactors'] as List<String>? ?? [];
-    
+    final topFactors =
+        _executiveMetrics['topRiskFactors'] as List<String>? ?? [];
+
     return Card(
       elevation: 4,
       child: Padding(
@@ -949,7 +990,8 @@ class _IntegrityExecutiveDashboardState extends State<IntegrityExecutiveDashboar
             if (topFactors.isEmpty)
               const Text(
                 'No significant risk factors detected',
-                style: TextStyle(color: Colors.green, fontStyle: FontStyle.italic),
+                style:
+                    TextStyle(color: Colors.green, fontStyle: FontStyle.italic),
               )
             else
               ...topFactors.asMap().entries.map((entry) {
@@ -987,7 +1029,7 @@ class _IntegrityExecutiveDashboardState extends State<IntegrityExecutiveDashboar
                     ],
                   ),
                 );
-              }).toList(),
+              }),
           ],
         ),
       ),
@@ -996,11 +1038,16 @@ class _IntegrityExecutiveDashboardState extends State<IntegrityExecutiveDashboar
 
   Color _getRiskFactorColor(int index) {
     switch (index) {
-      case 0: return Colors.red;
-      case 1: return Colors.orange;
-      case 2: return Colors.yellow[700]!;
-      case 3: return Colors.blue;
-      default: return Colors.grey;
+      case 0:
+        return Colors.red;
+      case 1:
+        return Colors.orange;
+      case 2:
+        return Colors.yellow[700]!;
+      case 3:
+        return Colors.blue;
+      default:
+        return Colors.grey;
     }
   }
 
@@ -1087,7 +1134,7 @@ class _IntegrityExecutiveDashboardState extends State<IntegrityExecutiveDashboar
   Widget _buildRecentInvestigationsCard() {
     final app = Provider.of<AppState>(context, listen: false);
     final servers = app.servers.take(3).toList();
-    
+
     return Card(
       elevation: 4,
       child: Padding(
@@ -1107,24 +1154,31 @@ class _IntegrityExecutiveDashboardState extends State<IntegrityExecutiveDashboar
             ),
             const SizedBox(height: 16),
             if (servers.isNotEmpty) ...[
-              for (int i = 0; i < servers.length; i++) 
+              for (int i = 0; i < servers.length; i++)
                 _buildInvestigationItem(
                   servers[i].id,
                   servers[i].name,
-                  i == 0 ? 'Click pattern anomaly - Resolved' :
-                  i == 1 ? 'Volume spike investigation - Closed' :
-                         'Session duration concern - Pending',
-                  i == 0 ? 'Warning issued' :
-                  i == 1 ? 'Legitimate activity' :
-                         'Under review',
-                  i == 0 ? Colors.orange :
-                  i == 1 ? Colors.green :
-                         Colors.blue,
+                  i == 0
+                      ? 'Click pattern anomaly - Resolved'
+                      : i == 1
+                          ? 'Volume spike investigation - Closed'
+                          : 'Session duration concern - Pending',
+                  i == 0
+                      ? 'Warning issued'
+                      : i == 1
+                          ? 'Legitimate activity'
+                          : 'Under review',
+                  i == 0
+                      ? Colors.orange
+                      : i == 1
+                          ? Colors.green
+                          : Colors.blue,
                 ),
             ] else
               const Text(
                 'No recent investigations',
-                style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
+                style:
+                    TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
               ),
           ],
         ),
@@ -1132,7 +1186,8 @@ class _IntegrityExecutiveDashboardState extends State<IntegrityExecutiveDashboar
     );
   }
 
-  Widget _buildInvestigationItem(String serverId, String serverName, String description, String status, Color color) {
+  Widget _buildInvestigationItem(String serverId, String serverName,
+      String description, String status, Color color) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: InkWell(
@@ -1170,7 +1225,8 @@ class _IntegrityExecutiveDashboardState extends State<IntegrityExecutiveDashboar
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: color.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(8),

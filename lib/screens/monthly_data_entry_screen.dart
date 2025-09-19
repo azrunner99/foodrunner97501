@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../services/database_service.dart';
 
 class MonthlyDataEntryScreen extends StatefulWidget {
+  const MonthlyDataEntryScreen({super.key});
+
   @override
   _MonthlyDataEntryScreenState createState() => _MonthlyDataEntryScreenState();
 }

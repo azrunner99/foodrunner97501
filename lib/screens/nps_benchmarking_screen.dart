@@ -118,8 +118,8 @@ class _NPSBenchmarkingScreenState extends State<NPSBenchmarkingScreen>
                 Text(
                   'Industry Benchmarks',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
               ],
             ),
@@ -127,9 +127,8 @@ class _NPSBenchmarkingScreenState extends State<NPSBenchmarkingScreen>
             if (service.industryBenchmarks.isEmpty)
               const Text('No industry benchmark data available')
             else
-              ...service.industryBenchmarks.map((benchmark) => 
-                _buildBenchmarkItem(benchmark)
-              ),
+              ...service.industryBenchmarks
+                  .map((benchmark) => _buildBenchmarkItem(benchmark)),
           ],
         ),
       ),
@@ -272,8 +271,8 @@ class _NPSBenchmarkingScreenState extends State<NPSBenchmarkingScreen>
                 Text(
                   'Competitor Benchmarks',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
               ],
             ),
@@ -281,9 +280,8 @@ class _NPSBenchmarkingScreenState extends State<NPSBenchmarkingScreen>
             if (service.competitiveBenchmarks.isEmpty)
               const Text('No competitor benchmark data available')
             else
-              ...service.competitiveBenchmarks.map((competitor) => 
-                _buildCompetitorItem(competitor)
-              ),
+              ...service.competitiveBenchmarks
+                  .map((competitor) => _buildCompetitorItem(competitor)),
           ],
         ),
       ),
@@ -331,7 +329,8 @@ class _NPSBenchmarkingScreenState extends State<NPSBenchmarkingScreen>
               if (competitor.isVerified)
                 Container(
                   margin: const EdgeInsets.only(left: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: Colors.green,
                     borderRadius: BorderRadius.circular(8),
@@ -406,8 +405,8 @@ class _NPSBenchmarkingScreenState extends State<NPSBenchmarkingScreen>
                 Text(
                   'Understanding NPS Benchmarks',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
               ],
             ),
@@ -465,20 +464,21 @@ class _NPSBenchmarkingScreenState extends State<NPSBenchmarkingScreen>
         ),
         const SizedBox(height: 8),
         ...items.map((item) => Padding(
-          padding: const EdgeInsets.only(left: 16, bottom: 4),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('• ', style: TextStyle(fontWeight: FontWeight.bold)),
-              Expanded(
-                child: Text(
-                  item,
-                  style: TextStyle(color: Colors.grey[700]),
-                ),
+              padding: const EdgeInsets.only(left: 16, bottom: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('• ',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  Expanded(
+                    child: Text(
+                      item,
+                      style: TextStyle(color: Colors.grey[700]),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        )),
+            )),
       ],
     );
   }

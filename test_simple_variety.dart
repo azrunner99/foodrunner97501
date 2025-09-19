@@ -3,31 +3,33 @@ import 'dart:math';
 
 void main() {
   print('Testing Message Variety Engine...\n');
-  
+
   // Simulate getting unique messages from variety categories
   final categories = ['speed', 'competitive', 'achievement', 'perfectionist'];
   final testXpAmounts = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50];
-  
+
   print('=== Testing Message Variety ===');
-  
+
   // Generate 20 test messages to check for variety
   final Set<String> generatedMessages = {};
-  
+
   for (int i = 0; i < 20; i++) {
     String category = categories[Random().nextInt(categories.length)];
     int xpAmount = testXpAmounts[Random().nextInt(testXpAmounts.length)];
-    
+
     // Simulate the variety engine logic
     String message = _generateVarietyMessage(category, xpAmount);
     generatedMessages.add(message);
-    
+
     print('${i + 1}. [$category] $message');
   }
-  
+
   print('\n=== Results ===');
-  print('Generated ${generatedMessages.length} unique messages out of 20 attempts');
-  print('Variety percentage: ${(generatedMessages.length / 20 * 100).toStringAsFixed(1)}%');
-  
+  print(
+      'Generated ${generatedMessages.length} unique messages out of 20 attempts');
+  print(
+      'Variety percentage: ${(generatedMessages.length / 20 * 100).toStringAsFixed(1)}%');
+
   if (generatedMessages.length >= 15) {
     print('✅ EXCELLENT variety! The message system is working well.');
   } else if (generatedMessages.length >= 10) {
@@ -35,23 +37,25 @@ void main() {
   } else {
     print('❌ LOW variety. The message system may need improvement.');
   }
-  
+
   print('\n=== Integration Status ===');
   print('✅ MessageVarietyEngine.getSimpleVarietyMessage() method added');
   print('✅ InstantFeedbackService updated to use MessageVarietyEngine');
   print('✅ Home screen flash messages now pass XP amounts');
   print('✅ 500+ unique messages now available in flash system');
-  
+
   print('\n=== What This Means ===');
-  print('Your flash messages should now show much more variety during gameplay!');
+  print(
+      'Your flash messages should now show much more variety during gameplay!');
   print('Instead of seeing the same 12-20 messages repeatedly, you now have');
-  print('access to 500+ unique messages across different achievement categories.');
+  print(
+      'access to 500+ unique messages across different achievement categories.');
 }
 
 String _generateVarietyMessage(String category, int xpAmount) {
   // Simulate some of the variety that MessageVarietyEngine provides
   final Random random = Random();
-  
+
   switch (category) {
     case 'speed':
       final speedMessages = [
@@ -67,7 +71,7 @@ String _generateVarietyMessage(String category, int xpAmount) {
         'Warp speed delivery! +$xpAmount XP',
       ];
       return speedMessages[random.nextInt(speedMessages.length)];
-      
+
     case 'competitive':
       final competitiveMessages = [
         'Crushing the competition! +$xpAmount XP',
@@ -82,7 +86,7 @@ String _generateVarietyMessage(String category, int xpAmount) {
         'Elite tier performance! +$xpAmount XP',
       ];
       return competitiveMessages[random.nextInt(competitiveMessages.length)];
-      
+
     case 'achievement':
       final achievementMessages = [
         'Milestone crushed! +$xpAmount XP',
@@ -97,7 +101,7 @@ String _generateVarietyMessage(String category, int xpAmount) {
         'Victory condition met! +$xpAmount XP',
       ];
       return achievementMessages[random.nextInt(achievementMessages.length)];
-      
+
     case 'perfectionist':
       final perfectionistMessages = [
         'Flawless execution! +$xpAmount XP',
@@ -111,8 +115,9 @@ String _generateVarietyMessage(String category, int xpAmount) {
         'Perfection achieved! +$xpAmount XP',
         'Flawless victory! +$xpAmount XP',
       ];
-      return perfectionistMessages[random.nextInt(perfectionistMessages.length)];
-      
+      return perfectionistMessages[
+          random.nextInt(perfectionistMessages.length)];
+
     default:
       return 'Great work! +$xpAmount XP';
   }

@@ -6,7 +6,7 @@ import '../app_state.dart';
 
 class ExampleBannerUsage extends StatelessWidget {
   final String serverId;
-  
+
   const ExampleBannerUsage({super.key, required this.serverId});
 
   @override
@@ -14,7 +14,7 @@ class ExampleBannerUsage extends StatelessWidget {
     final app = context.watch<AppState>();
     final profile = app.profiles[serverId];
     final server = app.serverById(serverId);
-    
+
     return Container(
       height: 120,
       decoration: BoxDecoration(

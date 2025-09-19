@@ -39,9 +39,11 @@ class BadgesScreen extends StatelessWidget {
         return 'Earn this badge by hitting its target during service.';
     }
   }
+
   final ServerProfile profile;
   final Map<String, int> repeatCounts;
-  const BadgesScreen({super.key, required this.profile, required this.repeatCounts});
+  const BadgesScreen(
+      {super.key, required this.profile, required this.repeatCounts});
 
   AchievementDef? _findDef(String id) {
     for (final d in achievementsCatalog) {
@@ -57,7 +59,8 @@ class BadgesScreen extends StatelessWidget {
       tiles.add(ListTile(
         leading: const Icon(Icons.verified, color: Colors.amber),
         title: Text(def?.title ?? 'Unknown'),
-        subtitle: Text('${def?.points ?? 0} pts • ${BadgesScreen._descFor(def?.id ?? id)}'),
+        subtitle: Text(
+            '${def?.points ?? 0} pts • ${BadgesScreen._descFor(def?.id ?? id)}'),
       ));
     }
     repeatCounts.forEach((id, times) {
@@ -65,7 +68,8 @@ class BadgesScreen extends StatelessWidget {
       tiles.add(ListTile(
         leading: const Icon(Icons.auto_awesome, color: Colors.lightBlue),
         title: Text(def?.title ?? 'Unknown'),
-        subtitle: Text('${def?.points ?? 0} pts • x$times • ${BadgesScreen._descFor(def?.id ?? id)}'),
+        subtitle: Text(
+            '${def?.points ?? 0} pts • x$times • ${BadgesScreen._descFor(def?.id ?? id)}'),
       ));
     });
     if (tiles.isEmpty) {
@@ -80,8 +84,10 @@ class BadgesScreen extends StatelessWidget {
       final earned = t.$2;
       final times = t.$3;
       final trailing = earned
-          ? Text(times > 0 ? 'x$times' : 'Earned', style: const TextStyle(color: Colors.green))
-          : Text('${def.points} pts', style: const TextStyle(color: Colors.blueGrey));
+          ? Text(times > 0 ? 'x$times' : 'Earned',
+              style: const TextStyle(color: Colors.green))
+          : Text('${def.points} pts',
+              style: const TextStyle(color: Colors.blueGrey));
       return ListTile(
         leading: Icon(earned ? Icons.emoji_events : Icons.emoji_events_outlined,
             color: earned ? Colors.green : null),
@@ -96,13 +102,12 @@ class BadgesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     String mode = 'earned';
     final earnedSet = profile.achievements.toSet();
-    final List<(AchievementDef, bool, int)> available = achievementsCatalog
-        .map<(AchievementDef, bool, int)>((def) {
-          final times = repeatCounts[def.id] ?? 0;
-          final earnedOnce = earnedSet.contains(def.id) || times > 0;
-          return (def, earnedOnce, times);
-        })
-        .toList();
+    final List<(AchievementDef, bool, int)> available =
+        achievementsCatalog.map<(AchievementDef, bool, int)>((def) {
+      final times = repeatCounts[def.id] ?? 0;
+      final earnedOnce = earnedSet.contains(def.id) || times > 0;
+      return (def, earnedOnce, times);
+    }).toList();
     return Scaffold(
       appBar: AppBar(title: const Text('Badges')),
       body: StatefulBuilder(

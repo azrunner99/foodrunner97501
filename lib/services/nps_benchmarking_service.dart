@@ -138,7 +138,8 @@ class TrendAnalysis {
 
 /// Comprehensive NPS benchmarking service
 class NPSBenchmarkingService extends ChangeNotifier {
-  static final NPSBenchmarkingService _instance = NPSBenchmarkingService._internal();
+  static final NPSBenchmarkingService _instance =
+      NPSBenchmarkingService._internal();
   factory NPSBenchmarkingService() => _instance;
   NPSBenchmarkingService._internal();
 
@@ -148,9 +149,12 @@ class NPSBenchmarkingService extends ChangeNotifier {
   BenchmarkAnalysis? _currentAnalysis;
 
   // Getters
-  List<IndustryBenchmark> get industryBenchmarks => List.unmodifiable(_industryBenchmarks);
-  List<CompetitiveBenchmark> get competitiveBenchmarks => List.unmodifiable(_competitiveBenchmarks);
-  List<PerformanceTarget> get performanceTargets => List.unmodifiable(_performanceTargets);
+  List<IndustryBenchmark> get industryBenchmarks =>
+      List.unmodifiable(_industryBenchmarks);
+  List<CompetitiveBenchmark> get competitiveBenchmarks =>
+      List.unmodifiable(_competitiveBenchmarks);
+  List<PerformanceTarget> get performanceTargets =>
+      List.unmodifiable(_performanceTargets);
   BenchmarkAnalysis? get currentAnalysis => _currentAnalysis;
 
   /// Initialize benchmarking service with industry data
@@ -275,7 +279,8 @@ class NPSBenchmarkingService extends ChangeNotifier {
   }
 
   /// Analyze current performance against benchmarks
-  BenchmarkAnalysis analyzePerformance(List<NPSScoreFeedback> feedback, List<NPSServer> servers) {
+  BenchmarkAnalysis analyzePerformance(
+      List<NPSScoreFeedback> feedback, List<NPSServer> servers) {
     if (feedback.isEmpty) {
       return BenchmarkAnalysis(
         currentNPS: 0.0,
@@ -293,7 +298,7 @@ class NPSBenchmarkingService extends ChangeNotifier {
     final industryAverage = _getIndustryAverage();
     final performanceRating = _getPerformanceRating(currentNPS);
     final percentileRank = _calculatePercentileRank(currentNPS);
-    
+
     final analysis = BenchmarkAnalysis(
       currentNPS: currentNPS,
       industryAverage: industryAverage,
@@ -325,8 +330,9 @@ class NPSBenchmarkingService extends ChangeNotifier {
   double _getIndustryAverage() {
     if (_industryBenchmarks.isEmpty) return 15.0;
     return _industryBenchmarks
-        .map((b) => b.averageNPS)
-        .reduce((a, b) => a + b) / _industryBenchmarks.length;
+            .map((b) => b.averageNPS)
+            .reduce((a, b) => a + b) /
+        _industryBenchmarks.length;
   }
 
   /// Get performance rating based on NPS score
@@ -351,61 +357,69 @@ class NPSBenchmarkingService extends ChangeNotifier {
   /// Identify performance strengths
   List<String> _identifyStrengths(double nps, List<NPSScoreFeedback> feedback) {
     final strengths = <String>[];
-    
+
     if (nps > _getIndustryAverage()) {
       strengths.add('Above industry average performance');
     }
-    
-    final promoterRate = feedback.where((f) => f.score >= 9).length / feedback.length;
+
+    final promoterRate =
+        feedback.where((f) => f.score >= 9).length / feedback.length;
     if (promoterRate > 0.4) {
       strengths.add('High promoter rate (${(promoterRate * 100).toInt()}%)');
     }
-    
-    final detractorRate = feedback.where((f) => f.score <= 6).length / feedback.length;
+
+    final detractorRate =
+        feedback.where((f) => f.score <= 6).length / feedback.length;
     if (detractorRate < 0.2) {
       strengths.add('Low detractor rate (${(detractorRate * 100).toInt()}%)');
     }
-    
+
     if (feedback.length > 100) {
       strengths.add('Strong response volume indicating good engagement');
     }
-    
+
     return strengths;
   }
 
   /// Identify areas for improvement
-  List<String> _identifyImprovements(double nps, List<NPSScoreFeedback> feedback) {
+  List<String> _identifyImprovements(
+      double nps, List<NPSScoreFeedback> feedback) {
     final improvements = <String>[];
-    
+
     if (nps < _getIndustryAverage()) {
       improvements.add('Below industry average - focus on overall experience');
     }
-    
-    final detractorRate = feedback.where((f) => f.score <= 6).length / feedback.length;
+
+    final detractorRate =
+        feedback.where((f) => f.score <= 6).length / feedback.length;
     if (detractorRate > 0.3) {
       improvements.add('High detractor rate - address service issues');
     }
-    
-    final passiveRate = feedback.where((f) => f.score >= 7 && f.score <= 8).length / feedback.length;
+
+    final passiveRate =
+        feedback.where((f) => f.score >= 7 && f.score <= 8).length /
+            feedback.length;
     if (passiveRate > 0.4) {
       improvements.add('High passive rate - convert passives to promoters');
     }
-    
+
     if (feedback.length < 50) {
       improvements.add('Low response volume - increase feedback collection');
     }
-    
+
     return improvements;
   }
 
   /// Generate performance recommendations
-  List<PerformanceRecommendation> _generateRecommendations(double nps, List<NPSScoreFeedback> feedback) {
+  List<PerformanceRecommendation> _generateRecommendations(
+      double nps, List<NPSScoreFeedback> feedback) {
     final recommendations = <PerformanceRecommendation>[];
-    
+
     if (nps < 20) {
       recommendations.add(PerformanceRecommendation(
         title: 'Service Recovery Program',
-        description: 'Implement systematic approach to address detractor feedback',
+        description:
+            'Implement systematic approach to address detractor feedback',
         priority: 'High',
         category: 'Service',
         potentialImpact: 15.0,
@@ -417,7 +431,7 @@ class NPSBenchmarkingService extends ChangeNotifier {
         ],
       ));
     }
-    
+
     if (nps >= 20 && nps < 35) {
       recommendations.add(PerformanceRecommendation(
         title: 'Experience Enhancement',
@@ -433,7 +447,7 @@ class NPSBenchmarkingService extends ChangeNotifier {
         ],
       ));
     }
-    
+
     recommendations.add(PerformanceRecommendation(
       title: 'Feedback Collection Optimization',
       description: 'Increase response rates and feedback quality',
@@ -447,18 +461,18 @@ class NPSBenchmarkingService extends ChangeNotifier {
         'Train staff on feedback importance',
       ],
     ));
-    
+
     return recommendations;
   }
 
   /// Get competitor comparison data
   Map<String, double> _getCompetitorComparison(double currentNPS) {
     final comparison = <String, double>{};
-    
+
     for (final competitor in _competitiveBenchmarks) {
       comparison[competitor.competitorName] = competitor.npsScore - currentNPS;
     }
-    
+
     return comparison;
   }
 
@@ -467,20 +481,24 @@ class NPSBenchmarkingService extends ChangeNotifier {
     final now = DateTime.now();
     final startDate = now.subtract(Duration(days: days));
     final midDate = now.subtract(Duration(days: days ~/ 2));
-    
-    final firstHalf = feedback.where((f) => 
-      f.submissionDate.isAfter(startDate) && f.submissionDate.isBefore(midDate)
-    ).toList();
-    
-    final secondHalf = feedback.where((f) => 
-      f.submissionDate.isAfter(midDate) && f.submissionDate.isBefore(now)
-    ).toList();
-    
+
+    final firstHalf = feedback
+        .where((f) =>
+            f.submissionDate.isAfter(startDate) &&
+            f.submissionDate.isBefore(midDate))
+        .toList();
+
+    final secondHalf = feedback
+        .where((f) =>
+            f.submissionDate.isAfter(midDate) && f.submissionDate.isBefore(now))
+        .toList();
+
     final startNPS = _calculateNPS(firstHalf);
     final endNPS = _calculateNPS(secondHalf);
     final change = endNPS - startNPS;
-    final changePercentage = startNPS != 0 ? (change / startNPS.abs()) * 100 : 0.0;
-    
+    final changePercentage =
+        startNPS != 0 ? (change / startNPS.abs()) * 100 : 0.0;
+
     String trend;
     if (change > 5) {
       trend = 'Improving';
@@ -489,9 +507,9 @@ class NPSBenchmarkingService extends ChangeNotifier {
     } else {
       trend = 'Stable';
     }
-    
+
     return TrendAnalysis(
-      period: '${days} days',
+      period: '$days days',
       startNPS: startNPS,
       endNPS: endNPS,
       change: change,
@@ -504,7 +522,7 @@ class NPSBenchmarkingService extends ChangeNotifier {
   /// Identify factors contributing to trends
   List<String> _identifyTrendFactors(double change) {
     final factors = <String>[];
-    
+
     if (change > 0) {
       factors.addAll([
         'Improved service quality',
@@ -526,7 +544,7 @@ class NPSBenchmarkingService extends ChangeNotifier {
         'Balanced customer mix',
       ]);
     }
-    
+
     return factors;
   }
 
@@ -537,7 +555,8 @@ class NPSBenchmarkingService extends ChangeNotifier {
   }
 
   /// Update performance target
-  void updatePerformanceTarget(String targetId, PerformanceTarget updatedTarget) {
+  void updatePerformanceTarget(
+      String targetId, PerformanceTarget updatedTarget) {
     final index = _performanceTargets.indexWhere((t) => t.id == targetId);
     if (index != -1) {
       _performanceTargets[index] = updatedTarget;
@@ -554,12 +573,13 @@ class NPSBenchmarkingService extends ChangeNotifier {
   /// Get performance against targets
   Map<String, double> getTargetProgress(double currentNPS) {
     final progress = <String, double>{};
-    
+
     for (final target in _performanceTargets.where((t) => t.isActive)) {
-      final progressPercentage = (currentNPS / target.targetNPS * 100).clamp(0.0, 100.0);
+      final progressPercentage =
+          (currentNPS / target.targetNPS * 100).clamp(0.0, 100.0);
       progress[target.name] = progressPercentage;
     }
-    
+
     return progress;
   }
 

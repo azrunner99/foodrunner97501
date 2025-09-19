@@ -103,7 +103,8 @@ class AuditLogEntry {
       userName: json['userName'],
       sessionId: json['sessionId'],
       level: AuditLogLevel.values.firstWhere((l) => l.name == json['level']),
-      category: AuditCategory.values.firstWhere((c) => c.name == json['category']),
+      category:
+          AuditCategory.values.firstWhere((c) => c.name == json['category']),
       action: json['action'],
       resource: json['resource'],
       description: json['description'],
@@ -114,8 +115,8 @@ class AuditLogEntry {
       userAgent: json['userAgent'],
       success: json['success'],
       errorMessage: json['errorMessage'],
-      processingTime: json['processingTimeMs'] != null 
-          ? Duration(milliseconds: json['processingTimeMs']) 
+      processingTime: json['processingTimeMs'] != null
+          ? Duration(milliseconds: json['processingTimeMs'])
           : null,
       metadata: json['metadata'] ?? {},
     );
@@ -140,10 +141,10 @@ class AuditLogEntry {
   /// Check if this is a security-relevant log
   bool get isSecurityRelevant {
     return level == AuditLogLevel.security ||
-           category == AuditCategory.authentication ||
-           category == AuditCategory.authorization ||
-           category == AuditCategory.security ||
-           !success;
+        category == AuditCategory.authentication ||
+        category == AuditCategory.authorization ||
+        category == AuditCategory.security ||
+        !success;
   }
 }
 
@@ -196,7 +197,11 @@ class AuditConfig {
     this.retentionPeriod = const Duration(days: 365 * 7), // 7 years
     this.maxLogEntries = 1000000,
     this.enableRealTimeAlerts = true,
-    this.alertLevels = const [AuditLogLevel.error, AuditLogLevel.critical, AuditLogLevel.security],
+    this.alertLevels = const [
+      AuditLogLevel.error,
+      AuditLogLevel.critical,
+      AuditLogLevel.security
+    ],
     this.enableCompression = true,
     this.enableEncryption = true,
     this.enableRemoteBackup = false,
@@ -240,9 +245,10 @@ class NPSAuditService extends ChangeNotifier {
 
   // Getters
   List<AuditLogEntry> get auditLogs => List.unmodifiable(_auditLogs);
-  List<AuditIntegrityCheck> get integrityChecks => List.unmodifiable(_integrityChecks);
+  List<AuditIntegrityCheck> get integrityChecks =>
+      List.unmodifiable(_integrityChecks);
   AuditConfig get config => _config;
-  
+
   /// Initialize audit service
   void initialize() {
     _log(
@@ -371,7 +377,8 @@ class NPSAuditService extends ChangeNotifier {
   void _triggerAlert(AuditLogEntry logEntry) {
     // In production, send to monitoring system, SIEM, or notification service
     if (kDebugMode) {
-      print('🚨 AUDIT ALERT: ${logEntry.level.name.toUpperCase()} - ${logEntry.action}');
+      print(
+          '🚨 AUDIT ALERT: ${logEntry.level.name.toUpperCase()} - ${logEntry.action}');
       print('   User: ${logEntry.userName} (${logEntry.userId})');
       print('   Resource: ${logEntry.resource}');
       print('   Description: ${logEntry.description}');
@@ -387,10 +394,12 @@ class NPSAuditService extends ChangeNotifier {
 
     // Date range filter
     if (query.startDate != null) {
-      logs = logs.where((log) => log.timestamp.isAfter(query.startDate!)).toList();
+      logs =
+          logs.where((log) => log.timestamp.isAfter(query.startDate!)).toList();
     }
     if (query.endDate != null) {
-      logs = logs.where((log) => log.timestamp.isBefore(query.endDate!)).toList();
+      logs =
+          logs.where((log) => log.timestamp.isBefore(query.endDate!)).toList();
     }
 
     // User filter
@@ -405,19 +414,25 @@ class NPSAuditService extends ChangeNotifier {
 
     // Category filter
     if (query.categories != null && query.categories!.isNotEmpty) {
-      logs = logs.where((log) => query.categories!.contains(log.category)).toList();
+      logs = logs
+          .where((log) => query.categories!.contains(log.category))
+          .toList();
     }
 
     // Action filter
     if (query.actions != null && query.actions!.isNotEmpty) {
-      logs = logs.where((log) => query.actions!.any((action) =>
-          log.action.toLowerCase().contains(action.toLowerCase()))).toList();
+      logs = logs
+          .where((log) => query.actions!.any((action) =>
+              log.action.toLowerCase().contains(action.toLowerCase())))
+          .toList();
     }
 
     // Resource filter
     if (query.resources != null && query.resources!.isNotEmpty) {
-      logs = logs.where((log) => query.resources!.any((resource) =>
-          log.resource.toLowerCase().contains(resource.toLowerCase()))).toList();
+      logs = logs
+          .where((log) => query.resources!.any((resource) =>
+              log.resource.toLowerCase().contains(resource.toLowerCase())))
+          .toList();
     }
 
     // Success filter
@@ -433,11 +448,13 @@ class NPSAuditService extends ChangeNotifier {
     // Search term filter
     if (query.searchTerm != null && query.searchTerm!.isNotEmpty) {
       final searchLower = query.searchTerm!.toLowerCase();
-      logs = logs.where((log) =>
-          log.action.toLowerCase().contains(searchLower) ||
-          log.description.toLowerCase().contains(searchLower) ||
-          log.resource.toLowerCase().contains(searchLower) ||
-          log.userName.toLowerCase().contains(searchLower)).toList();
+      logs = logs
+          .where((log) =>
+              log.action.toLowerCase().contains(searchLower) ||
+              log.description.toLowerCase().contains(searchLower) ||
+              log.resource.toLowerCase().contains(searchLower) ||
+              log.userName.toLowerCase().contains(searchLower))
+          .toList();
     }
 
     // Sort by timestamp (most recent first)
@@ -468,21 +485,20 @@ class NPSAuditService extends ChangeNotifier {
     // Category breakdown
     final categoryStats = <String, int>{};
     for (final category in AuditCategory.values) {
-      categoryStats[category.name] = _auditLogs
-          .where((log) => log.category == category)
-          .length;
+      categoryStats[category.name] =
+          _auditLogs.where((log) => log.category == category).length;
     }
 
     // Level breakdown
     final levelStats = <String, int>{};
     for (final level in AuditLogLevel.values) {
-      levelStats[level.name] = _auditLogs
-          .where((log) => log.level == level)
-          .length;
+      levelStats[level.name] =
+          _auditLogs.where((log) => log.level == level).length;
     }
 
     // Security events
-    final securityEvents = _auditLogs.where((log) => log.isSecurityRelevant).length;
+    final securityEvents =
+        _auditLogs.where((log) => log.isSecurityRelevant).length;
     final failedOperations = _auditLogs.where((log) => !log.success).length;
 
     // Top users by activity
@@ -495,8 +511,9 @@ class NPSAuditService extends ChangeNotifier {
 
     // Recent critical events
     final criticalEvents = _auditLogs
-        .where((log) => log.level == AuditLogLevel.critical || 
-                       log.level == AuditLogLevel.security)
+        .where((log) =>
+            log.level == AuditLogLevel.critical ||
+            log.level == AuditLogLevel.security)
         .take(10)
         .toList();
 
@@ -509,17 +526,22 @@ class NPSAuditService extends ChangeNotifier {
       'failed_operations': failedOperations,
       'category_breakdown': categoryStats,
       'level_breakdown': levelStats,
-      'top_users_7d': topUsers.take(10).map((e) => {
-        'user': e.key,
-        'activity_count': e.value,
-      }).toList(),
-      'recent_critical_events': criticalEvents.map((log) => {
-        'timestamp': log.timestamp.toIso8601String(),
-        'level': log.level.name,
-        'action': log.action,
-        'user': log.userName,
-        'resource': log.resource,
-      }).toList(),
+      'top_users_7d': topUsers
+          .take(10)
+          .map((e) => {
+                'user': e.key,
+                'activity_count': e.value,
+              })
+          .toList(),
+      'recent_critical_events': criticalEvents
+          .map((log) => {
+                'timestamp': log.timestamp.toIso8601String(),
+                'level': log.level.name,
+                'action': log.action,
+                'user': log.userName,
+                'resource': log.resource,
+              })
+          .toList(),
       'integrity_checks': _integrityChecks.length,
       'last_integrity_check': _integrityChecks.isNotEmpty
           ? _integrityChecks.last.timestamp.toIso8601String()
@@ -538,44 +560,44 @@ class NPSAuditService extends ChangeNotifier {
   AuditIntegrityCheck performIntegrityCheck() {
     final checkId = 'integrity_${DateTime.now().millisecondsSinceEpoch}';
     final timestamp = DateTime.now();
-    
+
     // Calculate checksum of all log entries
     final allLogsJson = _auditLogs.map((log) => log.toJson()).toList();
     final logsString = json.encode(allLogsJson);
     final checksum = _calculateChecksum(logsString);
-    
+
     // Look for potential tampering (simplified check)
     final tamperedEntries = <String>[];
     var previousTimestamp = DateTime(1970);
-    
+
     for (final log in _auditLogs) {
       // Check timestamp order (logs should be chronological)
       if (log.timestamp.isBefore(previousTimestamp)) {
         tamperedEntries.add('${log.id}: Invalid timestamp order');
       }
-      
+
       // Check for required fields
       if (log.id.isEmpty || log.userId.isEmpty || log.action.isEmpty) {
         tamperedEntries.add('${log.id}: Missing required fields');
       }
-      
+
       previousTimestamp = log.timestamp;
     }
-    
+
     final statistics = {
       'total_entries': _auditLogs.length,
       'date_range': {
-        'earliest': _auditLogs.isNotEmpty 
+        'earliest': _auditLogs.isNotEmpty
             ? _auditLogs.first.timestamp.toIso8601String()
             : null,
-        'latest': _auditLogs.isNotEmpty 
+        'latest': _auditLogs.isNotEmpty
             ? _auditLogs.last.timestamp.toIso8601String()
             : null,
       },
       'checksum_algorithm': 'simple_hash',
       'tampered_count': tamperedEntries.length,
     };
-    
+
     final integrityCheck = AuditIntegrityCheck(
       id: checkId,
       timestamp: timestamp,
@@ -585,19 +607,20 @@ class NPSAuditService extends ChangeNotifier {
       tamperedEntries: tamperedEntries,
       statistics: statistics,
     );
-    
+
     _integrityChecks.add(integrityCheck);
-    
+
     // Log the integrity check
     _log(
       userId: 'SYSTEM',
       userName: 'System',
       sessionId: 'integrity_check',
-      level: integrityCheck.isValid ? AuditLogLevel.info : AuditLogLevel.security,
+      level:
+          integrityCheck.isValid ? AuditLogLevel.info : AuditLogLevel.security,
       category: AuditCategory.security,
       action: 'INTEGRITY_CHECK_PERFORMED',
       resource: 'audit_logs',
-      description: integrityCheck.isValid 
+      description: integrityCheck.isValid
           ? 'Audit log integrity check passed'
           : 'Audit log integrity check failed - potential tampering detected',
       details: {
@@ -610,7 +633,7 @@ class NPSAuditService extends ChangeNotifier {
       success: integrityCheck.isValid,
       errorMessage: integrityCheck.isValid ? null : 'Integrity check failed',
     );
-    
+
     return integrityCheck;
   }
 
@@ -630,19 +653,19 @@ class NPSAuditService extends ChangeNotifier {
     bool includeSystemLogs = false,
   }) {
     var logs = _auditLogs.toList();
-    
+
     if (startDate != null) {
       logs = logs.where((log) => log.timestamp.isAfter(startDate)).toList();
     }
-    
+
     if (endDate != null) {
       logs = logs.where((log) => log.timestamp.isBefore(endDate)).toList();
     }
-    
+
     if (!includeSystemLogs) {
       logs = logs.where((log) => log.userId != 'SYSTEM').toList();
     }
-    
+
     final exportData = {
       'export_timestamp': DateTime.now().toIso8601String(),
       'total_entries': logs.length,
@@ -652,7 +675,7 @@ class NPSAuditService extends ChangeNotifier {
       },
       'logs': logs.map((log) => log.toJson()).toList(),
     };
-    
+
     return json.encode(exportData);
   }
 
@@ -660,7 +683,7 @@ class NPSAuditService extends ChangeNotifier {
   void updateConfig(AuditConfig config) {
     final oldConfig = _config;
     _config = config;
-    
+
     _log(
       userId: 'SYSTEM',
       userName: 'System',
@@ -683,7 +706,7 @@ class NPSAuditService extends ChangeNotifier {
       ipAddress: '127.0.0.1',
       userAgent: 'System',
     );
-    
+
     notifyListeners();
   }
 
@@ -691,11 +714,11 @@ class NPSAuditService extends ChangeNotifier {
   int cleanupOldLogs() {
     final cutoffDate = DateTime.now().subtract(_config.retentionPeriod);
     final initialCount = _auditLogs.length;
-    
+
     _auditLogs.removeWhere((log) => log.timestamp.isBefore(cutoffDate));
-    
+
     final removedCount = initialCount - _auditLogs.length;
-    
+
     if (removedCount > 0) {
       _log(
         userId: 'SYSTEM',
@@ -714,10 +737,10 @@ class NPSAuditService extends ChangeNotifier {
         ipAddress: '127.0.0.1',
         userAgent: 'System',
       );
-      
+
       notifyListeners();
     }
-    
+
     return removedCount;
   }
 }

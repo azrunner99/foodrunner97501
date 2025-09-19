@@ -22,8 +22,9 @@ class _NPSBenchmarkingWidgetState extends State<NPSBenchmarkingWidget> {
       builder: (context, benchmarkService, npsProvider, child) {
         // Generate sample feedback data for demo
         final sampleFeedback = _generateSampleFeedback();
-        final analysis = benchmarkService.analyzePerformance(sampleFeedback, npsProvider.servers);
-        
+        final analysis = benchmarkService.analyzePerformance(
+            sampleFeedback, npsProvider.servers);
+
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -80,16 +81,16 @@ class _NPSBenchmarkingWidgetState extends State<NPSBenchmarkingWidget> {
                   Text(
                     'Performance Benchmarking',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).primaryColor,
-                    ),
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).primaryColor,
+                        ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     'Compare your NPS performance against industry standards and competitors',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey[600],
-                    ),
+                          color: Colors.grey[600],
+                        ),
                   ),
                 ],
               ),
@@ -110,8 +111,8 @@ class _NPSBenchmarkingWidgetState extends State<NPSBenchmarkingWidget> {
             Text(
               'Benchmark Type',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 12),
             Row(
@@ -161,8 +162,8 @@ class _NPSBenchmarkingWidgetState extends State<NPSBenchmarkingWidget> {
             Text(
               'Performance Overview',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 16),
             Row(
@@ -210,7 +211,8 @@ class _NPSBenchmarkingWidgetState extends State<NPSBenchmarkingWidget> {
     );
   }
 
-  Widget _buildMetricCard(String title, String value, Color color, IconData icon) {
+  Widget _buildMetricCard(
+      String title, String value, Color color, IconData icon) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -254,8 +256,8 @@ class _NPSBenchmarkingWidgetState extends State<NPSBenchmarkingWidget> {
             Text(
               'Industry Benchmark Comparison',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -297,31 +299,38 @@ class _NPSBenchmarkingWidgetState extends State<NPSBenchmarkingWidget> {
                   case 1:
                     return const Text('Fair', style: TextStyle(fontSize: 10));
                   case 2:
-                    return const Text('Industry\nAvg', style: TextStyle(fontSize: 10));
+                    return const Text('Industry\nAvg',
+                        style: TextStyle(fontSize: 10));
                   case 3:
                     return const Text('Good', style: TextStyle(fontSize: 10));
                   case 4:
-                    return const Text('Excellent', style: TextStyle(fontSize: 10));
+                    return const Text('Excellent',
+                        style: TextStyle(fontSize: 10));
                   case 5:
-                    return const Text('Your\nScore', style: TextStyle(fontSize: 10));
+                    return const Text('Your\nScore',
+                        style: TextStyle(fontSize: 10));
                   default:
                     return const Text('');
                 }
               },
             ),
           ),
-          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         ),
         gridData: const FlGridData(show: true),
         borderData: FlBorderData(show: false),
         barGroups: [
           _buildBarGroup(0, -10, Colors.red), // Poor
           _buildBarGroup(1, 10, Colors.orange), // Fair
-          _buildBarGroup(2, analysis.industryAverage, Colors.blue), // Industry Avg
+          _buildBarGroup(
+              2, analysis.industryAverage, Colors.blue), // Industry Avg
           _buildBarGroup(3, 30, Colors.lightGreen), // Good
           _buildBarGroup(4, 50, Colors.green), // Excellent
-          _buildBarGroup(5, analysis.currentNPS, _getNPSColor(analysis.currentNPS)), // Your Score
+          _buildBarGroup(5, analysis.currentNPS,
+              _getNPSColor(analysis.currentNPS)), // Your Score
         ],
       ),
     );
@@ -344,9 +353,11 @@ class _NPSBenchmarkingWidgetState extends State<NPSBenchmarkingWidget> {
     );
   }
 
-  Widget _buildTrendAnalysis(List<NPSScoreFeedback> feedback, NPSBenchmarkingService service) {
-    final trendAnalysis = service.getTrendAnalysis(feedback, int.parse(_selectedTimeframe));
-    
+  Widget _buildTrendAnalysis(
+      List<NPSScoreFeedback> feedback, NPSBenchmarkingService service) {
+    final trendAnalysis =
+        service.getTrendAnalysis(feedback, int.parse(_selectedTimeframe));
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -358,8 +369,8 @@ class _NPSBenchmarkingWidgetState extends State<NPSBenchmarkingWidget> {
                 Text(
                   'Trend Analysis',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
                 const Spacer(),
                 DropdownButton<String>(
@@ -402,7 +413,9 @@ class _NPSBenchmarkingWidgetState extends State<NPSBenchmarkingWidget> {
                   child: _buildTrendCard(
                     'Change',
                     '${trendAnalysis.change >= 0 ? '+' : ''}${trendAnalysis.change.toStringAsFixed(1)}',
-                    trendAnalysis.change >= 0 ? Icons.trending_up : Icons.trending_down,
+                    trendAnalysis.change >= 0
+                        ? Icons.trending_up
+                        : Icons.trending_down,
                     trendAnalysis.change >= 0 ? Colors.green : Colors.red,
                   ),
                 ),
@@ -423,7 +436,8 @@ class _NPSBenchmarkingWidgetState extends State<NPSBenchmarkingWidget> {
     );
   }
 
-  Widget _buildTrendCard(String title, String value, IconData icon, Color color) {
+  Widget _buildTrendCard(
+      String title, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -467,14 +481,15 @@ class _NPSBenchmarkingWidgetState extends State<NPSBenchmarkingWidget> {
             Text(
               'Performance Recommendations',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 16),
             if (analysis.recommendations.isEmpty)
               const Text('No specific recommendations at this time.')
             else
-              ...analysis.recommendations.map((rec) => _buildRecommendationCard(rec)),
+              ...analysis.recommendations
+                  .map((rec) => _buildRecommendationCard(rec)),
           ],
         ),
       ),
@@ -535,14 +550,16 @@ class _NPSBenchmarkingWidgetState extends State<NPSBenchmarkingWidget> {
               const SizedBox(width: 4),
               Text(
                 'Impact: +${recommendation.potentialImpact.toStringAsFixed(1)} NPS',
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                style:
+                    const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
               ),
               const SizedBox(width: 16),
               Icon(Icons.schedule, size: 16, color: Colors.blue),
               const SizedBox(width: 4),
               Text(
                 'Timeline: ${recommendation.estimatedTimeframe} days',
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                style:
+                    const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
               ),
             ],
           ),
@@ -551,9 +568,10 @@ class _NPSBenchmarkingWidgetState extends State<NPSBenchmarkingWidget> {
     );
   }
 
-  Widget _buildTargetProgress(BenchmarkAnalysis analysis, NPSBenchmarkingService service) {
+  Widget _buildTargetProgress(
+      BenchmarkAnalysis analysis, NPSBenchmarkingService service) {
     final progress = service.getTargetProgress(analysis.currentNPS);
-    
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -563,14 +581,15 @@ class _NPSBenchmarkingWidgetState extends State<NPSBenchmarkingWidget> {
             Text(
               'Target Progress',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 16),
             if (progress.isEmpty)
               const Text('No active targets set.')
             else
-              ...progress.entries.map((entry) => _buildProgressBar(entry.key, entry.value)),
+              ...progress.entries
+                  .map((entry) => _buildProgressBar(entry.key, entry.value)),
           ],
         ),
       ),
@@ -603,7 +622,8 @@ class _NPSBenchmarkingWidgetState extends State<NPSBenchmarkingWidget> {
           LinearProgressIndicator(
             value: progress / 100,
             backgroundColor: Colors.grey[300],
-            valueColor: AlwaysStoppedAnimation<Color>(_getProgressColor(progress)),
+            valueColor:
+                AlwaysStoppedAnimation<Color>(_getProgressColor(progress)),
           ),
         ],
       ),
@@ -620,16 +640,15 @@ class _NPSBenchmarkingWidgetState extends State<NPSBenchmarkingWidget> {
             Text(
               'Competitor Comparison',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 16),
             if (analysis.competitorComparison.isEmpty)
               const Text('No competitor data available.')
             else
-              ...analysis.competitorComparison.entries.map((entry) => 
-                _buildCompetitorItem(entry.key, entry.value)
-              ),
+              ...analysis.competitorComparison.entries
+                  .map((entry) => _buildCompetitorItem(entry.key, entry.value)),
           ],
         ),
       ),
@@ -638,15 +657,19 @@ class _NPSBenchmarkingWidgetState extends State<NPSBenchmarkingWidget> {
 
   Widget _buildCompetitorItem(String competitorName, double difference) {
     final isAhead = difference < 0;
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isAhead ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+        color: isAhead
+            ? Colors.green.withOpacity(0.1)
+            : Colors.red.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: isAhead ? Colors.green.withOpacity(0.3) : Colors.red.withOpacity(0.3),
+          color: isAhead
+              ? Colors.green.withOpacity(0.3)
+              : Colors.red.withOpacity(0.3),
         ),
       ),
       child: Row(
@@ -751,7 +774,7 @@ class _NPSBenchmarkingWidgetState extends State<NPSBenchmarkingWidget> {
   List<NPSScoreFeedback> _generateSampleFeedback() {
     final List<NPSScoreFeedback> sampleData = [];
     final now = DateTime.now();
-    
+
     for (int i = 0; i < 100; i++) {
       final date = now.subtract(Duration(days: i % 30));
       sampleData.add(NPSScoreFeedback(
@@ -763,7 +786,7 @@ class _NPSBenchmarkingWidgetState extends State<NPSBenchmarkingWidget> {
         createdAt: date,
       ));
     }
-    
+
     return sampleData;
   }
 }

@@ -6,7 +6,7 @@ import '../utils/banner_assets.dart';
 
 class ProfileBannerScreen extends StatefulWidget {
   final String serverId;
-  
+
   const ProfileBannerScreen({super.key, required this.serverId});
 
   @override
@@ -37,7 +37,8 @@ class _ProfileBannerScreenState extends State<ProfileBannerScreen> {
   Future<void> _loadAvailableBanners() async {
     final app = context.read<AppState>();
     try {
-      final banners = await BannerAssets.getAvailableBanners(widget.serverId, app.profiles);
+      final banners =
+          await BannerAssets.getAvailableBanners(widget.serverId, app.profiles);
       setState(() {
         availableBanners = banners;
         isLoadingBanners = false;
@@ -54,8 +55,9 @@ class _ProfileBannerScreenState extends State<ProfileBannerScreen> {
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
     final server = app.serverById(widget.serverId);
-    final profile = app.profiles[widget.serverId]; // Get the profile for avatar access
-    
+    final profile =
+        app.profiles[widget.serverId]; // Get the profile for avatar access
+
     if (server == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Profile Banner')),
@@ -197,21 +199,31 @@ class _ProfileBannerScreenState extends State<ProfileBannerScreen> {
                                 padding: const EdgeInsets.all(4),
                                 decoration: BoxDecoration(
                                   gradient: const LinearGradient(
-                                    colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+                                    colors: [
+                                      Color(0xFF667EEA),
+                                      Color(0xFF764BA2)
+                                    ],
                                   ),
                                   borderRadius: BorderRadius.circular(38),
                                 ),
                                 child: CircleAvatar(
                                   radius: 34,
                                   backgroundColor: Colors.white,
-                                  backgroundImage: profile?.avatarPath != null && profile!.avatarPath!.isNotEmpty
-                                      ? (profile.avatarPath!.startsWith('/') || profile.avatarPath!.contains(':')
-                                          ? FileImage(File(profile.avatarPath!)) as ImageProvider
+                                  backgroundImage: profile?.avatarPath !=
+                                              null &&
+                                          profile!.avatarPath!.isNotEmpty
+                                      ? (profile.avatarPath!.startsWith('/') ||
+                                              profile.avatarPath!.contains(':')
+                                          ? FileImage(File(profile.avatarPath!))
+                                              as ImageProvider
                                           : AssetImage(profile.avatarPath!))
                                       : null,
-                                  child: profile?.avatarPath == null || profile!.avatarPath!.isEmpty
+                                  child: profile?.avatarPath == null ||
+                                          profile!.avatarPath!.isEmpty
                                       ? Text(
-                                          server.name.isNotEmpty ? server.name[0].toUpperCase() : 'S',
+                                          server.name.isNotEmpty
+                                              ? server.name[0].toUpperCase()
+                                              : 'S',
                                           style: const TextStyle(
                                             fontSize: 24,
                                             fontWeight: FontWeight.w600,
@@ -231,15 +243,21 @@ class _ProfileBannerScreenState extends State<ProfileBannerScreen> {
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      _buildStatRow('🏃‍♂️ Runs: 15, Rank: 2/5', const Color(0xFF10B981)),
+                                      _buildStatRow('🏃‍♂️ Runs: 15, Rank: 2/5',
+                                          const Color(0xFF10B981)),
                                       const SizedBox(height: 6),
-                                      _buildStatRow('🍪 Pizookies: 3, Rank: 1/5', const Color(0xFFF59E0B)),
+                                      _buildStatRow(
+                                          '🍪 Pizookies: 3, Rank: 1/5',
+                                          const Color(0xFFF59E0B)),
                                       const SizedBox(height: 6),
-                                      _buildStatRow('✨ Shift XP Earned: 150', const Color(0xFF8B5CF6)),
+                                      _buildStatRow('✨ Shift XP Earned: 150',
+                                          const Color(0xFF8B5CF6)),
                                       const SizedBox(height: 6),
-                                      _buildStatRow('🎯 5525 / Next at 7000', const Color(0xFF6366F1)),
+                                      _buildStatRow('🎯 5525 / Next at 7000',
+                                          const Color(0xFF6366F1)),
                                     ],
                                   ),
                                 ),
@@ -254,7 +272,7 @@ class _ProfileBannerScreenState extends State<ProfileBannerScreen> {
               ),
             ),
           ),
-          
+
           // Fixed "Choose Your Style" header section
           Container(
             width: double.infinity,
@@ -309,7 +327,7 @@ class _ProfileBannerScreenState extends State<ProfileBannerScreen> {
               ),
             ),
           ),
-          
+
           // Scrollable banner list
           Expanded(
             child: Container(
@@ -317,84 +335,100 @@ class _ProfileBannerScreenState extends State<ProfileBannerScreen> {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
                 child: isLoadingBanners
-                  ? const Center(child: CircularProgressIndicator())
-                  : availableBanners.isEmpty
-                    ? const Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.image, size: 64, color: Colors.grey),
-                            SizedBox(height: 16),
-                            Text(
-                              'All banners are currently in use!',
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                              textAlign: TextAlign.center,
+                    ? const Center(child: CircularProgressIndicator())
+                    : availableBanners.isEmpty
+                        ? const Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.image, size: 64, color: Colors.grey),
+                                SizedBox(height: 16),
+                                Text(
+                                  'All banners are currently in use!',
+                                  style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold),
+                                  textAlign: TextAlign.center,
+                                ),
+                                SizedBox(height: 8),
+                                Text(
+                                  'Choose a different banner when other servers change theirs.',
+                                  style: TextStyle(color: Colors.grey),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
                             ),
-                            SizedBox(height: 8),
-                            Text(
-                              'Choose a different banner when other servers change theirs.',
-                              style: TextStyle(color: Colors.grey),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      )
-                    : ListView.builder(
-                        physics: const BouncingScrollPhysics(),
-                        itemCount: availableBanners.length,
-                        itemBuilder: (context, index) {
-                          final bannerPath = availableBanners[index];
-                          final bannerId = bannerPath.split('/').last.replaceAll('.webp', '');
-                          
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 16),
-                            child: GestureDetector(
-                              onTap: () => _selectBanner(context, bannerPath, bannerId),
-                              child: Container(
-                                height: 120, // Good height for banner aspect ratio
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: selectedBannerPath == bannerPath 
-                                        ? const Color(0xFF667EEA)
-                                        : const Color(0xFFE2E8F0),
-                              width: selectedBannerPath == bannerPath ? 3 : 2,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: selectedBannerPath == bannerPath
-                                    ? const Color(0xFF667EEA).withOpacity(0.2)
-                                    : const Color(0xFF64748B).withOpacity(0.1),
-                                blurRadius: selectedBannerPath == bannerPath ? 12 : 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: Image.asset(
-                              bannerPath,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  color: const Color(0xFFF1F5F9),
-                                  child: const Center(
-                                    child: Icon(
-                                      Icons.image_outlined,
-                                      color: Color(0xFF94A3B8),
-                                      size: 32,
+                          )
+                        : ListView.builder(
+                            physics: const BouncingScrollPhysics(),
+                            itemCount: availableBanners.length,
+                            itemBuilder: (context, index) {
+                              final bannerPath = availableBanners[index];
+                              final bannerId = bannerPath
+                                  .split('/')
+                                  .last
+                                  .replaceAll('.webp', '');
+
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 16),
+                                child: GestureDetector(
+                                  onTap: () => _selectBanner(
+                                      context, bannerPath, bannerId),
+                                  child: Container(
+                                    height:
+                                        120, // Good height for banner aspect ratio
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: selectedBannerPath == bannerPath
+                                            ? const Color(0xFF667EEA)
+                                            : const Color(0xFFE2E8F0),
+                                        width: selectedBannerPath == bannerPath
+                                            ? 3
+                                            : 2,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color:
+                                              selectedBannerPath == bannerPath
+                                                  ? const Color(0xFF667EEA)
+                                                      .withOpacity(0.2)
+                                                  : const Color(0xFF64748B)
+                                                      .withOpacity(0.1),
+                                          blurRadius:
+                                              selectedBannerPath == bannerPath
+                                                  ? 12
+                                                  : 8,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Image.asset(
+                                        bannerPath,
+                                        width: double.infinity,
+                                        fit: BoxFit.cover,
+                                        errorBuilder:
+                                            (context, error, stackTrace) {
+                                          return Container(
+                                            color: const Color(0xFFF1F5F9),
+                                            child: const Center(
+                                              child: Icon(
+                                                Icons.image_outlined,
+                                                color: Color(0xFF94A3B8),
+                                                size: 32,
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
                                     ),
                                   ),
-                                );
-                              },
-                            ),
+                                ),
+                              );
+                            },
                           ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
               ),
             ),
           ),
@@ -407,20 +441,21 @@ class _ProfileBannerScreenState extends State<ProfileBannerScreen> {
     setState(() {
       selectedBannerPath = bannerPath;
     });
-    
+
     // Save banner selection to app state
     final app = Provider.of<AppState>(context, listen: false);
     app.updateBanner(widget.serverId, bannerPath);
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Selected banner for ${app.serverById(widget.serverId)?.name ?? "server"}'),
+        content: Text(
+            'Selected banner for ${app.serverById(widget.serverId)?.name ?? "server"}'),
         duration: const Duration(seconds: 2),
         backgroundColor: const Color(0xFF667EEA),
         behavior: SnackBarBehavior.floating,
       ),
     );
-    
+
     // Reload available banners since one was just selected
     _loadAvailableBanners();
   }

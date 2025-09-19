@@ -8,7 +8,8 @@ class IntegrityComplianceScreen extends StatefulWidget {
   const IntegrityComplianceScreen({super.key});
 
   @override
-  State<IntegrityComplianceScreen> createState() => _IntegrityComplianceScreenState();
+  State<IntegrityComplianceScreen> createState() =>
+      _IntegrityComplianceScreenState();
 }
 
 class _IntegrityComplianceScreenState extends State<IntegrityComplianceScreen> {
@@ -32,7 +33,8 @@ class _IntegrityComplianceScreenState extends State<IntegrityComplianceScreen> {
         status: DocumentStatus.active,
         version: '2.1',
         lastUpdated: DateTime.now().subtract(const Duration(days: 30)),
-        description: 'Comprehensive policy for server monitoring and integrity assessment',
+        description:
+            'Comprehensive policy for server monitoring and integrity assessment',
         content: _getServerIntegrityPolicy(),
       ),
       ComplianceDocument(
@@ -42,7 +44,8 @@ class _IntegrityComplianceScreenState extends State<IntegrityComplianceScreen> {
         status: DocumentStatus.active,
         version: '1.5',
         lastUpdated: DateTime.now().subtract(const Duration(days: 15)),
-        description: 'Procedures for protecting server data and maintaining privacy compliance',
+        description:
+            'Procedures for protecting server data and maintaining privacy compliance',
         content: _getDataPrivacyProcedures(),
       ),
       ComplianceDocument(
@@ -52,7 +55,8 @@ class _IntegrityComplianceScreenState extends State<IntegrityComplianceScreen> {
         status: DocumentStatus.active,
         version: '1.0',
         lastUpdated: DateTime.now().subtract(const Duration(days: 7)),
-        description: 'Guidelines for responding to integrity alerts and escalation procedures',
+        description:
+            'Guidelines for responding to integrity alerts and escalation procedures',
         content: _getAlertResponseGuidelines(),
       ),
       ComplianceDocument(
@@ -84,7 +88,8 @@ class _IntegrityComplianceScreenState extends State<IntegrityComplianceScreen> {
         action: 'Investigation Created',
         userId: 'manager_a',
         serverId: '4f55jaewuhldbaoi',
-        details: 'New investigation case INV-001 created for click pattern anomaly',
+        details:
+            'New investigation case INV-001 created for click pattern anomaly',
         category: AuditCategory.investigation,
       ),
       AuditRecord(
@@ -93,7 +98,8 @@ class _IntegrityComplianceScreenState extends State<IntegrityComplianceScreen> {
         action: 'Policy Review',
         userId: 'admin',
         serverId: null,
-        details: 'Server Integrity Monitoring Policy v2.1 reviewed and approved',
+        details:
+            'Server Integrity Monitoring Policy v2.1 reviewed and approved',
         category: AuditCategory.policy,
       ),
       AuditRecord(
@@ -120,10 +126,10 @@ class _IntegrityComplianceScreenState extends State<IntegrityComplianceScreen> {
               children: [
                 // Compliance Header
                 _buildComplianceHeader(),
-                
+
                 // Tab Navigation
                 _buildTabNavigation(),
-                
+
                 // Main Content
                 Expanded(
                   child: _buildTabContent(),
@@ -223,7 +229,7 @@ class _IntegrityComplianceScreenState extends State<IntegrityComplianceScreen> {
 
   Widget _buildTabButton(String tabId, String label, IconData icon) {
     final isSelected = _selectedTab == tabId;
-    
+
     return Expanded(
       child: InkWell(
         onTap: () {
@@ -287,9 +293,9 @@ class _IntegrityComplianceScreenState extends State<IntegrityComplianceScreen> {
         children: [
           // Policies Overview
           _buildPoliciesOverviewCard(),
-          
+
           const SizedBox(height: 16),
-          
+
           // Document Library
           _buildDocumentLibraryCard(),
         ],
@@ -298,10 +304,13 @@ class _IntegrityComplianceScreenState extends State<IntegrityComplianceScreen> {
   }
 
   Widget _buildPoliciesOverviewCard() {
-    final activeCount = _documents.where((d) => d.status == DocumentStatus.active).length;
-    final draftCount = _documents.where((d) => d.status == DocumentStatus.draft).length;
-    final pendingCount = _documents.where((d) => d.status == DocumentStatus.pending).length;
-    
+    final activeCount =
+        _documents.where((d) => d.status == DocumentStatus.active).length;
+    final draftCount =
+        _documents.where((d) => d.status == DocumentStatus.draft).length;
+    final pendingCount =
+        _documents.where((d) => d.status == DocumentStatus.pending).length;
+
     return Card(
       elevation: 4,
       child: Padding(
@@ -323,16 +332,19 @@ class _IntegrityComplianceScreenState extends State<IntegrityComplianceScreen> {
             Row(
               children: [
                 Expanded(
-                  child: _buildDocumentStat('Active', activeCount, Colors.green),
+                  child:
+                      _buildDocumentStat('Active', activeCount, Colors.green),
                 ),
                 Expanded(
                   child: _buildDocumentStat('Draft', draftCount, Colors.orange),
                 ),
                 Expanded(
-                  child: _buildDocumentStat('Pending', pendingCount, Colors.blue),
+                  child:
+                      _buildDocumentStat('Pending', pendingCount, Colors.blue),
                 ),
                 Expanded(
-                  child: _buildDocumentStat('Total', _documents.length, Colors.grey[700]!),
+                  child: _buildDocumentStat(
+                      'Total', _documents.length, Colors.grey[700]!),
                 ),
               ],
             ),
@@ -451,9 +463,11 @@ class _IntegrityComplianceScreenState extends State<IntegrityComplianceScreen> {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: _getDocumentStatusColor(document.status).withOpacity(0.2),
+                    color: _getDocumentStatusColor(document.status)
+                        .withOpacity(0.2),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
@@ -520,7 +534,8 @@ class _IntegrityComplianceScreenState extends State<IntegrityComplianceScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -531,7 +546,8 @@ class _IntegrityComplianceScreenState extends State<IntegrityComplianceScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -543,7 +559,8 @@ class _IntegrityComplianceScreenState extends State<IntegrityComplianceScreen> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.orange,
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
                         ),
                       ),
                   ],
@@ -564,9 +581,9 @@ class _IntegrityComplianceScreenState extends State<IntegrityComplianceScreen> {
         children: [
           // Audit Overview
           _buildAuditOverviewCard(),
-          
+
           const SizedBox(height: 16),
-          
+
           // Audit Trail
           _buildAuditTrailCard(),
         ],
@@ -575,13 +592,11 @@ class _IntegrityComplianceScreenState extends State<IntegrityComplianceScreen> {
   }
 
   Widget _buildAuditOverviewCard() {
-    final todayRecords = _auditRecords
-        .where((r) => _isToday(r.timestamp))
-        .length;
-    final weekRecords = _auditRecords
-        .where((r) => _isThisWeek(r.timestamp))
-        .length;
-    
+    final todayRecords =
+        _auditRecords.where((r) => _isToday(r.timestamp)).length;
+    final weekRecords =
+        _auditRecords.where((r) => _isThisWeek(r.timestamp)).length;
+
     return Card(
       elevation: 4,
       child: Padding(
@@ -606,13 +621,16 @@ class _IntegrityComplianceScreenState extends State<IntegrityComplianceScreen> {
                   child: _buildAuditStat('Today', todayRecords, Colors.blue),
                 ),
                 Expanded(
-                  child: _buildAuditStat('This Week', weekRecords, Colors.green),
+                  child:
+                      _buildAuditStat('This Week', weekRecords, Colors.green),
                 ),
                 Expanded(
-                  child: _buildAuditStat('Total Records', _auditRecords.length, Colors.orange),
+                  child: _buildAuditStat(
+                      'Total Records', _auditRecords.length, Colors.orange),
                 ),
                 Expanded(
-                  child: _buildAuditStat('Categories', AuditCategory.values.length, Colors.purple),
+                  child: _buildAuditStat(
+                      'Categories', AuditCategory.values.length, Colors.purple),
                 ),
               ],
             ),
@@ -799,14 +817,14 @@ class _IntegrityComplianceScreenState extends State<IntegrityComplianceScreen> {
         children: [
           // Privacy Overview
           _buildPrivacyOverviewCard(),
-          
+
           const SizedBox(height: 16),
-          
+
           // Data Protection Controls
           _buildDataProtectionCard(),
-          
+
           const SizedBox(height: 16),
-          
+
           // Privacy Settings
           _buildPrivacySettingsCard(),
         ],
@@ -836,16 +854,20 @@ class _IntegrityComplianceScreenState extends State<IntegrityComplianceScreen> {
             Row(
               children: [
                 Expanded(
-                  child: _buildPrivacyStat('Data Encryption', 'Active', Colors.green, Icons.lock),
+                  child: _buildPrivacyStat(
+                      'Data Encryption', 'Active', Colors.green, Icons.lock),
                 ),
                 Expanded(
-                  child: _buildPrivacyStat('Access Control', 'Enabled', Colors.green, Icons.security),
+                  child: _buildPrivacyStat('Access Control', 'Enabled',
+                      Colors.green, Icons.security),
                 ),
                 Expanded(
-                  child: _buildPrivacyStat('Audit Logging', 'On', Colors.green, Icons.visibility),
+                  child: _buildPrivacyStat(
+                      'Audit Logging', 'On', Colors.green, Icons.visibility),
                 ),
                 Expanded(
-                  child: _buildPrivacyStat('Retention Policy', '30 Days', Colors.blue, Icons.schedule),
+                  child: _buildPrivacyStat('Retention Policy', '30 Days',
+                      Colors.blue, Icons.schedule),
                 ),
               ],
             ),
@@ -855,7 +877,8 @@ class _IntegrityComplianceScreenState extends State<IntegrityComplianceScreen> {
     );
   }
 
-  Widget _buildPrivacyStat(String label, String value, Color color, IconData icon) {
+  Widget _buildPrivacyStat(
+      String label, String value, Color color, IconData icon) {
     return Container(
       padding: const EdgeInsets.all(12),
       margin: const EdgeInsets.all(4),
@@ -946,15 +969,20 @@ class _IntegrityComplianceScreenState extends State<IntegrityComplianceScreen> {
     );
   }
 
-  Widget _buildProtectionControl(String title, String description, bool enabled, IconData icon) {
+  Widget _buildProtectionControl(
+      String title, String description, bool enabled, IconData icon) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 4),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: enabled ? Colors.green.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
+        color: enabled
+            ? Colors.green.withOpacity(0.1)
+            : Colors.grey.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: enabled ? Colors.green.withOpacity(0.3) : Colors.grey.withOpacity(0.3),
+          color: enabled
+              ? Colors.green.withOpacity(0.3)
+              : Colors.grey.withOpacity(0.3),
         ),
       ),
       child: Row(
@@ -963,7 +991,9 @@ class _IntegrityComplianceScreenState extends State<IntegrityComplianceScreen> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: enabled ? Colors.green.withOpacity(0.2) : Colors.grey.withOpacity(0.2),
+              color: enabled
+                  ? Colors.green.withOpacity(0.2)
+                  : Colors.grey.withOpacity(0.2),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
@@ -997,7 +1027,9 @@ class _IntegrityComplianceScreenState extends State<IntegrityComplianceScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: enabled ? Colors.green.withOpacity(0.2) : Colors.grey.withOpacity(0.2),
+              color: enabled
+                  ? Colors.green.withOpacity(0.2)
+                  : Colors.grey.withOpacity(0.2),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
@@ -1033,7 +1065,7 @@ class _IntegrityComplianceScreenState extends State<IntegrityComplianceScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            
+
             // Data Retention Setting
             _buildSettingItem(
               'Data Retention Period',
@@ -1041,7 +1073,7 @@ class _IntegrityComplianceScreenState extends State<IntegrityComplianceScreen> {
               'Configure how long integrity data is stored',
               () => _configureRetention(),
             ),
-            
+
             // Anonymization Level
             _buildSettingItem(
               'Data Anonymization Level',
@@ -1049,7 +1081,7 @@ class _IntegrityComplianceScreenState extends State<IntegrityComplianceScreen> {
               'Set the level of data anonymization in reports',
               () => _configureAnonymization(),
             ),
-            
+
             // Export Controls
             _buildSettingItem(
               'Data Export Controls',
@@ -1057,7 +1089,7 @@ class _IntegrityComplianceScreenState extends State<IntegrityComplianceScreen> {
               'Configure requirements for data export operations',
               () => _configureExportControls(),
             ),
-            
+
             // Access Permissions
             _buildSettingItem(
               'Access Permissions',
@@ -1071,7 +1103,8 @@ class _IntegrityComplianceScreenState extends State<IntegrityComplianceScreen> {
     );
   }
 
-  Widget _buildSettingItem(String title, String value, String description, VoidCallback onTap) {
+  Widget _buildSettingItem(
+      String title, String value, String description, VoidCallback onTap) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: InkWell(
@@ -1137,9 +1170,9 @@ class _IntegrityComplianceScreenState extends State<IntegrityComplianceScreen> {
         children: [
           // Report Overview
           _buildReportOverviewCard(),
-          
+
           const SizedBox(height: 16),
-          
+
           // Available Reports
           _buildAvailableReportsCard(),
         ],
@@ -1174,7 +1207,8 @@ class _IntegrityComplianceScreenState extends State<IntegrityComplianceScreen> {
             Row(
               children: [
                 Expanded(
-                  child: _buildReportStat('Reports Generated', '12', Colors.blue),
+                  child:
+                      _buildReportStat('Reports Generated', '12', Colors.blue),
                 ),
                 Expanded(
                   child: _buildReportStat('This Month', '3', Colors.green),
@@ -1229,13 +1263,15 @@ class _IntegrityComplianceScreenState extends State<IntegrityComplianceScreen> {
     final reports = [
       ComplianceReport(
         title: 'Server Integrity Compliance Report',
-        description: 'Comprehensive report on server integrity monitoring and compliance status',
+        description:
+            'Comprehensive report on server integrity monitoring and compliance status',
         type: 'Regulatory',
         lastGenerated: DateTime.now().subtract(const Duration(days: 7)),
       ),
       ComplianceReport(
         title: 'Data Privacy Assessment',
-        description: 'Assessment of data privacy controls and protection measures',
+        description:
+            'Assessment of data privacy controls and protection measures',
         type: 'Privacy',
         lastGenerated: DateTime.now().subtract(const Duration(days: 14)),
       ),
@@ -1332,7 +1368,8 @@ class _IntegrityComplianceScreenState extends State<IntegrityComplianceScreen> {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         color: Colors.blue.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(4),
@@ -1366,7 +1403,8 @@ class _IntegrityComplianceScreenState extends State<IntegrityComplianceScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 ),
                 child: const Text(
                   'Generate',
@@ -1379,7 +1417,8 @@ class _IntegrityComplianceScreenState extends State<IntegrityComplianceScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.orange,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 ),
                 child: const Text(
                   'Schedule',
@@ -1396,48 +1435,70 @@ class _IntegrityComplianceScreenState extends State<IntegrityComplianceScreen> {
   // Utility methods for UI
   Color _getDocumentTypeColor(DocumentType type) {
     switch (type) {
-      case DocumentType.policy: return Colors.blue;
-      case DocumentType.procedure: return Colors.green;
-      case DocumentType.guideline: return Colors.orange;
-      case DocumentType.standard: return Colors.purple;
+      case DocumentType.policy:
+        return Colors.blue;
+      case DocumentType.procedure:
+        return Colors.green;
+      case DocumentType.guideline:
+        return Colors.orange;
+      case DocumentType.standard:
+        return Colors.purple;
     }
   }
 
   IconData _getDocumentTypeIcon(DocumentType type) {
     switch (type) {
-      case DocumentType.policy: return Icons.policy;
-      case DocumentType.procedure: return Icons.list_alt;
-      case DocumentType.guideline: return Icons.help_outline;
-      case DocumentType.standard: return Icons.verified;
+      case DocumentType.policy:
+        return Icons.policy;
+      case DocumentType.procedure:
+        return Icons.list_alt;
+      case DocumentType.guideline:
+        return Icons.help_outline;
+      case DocumentType.standard:
+        return Icons.verified;
     }
   }
 
   Color _getDocumentStatusColor(DocumentStatus status) {
     switch (status) {
-      case DocumentStatus.active: return Colors.green;
-      case DocumentStatus.draft: return Colors.orange;
-      case DocumentStatus.pending: return Colors.blue;
-      case DocumentStatus.archived: return Colors.grey;
+      case DocumentStatus.active:
+        return Colors.green;
+      case DocumentStatus.draft:
+        return Colors.orange;
+      case DocumentStatus.pending:
+        return Colors.blue;
+      case DocumentStatus.archived:
+        return Colors.grey;
     }
   }
 
   Color _getAuditCategoryColor(AuditCategory category) {
     switch (category) {
-      case AuditCategory.alert: return Colors.red;
-      case AuditCategory.investigation: return Colors.orange;
-      case AuditCategory.policy: return Colors.blue;
-      case AuditCategory.export: return Colors.green;
-      case AuditCategory.access: return Colors.purple;
+      case AuditCategory.alert:
+        return Colors.red;
+      case AuditCategory.investigation:
+        return Colors.orange;
+      case AuditCategory.policy:
+        return Colors.blue;
+      case AuditCategory.export:
+        return Colors.green;
+      case AuditCategory.access:
+        return Colors.purple;
     }
   }
 
   IconData _getAuditCategoryIcon(AuditCategory category) {
     switch (category) {
-      case AuditCategory.alert: return Icons.warning;
-      case AuditCategory.investigation: return Icons.search;
-      case AuditCategory.policy: return Icons.policy;
-      case AuditCategory.export: return Icons.download;
-      case AuditCategory.access: return Icons.login;
+      case AuditCategory.alert:
+        return Icons.warning;
+      case AuditCategory.investigation:
+        return Icons.search;
+      case AuditCategory.policy:
+        return Icons.policy;
+      case AuditCategory.export:
+        return Icons.download;
+      case AuditCategory.access:
+        return Icons.login;
     }
   }
 
@@ -1451,7 +1512,9 @@ class _IntegrityComplianceScreenState extends State<IntegrityComplianceScreen> {
 
   bool _isToday(DateTime date) {
     final now = DateTime.now();
-    return date.year == now.year && date.month == now.month && date.day == now.day;
+    return date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day;
   }
 
   bool _isThisWeek(DateTime date) {
@@ -1728,5 +1791,7 @@ class ComplianceReport {
 }
 
 enum DocumentType { policy, procedure, guideline, standard }
+
 enum DocumentStatus { active, draft, pending, archived }
+
 enum AuditCategory { alert, investigation, policy, export, access }

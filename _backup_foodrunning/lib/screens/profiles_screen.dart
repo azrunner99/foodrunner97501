@@ -21,7 +21,9 @@ class ProfilesScreen extends StatelessWidget {
           final s = servers[i];
           final p = app.profiles[s.id];
           final myAllTime = (app.totals[s.id] ?? 0);
-          final share = allTimeTeamTotal > 0 ? (myAllTime * 100.0 / allTimeTeamTotal) : 0.0;
+          final share = allTimeTeamTotal > 0
+              ? (myAllTime * 100.0 / allTimeTeamTotal)
+              : 0.0;
 
           return ListTile(
             leading: const CircleAvatar(child: Icon(Icons.person)),
@@ -31,9 +33,11 @@ class ProfilesScreen extends StatelessWidget {
               'All-time % of team runs: ${share.toStringAsFixed(1)}%',
             ),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.push(context, MaterialPageRoute(
-              builder: (_) => _ProfileDetail(serverId: s.id, name: s.name),
-            )),
+            onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => _ProfileDetail(serverId: s.id, name: s.name),
+                )),
           );
         },
       ),
@@ -47,7 +51,8 @@ class _ProfileDetail extends StatelessWidget {
   const _ProfileDetail({required this.serverId, required this.name});
 
   // Pre-define colors to avoid expensive withOpacity calculations
-  static const Color achievementBackgroundColor = Color(0x26FFC107); // Colors.amber with 0.15 opacity
+  static const Color achievementBackgroundColor =
+      Color(0x26FFC107); // Colors.amber with 0.15 opacity
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +60,8 @@ class _ProfileDetail extends StatelessWidget {
     final p = app.profiles[serverId];
     final myAllTime = (app.totals[serverId] ?? 0);
     final allTimeTeamTotal = app.totals.values.fold<int>(0, (a, b) => a + b);
-    final share = allTimeTeamTotal > 0 ? (myAllTime * 100.0 / allTimeTeamTotal) : 0.0;
+    final share =
+        allTimeTeamTotal > 0 ? (myAllTime * 100.0 / allTimeTeamTotal) : 0.0;
 
     final got = (p?.achievements ?? <String>{}).toSet();
 
@@ -66,12 +72,18 @@ class _ProfileDetail extends StatelessWidget {
         child: ListView(
           children: [
             _StatRow(label: 'All-time runs', value: myAllTime.toString()),
-            _StatRow(label: 'All-time % of team runs', value: '${share.toStringAsFixed(1)}%'),
-            _StatRow(label: 'Best shift', value: (p?.bestShiftRuns ?? 0).toString()),
-            _StatRow(label: 'Best streak', value: (p?.streakBest ?? 0).toString()),
-            _StatRow(label: 'MVP awards', value: (p?.shiftsAsMvp ?? 0).toString()),
+            _StatRow(
+                label: 'All-time % of team runs',
+                value: '${share.toStringAsFixed(1)}%'),
+            _StatRow(
+                label: 'Best shift', value: (p?.bestShiftRuns ?? 0).toString()),
+            _StatRow(
+                label: 'Best streak', value: (p?.streakBest ?? 0).toString()),
+            _StatRow(
+                label: 'MVP awards', value: (p?.shiftsAsMvp ?? 0).toString()),
             const SizedBox(height: 16),
-            Text('Badges & Achievements', style: Theme.of(context).textTheme.titleLarge),
+            Text('Badges & Achievements',
+                style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -81,10 +93,14 @@ class _ProfileDetail extends StatelessWidget {
                   Chip(
                     label: Text(a.title),
                     avatar: Icon(
-                      got.contains(a.id) ? Icons.emoji_events : Icons.lock_outline,
-                      color: got.contains(a.id) ? Colors.amber[700] : Colors.grey,
+                      got.contains(a.id)
+                          ? Icons.emoji_events
+                          : Icons.lock_outline,
+                      color:
+                          got.contains(a.id) ? Colors.amber[700] : Colors.grey,
                     ),
-                    backgroundColor: got.contains(a.id) ? achievementBackgroundColor : null,
+                    backgroundColor:
+                        got.contains(a.id) ? achievementBackgroundColor : null,
                   ),
               ],
             )

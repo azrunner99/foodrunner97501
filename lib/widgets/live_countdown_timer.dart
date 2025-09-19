@@ -42,7 +42,7 @@ class _LiveCountdownTimerState extends State<LiveCountdownTimer> {
 
   void _updateTime() {
     final remaining = widget.endTime.difference(DateTime.now());
-    
+
     if (remaining.isNegative) {
       setState(() {
         _timeRemaining = '0:00';
@@ -51,11 +51,11 @@ class _LiveCountdownTimerState extends State<LiveCountdownTimer> {
       _timer?.cancel();
       return;
     }
-    
+
     final hours = remaining.inHours;
     final minutes = remaining.inMinutes % 60;
     final seconds = remaining.inSeconds % 60;
-    
+
     String newTime;
     if (hours > 0) {
       newTime = '${hours}h ${minutes}m';
@@ -64,7 +64,7 @@ class _LiveCountdownTimerState extends State<LiveCountdownTimer> {
     } else {
       newTime = '${seconds}s';
     }
-    
+
     if (_timeRemaining != newTime) {
       setState(() {
         _timeRemaining = newTime;
@@ -77,7 +77,7 @@ class _LiveCountdownTimerState extends State<LiveCountdownTimer> {
     if (widget.showLargeDisplay) {
       return _buildLargeDisplay();
     }
-    
+
     return Text(
       '${widget.prefix ?? ''}$_timeRemaining',
       style: widget.textStyle,
@@ -89,7 +89,7 @@ class _LiveCountdownTimerState extends State<LiveCountdownTimer> {
     final hours = remaining.inHours;
     final minutes = remaining.inMinutes % 60;
     final seconds = remaining.inSeconds % 60;
-    
+
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
@@ -125,12 +125,12 @@ class _LiveCountdownTimerState extends State<LiveCountdownTimer> {
             ),
           ),
           if (hours > 0) ...[
-            _buildTimeUnit('${hours.toString().padLeft(2, '0')}', 'H'),
+            _buildTimeUnit(hours.toString().padLeft(2, '0'), 'H'),
             SizedBox(width: 4),
           ],
-          _buildTimeUnit('${minutes.toString().padLeft(2, '0')}', 'M'),
+          _buildTimeUnit(minutes.toString().padLeft(2, '0'), 'M'),
           SizedBox(width: 4),
-          _buildTimeUnit('${seconds.toString().padLeft(2, '0')}', 'S'),
+          _buildTimeUnit(seconds.toString().padLeft(2, '0'), 'S'),
         ],
       ),
     );

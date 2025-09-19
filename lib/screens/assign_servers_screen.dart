@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../app_state.dart';
 
 class AssignServersScreen extends StatelessWidget {
+  const AssignServersScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
@@ -89,13 +91,15 @@ class _RosterBodyState extends State<_RosterBody> {
                 return Card(
                   margin: const EdgeInsets.symmetric(vertical: 6),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     child: Row(
                       children: [
                         Expanded(
                           child: Text(
                             s.name,
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                            style: const TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.w600),
                           ),
                         ),
                         Checkbox(

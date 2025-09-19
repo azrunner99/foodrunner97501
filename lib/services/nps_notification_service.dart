@@ -63,7 +63,8 @@ class NPSNotification {
 /// Comprehensive notification system for NPS events
 /// Handles push notifications, alerts, and real-time updates
 class NPSNotificationService {
-  static final NPSNotificationService _instance = NPSNotificationService._internal();
+  static final NPSNotificationService _instance =
+      NPSNotificationService._internal();
   factory NPSNotificationService() => _instance;
   NPSNotificationService._internal();
 
@@ -98,9 +99,12 @@ class NPSNotificationService {
     final isCritical = npsScore <= CRITICAL_NPS_THRESHOLD;
     final notification = NPSNotification(
       id: _generateId(),
-      type: isCritical ? NotificationType.criticalNPSScore : NotificationType.lowNPSScore,
+      type: isCritical
+          ? NotificationType.criticalNPSScore
+          : NotificationType.lowNPSScore,
       title: isCritical ? 'CRITICAL: Very Low NPS' : 'Low NPS Alert',
-      message: '${server.name} has ${isCritical ? 'critical' : 'low'} NPS of ${npsScore.toStringAsFixed(1)}% (${responseCount} responses)',
+      message:
+          '${server.name} has ${isCritical ? 'critical' : 'low'} NPS of ${npsScore.toStringAsFixed(1)}% ($responseCount responses)',
       timestamp: DateTime.now(),
       data: {
         'serverId': server.id,
@@ -110,7 +114,9 @@ class NPSNotificationService {
       },
       color: isCritical ? Colors.red.shade800 : Colors.orange.shade600,
       icon: isCritical ? Icons.warning : Icons.trending_down,
-      priority: isCritical ? NotificationPriority.critical : NotificationPriority.high,
+      priority: isCritical
+          ? NotificationPriority.critical
+          : NotificationPriority.high,
     );
 
     _addNotification(notification);
@@ -122,7 +128,8 @@ class NPSNotificationService {
       id: _generateId(),
       type: NotificationType.newFeedbackSubmission,
       title: 'New Feedback Received',
-      message: 'New ${_getScoreCategory(feedback.score)} feedback for ${server.name} (Score: ${feedback.score}/10)',
+      message:
+          'New ${_getScoreCategory(feedback.score)} feedback for ${server.name} (Score: ${feedback.score}/10)',
       timestamp: DateTime.now(),
       data: {
         'feedbackId': feedback.id,
@@ -133,19 +140,23 @@ class NPSNotificationService {
       },
       color: _getScoreColor(feedback.score),
       icon: Icons.feedback,
-      priority: feedback.score <= 6 ? NotificationPriority.high : NotificationPriority.medium,
+      priority: feedback.score <= 6
+          ? NotificationPriority.high
+          : NotificationPriority.medium,
     );
 
     _addNotification(notification);
   }
 
   /// Create notification for high response volume
-  void notifyHighResponseVolume(NPSServer server, int responseCount, String period) {
+  void notifyHighResponseVolume(
+      NPSServer server, int responseCount, String period) {
     final notification = NPSNotification(
       id: _generateId(),
       type: NotificationType.highResponseVolume,
       title: 'High Response Volume',
-      message: '${server.name} received ${responseCount} responses in ${period} - Great engagement!',
+      message:
+          '${server.name} received $responseCount responses in $period - Great engagement!',
       timestamp: DateTime.now(),
       data: {
         'serverId': server.id,
@@ -162,12 +173,14 @@ class NPSNotificationService {
   }
 
   /// Create notification for low response volume
-  void notifyLowResponseVolume(NPSServer server, int responseCount, String period) {
+  void notifyLowResponseVolume(
+      NPSServer server, int responseCount, String period) {
     final notification = NPSNotification(
       id: _generateId(),
       type: NotificationType.lowResponseVolume,
       title: 'Low Response Volume',
-      message: '${server.name} only received ${responseCount} responses in ${period} - Consider boosting feedback collection',
+      message:
+          '${server.name} only received $responseCount responses in $period - Consider boosting feedback collection',
       timestamp: DateTime.now(),
       data: {
         'serverId': server.id,
@@ -184,13 +197,15 @@ class NPSNotificationService {
   }
 
   /// Create notification for server performance trend
-  void notifyPerformanceTrend(NPSServer server, String trend, double change, String period) {
+  void notifyPerformanceTrend(
+      NPSServer server, String trend, double change, String period) {
     final isPositive = change > 0;
     final notification = NPSNotification(
       id: _generateId(),
       type: NotificationType.trendAlert,
       title: '${isPositive ? 'Improving' : 'Declining'} Performance',
-      message: '${server.name} performance ${trend} by ${change.abs().toStringAsFixed(1)}% over ${period}',
+      message:
+          '${server.name} performance $trend by ${change.abs().toStringAsFixed(1)}% over $period',
       timestamp: DateTime.now(),
       data: {
         'serverId': server.id,
@@ -201,19 +216,22 @@ class NPSNotificationService {
       },
       color: isPositive ? Colors.green.shade600 : Colors.red.shade600,
       icon: isPositive ? Icons.trending_up : Icons.trending_down,
-      priority: change.abs() > 10 ? NotificationPriority.high : NotificationPriority.medium,
+      priority: change.abs() > 10
+          ? NotificationPriority.high
+          : NotificationPriority.medium,
     );
 
     _addNotification(notification);
   }
 
   /// Create notification for system health issues
-  void notifySystemHealth(String issue, String details, NotificationPriority priority) {
+  void notifySystemHealth(
+      String issue, String details, NotificationPriority priority) {
     final notification = NPSNotification(
       id: _generateId(),
       type: NotificationType.systemHealth,
       title: 'System Health Alert',
-      message: '${issue}: ${details}',
+      message: '$issue: $details',
       timestamp: DateTime.now(),
       data: {
         'issue': issue,
@@ -261,14 +279,16 @@ class NPSNotificationService {
   }
 
   /// Get notifications by priority
-  List<NPSNotification> getNotificationsByPriority(NotificationPriority priority) {
+  List<NPSNotification> getNotificationsByPriority(
+      NotificationPriority priority) {
     return _notifications.where((n) => n.priority == priority).toList();
   }
 
   /// Show visual notification in app
-  void showInAppNotification(BuildContext context, NPSNotification notification) {
+  void showInAppNotification(
+      BuildContext context, NPSNotification notification) {
     // Haptic feedback for high priority notifications
-    if (notification.priority == NotificationPriority.high || 
+    if (notification.priority == NotificationPriority.high ||
         notification.priority == NotificationPriority.critical) {
       HapticFeedback.mediumImpact();
     }
@@ -306,7 +326,8 @@ class NPSNotificationService {
         ),
         backgroundColor: notification.color,
         duration: Duration(
-          seconds: notification.priority == NotificationPriority.critical ? 8 : 4,
+          seconds:
+              notification.priority == NotificationPriority.critical ? 8 : 4,
         ),
         action: SnackBarAction(
           label: 'View',
@@ -325,12 +346,12 @@ class NPSNotificationService {
 
   void _addNotification(NPSNotification notification) {
     _notifications.insert(0, notification); // Add to beginning for recency
-    
+
     // Limit to 100 notifications to prevent memory issues
     if (_notifications.length > 100) {
       _notifications.removeRange(100, _notifications.length);
     }
-    
+
     _notifyListeners(notification);
   }
 
@@ -369,7 +390,8 @@ class NPSNotificationService {
     }
   }
 
-  void _handleNotificationTap(BuildContext context, NPSNotification notification) {
+  void _handleNotificationTap(
+      BuildContext context, NPSNotification notification) {
     // Navigate to appropriate screen based on notification type
     switch (notification.type) {
       case NotificationType.lowNPSScore:

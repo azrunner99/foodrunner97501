@@ -3,40 +3,59 @@ import 'package:flutter/material.dart';
 import 'message_variety_engine.dart';
 
 enum FeedbackType {
-  basic,        // Regular run
-  speed,        // Quick successive runs  
-  milestone,    // 5, 10, 15, 20+ runs
-  competitive,  // Rank changes
-  pizookie,     // Special pizookie runs
-  team,         // Team achievements
-  achievement,  // Special unlocks
+  basic, // Regular run
+  speed, // Quick successive runs
+  milestone, // 5, 10, 15, 20+ runs
+  competitive, // Rank changes
+  pizookie, // Special pizookie runs
+  team, // Team achievements
+  achievement, // Special unlocks
 }
 
 enum FeedbackPriority {
-  low,      // Basic encouragement
-  medium,   // Milestones, competition
-  high,     // Achievements, special moments
-  epic,     // Major accomplishments
+  low, // Basic encouragement
+  medium, // Milestones, competition
+  high, // Achievements, special moments
+  epic, // Major accomplishments
 }
 
 class InstantFeedbackService {
   static final Random _random = Random();
-  
+
   // Enhanced prompt collections
   static const basicRunPrompts = [
-    "🔥 On fire!", "💪 Power move!", "⚡ Lightning fast!", "🏃‍♂️ Speed demon!",
-    "⭐ Superstar!", "🎯 Nailed it!", "💥 BAM!", "🚀 Rocket fuel!",
-    "👑 Royalty!", "🏆 Champion move!", "✨ Magic!", "🎊 Crushing it!"
+    "🔥 On fire!",
+    "💪 Power move!",
+    "⚡ Lightning fast!",
+    "🏃‍♂️ Speed demon!",
+    "⭐ Superstar!",
+    "🎯 Nailed it!",
+    "💥 BAM!",
+    "🚀 Rocket fuel!",
+    "👑 Royalty!",
+    "🏆 Champion move!",
+    "✨ Magic!",
+    "🎊 Crushing it!"
   ];
-  
+
   static const speedPrompts = [
-    "🔥 UNSTOPPABLE!", "⚡ SPEED OF LIGHT!", "🏃‍♂️ USAIN BOLT MODE!",
-    "🚀 WARP SPEED!", "💨 GONE IN 60 SECONDS!", "⚡ FLASH ACTIVATED!",
-    "🏎️ FORMULA 1 PACE!", "🌪️ TORNADO ENERGY!", "⚡ LIGHTNING BOLT!",
-    "🚄 BULLET TRAIN!", "🔥 BURNING RUBBER!", "💨 SPEED DEMON!",
-    "🏁 RACE MODE ON!", "⚡ ELECTRIC ENERGY!", "🚀 HYPERDRIVE!"
+    "🔥 UNSTOPPABLE!",
+    "⚡ SPEED OF LIGHT!",
+    "🏃‍♂️ USAIN BOLT MODE!",
+    "🚀 WARP SPEED!",
+    "💨 GONE IN 60 SECONDS!",
+    "⚡ FLASH ACTIVATED!",
+    "🏎️ FORMULA 1 PACE!",
+    "🌪️ TORNADO ENERGY!",
+    "⚡ LIGHTNING BOLT!",
+    "🚄 BULLET TRAIN!",
+    "🔥 BURNING RUBBER!",
+    "💨 SPEED DEMON!",
+    "🏁 RACE MODE ON!",
+    "⚡ ELECTRIC ENERGY!",
+    "🚀 HYPERDRIVE!"
   ];
-  
+
   static const milestonePrompts = [
     "🎉 MILESTONE!\nYou're in the zone!",
     "🏆 DOUBLE DIGITS!\nCrushing it!",
@@ -44,7 +63,7 @@ class InstantFeedbackService {
     "🔥 TWENTY!\nAbsolutely on fire!",
     "⭐ LEGEND STATUS!\nHall of fame!"
   ];
-  
+
   static const competitivePrompts = [
     "📈 MOVING UP!\nYou jumped to #2!",
     "🎯 GAINING GROUND!\nOnly 2 behind!",
@@ -52,7 +71,7 @@ class InstantFeedbackService {
     "👑 WIDENING THE GAP!\nDominant!",
     "🎯 LOCKED IN!\nLaser focus!"
   ];
-  
+
   static const pizookiePrompts = [
     "🍪 PIZOOKIE POWER!\n+35 XP! Worth the effort!",
     "🔥 SWEET VICTORY!\nDessert mastery!",
@@ -63,7 +82,7 @@ class InstantFeedbackService {
     "💎 SWEET PREMIUM!\n3.5x regular points!",
     "🎯 DESSERT HERO!\nGoing above and beyond!"
   ];
-  
+
   static const teamPrompts = [
     "🤝 TEAM PLAYER!\nLifting everyone up!",
     "🔥 TEAM ON FIRE!\nCollective excellence!",
@@ -72,7 +91,8 @@ class InstantFeedbackService {
   ];
 
   /// Get contextual instant feedback message with XP amount
-  static String getInstantMessage(FeedbackType type, {
+  static String getInstantMessage(
+    FeedbackType type, {
     int? runCount,
     int? rank,
     String? context,
@@ -80,7 +100,7 @@ class InstantFeedbackService {
   }) {
     // Use the MessageVarietyEngine for massive variety (500+ unique messages)
     final xp = xpAmount ?? 10; // Default XP if not provided
-    
+
     switch (type) {
       case FeedbackType.basic:
         // Mix of all message types for maximum variety in basic runs
@@ -90,11 +110,15 @@ class InstantFeedbackService {
       case FeedbackType.milestone:
         if (runCount != null) {
           // Special milestone messages with XP
-          if (runCount == 5) return "🎉 FIRST MILESTONE!\nYou're in the zone! +$xp XP!";
-          if (runCount == 10) return "🏆 DOUBLE DIGITS!\nYou're crushing it! +$xp XP!";
-          if (runCount == 15) return "👑 FIFTEEN!\nYou're royalty tonight! +$xp XP!";
+          if (runCount == 5)
+            return "🎉 FIRST MILESTONE!\nYou're in the zone! +$xp XP!";
+          if (runCount == 10)
+            return "🏆 DOUBLE DIGITS!\nYou're crushing it! +$xp XP!";
+          if (runCount == 15)
+            return "👑 FIFTEEN!\nYou're royalty tonight! +$xp XP!";
           if (runCount == 20) return "🔥 TWENTY!\nAbsolutely on fire! +$xp XP!";
-          if (runCount >= 25) return "⭐ LEGEND STATUS!\nHall of fame night! +$xp XP!";
+          if (runCount >= 25)
+            return "⭐ LEGEND STATUS!\nHall of fame night! +$xp XP!";
         }
         return MessageVarietyEngine.getSimpleVarietyMessage('achievement', xp);
       case FeedbackType.competitive:
@@ -103,14 +127,16 @@ class InstantFeedbackService {
         // Use specific pizookie prompts with XP amount
         final prompt = pizookiePrompts[_random.nextInt(pizookiePrompts.length)];
         // Replace the XP amount in the message with actual amount
-        return prompt.replaceAll('+35 XP', '+$xp XP').replaceAll('3.5x', '${(xp/10).toStringAsFixed(1)}x');
+        return prompt
+            .replaceAll('+35 XP', '+$xp XP')
+            .replaceAll('3.5x', '${(xp / 10).toStringAsFixed(1)}x');
       case FeedbackType.team:
         return MessageVarietyEngine.getSimpleVarietyMessage('achievement', xp);
       case FeedbackType.achievement:
         return MessageVarietyEngine.getSimpleVarietyMessage('achievement', xp);
     }
   }
-  
+
   /// Get feedback priority for UI styling
   static FeedbackPriority getPriority(FeedbackType type, {int? runCount}) {
     switch (type) {
@@ -131,7 +157,7 @@ class InstantFeedbackService {
         return FeedbackPriority.epic;
     }
   }
-  
+
   /// Enhanced feedback styling based on priority
   static TextStyle getTextStyle(FeedbackPriority priority) {
     switch (priority) {
@@ -173,13 +199,17 @@ class InstantFeedbackService {
           letterSpacing: 1.5,
           shadows: [
             Shadow(blurRadius: 15, color: Colors.black, offset: Offset(0, 0)),
-            Shadow(blurRadius: 25, color: Colors.purpleAccent, offset: Offset(0, 0)),
-            Shadow(blurRadius: 35, color: Colors.black54, offset: Offset(-2, -2)),
+            Shadow(
+                blurRadius: 25,
+                color: Colors.purpleAccent,
+                offset: Offset(0, 0)),
+            Shadow(
+                blurRadius: 35, color: Colors.black54, offset: Offset(-2, -2)),
           ],
         );
     }
   }
-  
+
   /// Get animation duration based on priority
   static Duration getAnimationDuration(FeedbackPriority priority) {
     switch (priority) {

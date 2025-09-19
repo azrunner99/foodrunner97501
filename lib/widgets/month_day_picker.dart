@@ -11,7 +11,7 @@ Future<DateTime?> showMonthDayPicker({
 }) async {
   final now = DateTime.now();
   final initial = initialDate ?? DateTime(now.year, 1, 1);
-  
+
   return showDialog<DateTime>(
     context: context,
     builder: (BuildContext context) {
@@ -45,10 +45,20 @@ class _MonthDayPickerDialog extends StatefulWidget {
 class _MonthDayPickerDialogState extends State<_MonthDayPickerDialog> {
   late int selectedMonth;
   late int selectedDay;
-  
+
   static const List<String> monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December'
   ];
 
   @override
@@ -60,7 +70,8 @@ class _MonthDayPickerDialogState extends State<_MonthDayPickerDialog> {
   }
 
   void _validateDay() {
-    final daysInMonth = DateTime(2024, selectedMonth + 1, 0).day; // Use 2024 (leap year) for February
+    final daysInMonth = DateTime(2024, selectedMonth + 1, 0)
+        .day; // Use 2024 (leap year) for February
     if (selectedDay > daysInMonth) {
       selectedDay = daysInMonth;
     }
@@ -70,7 +81,7 @@ class _MonthDayPickerDialogState extends State<_MonthDayPickerDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
@@ -89,7 +100,7 @@ class _MonthDayPickerDialogState extends State<_MonthDayPickerDialog> {
               ),
             ),
             const SizedBox(height: 16),
-            
+
             // Month/Day Display - more compact
             Container(
               width: double.infinity,
@@ -119,9 +130,9 @@ class _MonthDayPickerDialogState extends State<_MonthDayPickerDialog> {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Month Selector - taller
             Text(
               'Month',
@@ -131,14 +142,14 @@ class _MonthDayPickerDialogState extends State<_MonthDayPickerDialog> {
               ),
             ),
             const SizedBox(height: 8),
-            Container(
+            SizedBox(
               height: 160,
               child: ListView.builder(
                 itemCount: 12,
                 itemBuilder: (context, index) {
                   final month = index + 1;
                   final isSelected = month == selectedMonth;
-                  
+
                   return Container(
                     margin: const EdgeInsets.symmetric(vertical: 1),
                     child: InkWell(
@@ -150,17 +161,26 @@ class _MonthDayPickerDialogState extends State<_MonthDayPickerDialog> {
                       },
                       borderRadius: BorderRadius.circular(8),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 10, horizontal: 16),
                         decoration: BoxDecoration(
-                          color: isSelected ? colorScheme.primary.withOpacity(0.1) : null,
+                          color: isSelected
+                              ? colorScheme.primary.withOpacity(0.1)
+                              : null,
                           borderRadius: BorderRadius.circular(8),
-                          border: isSelected ? Border.all(color: colorScheme.primary) : null,
+                          border: isSelected
+                              ? Border.all(color: colorScheme.primary)
+                              : null,
                         ),
                         child: Text(
                           monthNames[index],
                           style: theme.textTheme.bodyLarge?.copyWith(
-                            color: isSelected ? colorScheme.primary : colorScheme.onSurface,
-                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                            color: isSelected
+                                ? colorScheme.primary
+                                : colorScheme.onSurface,
+                            fontWeight: isSelected
+                                ? FontWeight.w600
+                                : FontWeight.normal,
                           ),
                         ),
                       ),
@@ -169,9 +189,9 @@ class _MonthDayPickerDialogState extends State<_MonthDayPickerDialog> {
                 },
               ),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Day Selector
             Text(
               'Day',
@@ -181,7 +201,7 @@ class _MonthDayPickerDialogState extends State<_MonthDayPickerDialog> {
               ),
             ),
             const SizedBox(height: 8),
-            Container(
+            SizedBox(
               height: 200,
               child: GridView.builder(
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -190,11 +210,12 @@ class _MonthDayPickerDialogState extends State<_MonthDayPickerDialog> {
                   crossAxisSpacing: 4,
                   mainAxisSpacing: 4,
                 ),
-                itemCount: DateTime(2024, selectedMonth + 1, 0).day, // Days in selected month
+                itemCount: DateTime(2024, selectedMonth + 1, 0)
+                    .day, // Days in selected month
                 itemBuilder: (context, index) {
                   final day = index + 1;
                   final isSelected = day == selectedDay;
-                  
+
                   return InkWell(
                     onTap: () {
                       setState(() {
@@ -211,8 +232,12 @@ class _MonthDayPickerDialogState extends State<_MonthDayPickerDialog> {
                         child: Text(
                           day.toString(),
                           style: theme.textTheme.bodyMedium?.copyWith(
-                            color: isSelected ? colorScheme.onPrimary : colorScheme.onSurface,
-                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                            color: isSelected
+                                ? colorScheme.onPrimary
+                                : colorScheme.onSurface,
+                            fontWeight: isSelected
+                                ? FontWeight.w600
+                                : FontWeight.normal,
                           ),
                         ),
                       ),
@@ -221,9 +246,9 @@ class _MonthDayPickerDialogState extends State<_MonthDayPickerDialog> {
                 },
               ),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Action Buttons
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
@@ -236,7 +261,8 @@ class _MonthDayPickerDialogState extends State<_MonthDayPickerDialog> {
                 ElevatedButton(
                   onPressed: () {
                     final now = DateTime.now();
-                    final result = DateTime(now.year, selectedMonth, selectedDay);
+                    final result =
+                        DateTime(now.year, selectedMonth, selectedDay);
                     Navigator.of(context).pop(result);
                   },
                   child: Text(widget.confirmText),

@@ -4,30 +4,30 @@ import 'milestone_detection_service.dart';
 
 /// Behavioral pattern analysis for deep server personalization
 enum BehaviorPattern {
-  speedDemon,      // Fast, frequent clicking
-  steadyEddie,     // Consistent, reliable performance
+  speedDemon, // Fast, frequent clicking
+  steadyEddie, // Consistent, reliable performance
   competitiveShark, // Highly competitive, rank-focused
-  teamPlayer,      // Collaborative, supportive
-  perfectionist,   // High accuracy, quality-focused
-  hustler,         // Money-motivated, tip-focused
-  nightOwl,        // Prefers late shifts
-  earlyBird,       // Prefers early shifts
+  teamPlayer, // Collaborative, supportive
+  perfectionist, // High accuracy, quality-focused
+  hustler, // Money-motivated, tip-focused
+  nightOwl, // Prefers late shifts
+  earlyBird, // Prefers early shifts
   socialButterfly, // Enjoys team interactions
-  soloOperator,    // Prefers independent work
+  soloOperator, // Prefers independent work
 }
 
 /// Personality traits that influence messaging and rewards
 enum PersonalityTrait {
-  achievement,     // Driven by accomplishments
-  competition,     // Thrives on rivalry
-  recognition,     // Wants public acknowledgment
-  autonomy,        // Values independence
-  mastery,         // Seeks skill improvement
-  purpose,         // Mission-driven motivation
-  social,          // Enjoys team dynamics
-  security,        // Stability-focused
-  variety,         // Craves new experiences
-  challenge,       // Seeks difficult goals
+  achievement, // Driven by accomplishments
+  competition, // Thrives on rivalry
+  recognition, // Wants public acknowledgment
+  autonomy, // Values independence
+  mastery, // Seeks skill improvement
+  purpose, // Mission-driven motivation
+  social, // Enjoys team dynamics
+  security, // Stability-focused
+  variety, // Craves new experiences
+  challenge, // Seeks difficult goals
 }
 
 /// Comprehensive server personality profile
@@ -101,22 +101,28 @@ class ServerPersonality {
     return ServerPersonality(
       serverId: map['serverId'] ?? '',
       dominantPatterns: (map['dominantPatterns'] as List<dynamic>?)
-          ?.map((name) => BehaviorPattern.values.firstWhere((p) => p.name == name))
-          .toList() ?? [BehaviorPattern.steadyEddie],
+              ?.map((name) =>
+                  BehaviorPattern.values.firstWhere((p) => p.name == name))
+              .toList() ??
+          [BehaviorPattern.steadyEddie],
       traitScores: Map<PersonalityTrait, double>.fromEntries(
         (map['traitScores'] as Map<String, dynamic>?)?.entries.map(
-          (entry) => MapEntry(
-            PersonalityTrait.values.firstWhere((t) => t.name == entry.key),
-            (entry.value as num).toDouble(),
-          ),
-        ) ?? PersonalityTrait.values.map((t) => MapEntry(t, 0.5)),
+                  (entry) => MapEntry(
+                    PersonalityTrait.values
+                        .firstWhere((t) => t.name == entry.key),
+                    (entry.value as num).toDouble(),
+                  ),
+                ) ??
+            PersonalityTrait.values.map((t) => MapEntry(t, 0.5)),
       ),
       competitiveLevel: (map['competitiveLevel'] as num?)?.toDouble() ?? 0.5,
       socialLevel: (map['socialLevel'] as num?)?.toDouble() ?? 0.5,
       achievementDrive: (map['achievementDrive'] as num?)?.toDouble() ?? 0.5,
-      preferredShifts: List<String>.from(map['preferredShifts'] ?? ['lunch', 'dinner']),
+      preferredShifts:
+          List<String>.from(map['preferredShifts'] ?? ['lunch', 'dinner']),
       rivalryLevels: Map<String, int>.from(map['rivalryLevels'] ?? {}),
-      lastAnalysis: DateTime.tryParse(map['lastAnalysis'] ?? '') ?? DateTime.now(),
+      lastAnalysis:
+          DateTime.tryParse(map['lastAnalysis'] ?? '') ?? DateTime.now(),
       analysisVersion: map['analysisVersion'] ?? 1,
     );
   }
@@ -129,27 +135,28 @@ class ServerPersonalizationService {
   static const double _patternConfidenceThreshold = 0.7;
 
   /// Analyze server behavior and generate personality profile
-  static ServerPersonality analyzeServerPersonality(String serverId, ServerProfile profile) {
+  static ServerPersonality analyzeServerPersonality(
+      String serverId, ServerProfile profile) {
     final now = DateTime.now();
-    
+
     // Behavioral pattern analysis
     final patterns = _analyzeBehaviorPatterns(profile);
-    
+
     // Personality trait scoring
     final traitScores = _calculateTraitScores(profile, patterns);
-    
+
     // Competitive analysis
     final competitiveLevel = _calculateCompetitiveLevel(profile);
-    
+
     // Social analysis
     final socialLevel = _calculateSocialLevel(profile);
-    
+
     // Achievement drive analysis
     final achievementDrive = _calculateAchievementDrive(profile);
-    
+
     // Shift preference analysis
     final preferredShifts = _analyzeShiftPreferences(profile);
-    
+
     // Rivalry detection (placeholder - needs multi-server data)
     final rivalryLevels = <String, int>{};
 
@@ -173,15 +180,16 @@ class ServerPersonalizationService {
     ServerPersonality personality,
     ServerProfile profile,
   ) {
-    final dominant = personality.dominantPatterns.isNotEmpty 
-        ? personality.dominantPatterns.first 
+    final dominant = personality.dominantPatterns.isNotEmpty
+        ? personality.dominantPatterns.first
         : BehaviorPattern.steadyEddie;
-    
+
     final topTrait = personality.traitScores.entries
         .reduce((a, b) => a.value > b.value ? a : b)
         .key;
 
-    return _selectPersonalizedMessage(achievement, dominant, topTrait, personality, profile);
+    return _selectPersonalizedMessage(
+        achievement, dominant, topTrait, personality, profile);
   }
 
   /// Predict optimal reward timing for maximum psychological impact
@@ -190,105 +198,108 @@ class ServerPersonalizationService {
     if (personality.dominantPatterns.contains(BehaviorPattern.speedDemon)) {
       return Duration(milliseconds: 100);
     }
-    
+
     // Perfectionists appreciate slight delay for anticipation
     if (personality.dominantPatterns.contains(BehaviorPattern.perfectionist)) {
       return Duration(milliseconds: 800);
     }
-    
+
     // Default balanced timing
     return Duration(milliseconds: 400);
   }
 
   /// Calculate addiction score (how hooked the server is)
-  static double calculateAddictionScore(ServerProfile profile, ServerPersonality personality) {
+  static double calculateAddictionScore(
+      ServerProfile profile, ServerPersonality personality) {
     double score = 0.0;
-    
+
     // Frequency factor (0.0-0.3)
     final recentActivity = profile.recentTapTimes.length;
     score += math.min(recentActivity / 100.0, 0.3);
-    
+
     // Engagement streak factor (0.0-0.2)
     final milestoneCount = profile.milestoneHistory.length;
     score += math.min(milestoneCount / 50.0, 0.2);
-    
+
     // Competitive engagement factor (0.0-0.2)
     score += personality.competitiveLevel * 0.2;
-    
+
     // Achievement drive factor (0.0-0.15)
     score += personality.achievementDrive * 0.15;
-    
+
     // Pattern consistency factor (0.0-0.15)
     final patternCount = personality.dominantPatterns.length;
     score += math.min(patternCount / 5.0, 0.15);
-    
+
     return math.min(score, 1.0);
   }
 
   // Private analysis methods
-  
+
   static List<BehaviorPattern> _analyzeBehaviorPatterns(ServerProfile profile) {
     final patterns = <BehaviorPattern>[];
-    
+
     // Speed analysis
     final avgSpeed = _calculateAverageClickSpeed(profile);
-    if (avgSpeed > 2.0) patterns.add(BehaviorPattern.speedDemon);
-    else if (avgSpeed > 0.5 && avgSpeed <= 1.0) patterns.add(BehaviorPattern.steadyEddie);
-    
+    if (avgSpeed > 2.0) {
+      patterns.add(BehaviorPattern.speedDemon);
+    } else if (avgSpeed > 0.5 && avgSpeed <= 1.0)
+      patterns.add(BehaviorPattern.steadyEddie);
+
     // Competitive analysis
     final competitiveness = _analyzeCompetitiveness(profile);
     if (competitiveness > 0.7) patterns.add(BehaviorPattern.competitiveShark);
-    
+
     // Perfectionist analysis
     final consistency = _analyzeConsistency(profile);
     if (consistency > 0.8) patterns.add(BehaviorPattern.perfectionist);
-    
+
     // Default pattern if none detected
     if (patterns.isEmpty) patterns.add(BehaviorPattern.steadyEddie);
-    
+
     return patterns;
   }
 
   static Map<PersonalityTrait, double> _calculateTraitScores(
-    ServerProfile profile, 
+    ServerProfile profile,
     List<BehaviorPattern> patterns,
   ) {
     final scores = <PersonalityTrait, double>{};
-    
+
     // Initialize all traits
     for (final trait in PersonalityTrait.values) {
       scores[trait] = 0.5; // Neutral baseline
     }
-    
+
     // Achievement scoring
     final milestoneCount = profile.milestoneHistory.length;
     scores[PersonalityTrait.achievement] = math.min(milestoneCount / 20.0, 1.0);
-    
+
     // Competition scoring
     final rankFocus = profile.lastKnownRank != null ? 0.8 : 0.3;
     scores[PersonalityTrait.competition] = rankFocus;
-    
+
     // Mastery scoring (based on consistency)
     final consistency = _analyzeConsistency(profile);
     scores[PersonalityTrait.mastery] = consistency;
-    
+
     // Variety scoring (based on shift diversity)
     final shiftVariety = _calculateShiftVariety(profile);
     scores[PersonalityTrait.variety] = shiftVariety;
-    
+
     return scores;
   }
 
   static double _calculateCompetitiveLevel(ServerProfile profile) {
     double level = 0.5;
-    
+
     // Rank awareness boosts competitiveness
     if (profile.lastKnownRank != null) level += 0.3;
-    
+
     // Milestone focus indicates competitiveness
     final milestoneCount = profile.milestoneHistory.length;
     level += math.min(milestoneCount / 30.0, 0.2);
-    
+
     return math.min(level, 1.0);
   }
 
@@ -300,7 +311,7 @@ class ServerPersonalizationService {
   static double _calculateAchievementDrive(ServerProfile profile) {
     final milestoneCount = profile.milestoneHistory.length;
     final activityLevel = profile.recentTapTimes.length;
-    
+
     return math.min((milestoneCount + activityLevel) / 50.0, 1.0);
   }
 
@@ -311,40 +322,45 @@ class ServerPersonalizationService {
 
   static double _calculateAverageClickSpeed(ServerProfile profile) {
     if (profile.recentTapTimes.length < 2) return 0.5;
-    
+
     final times = profile.recentTapTimes;
     double totalInterval = 0;
     for (int i = 1; i < times.length; i++) {
-      totalInterval += times[i].difference(times[i-1]).inMilliseconds;
+      totalInterval += times[i].difference(times[i - 1]).inMilliseconds;
     }
-    
+
     final avgInterval = totalInterval / (times.length - 1);
     return 1000.0 / avgInterval; // clicks per second
   }
 
   static double _analyzeCompetitiveness(ServerProfile profile) {
     // High milestone count + rank tracking = competitive
-    final milestoneScore = math.min(profile.milestoneHistory.length / 20.0, 0.7);
+    final milestoneScore =
+        math.min(profile.milestoneHistory.length / 20.0, 0.7);
     final rankScore = profile.lastKnownRank != null ? 0.3 : 0.0;
     return milestoneScore + rankScore;
   }
 
   static double _analyzeConsistency(ServerProfile profile) {
     if (profile.recentTapTimes.isEmpty) return 0.5;
-    
+
     // Analyze timing consistency (lower variance = higher consistency)
     final times = profile.recentTapTimes;
     if (times.length < 3) return 0.5;
-    
+
     final intervals = <double>[];
     for (int i = 1; i < times.length; i++) {
-      intervals.add(times[i].difference(times[i-1]).inMilliseconds.toDouble());
+      intervals
+          .add(times[i].difference(times[i - 1]).inMilliseconds.toDouble());
     }
-    
+
     final mean = intervals.reduce((a, b) => a + b) / intervals.length;
-    final variance = intervals.map((x) => math.pow(x - mean, 2).toDouble()).reduce((a, b) => a + b) / intervals.length;
+    final variance = intervals
+            .map((x) => math.pow(x - mean, 2).toDouble())
+            .reduce((a, b) => a + b) /
+        intervals.length;
     final standardDeviation = math.sqrt(variance);
-    
+
     // Lower standard deviation = higher consistency
     return math.max(0.0, 1.0 - (standardDeviation / mean));
   }
@@ -362,7 +378,7 @@ class ServerPersonalizationService {
     ServerProfile profile,
   ) {
     final random = math.Random();
-    
+
     // Speed demon messages
     if (pattern == BehaviorPattern.speedDemon) {
       final speedMessages = [
@@ -374,7 +390,7 @@ class ServerPersonalizationService {
       ];
       return speedMessages[random.nextInt(speedMessages.length)];
     }
-    
+
     // Competitive shark messages
     if (pattern == BehaviorPattern.competitiveShark) {
       final competitiveMessages = [
@@ -386,7 +402,7 @@ class ServerPersonalizationService {
       ];
       return competitiveMessages[random.nextInt(competitiveMessages.length)];
     }
-    
+
     // Perfectionist messages
     if (pattern == BehaviorPattern.perfectionist) {
       final perfectionistMessages = [
@@ -396,9 +412,10 @@ class ServerPersonalizationService {
         "🔬 Methodical excellence! +${achievement.xpReward} XP!",
         "📐 Perfect technique! +${achievement.xpReward} XP reward!",
       ];
-      return perfectionistMessages[random.nextInt(perfectionistMessages.length)];
+      return perfectionistMessages[
+          random.nextInt(perfectionistMessages.length)];
     }
-    
+
     // Achievement-focused messages
     if (trait == PersonalityTrait.achievement) {
       final achievementMessages = [
@@ -410,7 +427,7 @@ class ServerPersonalizationService {
       ];
       return achievementMessages[random.nextInt(achievementMessages.length)];
     }
-    
+
     // Default personalized message
     return "🌟 Great work! +${achievement.xpReward} XP earned!";
   }

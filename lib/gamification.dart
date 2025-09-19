@@ -1,4 +1,3 @@
-
 enum PowerUp { none, doublePoint, bonusFive }
 
 class AchievementDef {
@@ -161,26 +160,28 @@ class GamificationSettings {
   List<String>? customEncouragements;
 
   GamificationSettings({
-    this.transitionStartMinutes = 85,   // TESTING: 1:25 AM
-    this.transitionEndMinutes = 86,     // TESTING: 1:26 AM
+    this.transitionStartMinutes = 85, // TESTING: 1:25 AM
+    this.transitionEndMinutes = 86, // TESTING: 1:26 AM
     this.gamificationEnabled = true,
     this.encouragementFlashEnabled = true,
     this.customEncouragements,
   });
 
   Map<String, dynamic> toMap() => {
-    'transitionStartMinutes': transitionStartMinutes,
-    'transitionEndMinutes': transitionEndMinutes,
-    'gamificationEnabled': gamificationEnabled,
-    'encouragementFlashEnabled': encouragementFlashEnabled,
-    'customEncouragements': customEncouragements,
-  };
+        'transitionStartMinutes': transitionStartMinutes,
+        'transitionEndMinutes': transitionEndMinutes,
+        'gamificationEnabled': gamificationEnabled,
+        'encouragementFlashEnabled': encouragementFlashEnabled,
+        'customEncouragements': customEncouragements,
+      };
 
-  static GamificationSettings fromMap(Map<String, dynamic> m) => GamificationSettings(
-    transitionStartMinutes: m['transitionStartMinutes'] ?? 15 * 60 + 30,
-    transitionEndMinutes: m['transitionEndMinutes'] ?? 17 * 60,
-    gamificationEnabled: m['gamificationEnabled'] ?? true,
-    encouragementFlashEnabled: m['encouragementFlashEnabled'] ?? true,
-    customEncouragements: (m['customEncouragements'] as List?)?.cast<String>(),
-  );
+  static GamificationSettings fromMap(Map<String, dynamic> m) =>
+      GamificationSettings(
+        transitionStartMinutes: m['transitionStartMinutes'] ?? 15 * 60 + 30,
+        transitionEndMinutes: m['transitionEndMinutes'] ?? 17 * 60,
+        gamificationEnabled: m['gamificationEnabled'] ?? true,
+        encouragementFlashEnabled: m['encouragementFlashEnabled'] ?? true,
+        customEncouragements:
+            (m['customEncouragements'] as List?)?.cast<String>(),
+      );
 }

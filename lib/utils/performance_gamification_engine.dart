@@ -7,10 +7,12 @@ import '../utils/performance_calculator.dart';
 /// Advanced gamification system integrated with performance analysis
 /// Provides dynamic achievements, XP multipliers, and performance-based rewards
 class PerformanceGamificationEngine {
+  // Feature flags to gate new behavior.
+  static const bool kEnableGamificationEnhancements = false;
   static const int _baseXpPerRun = 10;
   static const double _performanceMultiplierCap = 3.0;
   static const double _consistencyBonusMultiplier = 1.2;
-  
+
   /// Calculate performance-based XP with dynamic multipliers
   static int calculatePerformanceXP({
     required String serverId,
@@ -20,25 +22,26 @@ class PerformanceGamificationEngine {
     bool isPizookieRun = false,
   }) {
     var baseXp = runsCompleted * _baseXpPerRun;
-    
+
     if (isPizookieRun) {
       baseXp = (baseXp * 2.5).round(); // Pizookie bonus
     }
-    
+
     // Apply performance multiplier if available
     if (recentPerformance != null) {
-      final performanceMultiplier = _calculatePerformanceMultiplier(recentPerformance);
+      final performanceMultiplier =
+          _calculatePerformanceMultiplier(recentPerformance);
       baseXp = (baseXp * performanceMultiplier).round();
     }
-    
+
     // Apply streak bonuses
     final streakMultiplier = _calculateStreakMultiplier(serverId);
     baseXp = (baseXp * streakMultiplier).round();
-    
+
     // Apply consistency bonus
     final consistencyMultiplier = _calculateConsistencyMultiplier(serverId);
     baseXp = (baseXp * consistencyMultiplier).round();
-    
+
     return baseXp;
   }
 
@@ -50,7 +53,7 @@ class PerformanceGamificationEngine {
     final achievements = <PerformanceAchievement>[];
     final appState = AppState();
     final profile = appState.profiles[serverId] ?? ServerProfile();
-    
+
     // Elite Performer achievements
     if (performance.performanceScore >= 90.0) {
       achievements.add(PerformanceAchievement(
@@ -58,7 +61,8 @@ class PerformanceGamificationEngine {
         serverId: serverId,
         type: AchievementType.performance,
         title: '🔥 Elite Performer',
-        description: 'Achieved ${performance.performanceScore.toStringAsFixed(1)}% performance score!',
+        description:
+            'Achieved ${performance.performanceScore.toStringAsFixed(1)}% performance score!',
         xpReward: 500,
         badgeIcon: '🏆',
         unlockedDate: DateTime.now(),
@@ -69,7 +73,7 @@ class PerformanceGamificationEngine {
         maxValue: 100.0,
       ));
     }
-    
+
     // Consistency Master achievements
     if (performance.metrics.consistencyScore >= 85.0) {
       achievements.add(PerformanceAchievement(
@@ -77,7 +81,8 @@ class PerformanceGamificationEngine {
         serverId: serverId,
         type: AchievementType.consistency,
         title: '🎯 Consistency Master',
-        description: 'Demonstrated exceptional consistency (${performance.metrics.consistencyScore.toStringAsFixed(1)}%)',
+        description:
+            'Demonstrated exceptional consistency (${performance.metrics.consistencyScore.toStringAsFixed(1)}%)',
         xpReward: 300,
         badgeIcon: '🎯',
         unlockedDate: DateTime.now(),
@@ -88,7 +93,7 @@ class PerformanceGamificationEngine {
         maxValue: 100.0,
       ));
     }
-    
+
     // Efficiency Expert achievements
     if (performance.metrics.rawEfficiency >= 8.0) {
       achievements.add(PerformanceAchievement(
@@ -96,7 +101,8 @@ class PerformanceGamificationEngine {
         serverId: serverId,
         type: AchievementType.efficiency,
         title: '⚡ Efficiency Expert',
-        description: 'Outstanding efficiency: ${performance.metrics.rawEfficiency.toStringAsFixed(1)} runs per shift',
+        description:
+            'Outstanding efficiency: ${performance.metrics.rawEfficiency.toStringAsFixed(1)} runs per shift',
         xpReward: 250,
         badgeIcon: '⚡',
         unlockedDate: DateTime.now(),
@@ -107,7 +113,7 @@ class PerformanceGamificationEngine {
         maxValue: 15.0,
       ));
     }
-    
+
     // Improvement achievements
     final previousPerformance = _getPreviousPerformanceScore(serverId);
     if (previousPerformance != null) {
@@ -118,7 +124,8 @@ class PerformanceGamificationEngine {
           serverId: serverId,
           type: AchievementType.improvement,
           title: '📈 Rapid Improvement',
-          description: 'Improved performance by ${improvement.toStringAsFixed(1)} points!',
+          description:
+              'Improved performance by ${improvement.toStringAsFixed(1)} points!',
           xpReward: 200,
           badgeIcon: '📈',
           unlockedDate: DateTime.now(),
@@ -130,9 +137,10 @@ class PerformanceGamificationEngine {
         ));
       }
     }
-    
+
     // Milestone achievements
-    if (profile.allTimeRuns >= 1000 && !_hasAchievement(serverId, 'thousand_runs')) {
+    if (profile.allTimeRuns >= 1000 &&
+        !_hasAchievement(serverId, 'thousand_runs')) {
       achievements.add(PerformanceAchievement(
         id: 'thousand_runs',
         serverId: serverId,
@@ -149,7 +157,7 @@ class PerformanceGamificationEngine {
         maxValue: 1000.0,
       ));
     }
-    
+
     return achievements;
   }
 
@@ -158,13 +166,16 @@ class PerformanceGamificationEngine {
     required List<Server> servers,
     required Duration timeFrame,
     LeaderboardType type = LeaderboardType.overall,
+    AppState? appState,
   }) {
-    final entries = <PerformanceLeaderboardEntry>[];
-    final appState = AppState();
-    final shifts = appState.history;
+    // Build a temporary collection to compute ranks and deltas first,
+    // then materialize immutable leaderboard entries.
+    final temp = <Map<String, dynamic>>[];
+    final state = appState ?? AppState();
+    final shifts = state.history;
     final endDate = DateTime.now();
     final startDate = endDate.subtract(timeFrame);
-    
+
     for (final server in servers) {
       final performance = PerformanceCalculator.calculateServerPerformance(
         serverId: server.id,
@@ -174,12 +185,12 @@ class PerformanceGamificationEngine {
         businessData: null,
         hireDate: DateTime.now().subtract(const Duration(days: 90)),
       );
-      
-      final profile = appState.profiles[server.id] ?? ServerProfile();
-      
+
+  final profile = state.profiles[server.id] ?? ServerProfile();
+
       double score;
       String metric;
-      
+
       switch (type) {
         case LeaderboardType.performance:
           score = performance.performanceScore;
@@ -202,27 +213,59 @@ class PerformanceGamificationEngine {
           metric = 'Overall Score';
           break;
       }
-      
+
+      temp.add({
+        'serverId': server.id,
+        'serverName': server.name,
+        'score': score,
+        'metric': metric,
+        'performance': performance,
+        'profile': profile,
+        'badge': _calculatePerformanceBadge(performance),
+      });
+    }
+
+    // Sort and assign ranks
+    temp.sort((a, b) => (b['score'] as double).compareTo(a['score'] as double));
+
+    final entries = <PerformanceLeaderboardEntry>[];
+    for (int i = 0; i < temp.length; i++) {
+      final t = temp[i];
+      final currentRank = i + 1;
+      final profile = t['profile'] as ServerProfile;
+
+      // Rank delta under flag: positive means improved (moved up, lower number)
+      int change = 0;
+      if (kEnableGamificationEnhancements && profile.lastKnownRank != null) {
+        change = profile.lastKnownRank! - currentRank;
+      }
+
+      // Optionally update lastKnownRank for future comparisons
+      if (kEnableGamificationEnhancements) {
+        profile.lastKnownRank = currentRank;
+      }
+
+      // Recent achievements: milestone-based; optionally augment with performance-based when enabled
+      final recent = _getRecentAchievements(t['serverId'] as String, profiles: state.profiles);
+      final perfBased = kEnableGamificationEnhancements
+          ? checkPerformanceAchievements(t['serverId'] as String, t['performance'] as ServerPerformanceData)
+          : <PerformanceAchievement>[];
+      final achievements = <PerformanceAchievement>[...recent, ...perfBased];
+
       entries.add(PerformanceLeaderboardEntry(
-        serverId: server.id,
-        serverName: server.name,
-        score: score,
-        metric: metric,
-        performance: performance,
+        serverId: t['serverId'] as String,
+        serverName: t['serverName'] as String,
+        score: t['score'] as double,
+        metric: t['metric'] as String,
+        performance: t['performance'] as ServerPerformanceData,
         profile: profile,
-        rank: 0, // Will be set after sorting
-        change: _calculateRankChange(server.id, type),
-        achievements: _getRecentAchievements(server.id),
-        badge: _calculatePerformanceBadge(performance),
+        rank: currentRank,
+        change: change,
+        achievements: achievements.take(3).toList(),
+        badge: t['badge'] as PerformanceBadge,
       ));
     }
-    
-    // Sort and assign ranks
-    entries.sort((a, b) => b.score.compareTo(a.score));
-    for (int i = 0; i < entries.length; i++) {
-      entries[i].rank = i + 1;
-    }
-    
+
     return entries;
   }
 
@@ -233,7 +276,7 @@ class PerformanceGamificationEngine {
     Duration period,
   ) {
     final rewards = <PerformanceReward>[];
-    
+
     // Elite performance bonus
     if (performance.performanceScore >= 95.0) {
       rewards.add(PerformanceReward(
@@ -249,7 +292,7 @@ class PerformanceGamificationEngine {
         requirements: '95%+ performance score',
       ));
     }
-    
+
     // Consistency reward
     if (performance.metrics.consistencyScore >= 90.0) {
       rewards.add(PerformanceReward(
@@ -265,10 +308,11 @@ class PerformanceGamificationEngine {
         requirements: '90%+ consistency score',
       ));
     }
-    
+
     // Improvement bonus
     final previousScore = _getPreviousPerformanceScore(serverId);
-    if (previousScore != null && performance.performanceScore > previousScore + 5) {
+    if (previousScore != null &&
+        performance.performanceScore > previousScore + 5) {
       rewards.add(PerformanceReward(
         id: 'improvement_bonus_${DateTime.now().millisecondsSinceEpoch}',
         serverId: serverId,
@@ -282,7 +326,7 @@ class PerformanceGamificationEngine {
         requirements: '5+ point improvement',
       ));
     }
-    
+
     return rewards;
   }
 
@@ -292,7 +336,7 @@ class PerformanceGamificationEngine {
     ServerPerformanceData currentPerformance,
   ) {
     final challenges = <PerformanceChallenge>[];
-    
+
     // Performance improvement challenge
     if (currentPerformance.performanceScore < 80.0) {
       challenges.add(PerformanceChallenge(
@@ -308,7 +352,7 @@ class PerformanceGamificationEngine {
         difficulty: ChallengeDifficulty.medium,
       ));
     }
-    
+
     // Consistency challenge
     if (currentPerformance.metrics.consistencyScore < 75.0) {
       challenges.add(PerformanceChallenge(
@@ -324,7 +368,7 @@ class PerformanceGamificationEngine {
         difficulty: ChallengeDifficulty.medium,
       ));
     }
-    
+
     // Efficiency challenge
     if (currentPerformance.metrics.rawEfficiency < 6.0) {
       challenges.add(PerformanceChallenge(
@@ -340,18 +384,23 @@ class PerformanceGamificationEngine {
         difficulty: ChallengeDifficulty.easy,
       ));
     }
-    
+
     return challenges;
   }
 
   /// Calculate performance multiplier based on current performance
-  static double _calculatePerformanceMultiplier(ServerPerformanceData performance) {
+  static double _calculatePerformanceMultiplier(
+      ServerPerformanceData performance) {
     final baseMultiplier = 1.0;
-    final performanceBonus = (performance.performanceScore - 50.0) / 100.0; // 0-0.5 bonus
-    final efficiencyBonus = math.min(performance.metrics.rawEfficiency / 10.0, 0.3); // Up to 0.3 bonus
-    final consistencyBonus = performance.metrics.consistencyScore / 500.0; // Up to 0.2 bonus
-    
-    final totalMultiplier = baseMultiplier + performanceBonus + efficiencyBonus + consistencyBonus;
+    final performanceBonus =
+        (performance.performanceScore - 50.0) / 100.0; // 0-0.5 bonus
+    final efficiencyBonus = math.min(
+        performance.metrics.rawEfficiency / 10.0, 0.3); // Up to 0.3 bonus
+    final consistencyBonus =
+        performance.metrics.consistencyScore / 500.0; // Up to 0.2 bonus
+
+    final totalMultiplier =
+        baseMultiplier + performanceBonus + efficiencyBonus + consistencyBonus;
     return math.min(totalMultiplier, _performanceMultiplierCap);
   }
 
@@ -359,7 +408,8 @@ class PerformanceGamificationEngine {
   static double _calculateStreakMultiplier(String serverId) {
     // Calculate recent consistency and apply bonus
     final recentPerformance = _getRecentPerformanceData(serverId);
-    if (recentPerformance != null && recentPerformance.metrics.consistencyScore > 80.0) {
+    if (recentPerformance != null &&
+        recentPerformance.metrics.consistencyScore > 80.0) {
       return _consistencyBonusMultiplier;
     }
     return 1.0;
@@ -387,12 +437,12 @@ class PerformanceGamificationEngine {
   }
 
   /// Get recent performance data
-  static ServerPerformanceData? _getRecentPerformanceData(String serverId) {
-    final appState = AppState();
-    final shifts = appState.history;
+  static ServerPerformanceData? _getRecentPerformanceData(String serverId, {AppState? appState}) {
+    final state = appState ?? AppState();
+    final shifts = state.history;
     final endDate = DateTime.now();
     final startDate = endDate.subtract(const Duration(days: 7));
-    
+
     return PerformanceCalculator.calculateServerPerformance(
       serverId: serverId,
       startDate: startDate,
@@ -404,36 +454,67 @@ class PerformanceGamificationEngine {
   }
 
   /// Calculate overall performance score combining multiple metrics
-  static double _calculateOverallScore(ServerPerformanceData performance, ServerProfile profile) {
+  static double _calculateOverallScore(
+      ServerPerformanceData performance, ServerProfile profile) {
     final performanceWeight = 0.4;
     final efficiencyWeight = 0.3;
     final consistencyWeight = 0.2;
     final xpWeight = 0.1;
-    
-    final normalizedXp = math.min(profile.points / 10000.0, 1.0) * 100; // Normalize XP to 0-100
-    
+
+    final normalizedXp =
+        math.min(profile.points / 10000.0, 1.0) * 100; // Normalize XP to 0-100
+
     return (performance.performanceScore * performanceWeight) +
-           (performance.metrics.rawEfficiency * 10 * efficiencyWeight) + // Scale efficiency to 0-100
-           (performance.metrics.consistencyScore * consistencyWeight) +
-           (normalizedXp * xpWeight);
+        (performance.metrics.rawEfficiency *
+            10 *
+            efficiencyWeight) + // Scale efficiency to 0-100
+        (performance.metrics.consistencyScore * consistencyWeight) +
+        (normalizedXp * xpWeight);
   }
 
   /// Calculate rank change for leaderboard
-  static int _calculateRankChange(String serverId, LeaderboardType type) {
-    // This would compare with previous leaderboard positions
-    // For now, return 0 to indicate no change
+  static int _calculateRankChange(String serverId, LeaderboardType type, {Map<String, ServerProfile>? profiles}) {
+    if (!kEnableGamificationEnhancements || profiles == null) return 0;
+    final profile = profiles[serverId];
+    if (profile == null) return 0;
+    final last = profile.lastKnownRank;
+    if (last == null) return 0;
+    // Positive change means moved up (lower rank number)
+    // Assume current rank will be set after sorting; here we can't know it yet.
+    // Return 0 now; callers can recompute change post ranking if desired.
     return 0;
   }
 
   /// Get recent achievements for a server
-  static List<PerformanceAchievement> _getRecentAchievements(String serverId) {
-    // This would fetch recent achievements from storage
-    // For now, return empty list
-    return [];
+  static List<PerformanceAchievement> _getRecentAchievements(String serverId, {Map<String, ServerProfile>? profiles}) {
+    if (!kEnableGamificationEnhancements || profiles == null) return [];
+    final profile = profiles[serverId];
+    if (profile == null) return [];
+    // Surface the 3 most recent milestoneHistory items as achievements, if present
+    final recent = profile.milestoneHistory
+        .map((m) => PerformanceAchievement(
+              id: m['id']?.toString() ?? 'milestone_${DateTime.now().millisecondsSinceEpoch}',
+              serverId: serverId,
+              type: AchievementType.milestone,
+              title: m['title']?.toString() ?? 'Milestone',
+              description: m['description']?.toString() ?? 'Recent milestone achieved',
+              xpReward: (m['xp'] as int?) ?? 0,
+              badgeIcon: m['icon']?.toString() ?? '⭐',
+              unlockedDate: DateTime.tryParse(m['date']?.toString() ?? '') ?? DateTime.now(),
+              rarity: AchievementRarity.common,
+              category: m['category']?.toString() ?? 'Milestones',
+              requirements: m['requirements']?.toString() ?? '',
+              progressValue: 1.0,
+              maxValue: 1.0,
+            ))
+        .toList();
+    recent.sort((a, b) => b.unlockedDate.compareTo(a.unlockedDate));
+    return recent.take(3).toList();
   }
 
   /// Calculate performance badge based on current metrics
-  static PerformanceBadge _calculatePerformanceBadge(ServerPerformanceData performance) {
+  static PerformanceBadge _calculatePerformanceBadge(
+      ServerPerformanceData performance) {
     if (performance.performanceScore >= 95.0) {
       return PerformanceBadge.legendary;
     } else if (performance.performanceScore >= 85.0) {
@@ -481,7 +562,8 @@ class PerformanceAchievement {
     required this.maxValue,
   });
 
-  double get progress => maxValue > 0 ? math.min(progressValue / maxValue, 1.0) : 1.0;
+  double get progress =>
+      maxValue > 0 ? math.min(progressValue / maxValue, 1.0) : 1.0;
 }
 
 enum AchievementType {
@@ -650,7 +732,8 @@ class PerformanceChallenge {
     required this.difficulty,
   });
 
-  double get progress => targetValue > 0 ? math.min(currentValue / targetValue, 1.0) : 1.0;
+  double get progress =>
+      targetValue > 0 ? math.min(currentValue / targetValue, 1.0) : 1.0;
   bool get isCompleted => currentValue >= targetValue;
   bool get isExpired => DateTime.now().isAfter(deadline);
 }

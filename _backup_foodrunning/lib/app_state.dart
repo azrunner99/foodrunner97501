@@ -39,7 +39,8 @@ class ServerProfile {
         bestShiftRuns: (m['bestShiftRuns'] ?? 0) as int,
         streakBest: (m['streakBest'] ?? 0) as int,
         shiftsAsMvp: (m['shiftsAsMvp'] ?? 0) as int,
-        achievements: (m['achievements'] as List?)?.cast<String>() ?? <String>[],
+        achievements:
+            (m['achievements'] as List?)?.cast<String>() ?? <String>[],
       );
 }
 
@@ -83,14 +84,11 @@ class AppState extends ChangeNotifier {
   int get teamGoal => _teamGoal;
   int get teamTotalThisShift => _teamTotalThisShift;
 
-  bool get canResumeLastShift =>
-      !_shiftActive && _lastEndedSnapshot != null;
+  bool get canResumeLastShift => !_shiftActive && _lastEndedSnapshot != null;
 
-  Server? serverById(String id) =>
-      _servers.firstWhereOrNull((s) => s.id == id);
+  Server? serverById(String id) => _servers.firstWhereOrNull((s) => s.id == id);
 
-  int allTimeFor(String id) =>
-      (_totals[id] ?? 0) + (_currentCounts[id] ?? 0);
+  int allTimeFor(String id) => (_totals[id] ?? 0) + (_currentCounts[id] ?? 0);
 
   Future<void> load() async {
     // servers
@@ -98,8 +96,8 @@ class AppState extends ChangeNotifier {
     final serverList = (sb.get('list') as List?)?.cast<Map>() ?? [];
     _servers
       ..clear()
-      ..addAll(serverList.map(
-          (m) => Server.fromMap(Map<String, dynamic>.from(m))));
+      ..addAll(
+          serverList.map((m) => Server.fromMap(Map<String, dynamic>.from(m))));
 
     // totals
     final tb = Storage.totalsBox;
@@ -113,8 +111,8 @@ class AppState extends ChangeNotifier {
     final histList = (shb.get('list') as List?)?.cast<Map>() ?? [];
     _history
       ..clear()
-      ..addAll(histList.map(
-          (m) => ShiftRecord.fromMap(Map<String, dynamic>.from(m))));
+      ..addAll(histList
+          .map((m) => ShiftRecord.fromMap(Map<String, dynamic>.from(m))));
 
     // profiles
     final pb = Storage.profilesBox;
@@ -132,7 +130,8 @@ class AppState extends ChangeNotifier {
     settings =
         sm.isEmpty ? GamificationSettings() : GamificationSettings.fromMap(sm);
 
-    _lastEndedSnapshot = (sbx.get('lastEndedSnapshot') as Map?)?.cast<String, dynamic>();
+    _lastEndedSnapshot =
+        (sbx.get('lastEndedSnapshot') as Map?)?.cast<String, dynamic>();
 
     // compute baseline goal from last 5 shifts
     _teamGoal = _computeGoalFromHistory();
@@ -201,7 +200,7 @@ class AppState extends ChangeNotifier {
   String _computeShiftType(DateTime t) {
     final hm = t.hour * 60 + t.minute;
     if (hm >= 15 * 60 + 30) return 'Dinner'; // >= 3:30 PM
-    if (hm >= 11 * 60) return 'Lunch';       // >= 11:00 AM
+    if (hm >= 11 * 60) return 'Lunch'; // >= 11:00 AM
     return 'Other';
   }
 
@@ -209,15 +208,15 @@ class AppState extends ChangeNotifier {
     if (_history.isEmpty) return 100; // starter goal
     final last = _history.take(5).toList();
     final avg = last
-        .map((r) => r.counts.values.fold<int>(0, (a, b) => a + b))
-        .fold<int>(0, (a, b) => a + b) /
+            .map((r) => r.counts.values.fold<int>(0, (a, b) => a + b))
+            .fold<int>(0, (a, b) => a + b) /
         last.length;
     final g = (avg * 1.1).round();
     return (g / 10).round() * 10; // nearest 10
   }
 
   Future<void> startNewShift({
-    required String label,        // UI may pass text; we override based on clock
+    required String label, // UI may pass text; we override based on clock
     required List<String> workingIds,
     DateTime? start,
   }) async {
@@ -341,22 +340,27 @@ class AppState extends ChangeNotifier {
     _shiftActive = true;
     _shiftLabel = (snap['label'] as String?) ?? 'Other';
     _shiftType = (snap['shiftType'] as String?) ?? 'Other';
-    _shiftStart = DateTime.tryParse((snap['start'] as String?) ?? '') ?? DateTime.now();
+    _shiftStart =
+        DateTime.tryParse((snap['start'] as String?) ?? '') ?? DateTime.now();
 
     _workingServerIds
       ..clear()
-      ..addAll(((snap['workingIds'] as List?) ?? const <String>[]).cast<String>());
+      ..addAll(
+          ((snap['workingIds'] as List?) ?? const <String>[]).cast<String>());
 
     _currentCounts
       ..clear()
-      ..addAll(((snap['counts'] as Map?) ?? const <String, int>{}).cast<String, int>());
+      ..addAll(((snap['counts'] as Map?) ?? const <String, int>{})
+          .cast<String, int>());
 
     _currentStreaks
       ..clear()
-      ..addAll(((snap['streaks'] as Map?) ?? const <String, int>{}).cast<String, int>());
+      ..addAll(((snap['streaks'] as Map?) ?? const <String, int>{})
+          .cast<String, int>());
 
     _teamGoal = (snap['teamGoal'] as int?) ?? _computeGoalFromHistory();
-    _teamTotalThisShift = (snap['teamTotal'] as int?) ?? _currentCounts.values.fold(0, (a, b) => a + b);
+    _teamTotalThisShift = (snap['teamTotal'] as int?) ??
+        _currentCounts.values.fold(0, (a, b) => a + b);
 
     await _saveLastEndedSnapshot(null);
     notifyListeners();
@@ -432,7 +436,8 @@ class AppState extends ChangeNotifier {
       if (p.allTimeRuns >= 50 && !p.achievements.contains('fifty_all_time')) {
         p.achievements.add('fifty_all_time');
       }
-      if (p.allTimeRuns >= 100 && !p.achievements.contains('hundred_all_time')) {
+      if (p.allTimeRuns >= 100 &&
+          !p.achievements.contains('hundred_all_time')) {
         p.achievements.add('hundred_all_time');
       }
     }

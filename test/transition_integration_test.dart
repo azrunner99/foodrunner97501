@@ -1,5 +1,5 @@
 // TRANSITION LOGIC PROTECTION TESTS
-// 
+//
 // CRITICAL: These tests validate the core transition logic
 // Run before any commit that touches app_state.dart:
 // flutter test test/transition_integration_test.dart

@@ -10,14 +10,15 @@ class BirthdayAnniversaryBanner extends StatefulWidget {
   });
 
   @override
-  State<BirthdayAnniversaryBanner> createState() => _BirthdayAnniversaryBannerState();
+  State<BirthdayAnniversaryBanner> createState() =>
+      _BirthdayAnniversaryBannerState();
 }
 
 class _BirthdayAnniversaryBannerState extends State<BirthdayAnniversaryBanner>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _animation;
-  
+
   List<String> _celebrationMessages = [];
   int _currentMessageIndex = 0;
 
@@ -25,10 +26,11 @@ class _BirthdayAnniversaryBannerState extends State<BirthdayAnniversaryBanner>
   void initState() {
     super.initState();
     _animationController = AnimationController(
-      duration: const Duration(seconds: 23), // 23 seconds per message (70% of current speed)
+      duration: const Duration(
+          seconds: 23), // 23 seconds per message (70% of current speed)
       vsync: this,
     );
-    
+
     _animation = Tween<double>(
       begin: 1.0, // Start from right side
       end: -1.0, // End at left side
@@ -38,7 +40,7 @@ class _BirthdayAnniversaryBannerState extends State<BirthdayAnniversaryBanner>
     ));
 
     _loadCelebrationMessages();
-    
+
     if (_celebrationMessages.isNotEmpty) {
       _startAnimation();
     }
@@ -49,14 +51,14 @@ class _BirthdayAnniversaryBannerState extends State<BirthdayAnniversaryBanner>
     final todayMonth = today.month.toString().padLeft(2, '0');
     final todayDay = today.day.toString().padLeft(2, '0');
     final todayYear = today.year;
-    
+
     final messages = <String>[];
-    
+
     // Check all servers for birthdays and anniversaries
     for (final server in widget.appState.servers) {
       final profile = widget.appState.profiles[server.id];
       if (profile == null) continue;
-      
+
       // Check birthday (format: MM/DD)
       if (profile.birthday.isNotEmpty) {
         try {
@@ -64,7 +66,7 @@ class _BirthdayAnniversaryBannerState extends State<BirthdayAnniversaryBanner>
           if (birthdayParts.length >= 2) {
             final birthdayMonth = birthdayParts[0];
             final birthdayDay = birthdayParts[1];
-            
+
             if (birthdayMonth == todayMonth && birthdayDay == todayDay) {
               messages.add('Happy Birthday ${server.name}!');
             }
@@ -73,7 +75,7 @@ class _BirthdayAnniversaryBannerState extends State<BirthdayAnniversaryBanner>
           // Invalid birthday format, skip
         }
       }
-      
+
       // Check hire date anniversary (format: MM/DD/YYYY)
       if (profile.hireDate.isNotEmpty) {
         try {
@@ -82,11 +84,14 @@ class _BirthdayAnniversaryBannerState extends State<BirthdayAnniversaryBanner>
             final hireMonth = hireDateParts[0];
             final hireDay = hireDateParts[1];
             final hireYear = int.parse(hireDateParts[2]);
-            
-            if (hireMonth == todayMonth && hireDay == todayDay && hireYear < todayYear) {
+
+            if (hireMonth == todayMonth &&
+                hireDay == todayDay &&
+                hireYear < todayYear) {
               final yearsOfService = todayYear - hireYear;
               String yearText = yearsOfService == 1 ? 'year' : 'years';
-              messages.add('Happy ${yearsOfService} $yearText Anniversary ${server.name}!');
+              messages.add(
+                  'Happy $yearsOfService $yearText Anniversary ${server.name}!');
             }
           }
         } catch (e) {
@@ -94,7 +99,7 @@ class _BirthdayAnniversaryBannerState extends State<BirthdayAnniversaryBanner>
         }
       }
     }
-    
+
     setState(() {
       _celebrationMessages = messages;
     });
@@ -105,7 +110,8 @@ class _BirthdayAnniversaryBannerState extends State<BirthdayAnniversaryBanner>
     _animationController.forward().then((_) {
       if (mounted && _celebrationMessages.isNotEmpty) {
         setState(() {
-          _currentMessageIndex = (_currentMessageIndex + 1) % _celebrationMessages.length;
+          _currentMessageIndex =
+              (_currentMessageIndex + 1) % _celebrationMessages.length;
         });
         _startAnimation(); // Continue with next message
       }
@@ -127,7 +133,8 @@ class _BirthdayAnniversaryBannerState extends State<BirthdayAnniversaryBanner>
 
     return Container(
       height: 50, // Same height as the shift leaderboard notification
-      margin: const EdgeInsets.only(top: 8.0, bottom: 4.0, left: 24.0, right: 24.0),
+      margin:
+          const EdgeInsets.only(top: 8.0, bottom: 4.0, left: 24.0, right: 24.0),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [

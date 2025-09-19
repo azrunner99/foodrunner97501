@@ -41,14 +41,14 @@ class _BackupManagerScreenState extends State<BackupManagerScreen> {
     setState(() {
       _migrationInProgress = true;
     });
-    
+
     try {
       await BackupManager.migrateBackupsToExternal();
       await _loadBackups(); // Refresh backup list after migration
     } catch (e) {
       // Migration failed or not needed, continue normally
     }
-    
+
     setState(() {
       _migrationInProgress = false;
     });
@@ -114,9 +114,11 @@ class _BackupManagerScreenState extends State<BackupManagerScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('This will restore all app data from the selected backup.'),
+            const Text(
+                'This will restore all app data from the selected backup.'),
             const SizedBox(height: 16),
-            const Text('⚠️ WARNING: This will replace ALL current data including:'),
+            const Text(
+                '⚠️ WARNING: This will replace ALL current data including:'),
             const SizedBox(height: 8),
             const Text('• All servers and their settings'),
             const Text('• Complete shift history'),
@@ -152,7 +154,8 @@ class _BackupManagerScreenState extends State<BackupManagerScreen> {
       try {
         final result = await BackupManager.restoreFromBackup(backup.filePath);
         if (result.success) {
-          _showSnackBar('${result.message}\n\nPlease restart the app for all changes to take effect.');
+          _showSnackBar(
+              '${result.message}\n\nPlease restart the app for all changes to take effect.');
           // Reload app state after restoration
           if (mounted) {
             final appState = Provider.of<AppState>(context, listen: false);
@@ -207,7 +210,7 @@ class _BackupManagerScreenState extends State<BackupManagerScreen> {
     try {
       final result = await BackupManager.exportBackup(backup.filePath);
       if (result.success) {
-        _showSnackBar('${result.message}');
+        _showSnackBar(result.message);
       } else {
         _showSnackBar(result.message, isError: true);
       }
@@ -265,20 +268,22 @@ class _BackupManagerScreenState extends State<BackupManagerScreen> {
 
   Future<void> _searchAndShowBackupFiles() async {
     setState(() => _isCreatingBackup = true); // Use this as loading state
-    
+
     try {
       // Search for backup files in common locations
       final foundBackups = await _findBackupFilesOnDevice();
-      
+
       setState(() => _isCreatingBackup = false);
-      
+
       if (foundBackups.isEmpty) {
-        _showSnackBar('No backup files found on device. Use file picker to manually select a backup file.', isError: true);
+        _showSnackBar(
+            'No backup files found on device. Use file picker to manually select a backup file.',
+            isError: true);
         // Fallback to manual file picker
         await _openManualFilePicker();
         return;
       }
-      
+
       // Show found backup files for selection
       final selectedFile = await showDialog<String>(
         context: context,
@@ -303,7 +308,7 @@ class _BackupManagerScreenState extends State<BackupManagerScreen> {
                       final filePath = backup['path'] as String;
                       final fileSize = backup['size'] as String;
                       final isZip = fileName.endsWith('.zip');
-                      
+
                       return ListTile(
                         leading: Icon(
                           isZip ? Icons.archive : Icons.description,
@@ -334,11 +339,10 @@ class _BackupManagerScreenState extends State<BackupManagerScreen> {
           ],
         ),
       );
-      
+
       if (selectedFile != null) {
         await _confirmAndRestore(selectedFile);
       }
-      
     } catch (e) {
       setState(() => _isCreatingBackup = false);
       _showSnackBar('Error searching for backup files: $e', isError: true);
@@ -349,23 +353,24 @@ class _BackupManagerScreenState extends State<BackupManagerScreen> {
 
   Future<List<Map<String, dynamic>>> _findBackupFilesOnDevice() async {
     final foundFiles = <Map<String, dynamic>>[];
-    
+
     try {
       // Get common directories to search
       final directories = await _getSearchDirectories();
-      
+
       for (final directory in directories) {
         if (await directory.exists()) {
-          await for (final entity in directory.list(recursive: true, followLinks: false)) {
+          await for (final entity
+              in directory.list(recursive: true, followLinks: false)) {
             if (entity is File) {
               final fileName = entity.path.split('/').last.split('\\').last;
-              
+
               // Check if it's a backup file
               if (_isBackupFile(fileName)) {
                 try {
                   final stat = await entity.stat();
                   final sizeStr = _formatFileSize(stat.size);
-                  
+
                   foundFiles.add({
                     'name': fileName,
                     'path': entity.path,
@@ -382,10 +387,11 @@ class _BackupManagerScreenState extends State<BackupManagerScreen> {
           }
         }
       }
-      
+
       // Sort by modification date (newest first)
-      foundFiles.sort((a, b) => (b['modified'] as DateTime).compareTo(a['modified'] as DateTime));
-      
+      foundFiles.sort((a, b) =>
+          (b['modified'] as DateTime).compareTo(a['modified'] as DateTime));
+
       return foundFiles;
     } catch (e) {
       print('[BackupSearch] Error searching for backup files: $e');
@@ -395,26 +401,26 @@ class _BackupManagerScreenState extends State<BackupManagerScreen> {
 
   Future<List<Directory>> _getSearchDirectories() async {
     final directories = <Directory>[];
-    
+
     try {
       // Documents directory
       final documentsDir = await getApplicationDocumentsDirectory();
       directories.add(documentsDir);
-      
+
       // Download folder (common location for exported files)
       final downloadPaths = [
         '/storage/emulated/0/Download',
         '/sdcard/Download',
         Platform.isAndroid ? '/storage/emulated/0/Downloads' : null,
       ].where((path) => path != null).cast<String>();
-      
+
       for (final path in downloadPaths) {
         final dir = Directory(path);
         if (await dir.exists()) {
           directories.add(dir);
         }
       }
-      
+
       // External storage (if available)
       try {
         if (Platform.isAndroid) {
@@ -426,18 +432,17 @@ class _BackupManagerScreenState extends State<BackupManagerScreen> {
       } catch (e) {
         // External storage not accessible
       }
-      
     } catch (e) {
       print('[BackupSearch] Error getting search directories: $e');
     }
-    
+
     return directories;
   }
 
   bool _isBackupFile(String fileName) {
     final lowerName = fileName.toLowerCase();
     return (lowerName.endsWith('.json') || lowerName.endsWith('.zip')) &&
-           (lowerName.contains('backup') || 
+        (lowerName.contains('backup') ||
             lowerName.contains('food_runs') ||
             lowerName.contains('auto_backup') ||
             lowerName.startsWith('food_runs_backup_') ||
@@ -477,7 +482,7 @@ class _BackupManagerScreenState extends State<BackupManagerScreen> {
 
   Future<void> _confirmAndRestore(String filePath) async {
     final fileName = filePath.split('/').last.split('\\').last;
-    
+
     // Show confirmation dialog with file info
     final confirmed = await showDialog<bool>(
       context: context,
@@ -489,7 +494,8 @@ class _BackupManagerScreenState extends State<BackupManagerScreen> {
           children: [
             Text('Selected file: $fileName'),
             const SizedBox(height: 16),
-            const Text('⚠️ WARNING: This will replace ALL current data including:'),
+            const Text(
+                '⚠️ WARNING: This will replace ALL current data including:'),
             const SizedBox(height: 8),
             const Text('• All servers and their data'),
             const Text('• All shifts and history'),
@@ -580,13 +586,13 @@ class _BackupManagerScreenState extends State<BackupManagerScreen> {
                       padding: const EdgeInsets.all(12),
                       margin: const EdgeInsets.only(bottom: 6),
                       decoration: BoxDecoration(
-                        color: _locationInfo!['survivesClearData'] 
-                            ? Colors.green[50] 
+                        color: _locationInfo!['survivesClearData']
+                            ? Colors.green[50]
                             : Colors.orange[50],
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: _locationInfo!['survivesClearData'] 
-                              ? Colors.green[200]! 
+                          color: _locationInfo!['survivesClearData']
+                              ? Colors.green[200]!
                               : Colors.orange[200]!,
                         ),
                       ),
@@ -596,11 +602,11 @@ class _BackupManagerScreenState extends State<BackupManagerScreen> {
                           Row(
                             children: [
                               Icon(
-                                _locationInfo!['survivesClearData'] 
-                                    ? Icons.security 
+                                _locationInfo!['survivesClearData']
+                                    ? Icons.security
                                     : Icons.warning_outlined,
-                                color: _locationInfo!['survivesClearData'] 
-                                    ? Colors.green[700] 
+                                color: _locationInfo!['survivesClearData']
+                                    ? Colors.green[700]
                                     : Colors.orange[700],
                                 size: 20,
                               ),
@@ -610,8 +616,8 @@ class _BackupManagerScreenState extends State<BackupManagerScreen> {
                                   'Storage: ${_locationInfo!['primaryLocation']}',
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    color: _locationInfo!['survivesClearData'] 
-                                        ? Colors.green[800] 
+                                    color: _locationInfo!['survivesClearData']
+                                        ? Colors.green[800]
                                         : Colors.orange[800],
                                   ),
                                 ),
@@ -620,13 +626,13 @@ class _BackupManagerScreenState extends State<BackupManagerScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            _locationInfo!['survivesClearData'] 
+                            _locationInfo!['survivesClearData']
                                 ? 'Backups will survive app data clearing'
                                 : 'Backups will be lost if app data is cleared',
                             style: TextStyle(
                               fontSize: 12,
-                              color: _locationInfo!['survivesClearData'] 
-                                  ? Colors.green[600] 
+                              color: _locationInfo!['survivesClearData']
+                                  ? Colors.green[600]
                                   : Colors.orange[600],
                             ),
                           ),
@@ -638,7 +644,8 @@ class _BackupManagerScreenState extends State<BackupManagerScreen> {
                                   const SizedBox(
                                     width: 12,
                                     height: 12,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
@@ -672,7 +679,8 @@ class _BackupManagerScreenState extends State<BackupManagerScreen> {
                             children: [
                               Row(
                                 children: [
-                                  Icon(Icons.info_outline, color: Colors.blue[700], size: 20),
+                                  Icon(Icons.info_outline,
+                                      color: Colors.blue[700], size: 20),
                                   const SizedBox(width: 8),
                                   Text(
                                     'How Backup System Works',
@@ -685,15 +693,28 @@ class _BackupManagerScreenState extends State<BackupManagerScreen> {
                                 ],
                               ),
                               const SizedBox(height: 8),
-                              _buildInfoRow(Icons.schedule, 'Automatic Timing', 'Every night during closing hours'),
+                              _buildInfoRow(Icons.schedule, 'Automatic Timing',
+                                  'Every night during closing hours'),
                               const SizedBox(height: 4),
-                              _buildInfoRow(Icons.cloud_upload, 'Server Backups', 'JSON files - 30-day rolling retention'),
+                              _buildInfoRow(
+                                  Icons.cloud_upload,
+                                  'Server Backups',
+                                  'JSON files - 30-day rolling retention'),
                               const SizedBox(height: 4),
-                              _buildInfoRow(Icons.phone_android, 'Device Backups', 'ZIP files with photos - daily to device'),
+                              _buildInfoRow(
+                                  Icons.phone_android,
+                                  'Device Backups',
+                                  'ZIP files with photos - daily to device'),
                               const SizedBox(height: 4),
-                              _buildInfoRow(Icons.photo_library, 'Complete Protection', 'All data, settings, and photos included'),
+                              _buildInfoRow(
+                                  Icons.photo_library,
+                                  'Complete Protection',
+                                  'All data, settings, and photos included'),
                               const SizedBox(height: 4),
-                              _buildInfoRow(Icons.auto_delete, 'Rolling Retention', 'Old backups auto-deleted after 30 days'),
+                              _buildInfoRow(
+                                  Icons.auto_delete,
+                                  'Rolling Retention',
+                                  'Old backups auto-deleted after 30 days'),
                             ],
                           ),
                         ),
@@ -711,7 +732,8 @@ class _BackupManagerScreenState extends State<BackupManagerScreen> {
                             children: [
                               Row(
                                 children: [
-                                  Icon(Icons.schedule, color: Colors.green[600], size: 18),
+                                  Icon(Icons.schedule,
+                                      color: Colors.green[600], size: 18),
                                   const SizedBox(width: 8),
                                   Text(
                                     'Automatic Daily Backups',
@@ -735,13 +757,16 @@ class _BackupManagerScreenState extends State<BackupManagerScreen> {
                               SizedBox(
                                 width: double.infinity,
                                 child: ElevatedButton.icon(
-                                  onPressed: _isCreatingBackup ? null : _triggerAutoBackup,
+                                  onPressed: _isCreatingBackup
+                                      ? null
+                                      : _triggerAutoBackup,
                                   icon: const Icon(Icons.play_arrow, size: 16),
                                   label: const Text('Trigger Auto Backup Now'),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.green[600],
                                     foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(vertical: 8),
+                                    padding:
+                                        const EdgeInsets.symmetric(vertical: 8),
                                   ),
                                 ),
                               ),
@@ -761,11 +786,13 @@ class _BackupManagerScreenState extends State<BackupManagerScreen> {
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(Icons.backup_outlined, size: 64, color: Colors.grey),
+                                    Icon(Icons.backup_outlined,
+                                        size: 64, color: Colors.grey),
                                     SizedBox(height: 16),
                                     Text(
                                       'No backups found',
-                                      style: TextStyle(fontSize: 18, color: Colors.grey),
+                                      style: TextStyle(
+                                          fontSize: 18, color: Colors.grey),
                                     ),
                                     SizedBox(height: 8),
                                     Text(
@@ -779,30 +806,41 @@ class _BackupManagerScreenState extends State<BackupManagerScreen> {
                             : ListView.separated(
                                 padding: const EdgeInsets.all(16),
                                 itemCount: _backups.length,
-                                separatorBuilder: (context, index) => const SizedBox(height: 8),
+                                separatorBuilder: (context, index) =>
+                                    const SizedBox(height: 8),
                                 itemBuilder: (context, index) {
                                   final backup = _backups[index];
                                   return Card(
                                     elevation: 2,
                                     child: ListTile(
                                       leading: CircleAvatar(
-                                        backgroundColor: backup.isAutomatic ? Colors.green[100] : Colors.blue[100],
+                                        backgroundColor: backup.isAutomatic
+                                            ? Colors.green[100]
+                                            : Colors.blue[100],
                                         child: Icon(
-                                          backup.isAutomatic ? Icons.schedule : Icons.backup, 
-                                          color: backup.isAutomatic ? Colors.green : Colors.blue,
+                                          backup.isAutomatic
+                                              ? Icons.schedule
+                                              : Icons.backup,
+                                          color: backup.isAutomatic
+                                              ? Colors.green
+                                              : Colors.blue,
                                         ),
                                       ),
                                       title: Text(
                                         backup.displayName,
-                                        style: const TextStyle(fontWeight: FontWeight.w500),
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.w500),
                                       ),
                                       subtitle: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
-                                          Text('Created: ${backup.formattedDate}'),
+                                          Text(
+                                              'Created: ${backup.formattedDate}'),
                                           Text('Size: ${backup.formattedSize}'),
                                           if (backup.metadata != null)
-                                            Text('Version: ${backup.metadata!['version'] ?? 'Unknown'}'),
+                                            Text(
+                                                'Version: ${backup.metadata!['version'] ?? 'Unknown'}'),
                                         ],
                                       ),
                                       isThreeLine: true,
@@ -828,7 +866,8 @@ class _BackupManagerScreenState extends State<BackupManagerScreen> {
                                             value: 'restore',
                                             child: Row(
                                               children: [
-                                                Icon(Icons.restore, color: Colors.orange),
+                                                Icon(Icons.restore,
+                                                    color: Colors.orange),
                                                 SizedBox(width: 8),
                                                 Text('Restore'),
                                               ],
@@ -838,7 +877,8 @@ class _BackupManagerScreenState extends State<BackupManagerScreen> {
                                             value: 'share',
                                             child: Row(
                                               children: [
-                                                Icon(Icons.share, color: Colors.blue),
+                                                Icon(Icons.share,
+                                                    color: Colors.blue),
                                                 SizedBox(width: 8),
                                                 Text('Share'),
                                               ],
@@ -848,7 +888,8 @@ class _BackupManagerScreenState extends State<BackupManagerScreen> {
                                             value: 'save',
                                             child: Row(
                                               children: [
-                                                Icon(Icons.download, color: Colors.green),
+                                                Icon(Icons.download,
+                                                    color: Colors.green),
                                                 SizedBox(width: 8),
                                                 Text('Save to Device'),
                                               ],
@@ -858,7 +899,8 @@ class _BackupManagerScreenState extends State<BackupManagerScreen> {
                                             value: 'delete',
                                             child: Row(
                                               children: [
-                                                Icon(Icons.delete, color: Colors.red),
+                                                Icon(Icons.delete,
+                                                    color: Colors.red),
                                                 SizedBox(width: 8),
                                                 Text('Delete'),
                                               ],
@@ -881,9 +923,13 @@ class _BackupManagerScreenState extends State<BackupManagerScreen> {
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton.icon(
-                            onPressed: _isCreatingBackup || _isRestoring ? null : _showRestoreOptions,
+                            onPressed: _isCreatingBackup || _isRestoring
+                                ? null
+                                : _showRestoreOptions,
                             icon: const Icon(Icons.search, size: 16),
-                            label: Text(_isCreatingBackup ? 'Searching...' : 'Find & Restore Backups'),
+                            label: Text(_isCreatingBackup
+                                ? 'Searching...'
+                                : 'Find & Restore Backups'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.orange[600],
                               foregroundColor: Colors.white,

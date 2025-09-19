@@ -1,5 +1,6 @@
 /// Centralized validation service for the NPS system
 /// Provides comprehensive validation for all data types and business rules
+library;
 
 /// Validation result class
 class ValidationResult {
@@ -22,7 +23,8 @@ class ValidationResult {
   }
 
   /// Create a failed validation result
-  factory ValidationResult.failure(List<String> errors, {List<String> warnings = const []}) {
+  factory ValidationResult.failure(List<String> errors,
+      {List<String> warnings = const []}) {
     return ValidationResult(
       isValid: false,
       errors: errors,
@@ -78,7 +80,8 @@ class ValidationService {
     // Character validation - allow letters, spaces, hyphens, apostrophes, and periods
     final namePattern = RegExp(r"^[a-zA-Z\s\-'\.]+$");
     if (!namePattern.hasMatch(trimmedName)) {
-      errors.add('Server name can only contain letters, spaces, hyphens, apostrophes, and periods');
+      errors.add(
+          'Server name can only contain letters, spaces, hyphens, apostrophes, and periods');
     }
 
     // Business rules
@@ -114,13 +117,15 @@ class ValidationService {
     // Business rule: Cannot be too far in the past
     final tenYearsAgo = today.subtract(const Duration(days: 365 * 10));
     if (hireDateOnly.isBefore(tenYearsAgo)) {
-      warnings.add('Hire date is more than 10 years ago - please verify this is correct');
+      warnings.add(
+          'Hire date is more than 10 years ago - please verify this is correct');
     }
 
     // Very recent hire
     final threeDaysAgo = today.subtract(const Duration(days: 3));
     if (hireDateOnly.isAfter(threeDaysAgo)) {
-      warnings.add('Server was hired very recently - may not have sufficient feedback yet');
+      warnings.add(
+          'Server was hired very recently - may not have sufficient feedback yet');
     }
 
     if (errors.isNotEmpty) {
@@ -139,7 +144,8 @@ class ValidationService {
 
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final feedbackDateOnly = DateTime(feedbackDate.year, feedbackDate.month, feedbackDate.day);
+    final feedbackDateOnly =
+        DateTime(feedbackDate.year, feedbackDate.month, feedbackDate.day);
 
     // Cannot be in the future
     if (feedbackDateOnly.isAfter(today)) {
@@ -194,11 +200,12 @@ class ValidationService {
     }
 
     // Decimal places
-    final decimalPlaces = salesAmount.toString().split('.').length > 1 
-        ? salesAmount.toString().split('.')[1].length 
+    final decimalPlaces = salesAmount.toString().split('.').length > 1
+        ? salesAmount.toString().split('.')[1].length
         : 0;
     if (decimalPlaces > 2) {
-      warnings.add('Sales amount has more than 2 decimal places - will be rounded');
+      warnings
+          .add('Sales amount has more than 2 decimal places - will be rounded');
     }
 
     if (errors.isNotEmpty) {
@@ -383,9 +390,11 @@ class ValidationService {
     if (salesAmount != null && guestCount != null) {
       final averagePerGuest = salesAmount / guestCount;
       if (averagePerGuest > 200) {
-        allWarnings.add('Very high average per guest (\$${averagePerGuest.toStringAsFixed(2)}) - please verify');
+        allWarnings.add(
+            'Very high average per guest (\$${averagePerGuest.toStringAsFixed(2)}) - please verify');
       } else if (averagePerGuest < 10) {
-        allWarnings.add('Very low average per guest (\$${averagePerGuest.toStringAsFixed(2)}) - please verify');
+        allWarnings.add(
+            'Very low average per guest (\$${averagePerGuest.toStringAsFixed(2)}) - please verify');
       }
     }
 
@@ -400,10 +409,11 @@ class ValidationService {
 
   /// Clean and format server name
   String cleanServerName(String name) {
-    return name.trim()
+    return name
+        .trim()
         .split(' ')
-        .map((word) => word.isNotEmpty 
-            ? word[0].toUpperCase() + word.substring(1).toLowerCase() 
+        .map((word) => word.isNotEmpty
+            ? word[0].toUpperCase() + word.substring(1).toLowerCase()
             : word)
         .join(' ')
         .replaceAll(RegExp(r'\s+'), ' '); // Remove extra spaces
@@ -411,9 +421,12 @@ class ValidationService {
 
   /// Clean and format notes
   String cleanNotes(String notes) {
-    return notes.trim()
-        .replaceAll(RegExp(r'\s+'), ' ') // Replace multiple spaces with single space
-        .replaceAll(RegExp(r'\n+'), '\n'); // Replace multiple newlines with single newline
+    return notes
+        .trim()
+        .replaceAll(
+            RegExp(r'\s+'), ' ') // Replace multiple spaces with single space
+        .replaceAll(RegExp(r'\n+'),
+            '\n'); // Replace multiple newlines with single newline
   }
 
   /// Check if date is a business day (Monday-Friday)
@@ -429,11 +442,11 @@ class ValidationService {
   /// Get business day warnings for feedback
   List<String> getBusinessDayWarnings(DateTime feedbackDate) {
     final warnings = <String>[];
-    
+
     if (isWeekend(feedbackDate)) {
       warnings.add('Weekend feedback may have different service patterns');
     }
-    
+
     return warnings;
   }
 }

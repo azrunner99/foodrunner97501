@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/nps_provider.dart';
@@ -22,12 +21,16 @@ class ServerMetricsData {
     double? oneMonthNpsPercentage,
     double? allTimeSales,
     int? allTimeTableCount,
-  }) : 
-    allTimeNpsController = TextEditingController(text: allTimeNpsPercentage?.toStringAsFixed(1) ?? ''),
-    threeMonthNpsController = TextEditingController(text: threeMonthNpsPercentage?.toStringAsFixed(1) ?? ''),
-    oneMonthNpsController = TextEditingController(text: oneMonthNpsPercentage?.toStringAsFixed(1) ?? ''),
-    allTimeSalesController = TextEditingController(text: allTimeSales?.toStringAsFixed(2) ?? ''),
-    allTimeTableCountController = TextEditingController(text: allTimeTableCount?.toString() ?? '');
+  })  : allTimeNpsController = TextEditingController(
+            text: allTimeNpsPercentage?.toStringAsFixed(1) ?? ''),
+        threeMonthNpsController = TextEditingController(
+            text: threeMonthNpsPercentage?.toStringAsFixed(1) ?? ''),
+        oneMonthNpsController = TextEditingController(
+            text: oneMonthNpsPercentage?.toStringAsFixed(1) ?? ''),
+        allTimeSalesController =
+            TextEditingController(text: allTimeSales?.toStringAsFixed(2) ?? ''),
+        allTimeTableCountController =
+            TextEditingController(text: allTimeTableCount?.toString() ?? '');
 
   ServerMetricsData copyWith({
     double? allTimeNpsPercentage,
@@ -36,21 +39,24 @@ class ServerMetricsData {
     double? allTimeSales,
     int? allTimeTableCount,
   }) {
-    if (allTimeNpsPercentage != null) allTimeNpsController.text = allTimeNpsPercentage.toStringAsFixed(1);
-    if (threeMonthNpsPercentage != null) threeMonthNpsController.text = threeMonthNpsPercentage.toStringAsFixed(1);
-    if (oneMonthNpsPercentage != null) oneMonthNpsController.text = oneMonthNpsPercentage.toStringAsFixed(1);
-    
+    if (allTimeNpsPercentage != null)
+      allTimeNpsController.text = allTimeNpsPercentage.toStringAsFixed(1);
+    if (threeMonthNpsPercentage != null)
+      threeMonthNpsController.text = threeMonthNpsPercentage.toStringAsFixed(1);
+    if (oneMonthNpsPercentage != null)
+      oneMonthNpsController.text = oneMonthNpsPercentage.toStringAsFixed(1);
+
     // Only set sales if it's a meaningful value (greater than 0)
     if (allTimeSales != null && allTimeSales > 0) {
       // Format as currency without the dollar sign (since prefixText handles it)
       allTimeSalesController.text = allTimeSales.toStringAsFixed(2);
     }
-    
+
     // Only set table count if it's a meaningful value (greater than 0)
     if (allTimeTableCount != null && allTimeTableCount > 0) {
       allTimeTableCountController.text = allTimeTableCount.toString();
     }
-    
+
     return this;
   }
 
@@ -74,10 +80,10 @@ class ServerMetricsData {
   /// Check if any fields have data
   bool hasData() {
     return allTimeNpsController.text.isNotEmpty ||
-           threeMonthNpsController.text.isNotEmpty ||
-           oneMonthNpsController.text.isNotEmpty ||
-           allTimeSalesController.text.isNotEmpty ||
-           allTimeTableCountController.text.isNotEmpty;
+        threeMonthNpsController.text.isNotEmpty ||
+        oneMonthNpsController.text.isNotEmpty ||
+        allTimeSalesController.text.isNotEmpty ||
+        allTimeTableCountController.text.isNotEmpty;
   }
 }
 
@@ -87,7 +93,8 @@ class MonthlyNPSDataEntryWidget extends StatefulWidget {
   const MonthlyNPSDataEntryWidget({super.key});
 
   @override
-  State<MonthlyNPSDataEntryWidget> createState() => _MonthlyNPSDataEntryWidgetState();
+  State<MonthlyNPSDataEntryWidget> createState() =>
+      _MonthlyNPSDataEntryWidgetState();
 }
 
 class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
@@ -103,7 +110,7 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
 
   Future<void> _loadServerData() async {
     final npsProvider = Provider.of<NPSProvider>(context, listen: false);
-    
+
     // Initialize data for all active servers
     for (final server in npsProvider.servers.where((s) => s.active)) {
       _serverData[server.id!] = ServerMetricsData(
@@ -111,28 +118,30 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
         serverName: server.name,
       );
     }
-    
+
     await _loadExistingData();
   }
 
   Future<void> _loadExistingData() async {
     if (_serverData.isEmpty) return;
-    
+
     setState(() {
       _isLoading = true;
     });
 
     try {
       final npsProvider = Provider.of<NPSProvider>(context, listen: false);
-      final reportMonth = int.parse('${_selectedMonth.year}${_selectedMonth.month.toString().padLeft(2, '0')}');
-      
+      final reportMonth = int.parse(
+          '${_selectedMonth.year}${_selectedMonth.month.toString().padLeft(2, '0')}');
+
       // Load existing data for each server
       for (final entry in _serverData.entries) {
         final serverId = entry.key;
         try {
           // First try to load saved data from database
-          final existingReportMap = await npsProvider.database.getMonthlyReport(serverId, reportMonth);
-          
+          final existingReportMap = await npsProvider.database
+              .getMonthlyReport(serverId, reportMonth);
+
           if (existingReportMap != null) {
             // Load saved data from database
             final report = NPSMonthlyReport.fromMap(existingReportMap);
@@ -146,7 +155,8 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
             debugPrint('✅ Loaded saved data for server $serverId');
           } else {
             // No saved data found, generate fresh report for reference
-            final report = await npsProvider.calculator.generateMonthlyReport(serverId, reportMonth);
+            final report = await npsProvider.calculator
+                .generateMonthlyReport(serverId, reportMonth);
             _serverData[serverId] = _serverData[serverId]!.copyWith(
               allTimeNpsPercentage: report.allTimeNpsPercentage,
               threeMonthNpsPercentage: report.threeMonthNpsPercentage,
@@ -260,7 +270,8 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.red.shade700,
                   side: BorderSide(color: Colors.red.shade300),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 ),
               ),
             ],
@@ -288,7 +299,8 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
             InkWell(
               onTap: _selectMonth,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.grey.shade300),
                   borderRadius: BorderRadius.circular(8),
@@ -325,12 +337,14 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
             child: ListView.builder(
               itemCount: npsProvider.servers.where((s) => s.active).length,
               itemBuilder: (context, index) {
-                final server = npsProvider.servers.where((s) => s.active).toList()[index];
-                final serverData = _serverData[server.id] ?? ServerMetricsData(
-                  serverId: server.id ?? 0,
-                  serverName: server.name,
-                );
-                
+                final server =
+                    npsProvider.servers.where((s) => s.active).toList()[index];
+                final serverData = _serverData[server.id] ??
+                    ServerMetricsData(
+                      serverId: server.id ?? 0,
+                      serverName: server.name,
+                    );
+
                 return Card(
                   margin: const EdgeInsets.only(bottom: 16),
                   child: Padding(
@@ -340,9 +354,10 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
                       children: [
                         Text(
                           server.name,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                         ),
                         const SizedBox(height: 16),
                         Row(
@@ -393,7 +408,9 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
                                   prefixText: '\$',
                                   hintText: '0.00',
                                 ),
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                        decimal: true),
                                 onChanged: (value) {
                                   // Format currency as user types
                                   if (value.isNotEmpty) {
@@ -408,7 +425,8 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: TextFormField(
-                                controller: serverData.allTimeTableCountController,
+                                controller:
+                                    serverData.allTimeTableCountController,
                                 decoration: const InputDecoration(
                                   labelText: 'All-Time Check Count',
                                   border: OutlineInputBorder(),
@@ -476,7 +494,8 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Clear All Data'),
-          content: const Text('Are you sure you want to clear all entered data? This action cannot be undone.'),
+          content: const Text(
+              'Are you sure you want to clear all entered data? This action cannot be undone.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
@@ -505,7 +524,7 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
         data.clear();
       }
     });
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('All data cleared successfully'),
@@ -522,25 +541,31 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
     try {
       final npsProvider = Provider.of<NPSProvider>(context, listen: false);
       final activeServers = npsProvider.servers.where((s) => s.active).toList();
-      
+
       int savedCount = 0;
-      
+
       for (final server in activeServers) {
         final serverData = _serverData[server.id];
         if (serverData != null && serverData.hasData()) {
           // Create NPSMonthlyReport from the server data
           final monthKey = _selectedMonth.year * 100 + _selectedMonth.month;
-          
+
           final report = NPSMonthlyReport(
             serverId: server.id ?? 0,
             reportMonth: monthKey,
             reportYear: _selectedMonth.year,
-            allTimeNpsPercentage: double.tryParse(serverData.allTimeNpsController.text),
-            threeMonthNpsPercentage: double.tryParse(serverData.threeMonthNpsController.text),
-            oneMonthNpsPercentage: double.tryParse(serverData.oneMonthNpsController.text),
-            allTimeSales: double.tryParse(serverData.allTimeSalesController.text) ?? 0.0,
-            allTimeTableCount: int.tryParse(serverData.allTimeTableCountController.text) ?? 0,
-            monthFeedback: FeedbackCounts(yes: 0, maybe: 0, no: 0), // Default empty counts
+            allTimeNpsPercentage:
+                double.tryParse(serverData.allTimeNpsController.text),
+            threeMonthNpsPercentage:
+                double.tryParse(serverData.threeMonthNpsController.text),
+            oneMonthNpsPercentage:
+                double.tryParse(serverData.oneMonthNpsController.text),
+            allTimeSales:
+                double.tryParse(serverData.allTimeSalesController.text) ?? 0.0,
+            allTimeTableCount:
+                int.tryParse(serverData.allTimeTableCountController.text) ?? 0,
+            monthFeedback:
+                FeedbackCounts(yes: 0, maybe: 0, no: 0), // Default empty counts
             threeMonthFeedback: FeedbackCounts(yes: 0, maybe: 0, no: 0),
             allTimeFeedback: FeedbackCounts(yes: 0, maybe: 0, no: 0),
             dataAsOfDate: DateTime.now(),
@@ -559,7 +584,8 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Successfully saved NPS data for $savedCount servers!'),
+            content:
+                Text('Successfully saved NPS data for $savedCount servers!'),
             backgroundColor: Colors.green,
           ),
         );
@@ -583,8 +609,18 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
 
   String _getMonthName(int month) {
     const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December'
     ];
     return months[month - 1];
   }
@@ -594,7 +630,7 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
 class NPSFeedbackEntry {
   int? score;
   String? comment;
-  
+
   NPSFeedbackEntry({this.score, this.comment});
 }
 
@@ -664,10 +700,20 @@ class _MonthYearPickerDialogState extends State<_MonthYearPickerDialog> {
               children: List.generate(12, (index) {
                 final monthIndex = index + 1;
                 final monthNames = [
-                  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+                  'Jan',
+                  'Feb',
+                  'Mar',
+                  'Apr',
+                  'May',
+                  'Jun',
+                  'Jul',
+                  'Aug',
+                  'Sep',
+                  'Oct',
+                  'Nov',
+                  'Dec'
                 ];
-                
+
                 return SizedBox(
                   width: 70,
                   height: 35,
@@ -681,9 +727,8 @@ class _MonthYearPickerDialogState extends State<_MonthYearPickerDialog> {
                       backgroundColor: _selectedMonth == monthIndex
                           ? Theme.of(context).primaryColor
                           : null,
-                      foregroundColor: _selectedMonth == monthIndex
-                          ? Colors.white
-                          : null,
+                      foregroundColor:
+                          _selectedMonth == monthIndex ? Colors.white : null,
                       padding: const EdgeInsets.all(4),
                     ),
                     child: Text(
