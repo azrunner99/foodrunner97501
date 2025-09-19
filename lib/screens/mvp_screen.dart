@@ -245,10 +245,10 @@ class _MvpScreenState extends State<MvpScreen> {
           double pizookieShare;
 
           if (dateRange == null) {
-            // All time - use existing totals
-            runs = app.totals[s.id] ?? 0;
+            // All time - use profile allTimeRuns which includes current shift
+            runs = app.profiles[s.id]?.allTimeRuns ?? 0;
             pizookieRuns = app.profiles[s.id]?.pizookieRuns ?? 0;
-            final totalAllTime = app.totals.values.fold<int>(0, (a, b) => a + b);
+            final totalAllTime = app.profiles.values.fold<int>(0, (a, b) => a + b.allTimeRuns);
             final totalPizookie = app.profiles.values.fold<int>(0, (a, b) => a + b.pizookieRuns);
             pct = totalAllTime > 0 ? (runs * 100.0 / totalAllTime) : 0.0;
             pizookieShare = totalPizookie > 0 ? (pizookieRuns * 100.0 / totalPizookie) : 0.0;

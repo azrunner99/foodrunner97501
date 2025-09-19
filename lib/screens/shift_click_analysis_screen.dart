@@ -21,12 +21,23 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
   DateTime _selectedDate = DateTime.now();
   List<ClickDataPoint> _clickData = [];
   List<DateTime> _individualClicks = [];
+  List<int> _restaurantActivityData = []; // Restaurant-wide activity for underlay
   bool _isLoading = true;
+  
+  // Chart interaction state
+  int? _selectedBarIndex;
+  final ScrollController _clicksScrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _loadClickData();
+  }
+
+  @override
+  void dispose() {
+    _clicksScrollController.dispose();
+    super.dispose();
   }
 
   // Get all dates with shift data for the current server within a date range
@@ -48,56 +59,99 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
   void _loadClickData() {
     setState(() {
       _isLoading = true;
+      _selectedBarIndex = null; // Reset selection
     });
 
     final app = Provider.of<AppState>(context, listen: false);
     
-    // Use default restaurant hours (11 AM to 10 PM)
-    final openingTime = TimeOfDay(hour: 11, minute: 0);
-    final closingTime = TimeOfDay(hour: 22, minute: 0);
+    print('DEBUG: Starting _loadClickData for date: $_selectedDate');
     
-    // Generate 15-minute intervals for the selected date
-    final clickData = _generateClickDataForDate(_selectedDate, openingTime, closingTime, app);
+    // Calculate dynamic timeframe based on actual clicks
+    final dynamicTimeframe = _calculateDynamicTimeframe(_selectedDate, app);
+    final startTime = dynamicTimeframe['start']!;
+    final endTime = dynamicTimeframe['end']!;
+    
+    print('DEBUG: Dynamic timeframe calculated: $startTime to $endTime');
+    
+    // Generate 15-minute intervals for the dynamic timeframe
+    final clickData = _generateClickDataForDynamicRange(_selectedDate, startTime, endTime, app);
+    
+    // Generate restaurant-wide activity data for the same timeframe
+    final restaurantActivity = _generateRestaurantActivityData(startTime, endTime, app);
     
     // Load individual clicks for the day
     final individualClicks = _getIndividualClicksForDate(_selectedDate, app);
     
+    print('DEBUG: Generated ${clickData.length} click data points and ${restaurantActivity.length} restaurant activity points');
+    
     setState(() {
       _clickData = clickData;
+      _restaurantActivityData = restaurantActivity;
       _individualClicks = individualClicks;
       _isLoading = false;
     });
   }
 
-  List<ClickDataPoint> _generateClickDataForDate(
+  List<ClickDataPoint> _generateClickDataForDynamicRange(
     DateTime date, 
-    TimeOfDay opening, 
-    TimeOfDay closing, 
+    DateTime startTime, 
+    DateTime endTime, 
     AppState app
   ) {
     final List<ClickDataPoint> dataPoints = [];
     
-    // Create DateTime objects for opening and closing
-    final openingDateTime = DateTime(date.year, date.month, date.day, opening.hour, opening.minute);
-    final closingDateTime = DateTime(date.year, date.month, date.day, closing.hour, closing.minute);
+    print('DEBUG: Generating chart data from $startTime to $endTime');
     
-    // Handle overnight shifts (closing time next day)
-    final actualClosingDateTime = closingDateTime.isBefore(openingDateTime) 
-        ? closingDateTime.add(Duration(days: 1))
-        : closingDateTime;
+    // Calculate the total time span in seconds for precision
+    final totalSeconds = endTime.difference(startTime).inSeconds;
+    final totalMinutes = totalSeconds / 60.0;
+    print('DEBUG: Total time span: $totalSeconds seconds ($totalMinutes minutes)');
     
-    // Generate 15-minute intervals
-    DateTime currentTime = openingDateTime;
-    while (currentTime.isBefore(actualClosingDateTime)) {
-      final endTime = currentTime.add(Duration(minutes: 15));
+    // Determine optimal interval and number of bars
+    Duration intervalDuration;
+    int targetBars = 8; // Ideal number of bars for good visualization
+    
+    if (totalSeconds <= 30) {
+      // Very short time span (≤30 seconds) - use 5-second intervals
+      intervalDuration = Duration(seconds: 5);
+    } else if (totalSeconds <= 120) {
+      // Short time span (≤2 minutes) - use 10-second intervals
+      intervalDuration = Duration(seconds: 10);
+    } else if (totalSeconds <= 300) {
+      // Medium-short time span (≤5 minutes) - use 30-second intervals
+      intervalDuration = Duration(seconds: 30);
+    } else if (totalMinutes <= 30) {
+      // Medium time span - use 1-5 minute intervals
+      final intervalMinutes = (totalMinutes / targetBars).ceil().clamp(1, 5);
+      intervalDuration = Duration(minutes: intervalMinutes);
+    } else if (totalMinutes <= 120) {
+      // Medium time span - use 5-15 minute intervals
+      final intervalMinutes = (totalMinutes / targetBars).ceil().clamp(5, 15);
+      intervalDuration = Duration(minutes: intervalMinutes);
+    } else {
+      // Long time span - use 15-30 minute intervals
+      final intervalMinutes = (totalMinutes / targetBars).ceil().clamp(15, 30);
+      intervalDuration = Duration(minutes: intervalMinutes);
+    }
+    
+    print('DEBUG: Using ${intervalDuration.inSeconds} second intervals (${intervalDuration.inMinutes} minutes) for optimal visualization');
+    
+    // Generate intervals using the calculated interval size
+    DateTime currentTime = startTime;
+    int intervalCount = 0;
+    while (currentTime.isBefore(endTime)) {
+      final intervalEnd = currentTime.add(intervalDuration);
+      final actualEnd = intervalEnd.isBefore(endTime) ? intervalEnd : endTime;
       
-      // Get click count for this 15-minute window
+      // Get click count for this window
       final clickCount = _getClickCountForTimeWindow(
         app, 
         widget.server.id, 
         currentTime, 
-        endTime.isBefore(actualClosingDateTime) ? endTime : actualClosingDateTime
+        actualEnd
       );
+      
+      print('DEBUG: Interval $intervalCount: ${currentTime.toString()} to ${actualEnd.toString()} = $clickCount clicks');
       
       dataPoints.add(ClickDataPoint(
         timeWindow: currentTime,
@@ -105,10 +159,63 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
         label: _formatTimeLabel(currentTime),
       ));
       
-      currentTime = endTime;
+      currentTime = intervalEnd;
+      intervalCount++;
     }
     
+    print('DEBUG: Generated ${dataPoints.length} data points for chart');
     return dataPoints;
+  }
+
+  // Generate restaurant-wide activity data for the same time intervals
+  List<int> _generateRestaurantActivityData(DateTime startTime, DateTime endTime, AppState app) {
+    final List<int> activityData = [];
+    
+    print('DEBUG: Generating restaurant activity data from $startTime to $endTime');
+    
+    // Calculate the same interval size as the main chart
+    final totalSeconds = endTime.difference(startTime).inSeconds;
+    final totalMinutes = totalSeconds / 60.0;
+    
+    Duration intervalDuration;
+    int targetBars = 8;
+    
+    if (totalSeconds <= 30) {
+      intervalDuration = Duration(seconds: 5);
+    } else if (totalSeconds <= 120) {
+      intervalDuration = Duration(seconds: 10);
+    } else if (totalSeconds <= 300) {
+      intervalDuration = Duration(seconds: 30);
+    } else if (totalMinutes <= 30) {
+      final intervalMinutes = (totalMinutes / targetBars).ceil().clamp(1, 5);
+      intervalDuration = Duration(minutes: intervalMinutes);
+    } else if (totalMinutes <= 120) {
+      final intervalMinutes = (totalMinutes / targetBars).ceil().clamp(5, 15);
+      intervalDuration = Duration(minutes: intervalMinutes);
+    } else {
+      final intervalMinutes = (totalMinutes / targetBars).ceil().clamp(15, 30);
+      intervalDuration = Duration(minutes: intervalMinutes);
+    }
+    
+    // Generate intervals using the same interval size as main chart
+    DateTime currentTime = startTime;
+    while (currentTime.isBefore(endTime)) {
+      final intervalEnd = currentTime.add(intervalDuration);
+      final actualEnd = intervalEnd.isBefore(endTime) ? intervalEnd : endTime;
+      
+      // Get total click count from ALL servers for this window
+      int totalClicks = 0;
+      for (final server in app.servers) {
+        final serverClicks = app.getTapCountForTimeWindow(server.id, currentTime, actualEnd);
+        totalClicks += serverClicks;
+      }
+      
+      activityData.add(totalClicks);
+      currentTime = intervalEnd;
+    }
+    
+    print('DEBUG: Generated ${activityData.length} restaurant activity data points');
+    return activityData;
   }
 
   int _getClickCountForTimeWindow(AppState app, String serverId, DateTime start, DateTime end) {
@@ -117,6 +224,47 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
     
     print('DEBUG: Time window ${start.toString()} to ${end.toString()} has $clickCount clicks');
     return clickCount;
+  }
+
+  // Calculate dynamic timeframe based on actual first and last clicks for the day
+  Map<String, DateTime> _calculateDynamicTimeframe(DateTime date, AppState app) {
+    // Get all clicks for the selected date
+    final startOfDay = DateTime(date.year, date.month, date.day);
+    final endOfDay = startOfDay.add(Duration(days: 1));
+    final clicks = app.getIndividualClickTimestamps(widget.server.id, startOfDay, endOfDay);
+    
+    print('DEBUG: Found ${clicks.length} total clicks for timeframe calculation');
+    if (clicks.isNotEmpty) {
+      clicks.sort((a, b) => a.compareTo(b));
+      print('DEBUG: Clicks range from ${clicks.first} to ${clicks.last}');
+    }
+    
+    if (clicks.isEmpty) {
+      // No clicks found, use default restaurant hours
+      return {
+        'start': DateTime(date.year, date.month, date.day, 11, 0), // 11 AM
+        'end': DateTime(date.year, date.month, date.day, 22, 0),   // 10 PM
+      };
+    }
+    
+    // Sort clicks to find first and last
+    clicks.sort((a, b) => a.compareTo(b));
+    final firstClick = clicks.first;
+    final lastClick = clicks.last;
+    
+    // Use the actual first and last click times with minimal padding
+    final adjustedFirstClick = firstClick.subtract(Duration(seconds: 5)); // 5 seconds before first click
+    final adjustedLastClick = lastClick.add(Duration(seconds: 5)); // 5 seconds after last click
+    
+    final totalSpan = adjustedLastClick.difference(adjustedFirstClick);
+    print('DEBUG: Dynamic timeframe - First click: $firstClick -> $adjustedFirstClick');
+    print('DEBUG: Dynamic timeframe - Last click: $lastClick -> $adjustedLastClick');
+    print('DEBUG: Total span: ${totalSpan.inSeconds} seconds (${totalSpan.inMinutes} minutes)');
+    
+    return {
+      'start': adjustedFirstClick,
+      'end': adjustedLastClick,
+    };
   }
 
   List<DateTime> _getIndividualClicksForDate(DateTime date, AppState app) {
@@ -133,6 +281,93 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
     // Sort clicks by time (newest first for display)
     clicks.sort((a, b) => b.compareTo(a));
     return clicks;
+  }
+
+  // Handle bar selection in chart
+  void _onBarTapped(int barIndex) {
+    if (barIndex < 0 || barIndex >= _clickData.length) return;
+    
+    setState(() {
+      _selectedBarIndex = barIndex;
+    });
+    
+    // Scroll to the corresponding clicks in the list
+    _scrollToClicksInInterval(barIndex);
+  }
+
+  // Helper method to get the interval duration being used
+  Duration _getIntervalDuration() {
+    if (_clickData.length <= 1) return Duration(minutes: 1);
+    
+    // Calculate based on the time difference between first two data points
+    final firstInterval = _clickData[0].timeWindow;
+    final secondInterval = _clickData[1].timeWindow;
+    return secondInterval.difference(firstInterval);
+  }
+
+  // Generate dynamic chart title based on interval duration
+  String _getChartTitle() {
+    final duration = _getIntervalDuration();
+    final seconds = duration.inSeconds;
+    final minutes = duration.inMinutes;
+    
+    if (seconds < 60) {
+      return 'Clicks per ${seconds}-second interval';
+    } else if (minutes == 1) {
+      return 'Clicks per minute';
+    } else if (minutes < 60) {
+      return 'Clicks per ${minutes}-minute interval';
+    } else {
+      final hours = (minutes / 60).round();
+      return 'Clicks per ${hours}-hour interval';
+    }
+  }
+
+  // Scroll to clicks that fall within the selected time interval
+  void _scrollToClicksInInterval(int barIndex) {
+    if (_individualClicks.isEmpty || barIndex >= _clickData.length) return;
+    
+    final selectedDataPoint = _clickData[barIndex];
+    final intervalStart = selectedDataPoint.timeWindow;
+    final intervalDuration = _getIntervalDuration();
+    final intervalEnd = intervalStart.add(intervalDuration);
+    
+    // Find the first click that falls within this interval
+    int firstClickIndex = -1;
+    for (int i = 0; i < _individualClicks.length; i++) {
+      final clickTime = _individualClicks[i];
+      if (clickTime.isAfter(intervalStart.subtract(Duration(seconds: 1))) && 
+          clickTime.isBefore(intervalEnd)) {
+        firstClickIndex = i;
+        break;
+      }
+    }
+    
+    if (firstClickIndex != -1) {
+      // Calculate scroll position (each list item is approximately 80 pixels)
+      final scrollPosition = firstClickIndex * 80.0;
+      
+      _clicksScrollController.animateTo(
+        scrollPosition,
+        duration: Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  // Check if a click falls within the selected interval
+  bool _isClickInSelectedInterval(DateTime clickTime) {
+    if (_selectedBarIndex == null || _selectedBarIndex! >= _clickData.length) {
+      return false;
+    }
+    
+    final selectedDataPoint = _clickData[_selectedBarIndex!];
+    final intervalStart = selectedDataPoint.timeWindow;
+    final intervalDuration = _getIntervalDuration();
+    final intervalEnd = intervalStart.add(intervalDuration);
+    
+    return clickTime.isAfter(intervalStart.subtract(Duration(seconds: 1))) && 
+           clickTime.isBefore(intervalEnd);
   }
 
   String _formatTimeLabel(DateTime time) {
@@ -362,40 +597,57 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
                             ),
                           )
                         : ListView.builder(
+                            controller: _clicksScrollController,
                             itemCount: _individualClicks.length,
                             itemBuilder: (context, index) {
                               final clickTime = _individualClicks[index];
                               final isToday = _isToday(clickTime);
                               final timeAgo = _getTimeAgo(clickTime);
+                              final isInSelectedInterval = _isClickInSelectedInterval(clickTime);
                               
                               return Card(
                                 margin: EdgeInsets.only(bottom: 8),
-                                elevation: 2,
-                                child: ListTile(
-                                  leading: CircleAvatar(
-                                    backgroundColor: isToday ? Colors.green[100] : Colors.blue[100],
-                                    child: Icon(
-                                      Icons.touch_app,
-                                      color: isToday ? Colors.green[600] : Colors.blue[600],
-                                      size: 20,
+                                elevation: isInSelectedInterval ? 4 : 2,
+                                color: isInSelectedInterval ? Colors.blue[50] : null,
+                                child: Container(
+                                  decoration: isInSelectedInterval ? BoxDecoration(
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: Colors.blue[300]!,
+                                      width: 2,
                                     ),
-                                  ),
-                                  title: Text(
-                                    _formatFullDateTime(clickTime),
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w500,
-                                      fontSize: 14,
+                                  ) : null,
+                                  child: ListTile(
+                                    leading: CircleAvatar(
+                                      backgroundColor: isInSelectedInterval 
+                                          ? Colors.blue[200] 
+                                          : (isToday ? Colors.green[100] : Colors.blue[100]),
+                                      child: Icon(
+                                        Icons.touch_app,
+                                        color: isInSelectedInterval 
+                                            ? Colors.blue[800] 
+                                            : (isToday ? Colors.green[600] : Colors.blue[600]),
+                                        size: 20,
+                                      ),
                                     ),
-                                  ),
-                                  subtitle: Text(
-                                    timeAgo,
-                                    style: TextStyle(
-                                      color: Colors.grey[600],
-                                      fontSize: 12,
+                                    title: Text(
+                                      _formatFullDateTime(clickTime),
+                                      style: TextStyle(
+                                        fontWeight: isInSelectedInterval ? FontWeight.bold : FontWeight.w500,
+                                        fontSize: 14,
+                                        color: isInSelectedInterval ? Colors.blue[800] : null,
+                                      ),
                                     ),
-                                  ),
-                                  trailing: isToday
-                                      ? Container(
+                                    subtitle: Text(
+                                      timeAgo,
+                                      style: TextStyle(
+                                        color: isInSelectedInterval ? Colors.blue[600] : Colors.grey[600],
+                                        fontSize: 12,
+                                        fontWeight: isInSelectedInterval ? FontWeight.w500 : FontWeight.normal,
+                                      ),
+                                    ),
+                                    trailing: isToday
+                                        ? Container(
                                           padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                           decoration: BoxDecoration(
                                             color: Colors.green[100],
@@ -411,7 +663,10 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
                                             ),
                                           ),
                                         )
-                                      : null,
+                                      : (isInSelectedInterval 
+                                          ? Icon(Icons.star, color: Colors.blue[600], size: 20)
+                                          : null),
+                                  ),
                                 ),
                               );
                             },
@@ -520,137 +775,79 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
               ),
               child: Column(
                 children: [
-                  // Chart Title
+                  // Chart Title with Legend
                   Padding(
                     padding: EdgeInsets.only(bottom: 20),
-                    child: Text(
-                      'Clicks per 15-minute interval',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey[700],
-                      ),
+                    child: Column(
+                      children: [
+                        Text(
+                          _getChartTitle(),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            // Server legend
+                            Row(
+                              children: [
+                                Container(
+                                  width: 12,
+                                  height: 12,
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue[400],
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  '${widget.server.name}',
+                                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                                ),
+                              ],
+                            ),
+                            SizedBox(width: 16),
+                            // Restaurant legend
+                            Row(
+                              children: [
+                                Container(
+                                  width: 12,
+                                  height: 2,
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange[400],
+                                    borderRadius: BorderRadius.circular(1),
+                                  ),
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  'All servers',
+                                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                   
-                  // Bar Chart
+                  // Composite Chart - Line chart underlay with bar chart overlay
                   Expanded(
-                    child: BarChart(
-                      BarChartData(
-                        alignment: BarChartAlignment.spaceAround,
-                        maxY: maxClicks > 0 ? maxClicks.toDouble() * 1.1 : 10,
-                        barTouchData: BarTouchData(
-                          enabled: true,
-                          touchTooltipData: BarTouchTooltipData(
-                            tooltipBgColor: Colors.blueGrey,
-                            getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                              if (groupIndex < _clickData.length) {
-                                final dataPoint = _clickData[groupIndex];
-                                return BarTooltipItem(
-                                  '${dataPoint.label}\n${dataPoint.clickCount} clicks',
-                                  TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                );
-                              }
-                              return null;
-                            },
-                          ),
+                    child: Stack(
+                      children: [
+                        // Background Line Chart (restaurant activity) - FIRST so it's underneath
+                        Positioned.fill(
+                          child: _buildRestaurantActivityLineChart(maxClicks),
                         ),
-                        titlesData: FlTitlesData(
-                          show: true,
-                          rightTitles: AxisTitles(
-                            sideTitles: SideTitles(showTitles: false),
-                          ),
-                          topTitles: AxisTitles(
-                            sideTitles: SideTitles(showTitles: false),
-                          ),
-                          bottomTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              getTitlesWidget: (double value, TitleMeta meta) {
-                                int index = value.toInt();
-                                if (index >= 0 && index < _clickData.length) {
-                                  // Show every 4th label to avoid crowding
-                                  if (index % 4 == 0) {
-                                    return Transform.rotate(
-                                      angle: -0.5,
-                                      child: Text(
-                                        _clickData[index].label,
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          color: Colors.grey[600],
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                }
-                                return Text('');
-                              },
-                              reservedSize: 40,
-                            ),
-                          ),
-                          leftTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              interval: maxClicks > 10 ? (maxClicks / 5).ceilToDouble() : 2,
-                              getTitlesWidget: (double value, TitleMeta meta) {
-                                return Text(
-                                  value.toInt().toString(),
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: Colors.grey[600],
-                                  ),
-                                );
-                              },
-                              reservedSize: 40,
-                            ),
-                          ),
+                        // Foreground Bar Chart (server-specific clicks) - SECOND so it's on top
+                        Positioned.fill(
+                          child: _buildServerBarChart(maxClicks),
                         ),
-                        borderData: FlBorderData(
-                          show: true,
-                          border: Border(
-                            bottom: BorderSide(color: Colors.grey[300]!),
-                            left: BorderSide(color: Colors.grey[300]!),
-                          ),
-                        ),
-                        barGroups: _clickData.asMap().entries.map((entry) {
-                          final index = entry.key;
-                          final dataPoint = entry.value;
-                          
-                          return BarChartGroupData(
-                            x: index,
-                            barRods: [
-                              BarChartRodData(
-                                toY: dataPoint.clickCount.toDouble(),
-                                color: _getBarColor(dataPoint.clickCount, maxClicks),
-                                width: 8,
-                                borderRadius: BorderRadius.only(
-                                  topLeft: Radius.circular(4),
-                                  topRight: Radius.circular(4),
-                                ),
-                                backDrawRodData: BackgroundBarChartRodData(
-                                  show: true,
-                                  toY: maxClicks > 0 ? maxClicks.toDouble() * 1.1 : 10,
-                                  color: Colors.grey[100],
-                                ),
-                              ),
-                            ],
-                          );
-                        }).toList(),
-                        gridData: FlGridData(
-                          show: true,
-                          drawVerticalLine: false,
-                          horizontalInterval: maxClicks > 10 ? (maxClicks / 5).ceilToDouble() : 2,
-                          getDrawingHorizontalLine: (value) {
-                            return FlLine(
-                              color: Colors.grey[200]!,
-                              strokeWidth: 1,
-                            );
-                          },
-                        ),
-                      ),
+                      ],
                     ),
                   ),
                 ],
@@ -695,15 +892,220 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
     );
   }
 
-  Color _getBarColor(int clickCount, int maxClicks) {
-    if (maxClicks == 0) return Colors.grey[300]!;
+  Color _getBarColor(int clickCount, int maxClicks, int index) {
+    // If this bar is selected, use a distinctive color
+    if (_selectedBarIndex == index) {
+      return Colors.purple[600]!.withOpacity(0.95); // High opacity for selected bar
+    }
+    
+    if (maxClicks == 0) return Colors.grey[300]!.withOpacity(0.8);
     
     final intensity = clickCount / maxClicks;
-    if (intensity > 0.8) return Colors.red[400]!;      // High activity
-    if (intensity > 0.6) return Colors.orange[400]!;   // Medium-high activity
-    if (intensity > 0.4) return Colors.yellow[600]!;   // Medium activity
-    if (intensity > 0.2) return Colors.blue[400]!;     // Low-medium activity
-    return Colors.grey[400]!;                          // Low activity
+    if (intensity > 0.8) return Colors.red[400]!.withOpacity(0.9);      // High activity - high opacity
+    if (intensity > 0.6) return Colors.orange[400]!.withOpacity(0.9);   // Medium-high activity
+    if (intensity > 0.4) return Colors.yellow[600]!.withOpacity(0.9);   // Medium activity
+    if (intensity > 0.2) return Colors.blue[400]!.withOpacity(0.9);     // Low-medium activity
+    return Colors.grey[400]!.withOpacity(0.8);                          // Low activity
+  }
+
+  // Build the background line chart showing restaurant-wide activity
+  Widget _buildRestaurantActivityLineChart(int maxClicks) {
+    if (_restaurantActivityData.isEmpty) {
+      print('DEBUG: Restaurant activity data is empty, returning empty container');
+      return Container();
+    }
+    
+    print('DEBUG: Building line chart with ${_restaurantActivityData.length} data points: $_restaurantActivityData');
+    print('DEBUG: Server max clicks: $maxClicks');
+    
+    // Calculate max value for better scaling
+    final maxRestaurantActivity = _restaurantActivityData.reduce(max);
+    print('DEBUG: Restaurant max activity: $maxRestaurantActivity');
+    
+    // Use 0-based Y-axis range that matches the server bar chart
+    final chartMaxY = maxClicks > 0 ? maxClicks.toDouble() * 1.1 : 10.0;
+    print('DEBUG: Line chart using 0-based Y-axis, maxY: $chartMaxY');
+    
+    return LineChart(
+      LineChartData(
+        gridData: FlGridData(show: false),
+        titlesData: FlTitlesData(show: false),
+        borderData: FlBorderData(show: false),
+        minX: 0,
+        maxX: (_restaurantActivityData.length - 1).toDouble(),
+        minY: 0, // Start from 0 baseline
+        maxY: chartMaxY,
+        lineBarsData: [
+          LineChartBarData(
+            spots: _restaurantActivityData.asMap().entries.map((entry) {
+              // Use original restaurant data, scaled down to fit within server max
+              final maxRestaurantValue = maxRestaurantActivity > 0 ? maxRestaurantActivity : 1;
+              final minRestaurantValue = _restaurantActivityData.isEmpty ? 0 : _restaurantActivityData.reduce((a, b) => a < b ? a : b);
+              final maxServerValue = maxClicks > 0 ? maxClicks : 1;
+              
+              // Simple proportional scaling - restaurant data scaled to 70% of server max
+              final scaledValue = (entry.value.toDouble() / maxRestaurantValue) * maxServerValue * 0.7;
+              
+              // Add offset to lift the baseline to match server bars at zero
+              final baselineOffset = minRestaurantValue < 0 ? -minRestaurantValue : 0;
+              final adjustedValue = scaledValue + baselineOffset;
+              
+              final spot = FlSpot(entry.key.toDouble(), adjustedValue);
+              print('DEBUG: Line chart spot - Original: ${entry.value}, Scaled: $scaledValue, Offset: $baselineOffset, Final: $adjustedValue');
+              return spot;
+            }).toList(),
+            isCurved: true,
+            color: Colors.orange[300]!.withOpacity(0.3), // Much lighter line
+            barWidth: 2, // Thinner line
+            isStrokeCapRound: true,
+            dotData: FlDotData(
+              show: true,
+              getDotPainter: (spot, percent, barData, index) {
+                return FlDotCirclePainter(
+                  radius: 2, // Smaller dots
+                  color: Colors.orange[400]!.withOpacity(0.4),
+                  strokeWidth: 1,
+                  strokeColor: Colors.white.withOpacity(0.8),
+                );
+              },
+            ),
+            belowBarData: BarAreaData(
+              show: true, // Bring back the nice orange shading
+              color: Colors.orange[100]!.withOpacity(0.2), // Very light shading
+            ),
+          ),
+        ],
+        lineTouchData: LineTouchData(enabled: false),
+      ),
+    );
+  }
+
+  // Build the foreground bar chart showing server-specific clicks
+  Widget _buildServerBarChart(int maxClicks) {
+    return BarChart(
+      BarChartData(
+        alignment: BarChartAlignment.spaceAround,
+        minY: 0, // Standard 0 baseline
+        maxY: maxClicks > 0 ? maxClicks.toDouble() * 1.1 : 10.0,
+        backgroundColor: Colors.transparent,
+        barTouchData: BarTouchData(
+          enabled: true,
+          touchCallback: (FlTouchEvent event, barTouchResponse) {
+            if (event is FlTapUpEvent && barTouchResponse != null && barTouchResponse.spot != null) {
+              final touchedIndex = barTouchResponse.spot!.touchedBarGroupIndex;
+              _onBarTapped(touchedIndex);
+            }
+          },
+          touchTooltipData: BarTouchTooltipData(
+            tooltipBgColor: Colors.blueGrey,
+            getTooltipItem: (group, groupIndex, rod, rodIndex) {
+              if (groupIndex < _clickData.length) {
+                final dataPoint = _clickData[groupIndex];
+                final restaurantTotal = groupIndex < _restaurantActivityData.length 
+                    ? _restaurantActivityData[groupIndex] 
+                    : 0;
+                return BarTooltipItem(
+                  '${dataPoint.label}\n${widget.server.name}: ${dataPoint.clickCount} clicks\nRestaurant: $restaurantTotal total',
+                  TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                );
+              }
+              return null;
+            },
+          ),
+        ),
+        titlesData: FlTitlesData(
+          show: true,
+          rightTitles: AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          topTitles: AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              getTitlesWidget: (double value, TitleMeta meta) {
+                int index = value.toInt();
+                if (index >= 0 && index < _clickData.length) {
+                  // Show every 4th label to avoid crowding
+                  if (index % 4 == 0) {
+                    return Transform.rotate(
+                      angle: -0.5,
+                      child: Text(
+                        _clickData[index].label,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    );
+                  }
+                }
+                return Text('');
+              },
+              reservedSize: 40,
+            ),
+          ),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              interval: maxClicks > 10 ? (maxClicks / 5).ceilToDouble() : 2,
+              getTitlesWidget: (double value, TitleMeta meta) {
+                return Text(
+                  value.toInt().toString(),
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Colors.grey[600],
+                  ),
+                );
+              },
+              reservedSize: 40,
+            ),
+          ),
+        ),
+        borderData: FlBorderData(
+          show: true,
+          border: Border(
+            bottom: BorderSide(color: Colors.grey[300]!),
+            left: BorderSide(color: Colors.grey[300]!),
+          ),
+        ),
+        barGroups: _clickData.asMap().entries.map((entry) {
+          final index = entry.key;
+          final dataPoint = entry.value;
+          
+          return BarChartGroupData(
+            x: index,
+            barRods: [
+              BarChartRodData(
+                toY: dataPoint.clickCount.toDouble(),
+                color: _getBarColor(dataPoint.clickCount, maxClicks, index),
+                width: 8,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(4),
+                  topRight: Radius.circular(4),
+                ),
+                // Remove background bars to show line chart underneath
+              ),
+            ],
+          );
+        }).toList(),
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          horizontalInterval: maxClicks > 10 ? (maxClicks / 5).ceilToDouble() : 2,
+          getDrawingHorizontalLine: (value) {
+            return FlLine(
+              color: Colors.grey[200]!,
+              strokeWidth: 1,
+            );
+          },
+        ),
+      ),
+    );
   }
 
   String _getPeakPeriod() {

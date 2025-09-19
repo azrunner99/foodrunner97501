@@ -2654,10 +2654,15 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                                   opacity: opacity,
                                   child: Transform.scale(
                                     scale: scale,
-                                    child: Text(
-                                      _flashText ?? '',
-                                      style: InstantFeedbackService.getTextStyle(_flashPriority),
-                                      textAlign: TextAlign.center,
+                                    child: Container(
+                                      width: MediaQuery.of(context).size.width - 32, // Screen width minus padding
+                                      child: Text(
+                                        _flashText ?? '',
+                                        style: InstantFeedbackService.getTextStyle(_flashPriority),
+                                        textAlign: TextAlign.center,
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 2,
+                                      ),
                                     ),
                                   ),
                                 );
@@ -2677,18 +2682,24 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                                   return Opacity(
                                     opacity: opacity,
                                     child: Center(
-                                      child: Text(
-                                        _flashSubText!,
-                                        style: const TextStyle(
-                                          fontSize: 32,
-                                          fontWeight: FontWeight.w900,
-                                          color: Colors.white,
-                                          letterSpacing: 1.2,
-                                          shadows: [
-                                            Shadow(blurRadius: 10, color: Colors.black, offset: Offset(0, 0)),
-                                            Shadow(blurRadius: 16, color: Colors.black87, offset: Offset(2, 2)),
-                                            Shadow(blurRadius: 24, color: Colors.black54, offset: Offset(-2, -2)),
-                                          ],
+                                      child: Container(
+                                        width: MediaQuery.of(context).size.width - 32, // Screen width minus padding
+                                        child: Text(
+                                          _flashSubText!,
+                                          style: const TextStyle(
+                                            fontSize: 32,
+                                            fontWeight: FontWeight.w900,
+                                            color: Colors.white,
+                                            letterSpacing: 1.2,
+                                            shadows: [
+                                              Shadow(blurRadius: 10, color: Colors.black, offset: Offset(0, 0)),
+                                              Shadow(blurRadius: 16, color: Colors.black87, offset: Offset(2, 2)),
+                                              Shadow(blurRadius: 24, color: Colors.black54, offset: Offset(-2, -2)),
+                                            ],
+                                          ),
+                                          textAlign: TextAlign.center,
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 2,
                                         ),
                                       ),
                                     ),
