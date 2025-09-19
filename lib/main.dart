@@ -32,6 +32,10 @@ void main() async {
   
   // Initialize NPS services
   final npsProvider = NPSProvider();
+  
+  // Initialize NPSProvider with AppState to sync servers
+  await npsProvider.initialize(appState: appState);
+  
   final npsFilterService = NPSFilterService();
   final npsBenchmarkingService = NPSBenchmarkingService();
   

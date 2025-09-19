@@ -7,6 +7,7 @@
 class NPSServer {
   final int? id;
   final String name;
+  final String? originalId; // Original server ID from main app
   final DateTime hireDate;
   final bool active;
   final DateTime? createdAt;
@@ -15,6 +16,7 @@ class NPSServer {
   NPSServer({
     this.id,
     required this.name,
+    this.originalId,
     required this.hireDate,
     this.active = true,
     this.createdAt,
@@ -26,6 +28,7 @@ class NPSServer {
     return NPSServer(
       id: map['id'] as int?,
       name: map['name'] as String,
+      originalId: map['original_id'] as String?,
       hireDate: DateTime.parse(map['hire_date'] as String),
       active: (map['active'] as int) == 1,
       createdAt: map['created_at'] != null 
@@ -42,6 +45,7 @@ class NPSServer {
     return {
       if (id != null) 'id': id,
       'name': name,
+      if (originalId != null) 'original_id': originalId,
       'hire_date': hireDate.toIso8601String().split('T')[0], // Store as YYYY-MM-DD
       'active': active ? 1 : 0,
       'created_at': createdAt?.toIso8601String(),

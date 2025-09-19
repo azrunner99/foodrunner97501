@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../app_state.dart';
 import '../widgets/wallpaper_background.dart';
-import 'manage_ser      appBar: AppBar(
-        title: const Text('Admin Tools'),
-        backgroundColor: Colors.green,s_screen.dart';
+import 'manage_servers_screen.dart';
 import 'server_avatar_settings_screen.dart';
 import 'server_dashboard_screen.dart';
 import 'backup_manager_screen.dart';

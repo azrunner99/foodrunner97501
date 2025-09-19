@@ -41,9 +41,15 @@ class NPSProvider with ChangeNotifier {
   Future<void> initialize({AppState? appState}) async {
     _setLoading(true);
     try {
+      debugPrint('🚨 [NPSProvider] initialize() called with appState: ${appState != null ? "PRESENT" : "NULL"}');
+      
       // Sync servers from main app if provided
       if (appState != null) {
+        debugPrint('🚨 [NPSProvider] About to call _syncServersFromAppState...');
         await _syncServersFromAppState(appState);
+        debugPrint('🚨 [NPSProvider] _syncServersFromAppState completed');
+      } else {
+        debugPrint('🚨 [NPSProvider] Skipping sync - no AppState provided');
       }
       
       await _loadServers();
@@ -61,18 +67,18 @@ class NPSProvider with ChangeNotifier {
   /// Sync servers from the main app's AppState to the NPS system
   Future<void> _syncServersFromAppState(AppState appState) async {
     try {
-      debugPrint('[NPSProvider] Starting server sync from AppState...');
-      debugPrint('[NPSProvider] Main app has ${appState.servers.length} servers');
+      debugPrint('🔥 [NPSProvider] Starting server sync from AppState...');
+      debugPrint('🔥 [NPSProvider] Main app has ${appState.servers.length} servers');
       
       for (final mainServer in appState.servers) {
-        debugPrint('[NPSProvider] Processing server: ${mainServer.name}');
+        debugPrint('🔥 [NPSProvider] Processing server: ${mainServer.name} (ID: ${mainServer.id})');
         
-        // Check if server already exists in NPS system
+        // Check if server already exists in NPS system (by name or original_id)
         final existingServerMaps = await _database.getAllServers();
-        debugPrint('[NPSProvider] NPS system has ${existingServerMaps.length} servers');
+        debugPrint('🔥 [NPSProvider] NPS system has ${existingServerMaps.length} servers');
         
         final existingServer = existingServerMaps.firstWhere(
-          (serverMap) => serverMap['name'] == mainServer.name,
+          (serverMap) => serverMap['name'] == mainServer.name || serverMap['original_id'] == mainServer.id,
           orElse: () => <String, dynamic>{},
         );
 
@@ -80,6 +86,7 @@ class NPSProvider with ChangeNotifier {
           // Server doesn't exist in NPS system, add it
           final serverMap = {
             'name': mainServer.name,
+            'original_id': mainServer.id, // Store the original main app server ID
             'hire_date': (mainServer.hireDate ?? DateTime.now()).toIso8601String(),
             'active': 1,
             'created_at': DateTime.now().toIso8601String(),
@@ -87,8 +94,17 @@ class NPSProvider with ChangeNotifier {
           };
           
           await _database.insertServer(serverMap);
-          debugPrint('[NPSProvider] ✅ Synced server: ${mainServer.name}');
+          debugPrint('🔥 [NPSProvider] ✅ Synced server: ${mainServer.name} (original_id: ${mainServer.id})');
         } else {
+          // Server exists, but check if original_id needs to be updated
+          if (existingServer['original_id'] == null && existingServer['name'] == mainServer.name) {
+            try {
+              await _database.updateServer(existingServer['id'], {'original_id': mainServer.id});
+              debugPrint('🔥 [NPSProvider] ✅ Updated original_id for existing server: ${mainServer.name}');
+            } catch (e) {
+              debugPrint('🔥 [NPSProvider] ⚠️ Could not update original_id for ${mainServer.name}: $e');
+            }
+          }
           debugPrint('[NPSProvider] ⏭️ Server already exists: ${mainServer.name}');
         }
       }
@@ -439,6 +455,61 @@ class NPSProvider with ChangeNotifier {
     }
   }
   
+  /// Get all-time NPS metrics for a server from monthly reports
+  /// This is used as fallback when no current period NPS data exists
+  Future<Map<String, dynamic>?> getAllTimeNPSMetrics(String serverId) async {
+    try {
+      // Find the NPS server ID mapping for the given main app server ID
+      final npsServer = _servers.firstWhere(
+        (server) => server.originalId == serverId,
+        orElse: () => throw Exception('No NPS server found for main app server ID: $serverId'),
+      );
+      
+      // Generate month numbers for the last 12 months to find any existing reports
+      final now = DateTime.now();
+      double totalChecks = 0;
+      double totalSales = 0;
+      int reportsFound = 0;
+      
+      for (int i = 0; i < 12; i++) {
+        final monthDate = DateTime(now.year, now.month - i, 1);
+        final reportMonth = monthDate.month;
+        
+        final reportData = await _database.getMonthlyReport(npsServer.id!, reportMonth);
+        if (reportData != null && reportData.isNotEmpty) {
+          reportsFound++;
+          // Use all_time data from the most recent report found
+          if (reportData.containsKey('all_time_table_count')) {
+            totalChecks = (reportData['all_time_table_count'] as num?)?.toDouble() ?? 0;
+          }
+          if (reportData.containsKey('all_time_sales')) {
+            totalSales = (reportData['all_time_sales'] as num?)?.toDouble() ?? 0;
+          }
+          
+          // If we found a report with all_time data, use it and break
+          if (totalChecks > 0 || totalSales > 0) {
+            print('DEBUG: Found all-time NPS data for server $serverId: $totalChecks checks, \$${totalSales.toStringAsFixed(2)} sales');
+            break;
+          }
+        }
+      }
+      
+      if (reportsFound > 0 && (totalChecks > 0 || totalSales > 0)) {
+        return {
+          'checks': totalChecks,
+          'sales': totalSales,
+          'reportsFound': reportsFound,
+        };
+      } else {
+        print('DEBUG: No all-time NPS data found for server $serverId');
+        return null;
+      }
+    } catch (e) {
+      print('DEBUG: Error getting all-time NPS metrics for server $serverId: $e');
+      return null;
+    }
+  }
+
   // Private helper methods
   
   void _setLoading(bool loading) {

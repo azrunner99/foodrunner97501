@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../app_state.dart';
 import '../models.dart';
+import '../providers/nps_provider.dart';
 
 class ShiftClickAnalysisScreen extends StatefulWidget {
   final Server server;
@@ -63,8 +64,10 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
     });
 
     final app = Provider.of<AppState>(context, listen: false);
+    final npsProvider = context.read<NPSProvider>();
     
     print('DEBUG: Starting _loadClickData for date: $_selectedDate');
+    print('DEBUG: NPS Provider initialized: ${npsProvider.isInitialized}');
     
     // Calculate dynamic timeframe based on actual clicks
     final dynamicTimeframe = _calculateDynamicTimeframe(_selectedDate, app);
@@ -410,6 +413,168 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
     }
   }
 
+  // Build NPS data display widget to show check counts and performance metrics
+  Widget _buildNPSDataDisplay() {
+    return Consumer<NPSProvider>(
+      builder: (context, npsProvider, child) {
+        if (!npsProvider.isInitialized) {
+          return Container(
+            padding: EdgeInsets.all(16),
+            margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.orange[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.orange[200]!),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.orange[600]),
+                SizedBox(width: 12),
+                Text(
+                  'NPS data is loading...',
+                  style: TextStyle(
+                    color: Colors.orange[800],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        // Get current report for admin data
+        final currentReport = npsProvider.currentReport;
+        final checkCount = currentReport?.allTimeTableCount ?? 0;
+        final totalSales = currentReport?.allTimeSales ?? 0.0;
+        
+        return Container(
+          padding: EdgeInsets.all(16),
+          margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.green[50],
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.green[200]!),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                spreadRadius: 1,
+                blurRadius: 3,
+                offset: Offset(0, 1),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.analytics_outlined, color: Colors.green[700]),
+                  SizedBox(width: 8),
+                  Text(
+                    'NPS Performance Data',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.green[800],
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildMetricCard(
+                      'Total Checks',
+                      '$checkCount',
+                      Icons.receipt_long,
+                      Colors.blue,
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: _buildMetricCard(
+                      'Total Sales',
+                      '\$${totalSales.toStringAsFixed(0)}',
+                      Icons.attach_money,
+                      Colors.green,
+                    ),
+                  ),
+                ],
+              ),
+              if (checkCount > 0) ...[
+                SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildMetricCard(
+                        'Avg Check',
+                        '\$${(totalSales / checkCount).toStringAsFixed(2)}',
+                        Icons.trending_up,
+                        Colors.purple,
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: _buildMetricCard(
+                        'Click Efficiency',
+                        '${(_individualClicks.length / checkCount).toStringAsFixed(2)} clicks/check',
+                        Icons.speed,
+                        Colors.orange,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // Helper method to build metric cards
+  Widget _buildMetricCard(String title, String value, IconData icon, MaterialColor color) {
+    return Container(
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 16, color: color[700]),
+              SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: color[700],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: color[800],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -479,6 +644,9 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
               ],
             ),
           ),
+          
+          // NPS Performance Data Display
+          _buildNPSDataDisplay(),
           
           // Chart Area - 40% height in a styled container
           Container(

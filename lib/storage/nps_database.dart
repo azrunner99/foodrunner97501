@@ -32,7 +32,7 @@ class NPSDatabase {
       
       return await openDatabase(
         path,
-        version: 1,
+        version: 2, // Increased version for original_id migration
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
         onDowngrade: _onDowngrade,
@@ -52,6 +52,7 @@ class NPSDatabase {
         CREATE TABLE servers (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           name TEXT NOT NULL,
+          original_id TEXT, 
           hire_date DATE NOT NULL,
           active INTEGER DEFAULT 1,
           created_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -151,8 +152,15 @@ class NPSDatabase {
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     print('[NPSDatabase] Upgrading database from version $oldVersion to $newVersion');
     
-    // Future schema migrations will be implemented here
-    // For now, we'll handle this when we need to add new features
+    if (oldVersion < 2) {
+      // Add original_id column to servers table
+      try {
+        await db.execute('ALTER TABLE servers ADD COLUMN original_id TEXT');
+        print('[NPSDatabase] ✅ Added original_id column to servers table');
+      } catch (e) {
+        print('[NPSDatabase] ⚠️ Could not add original_id column (may already exist): $e');
+      }
+    }
   }
 
   Future<void> _onDowngrade(Database db, int oldVersion, int newVersion) async {

@@ -75,25 +75,24 @@ class _ServerPerformanceProfileScreenState extends State<ServerPerformanceProfil
       }
     }
     
-    // Calculate statistics
-    _totalHistoricalRuns = _allServerShifts.fold<int>(0, 
-        (sum, shift) => sum + (shift.counts[widget.server.id] ?? 0));
+    // USE AUTHORITATIVE SOURCE: Get all-time runs from app.totals (tap data)
+    // This is the same source used by the MVP screen and is the most accurate
+    _appAllTimeRuns = app.totals[widget.server.id] ?? 0;
+    _totalHistoricalRuns = _appAllTimeRuns; // Use authoritative source for consistency
     
+    print('[Profile Debug] Using authoritative total from app.totals: ${_appAllTimeRuns}');
+    
+    // Calculate pizookie runs from shift data (this is typically accurate)
     _totalPizookieRuns = _allServerShifts.fold<int>(0, 
         (sum, shift) => sum + (shift.pizookieCounts[widget.server.id] ?? 0));
     
-    print('[Profile Debug] Calculated totals: historical=${_totalHistoricalRuns}, pizookies=${_totalPizookieRuns}');
+    print('[Profile Debug] Calculated totals: authoritative=${_appAllTimeRuns}, pizookies=${_totalPizookieRuns}');
     
     // Current shift data
     _currentShiftRuns = app.shiftActive ? (app.currentCounts[widget.server.id] ?? 0) : 0;
     _currentPizookieRuns = app.shiftActive ? (app.currentPizookieCounts[widget.server.id] ?? 0) : 0;
     
     print('[Profile Debug] Current shift: active=${app.shiftActive}, runs=${_currentShiftRuns}, pizookies=${_currentPizookieRuns}');
-    
-    // App totals
-    _appAllTimeRuns = app.totals[widget.server.id] ?? 0;
-    
-    print('[Profile Debug] App totals for server: ${_appAllTimeRuns}');
     
     // Recent shifts (last 90 days)
     _recentShifts = _allServerShifts
@@ -113,10 +112,37 @@ class _ServerPerformanceProfileScreenState extends State<ServerPerformanceProfil
     
     try {
       final npsServers = await npsProvider.database.getAllServers(activeOnly: false);
-      final npsServer = npsServers.firstWhere(
+      print('[NPS Debug] Looking for server name: "${widget.server.name}"');
+      print('[NPS Debug] Available NPS servers: ${npsServers.map((s) => s['name']).toList()}');
+      
+      // Try exact match first
+      var npsServer = npsServers.firstWhere(
         (s) => s['name'] == widget.server.name,
         orElse: () => <String, dynamic>{},
       );
+      
+      // If no exact match, try case-insensitive match
+      if (npsServer.isEmpty) {
+        npsServer = npsServers.firstWhere(
+          (s) => (s['name'] as String).toLowerCase() == widget.server.name.toLowerCase(),
+          orElse: () => <String, dynamic>{},
+        );
+        if (npsServer.isNotEmpty) {
+          print('[NPS Debug] Found case-insensitive match: "${npsServer['name']}"');
+        }
+      }
+      
+      // If still no match, try partial match
+      if (npsServer.isEmpty) {
+        npsServer = npsServers.firstWhere(
+          (s) => (s['name'] as String).toLowerCase().contains(widget.server.name.toLowerCase()) ||
+                 widget.server.name.toLowerCase().contains((s['name'] as String).toLowerCase()),
+          orElse: () => <String, dynamic>{},
+        );
+        if (npsServer.isNotEmpty) {
+          print('[NPS Debug] Found partial match: "${npsServer['name']}"');
+        }
+      }
       
       if (npsServer.isNotEmpty) {
         final npsServerId = npsServer['id'] as int;
@@ -181,8 +207,15 @@ class _ServerPerformanceProfileScreenState extends State<ServerPerformanceProfil
         
         _npsHistoryText = adminNpsData;
       } else {
-        _npsHistoryText = ['❌ Server ${widget.server.name} not found in NPS database', 
-                         '⚠️ Server must be added to NPS system first'];
+        _npsHistoryText = [
+          '❌ Server "${widget.server.name}" not found in NPS database', 
+          '📋 Available NPS servers: ${npsServers.map((s) => s['name']).join(', ')}',
+          '',
+          '🔧 To fix this:',
+          '1. Go to Admin → NPS System → Server Management',
+          '2. Add "${widget.server.name}" to the NPS database',
+          '3. Or check if the server name spelling matches exactly'
+        ];
       }
     } catch (e) {
       _npsHistoryText = ['❌ Error loading admin NPS data: $e'];
@@ -329,6 +362,15 @@ class _ServerPerformanceProfileScreenState extends State<ServerPerformanceProfil
                         fontSize: 14,
                       ),
                     ),
+                    if (widget.performance.performanceScore < 50)
+                      Text(
+                        '⚠️ Low score may indicate missing NPS data',
+                        style: TextStyle(
+                          color: Colors.orange[100],
+                          fontSize: 11,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
                   ],
                 ),
               ],
@@ -361,7 +403,7 @@ class _ServerPerformanceProfileScreenState extends State<ServerPerformanceProfil
             const SizedBox(height: 16),
             _buildStatRow('✅ Total food runs', '$_appAllTimeRuns (authoritative)', Colors.green),
             _buildStatRow('Total historical shifts', '${_allServerShifts.length}'),
-            _buildStatRow('Historical food runs', '$_totalHistoricalRuns (from completed shifts)'),
+            _buildStatRow('Food runs (shifts data)', '$_totalHistoricalRuns (same as above for consistency)'),
             _buildStatRow('Historical pizookie runs', '$_totalPizookieRuns'),
             _buildStatRow('Current shift active', app.shiftActive ? 'Yes' : 'No', app.shiftActive ? Colors.green : Colors.grey),
             if (app.shiftActive) _buildStatRow('Current shift runs', '$_currentShiftRuns', Colors.orange),
@@ -427,8 +469,12 @@ class _ServerPerformanceProfileScreenState extends State<ServerPerformanceProfil
             ),
             const SizedBox(height: 16),
             _buildStatRow('Raw Efficiency', '${widget.performance.metrics.rawEfficiency.toStringAsFixed(2)} runs/shift'),
-            _buildStatRow('Guest Efficiency', '${widget.performance.metrics.guestEfficiency.toStringAsFixed(3)} runs/guest'),
-            _buildStatRow('Sales Efficiency', '${widget.performance.metrics.salesEfficiency.toStringAsFixed(2)} runs/\$1K'),
+            _buildStatRow('Guest Efficiency', widget.performance.metrics.guestEfficiency == 0.0 
+              ? '0.00 runs/check (no check data entered)' 
+              : '${widget.performance.metrics.guestEfficiency.toStringAsFixed(3)} runs/check'),
+            _buildStatRow('Sales Efficiency', widget.performance.metrics.salesEfficiency == 0.0
+              ? '0.00 runs/\$1K (no sales data entered)'
+              : '${widget.performance.metrics.salesEfficiency.toStringAsFixed(2)} runs/\$1K'),
             _buildStatRow('Consistency', '${widget.performance.metrics.consistencyScore.toStringAsFixed(1)}%'),
           ],
         ),

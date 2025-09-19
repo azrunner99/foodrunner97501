@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../app_state.dart';
 import '../models.dart';
 import '../models/performance_models.dart';
+import '../providers/nps_provider.dart';
 import '../utils/performance_calculator.dart';
 import '../utils/performance_analyzer.dart';
 import '../utils/trend_analyzer.dart';
@@ -51,6 +52,7 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
     
     try {
       final app = context.read<AppState>();
+      final npsProvider = context.read<NPSProvider>();
       final endDate = DateTime.now();
       final startDate = _getStartDateForTimeframe(endDate, _selectedTimeframe);
       
@@ -73,10 +75,11 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
       final peerAnalyses = <String, PeerAnalysis>{};
       final seasonalAnalyses = <String, SeasonalAnalysis>{};
       
-      // Load NPS history for performance calculations
+      // Load NPS history for performance calculations with NPSProvider
       final npsHistory = await PerformanceCalculator.loadNPSHistory(
         startDate: startDate,
         endDate: endDate,
+        npsProvider: npsProvider,
       );
       
       for (final server in app.servers) {
