@@ -264,34 +264,11 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 4,
-      child: Scaffold(
+    return Scaffold(
         appBar: AppBar(
           title: const Text('Server Performance'),
           backgroundColor: Colors.green.shade700,
           foregroundColor: Colors.white,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: _loadPerformanceData,
-            ),
-            IconButton(
-              icon: const Icon(Icons.settings),
-              onPressed: _showSettingsDialog,
-            ),
-          ],
-          bottom: const TabBar(
-            labelColor: Colors.white,
-            unselectedLabelColor: Colors.white70,
-            indicatorColor: Colors.white,
-            tabs: [
-              Tab(icon: Icon(Icons.leaderboard), text: 'Rankings'),
-              Tab(icon: Icon(Icons.trending_up), text: 'Trends'),
-              Tab(icon: Icon(Icons.analytics), text: 'Analytics'),
-              Tab(icon: Icon(Icons.bar_chart), text: 'Charts'),
-            ],
-          ),
         ),
         body: Container(
           decoration: BoxDecoration(
@@ -314,24 +291,11 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
                 )
               else
                 Expanded(
-                  child: TabBarView(
-                    children: [
-                      _buildPerformanceRankings(),
-                      _buildTrendsView(),
-                      _buildAnalyticsView(),
-                      _buildChartsView(),
-                    ],
-                  ),
+                  child: _buildPerformanceRankings(),
                 ),
             ],
           ),
         ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: _showDataEntryDialog,
-          backgroundColor: Colors.green.shade700,
-          child: const Icon(Icons.add_chart, color: Colors.white),
-        ),
-      ),
     );
   }
 
@@ -346,31 +310,23 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
       ),
       child: Row(
         children: [
-          Icon(Icons.warning_amber_rounded, color: Colors.orange.shade700),
+          Icon(Icons.info_outline_rounded, color: Colors.orange.shade700),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Monthly Data Entry Due',
+                  'Performance Analysis Notice',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Colors.orange.shade700,
                   ),
                 ),
                 const Text(
-                    'Guest counts and sales data needed for accurate performance analysis'),
+                    'NPS data and check counts are required for accurate performance analysis. Enter this data through the Admin panel for complete metrics.'),
               ],
             ),
-          ),
-          ElevatedButton(
-            onPressed: _showDataEntryDialog,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange.shade700,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Enter Data'),
           ),
         ],
       ),
@@ -412,392 +368,6 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
       return _buildEmptyState();
     }
     return _buildPerformanceList();
-  }
-
-  Widget _buildTrendsView() {
-    if (_performanceData.isEmpty) {
-      return _buildEmptyState();
-    }
-
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Performance Trends',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 16),
-                if (_trendAnalyses.isNotEmpty)
-                  ..._performanceData.take(3).map((performance) {
-                    final trendAnalysis = _trendAnalyses[performance.serverId];
-                    if (trendAnalysis == null) return const SizedBox();
-
-                    final server = context.read<AppState>().servers.firstWhere(
-                          (s) => s.id == performance.serverId,
-                          orElse: () =>
-                              Server(id: performance.serverId, name: 'Unknown'),
-                        );
-
-                    return Column(
-                      children: [
-                        ListTile(
-                          title: Text(server.name),
-                          subtitle: Text(
-                              '${trendAnalysis.trendDirection.name.toUpperCase()} trend'),
-                          trailing: Text(
-                            '${(trendAnalysis.confidence * 100).toStringAsFixed(0)}% confidence',
-                            style: TextStyle(color: Colors.grey[600]),
-                          ),
-                        ),
-                        SizedBox(
-                          height: 200,
-                          child: PerformanceChartWidgets.performanceTrendChart(
-                            trendAnalysis: trendAnalysis,
-                            context: context,
-                          ),
-                        ),
-                        const Divider(),
-                      ],
-                    );
-                  })
-                else
-                  const Center(
-                    child: Text('No trend data available'),
-                  ),
-              ],
-            ),
-          ),
-        ),
-        if (_seasonalAnalyses.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Seasonal Patterns',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 16),
-                  ..._seasonalAnalyses.entries.take(2).map((entry) {
-                    final server = context.read<AppState>().servers.firstWhere(
-                          (s) => s.id == entry.key,
-                          orElse: () => Server(id: entry.key, name: 'Unknown'),
-                        );
-
-                    return Column(
-                      children: [
-                        ListTile(
-                          title: Text('${server.name} - Weekly Pattern'),
-                        ),
-                        SizedBox(
-                          height: 200,
-                          child: PerformanceChartWidgets.weeklyPatternChart(
-                            dayOfWeekPatterns: entry.value.dayOfWeekPatterns,
-                            context: context,
-                          ),
-                        ),
-                        const Divider(),
-                      ],
-                    );
-                  }),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildAnalyticsView() {
-    if (_teamAnalytics == null) {
-      return _buildEmptyState();
-    }
-
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        // Team Overview Card
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Team Analytics',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildAnalyticsMetric(
-                        'Team Average',
-                        _teamAnalytics!.averageScore.toStringAsFixed(1),
-                        Icons.group,
-                        Colors.blue,
-                      ),
-                    ),
-                    Expanded(
-                      child: _buildAnalyticsMetric(
-                        'Top Performer',
-                        _teamAnalytics!.highestScore.toStringAsFixed(1),
-                        Icons.star,
-                        Colors.amber, // Changed from Colors.gold
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildAnalyticsMetric(
-                        'Total Servers',
-                        _teamAnalytics!.totalServers.toString(),
-                        Icons.people,
-                        Colors.green,
-                      ),
-                    ),
-                    Expanded(
-                      child: _buildAnalyticsMetric(
-                        'Risk Level',
-                        _teamAnalytics!.riskAssessment.overallRiskLevel,
-                        Icons.warning,
-                        _getRiskColor(
-                            _teamAnalytics!.riskAssessment.overallRiskLevel),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 16),
-
-        // Performance Distribution
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Performance Distribution',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  height: 200,
-                  child: PerformanceChartWidgets.performanceDistributionChart(
-                    distribution: {
-                      PerformanceRating.elite:
-                          _teamAnalytics!.distribution.elite,
-                      PerformanceRating.strong:
-                          _teamAnalytics!.distribution.strong,
-                      PerformanceRating.developing:
-                          _teamAnalytics!.distribution.developing,
-                      PerformanceRating.needsAttention:
-                          _teamAnalytics!.distribution.needsAttention,
-                      PerformanceRating.critical:
-                          _teamAnalytics!.distribution.critical,
-                    },
-                    context: context,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 16),
-
-        // Peer Comparisons
-        if (_peerAnalyses.isNotEmpty)
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Peer Comparisons',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 16),
-                  ..._peerAnalyses.entries.take(5).map((entry) {
-                    final server = context.read<AppState>().servers.firstWhere(
-                          (s) => s.id == entry.key,
-                          orElse: () => Server(id: entry.key, name: 'Unknown'),
-                        );
-                    final peerAnalysis = entry.value;
-
-                    return ListTile(
-                      title: Text(server.name),
-                      subtitle: Text(
-                          'Rank ${peerAnalysis.peerRanking} of ${peerAnalysis.totalPeers}'),
-                      trailing: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            '${peerAnalysis.peerPercentile.toStringAsFixed(1)}%',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            'percentile',
-                            style: TextStyle(
-                                fontSize: 12, color: Colors.grey[600]),
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
-                ],
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildChartsView() {
-    if (_performanceData.isEmpty) {
-      return _buildEmptyState();
-    }
-
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        // Performance Comparison Chart
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Performance Comparison',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  height: 300,
-                  child: PerformanceChartWidgets.performanceComparisonChart(
-                    performanceData: Map.fromEntries(
-                      _performanceData.map((p) {
-                        final server =
-                            context.read<AppState>().servers.firstWhere(
-                                  (s) => s.id == p.serverId,
-                                  orElse: () =>
-                                      Server(id: p.serverId, name: 'Unknown'),
-                                );
-                        return MapEntry(server.name, p.performanceScore);
-                      }),
-                    ),
-                    currentServerId: _performanceData.isNotEmpty
-                        ? context
-                            .read<AppState>()
-                            .servers
-                            .firstWhere(
-                              (s) => s.id == _performanceData.first.serverId,
-                              orElse: () => Server(id: '', name: ''),
-                            )
-                            .name
-                        : '',
-                    context: context,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 16),
-
-        // Performance Velocity Indicators
-        if (_trendAnalyses.isNotEmpty) ...[
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Performance Velocity',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 16),
-                  ..._trendAnalyses.entries.take(3).map((entry) {
-                    final server = context.read<AppState>().servers.firstWhere(
-                          (s) => s.id == entry.key,
-                          orElse: () => Server(id: entry.key, name: 'Unknown'),
-                        );
-
-                    // Calculate velocity from trend data
-                    final velocity = TrendAnalyzer.calculatePerformanceVelocity(
-                      entry.value.dailyTrends
-                          .map((d) => PerformanceTrend(
-                                date: d.date,
-                                score: d.score,
-                                foodRuns: d.totalRuns,
-                                shifts: d.shiftsWorked,
-                              ))
-                          .toList(),
-                    );
-
-                    return Column(
-                      children: [
-                        ListTile(
-                          title: Text(server.name),
-                          subtitle: Text(
-                              'Velocity Category: ${velocity.category.name}'),
-                        ),
-                        PerformanceChartWidgets.performanceVelocityIndicator(
-                          velocity: velocity,
-                          context: context,
-                        ),
-                        const Divider(),
-                      ],
-                    );
-                  }),
-                ],
-              ),
-            ),
-          ),
-        ],
-
-        const SizedBox(height: 16),
-
-        // Performance Insights
-        if (_trendAnalyses.isNotEmpty) ...[
-          ..._trendAnalyses.entries.take(2).map((entry) {
-            final seasonalAnalysis = _seasonalAnalyses[entry.key];
-
-            return Column(
-              children: [
-                PerformanceInsightsWidget(
-                  trendAnalysis: entry.value,
-                  seasonalAnalysis: seasonalAnalysis,
-                ),
-                const SizedBox(height: 16),
-              ],
-            );
-          }),
-        ],
-      ],
-    );
   }
 
   Widget _buildAnalyticsMetric(
@@ -1098,22 +668,5 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
         _loadPerformanceData(); // Refresh the performance data
       }
     });
-  }
-
-  void _showSettingsDialog() {
-    // TODO: Implement settings dialog
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Performance Settings'),
-        content: const Text('Performance calculation settings coming soon!'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
   }
 }

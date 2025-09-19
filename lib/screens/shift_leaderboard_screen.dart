@@ -7,6 +7,7 @@ import '../models.dart';
 import '../theme/app_theme.dart';
 import '../utils/integrity_analyzer.dart';
 import 'server_integrity_profile_screen.dart';
+import 'shift_click_analysis_screen.dart';
 
 class ShiftLeaderboardScreen extends StatefulWidget {
   final AppState app;
@@ -924,28 +925,30 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
                 ),
               ),
 
-              // Easter egg: Hidden admin access in bottom-right corner
+              // Easter egg: Hidden admin access on right side (server name and metrics area)
               Positioned(
-                bottom: 0,
+                top: 0,
                 right: 0,
                 child: GestureDetector(
                   onTap: () => _handleEasterEggTap(context, server),
                   child: Container(
-                    width: 25,
-                    height: 25,
+                    width: 220, // Covers the entire right side area
+                    height: 120, // Covers server name and XP info area
                     decoration: BoxDecoration(
                       color: Colors.transparent,
                       borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(8),
-                        bottomRight: Radius.circular(12),
+                        topRight: Radius.circular(12),
+                        bottomLeft: Radius.circular(8),
                       ),
                     ),
+                    // Optional: Add a very subtle visual hint in debug mode
                     child: Container(
-                      margin: EdgeInsets.all(2),
+                      alignment: Alignment.bottomRight,
+                      padding: EdgeInsets.all(4),
                       child: Icon(
                         Icons.admin_panel_settings,
-                        size: 16,
-                        color: Colors.white.withOpacity(0.3),
+                        size: 12,
+                        color: Colors.white.withOpacity(0.15), // Very subtle
                       ),
                     ),
                   ),
@@ -958,7 +961,7 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
     );
   }
 
-  // Easter egg: Track taps on bottom-right corner for admin access
+  // Easter egg: Track taps on right side (server name/metrics area) for admin access to shift analysis
   void _handleEasterEggTap(BuildContext context, Server server) {
     final serverId = server.id;
 
@@ -1033,7 +1036,7 @@ class _IntegrityPinDialogState extends State<IntegrityPinDialog> {
   void _authenticatePin() {
     if (_enteredPin == AppState.adminPin) {
       Navigator.of(context).pop();
-      _navigateToServerIntegrityProfile();
+      _navigateToShiftClickAnalysis();
     } else {
       setState(() {
         _enteredPin = '';
@@ -1048,33 +1051,11 @@ class _IntegrityPinDialogState extends State<IntegrityPinDialog> {
     }
   }
 
-  void _navigateToServerIntegrityProfile() {
-    final app = Provider.of<AppState>(context, listen: false);
-
-    // Generate current assessment for the server
-    final bins =
-        app.integrityBinsForDateRange(widget.server.id, todayOnly: true);
-    final runCount = app.currentCounts[widget.server.id] ?? 0;
-    final allServerCounts = <String, int>{};
-    for (final s in app.servers) {
-      allServerCounts[s.id] = app.currentCounts[s.id] ?? 0;
-    }
-
-    final basicAssessment = IntegrityAnalyzer.analyzeServer(
-      serverId: widget.server.id,
-      serverName: widget.server.name,
-      clickBins: bins,
-      totalRuns: runCount,
-      allServers: app.servers,
-      allServerCounts: allServerCounts,
-      analysisTime: DateTime.now(),
-    );
-
+  void _navigateToShiftClickAnalysis() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => ServerIntegrityProfileScreen(
+        builder: (context) => ShiftClickAnalysisScreen(
           server: widget.server,
-          assessment: basicAssessment,
         ),
       ),
     );

@@ -439,12 +439,11 @@ class _ServerIntegrityProfileScreenState
   }
 
   Widget _buildScoreBreakdown() {
-    // Simulated breakdown for enhanced assessment
+    // Simplified breakdown focusing on actual cheating concerns (manual over-clicking)
     final breakdowns = [
-      {'name': 'Click Pattern Analysis', 'score': 85, 'weight': 25},
-      {'name': 'Volume Consistency', 'score': 75, 'weight': 30},
-      {'name': 'Timing Patterns', 'score': 90, 'weight': 25},
-      {'name': 'Peer Comparison', 'score': 80, 'weight': 20},
+      {'name': 'Click Pattern Analysis', 'score': 85, 'weight': 35},  // Increased: detects rapid-fire clicking
+      {'name': 'Volume Consistency', 'score': 75, 'weight': 40},     // Increased: main concern is excessive clicking
+      {'name': 'Peer Comparison', 'score': 80, 'weight': 25},        // Slightly increased: compares to realistic levels
     ];
 
     return Column(
@@ -725,28 +724,6 @@ class _ServerIntegrityProfileScreenState
                   ],
                 ),
                 const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildClickStatCard(
-                        'Total Minutes',
-                        clickData.totalClickMinutes.toString(),
-                        Icons.schedule,
-                        Colors.blue,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _buildClickStatCard(
-                        'Total Runs',
-                        clickData.totalRuns.toString(),
-                        Icons.directions_run,
-                        Colors.green,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
                 const Text(
                   'Click Distribution per Minute',
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),

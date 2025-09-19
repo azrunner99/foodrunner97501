@@ -35,8 +35,6 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
           children: [
             _buildPeriodSelector(),
             const SizedBox(height: 20),
-            _buildOverviewCards(),
-            const SizedBox(height: 20),
             _buildSystemHealth(),
             const SizedBox(height: 20),
             _buildSmartInsights(),
@@ -60,6 +58,7 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
     final highRisk = assessments.where((a) => a.riskScore >= 70).length;
     final mediumRisk =
         assessments.where((a) => a.riskScore >= 40 && a.riskScore < 70).length;
+    final serversWithAlerts = assessments.where((a) => a.alerts.isNotEmpty).length;
     final totalServers = assessments.length;
 
     String healthStatus;
@@ -166,7 +165,7 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                '$totalServers servers monitored • ${highRisk + mediumRisk} requiring review',
+                                '$totalServers servers monitored • $serversWithAlerts requiring review',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: Colors.grey[600],
@@ -450,79 +449,6 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
                   },
                 );
               }).toList(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOverviewCards() {
-    final app = context.watch<AppState>();
-    final servers = app.servers;
-    final profiles = app.profiles;
-    final activeServers =
-        servers.where((s) => (profiles[s.id]?.allTimeRuns ?? 0) > 0).length;
-    final totalRuns =
-        servers.fold(0, (sum, s) => sum + (profiles[s.id]?.allTimeRuns ?? 0));
-    final avgRuns = activeServers > 0 ? (totalRuns / activeServers).round() : 0;
-
-    return Row(
-      children: [
-        Expanded(
-          child: _buildOverviewCard(
-            'Active Servers',
-            activeServers.toString(),
-            Icons.computer,
-            Colors.blue,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildOverviewCard(
-            'Total Runs',
-            totalRuns.toString(),
-            Icons.directions_run,
-            Colors.green,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildOverviewCard(
-            'Average',
-            avgRuns.toString(),
-            Icons.analytics,
-            Colors.orange,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildOverviewCard(
-      String title, String value, IconData icon, Color color) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 32),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 12,
-                color: Colors.grey,
-              ),
-              textAlign: TextAlign.center,
             ),
           ],
         ),

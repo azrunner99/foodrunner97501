@@ -395,11 +395,9 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
   String _formatTimeLabel(DateTime time) {
     final hour = time.hour;
     final minute = time.minute;
-    final second = time.second;
-    final millisecond = time.millisecond;
     final period = hour >= 12 ? 'PM' : 'AM';
     final displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
-    return '$displayHour:${minute.toString().padLeft(2, '0')}:${second.toString().padLeft(2, '0')}.${millisecond.toString().padLeft(3, '0')} $period';
+    return '$displayHour:${minute.toString().padLeft(2, '0')} $period';
   }
 
   Future<void> _selectDate() async {
@@ -429,126 +427,6 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
       });
       _loadClickData();
     }
-  }
-
-  // Build NPS data display widget to show check counts and performance metrics
-  Widget _buildNPSDataDisplay() {
-    return Consumer<NPSProvider>(
-      builder: (context, npsProvider, child) {
-        if (!npsProvider.isInitialized) {
-          return Container(
-            padding: EdgeInsets.all(16),
-            margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.orange[50],
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.orange[200]!),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.info_outline, color: Colors.orange[600]),
-                SizedBox(width: 12),
-                Text(
-                  'NPS data is loading...',
-                  style: TextStyle(
-                    color: Colors.orange[800],
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-
-        // Get current report for admin data
-        final currentReport = npsProvider.currentReport;
-        final checkCount = currentReport?.allTimeTableCount ?? 0;
-        final totalSales = currentReport?.allTimeSales ?? 0.0;
-
-        return Container(
-          padding: EdgeInsets.all(16),
-          margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.green[50],
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.green[200]!),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                spreadRadius: 1,
-                blurRadius: 3,
-                offset: Offset(0, 1),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.analytics_outlined, color: Colors.green[700]),
-                  SizedBox(width: 8),
-                  Text(
-                    'NPS Performance Data',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.green[800],
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildMetricCard(
-                      'Total Checks',
-                      '$checkCount',
-                      Icons.receipt_long,
-                      Colors.blue,
-                    ),
-                  ),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: _buildMetricCard(
-                      'Total Sales',
-                      '\$${totalSales.toStringAsFixed(0)}',
-                      Icons.attach_money,
-                      Colors.green,
-                    ),
-                  ),
-                ],
-              ),
-              if (checkCount > 0) ...[
-                SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildMetricCard(
-                        'Avg Check',
-                        '\$${(totalSales / checkCount).toStringAsFixed(2)}',
-                        Icons.trending_up,
-                        Colors.purple,
-                      ),
-                    ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: _buildMetricCard(
-                        'Click Efficiency',
-                        '${(_individualClicks.length / checkCount).toStringAsFixed(2)} clicks/check',
-                        Icons.speed,
-                        Colors.orange,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ],
-          ),
-        );
-      },
-    );
   }
 
   // Helper method to build metric cards
@@ -664,9 +542,6 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
               ],
             ),
           ),
-
-          // NPS Performance Data Display
-          _buildNPSDataDisplay(),
 
           // Chart Area - 40% height in a styled container
           Container(

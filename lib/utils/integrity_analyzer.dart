@@ -306,14 +306,11 @@ class IntegrityAnalyzer {
 
     // Timestamp-based analysis (when available)
     if (individualTimestamps != null && individualTimestamps.isNotEmpty) {
-      // Analyze timing patterns
+      // Analyze click velocity and burst patterns (relevant for manual over-clicking)
       final velocityRisk =
           TimestampIntegrityAnalyzer.analyzeClickVelocity(individualTimestamps);
       final microBursts =
           TimestampIntegrityAnalyzer.detectMicroBursts(individualTimestamps);
-      final mechanicalSignature =
-          TimestampIntegrityAnalyzer.analyzeMechanicalConsistency(
-              individualTimestamps);
       final proportionalAnalysis =
           TimestampIntegrityAnalyzer.analyzeClickProportions(
               individualTimestamps);
@@ -348,23 +345,6 @@ class IntegrityAnalyzer {
             timestamp: DateTime.now(),
           ));
         }
-      }
-
-      // Mechanical pattern alerts
-      final mechanicalRisk = mechanicalSignature.isMechanical
-          ? 95.0
-          : mechanicalSignature.isSuspicious
-              ? 70.0
-              : 20.0;
-      if (mechanicalRisk > 80.0) {
-        alerts.add(Alert(
-          level: AlertLevel.critical,
-          title: 'Mechanical Click Pattern Detected',
-          message:
-              '$serverName shows highly regular timing (CV: ${(mechanicalSignature.coefficientOfVariation * 100).toStringAsFixed(1)}%)',
-          serverId: serverId,
-          timestamp: DateTime.now(),
-        ));
       }
 
       // Micro-burst alerts with context awareness
@@ -887,27 +867,6 @@ class MicroBurst {
   bool get isImpossibleSpeed => velocity > 20.0; // Beyond human capability
 }
 
-class TimingSignature {
-  final double meanInterval;
-  final double stdDeviation;
-  final double coefficientOfVariation;
-  final List<int> intervals;
-
-  TimingSignature({
-    required this.meanInterval,
-    required this.stdDeviation,
-    required this.coefficientOfVariation,
-    required this.intervals,
-  });
-
-  bool get isMechanical =>
-      coefficientOfVariation < 0.05; // <5% variation is mechanical
-  bool get isSuspicious =>
-      coefficientOfVariation < 0.10; // <10% variation is suspicious
-  bool get isHuman =>
-      coefficientOfVariation > 0.15; // >15% variation is typical human
-}
-
 class ClickSession {
   final DateTime startTime;
   final DateTime endTime;
@@ -1115,54 +1074,6 @@ class TimestampIntegrityAnalyzer {
     return bursts;
   }
 
-  /// Analyze mechanical consistency in timing patterns
-  static TimingSignature analyzeMechanicalConsistency(
-      List<DateTime> timestamps) {
-    if (timestamps.length < 3) {
-      return TimingSignature(
-        meanInterval: 0.0,
-        stdDeviation: 0.0,
-        coefficientOfVariation: 1.0, // High variation = human-like
-        intervals: [],
-      );
-    }
-
-    // Calculate intervals between consecutive clicks
-    List<int> intervals = [];
-    for (int i = 1; i < timestamps.length; i++) {
-      final interval =
-          timestamps[i].difference(timestamps[i - 1]).inMilliseconds;
-      if (interval > 0 && interval < 10000) {
-        // Ignore intervals >10 seconds
-        intervals.add(interval);
-      }
-    }
-
-    if (intervals.isEmpty) {
-      return TimingSignature(
-        meanInterval: 0.0,
-        stdDeviation: 0.0,
-        coefficientOfVariation: 1.0,
-        intervals: [],
-      );
-    }
-
-    // Calculate statistical measures
-    final mean = intervals.reduce((a, b) => a + b) / intervals.length;
-    final variance =
-        intervals.map((x) => math.pow(x - mean, 2)).reduce((a, b) => a + b) /
-            intervals.length;
-    final stdDev = math.sqrt(variance);
-    final coeffVar = mean > 0 ? stdDev / mean : 1.0;
-
-    return TimingSignature(
-      meanInterval: mean,
-      stdDeviation: stdDev,
-      coefficientOfVariation: coeffVar,
-      intervals: intervals,
-    );
-  }
-
   /// Detect click sessions with precise timing boundaries
   static List<ClickSession> detectClickSessions(List<DateTime> timestamps,
       {Duration sessionGap = const Duration(minutes: 5)}) {
@@ -1204,27 +1115,17 @@ class TimestampIntegrityAnalyzer {
     return sessions;
   }
 
-  /// Calculate comprehensive timestamp-based risk score
+  /// Calculate comprehensive timestamp-based risk score (focused on manual over-clicking)
   static double calculateTimestampRiskScore(List<DateTime> timestamps) {
     if (timestamps.length < 2) return 0.0;
 
     double totalRisk = 0.0;
 
-    // 1. Velocity analysis (30% weight)
+    // 1. Velocity analysis (40% weight) - primary concern for rapid clicking
     final velocityRisk = analyzeClickVelocity(timestamps);
-    totalRisk += velocityRisk * 0.30;
+    totalRisk += velocityRisk * 0.40;
 
-    // 2. Mechanical consistency analysis (25% weight)
-    final timingSignature = analyzeMechanicalConsistency(timestamps);
-    double mechanicalRisk = 0.0;
-    if (timingSignature.isMechanical) {
-      mechanicalRisk = 80.0;
-    } else if (timingSignature.isSuspicious) {
-      mechanicalRisk = 40.0;
-    }
-    totalRisk += mechanicalRisk * 0.25;
-
-    // 3. Micro-burst analysis (25% weight)
+    // 2. Micro-burst analysis (35% weight) - detect rapid-fire clicking sessions
     final microBursts = detectMicroBursts(timestamps);
     double burstRisk = 0.0;
     for (final burst in microBursts) {
@@ -1234,9 +1135,9 @@ class TimestampIntegrityAnalyzer {
         burstRisk += 15.0;
       }
     }
-    totalRisk += math.min(100.0, burstRisk) * 0.25;
+    totalRisk += math.min(100.0, burstRisk) * 0.35;
 
-    // 4. Session analysis (15% weight)
+    // 3. Session analysis (25% weight) - detect sustained excessive clicking
     final sessions = detectClickSessions(timestamps);
     double sessionRisk = 0.0;
     for (final session in sessions) {
@@ -1247,7 +1148,7 @@ class TimestampIntegrityAnalyzer {
         sessionRisk += 15.0;
       }
     }
-    totalRisk += math.min(100.0, sessionRisk) * 0.15;
+    totalRisk += math.min(100.0, sessionRisk) * 0.25;
 
     // 5. Proportional analysis (20% weight) - CRITICAL for dishonest patterns
     final proportionalAnalysis = analyzeClickProportions(timestamps);
@@ -1277,16 +1178,6 @@ class TimestampIntegrityAnalyzer {
       }
       riskFactors.add(
           "Inhuman click velocity detected: ${maxVelocity.toStringAsFixed(1)} clicks/second");
-    }
-
-    // Mechanical consistency analysis
-    final timingSignature = analyzeMechanicalConsistency(timestamps);
-    if (timingSignature.isMechanical) {
-      riskFactors.add(
-          "Mechanical timing patterns: ${(timingSignature.coefficientOfVariation * 100).toStringAsFixed(1)}% variation coefficient");
-    } else if (timingSignature.isSuspicious) {
-      riskFactors.add(
-          "Suspiciously consistent timing: ${(timingSignature.coefficientOfVariation * 100).toStringAsFixed(1)}% variation");
     }
 
     // Micro-burst analysis

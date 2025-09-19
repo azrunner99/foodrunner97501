@@ -37,10 +37,9 @@ class IntegrityMonitoringInfoScreen extends StatelessWidget {
               'Multi-Dimensional Fairness Scoring',
               'Like a fairness report card that combines multiple factors to detect potential cheating. We analyze different aspects of clicking behavior to spot servers who might be gaming the system.',
               [
-                'Timing Patterns (25%): Looks for unnatural clicking rhythms',
-                'Volume Analysis (30%): Detects unrealistic delivery counts',
-                'Click Patterns (25%): Spots rapid-fire clicking that doesn\'t match real food service',
-                'Peer Comparison (20%): Compares performance to other servers for context'
+                'Volume Analysis (40%): Detects unrealistic delivery counts and excessive clicking',
+                'Click Patterns (35%): Spots rapid-fire clicking that doesn\'t match real food service',
+                'Peer Comparison (25%): Compares performance to other servers for context'
               ],
               Icons.analytics,
               Colors.blue,
@@ -49,61 +48,49 @@ class IntegrityMonitoringInfoScreen extends StatelessWidget {
               'Rapid-Fire Click Detection',
               'The biggest red flag: servers clicking extremely fast in short bursts to rack up fake deliveries. This catches people trying to cheat by rapid-clicking their button.',
               [
-                'Detects bursts of 4+ clicks per minute (humanly difficult during real service)',
-                'Flags patterns of rapid clicking followed by long breaks',
-                'Identifies clicking speeds that don\'t match realistic food delivery timing',
-                'Catches servers trying to quickly accumulate fraudulent points'
+                'Detects bursts of 4+ clicks per minute (suspicious for real food service)',
+                'Flags sustained rapid clicking patterns (5+ clicks is highly suspicious)',
+                'Identifies clicking speeds above 8 clicks/second (humanly possible but suspicious)',
+                'Distinguishes between legitimate multi-item orders (2-3 clicks) and abuse'
               ],
               Icons.mouse,
               Colors.red,
             ),
             _buildFeatureCard(
-              'Unnatural Pattern Detection',
-              'Real food service has natural variation - sometimes busy, sometimes slow. This catches overly consistent clicking that suggests someone is gaming the system methodically.',
+              'Volume Consistency Analysis',
+              'Monitors overall delivery counts and patterns to spot servers who are clicking way more than realistic for actual food service work.',
               [
-                'Detects clicking that\'s "too perfect" or mechanical',
-                'Flags unrealistic consistency in delivery timing',
-                'Spots patterns that don\'t match natural restaurant flow',
-                'Identifies servers who might be systematically cheating'
+                'Compares delivery volumes against realistic restaurant capacity',
+                'Flags servers with unusually high click-to-delivery ratios',
+                'Detects sudden dramatic increases in delivery counts',
+                'Monitors for patterns that don\'t match genuine food service timing'
               ],
-              Icons.precision_manufacturing,
+              Icons.assessment,
               Colors.orange,
             ),
             _buildFeatureCard(
-              'Unrealistic Session Monitoring',
-              'Real servers take breaks, have rushes and slow periods. This flags sessions that seem too long or consistent to be genuine food service work.',
+              'Session Pattern Monitoring',
+              'Real servers work in natural patterns with breaks and varying intensity. This detects unrealistic clicking sessions that suggest manual over-clicking.',
               [
-                'Monitors for suspiciously long continuous clicking sessions',
-                'Flags activity that doesn\'t match realistic work patterns',
-                'Detects servers who might be clicking during off-hours',
-                'Identifies patterns that don\'t align with restaurant operating reality'
+                'Monitors for unusually long continuous clicking sessions',
+                'Flags activity during non-service hours or breaks',
+                'Detects sustained high-intensity clicking patterns',
+                'Identifies work patterns that don\'t match realistic restaurant operations'
               ],
               Icons.schedule,
               Colors.green,
             ),
             _buildFeatureCard(
-              'Performance Outlier Analysis',
-              'When someone is delivering way more food than everyone else, it raises questions. This compares each server to the group to spot unrealistic overperformers.',
+              'Peer Performance Comparison',
+              'When someone consistently delivers way more than their colleagues, it raises questions. This compares each server\'s performance to realistic group averages.',
               [
-                'Identifies servers with suspiciously high delivery counts',
-                'Compares performance to peer group averages',
-                'Flags statistical outliers who might be cheating',
-                'Helps maintain fair competition among servers'
+                'Compares individual performance to team averages',
+                'Flags statistical outliers who exceed realistic delivery rates',
+                'Considers shift type, time of day, and restaurant context',
+                'Helps identify servers who may be inflating their numbers'
               ],
               Icons.show_chart,
               Colors.purple,
-            ),
-            _buildFeatureCard(
-              'Sudden Performance Spike Detection',
-              'If someone suddenly goes from 10 deliveries to 30+ deliveries instantly, that\'s suspicious. This catches dramatic increases that don\'t match restaurant reality.',
-              [
-                'Monitors for unrealistic jumps in delivery counts',
-                'Flags sudden 3x increases in performance',
-                'Detects patterns that don\'t match natural service flow',
-                'Catches servers who might start cheating mid-shift'
-              ],
-              Icons.trending_up,
-              Colors.deepOrange,
             ),
             const SizedBox(height: 24),
             Container(
@@ -132,12 +119,12 @@ class IntegrityMonitoringInfoScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   const Text(
-                    'All these systems run automatically in the background, constantly analyzing behavior patterns. When multiple red flags appear together, the risk score increases. The system presents findings in plain English so you can quickly understand what needs attention.',
+                    'All these systems run automatically in the background, constantly analyzing behavior patterns. When multiple red flags appear together, the risk score increases. The system focuses on detecting manual over-clicking where servers click without actually running food deliveries.',
                     style: TextStyle(fontSize: 14),
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'The goal is to maintain fair competition while protecting against automation and ensuring genuine human performance.',
+                    'The goal is to maintain fair competition by ensuring all servers are genuinely performing food service work, not inflating their numbers through excessive clicking.',
                     style: TextStyle(
                       fontSize: 14,
                       fontStyle: FontStyle.italic,
