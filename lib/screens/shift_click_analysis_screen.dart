@@ -219,10 +219,11 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
   }
 
   int _getClickCountForTimeWindow(AppState app, String serverId, DateTime start, DateTime end) {
-    // Use the new method to get real tap data for this time window
-    final clickCount = app.getTapCountForTimeWindow(serverId, start, end);
+    // Use the same individual timestamps method to ensure data consistency
+    final individualClicks = app.getIndividualClickTimestamps(serverId, start, end);
+    final clickCount = individualClicks.length;
     
-    print('DEBUG: Time window ${start.toString()} to ${end.toString()} has $clickCount clicks');
+    print('DEBUG: Time window ${start.toString()} to ${end.toString()} has $clickCount clicks (from individual timestamps)');
     return clickCount;
   }
 
@@ -788,6 +789,15 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
                             color: Colors.grey[700],
                           ),
                         ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Y-axis shows ${widget.server.name} click counts • Orange line shows scaled restaurant activity',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey[500],
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
                         SizedBox(height: 8),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -843,8 +853,9 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
                         Positioned.fill(
                           child: _buildRestaurantActivityLineChart(maxClicks),
                         ),
-                        // Foreground Bar Chart (server-specific clicks) - SECOND so it's on top
-                        Positioned.fill(
+                        // Foreground Bar Chart (server-specific clicks) - moved down to align baselines
+                        Transform.translate(
+                          offset: const Offset(0, 40), // Move the entire bar chart down by 40 pixels total
                           child: _buildServerBarChart(maxClicks),
                         ),
                       ],
@@ -939,20 +950,13 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
           LineChartBarData(
             spots: _restaurantActivityData.asMap().entries.map((entry) {
               // Use original restaurant data, scaled down to fit within server max
-              final maxRestaurantValue = maxRestaurantActivity > 0 ? maxRestaurantActivity : 1;
-              final minRestaurantValue = _restaurantActivityData.isEmpty ? 0 : _restaurantActivityData.reduce((a, b) => a < b ? a : b);
+              final maxRestaurantValue = _restaurantActivityData.isEmpty ? 1 : _restaurantActivityData.reduce((a, b) => a > b ? a : b);
               final maxServerValue = maxClicks > 0 ? maxClicks : 1;
               
-              // Simple proportional scaling - restaurant data scaled to 70% of server max
-              final scaledValue = (entry.value.toDouble() / maxRestaurantValue) * maxServerValue * 0.7;
+              // Simple proportional scaling - restaurant data scaled to 85% of server max (increased for more prominence)
+              final scaledValue = (entry.value.toDouble() / maxRestaurantValue) * maxServerValue * 0.85;
               
-              // Add offset to lift the baseline to match server bars at zero
-              final baselineOffset = minRestaurantValue < 0 ? -minRestaurantValue : 0;
-              final adjustedValue = scaledValue + baselineOffset;
-              
-              final spot = FlSpot(entry.key.toDouble(), adjustedValue);
-              print('DEBUG: Line chart spot - Original: ${entry.value}, Scaled: $scaledValue, Offset: $baselineOffset, Final: $adjustedValue');
-              return spot;
+              return FlSpot(entry.key.toDouble(), scaledValue);
             }).toList(),
             isCurved: true,
             color: Colors.orange[300]!.withOpacity(0.3), // Much lighter line
@@ -985,7 +989,7 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
     return BarChart(
       BarChartData(
         alignment: BarChartAlignment.spaceAround,
-        minY: 0, // Standard 0 baseline
+        minY: 0, // Reset to normal baseline since we're moving the whole widget
         maxY: maxClicks > 0 ? maxClicks.toDouble() * 1.1 : 10.0,
         backgroundColor: Colors.transparent,
         barTouchData: BarTouchData(
