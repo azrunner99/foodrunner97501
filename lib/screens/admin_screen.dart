@@ -184,6 +184,12 @@ class _AdminScreenState extends State<AdminScreen> {
                     );
                   },
                 ),
+                _buildAdminTile(
+                  icon: Icons.lock,
+                  title: 'Change Admin PIN',
+                  subtitle: 'Update the administrator access PIN',
+                  onTap: () => _showChangePinDialog(app),
+                ),
               ],
             ),
             const SizedBox(height: 24),
@@ -193,8 +199,9 @@ class _AdminScreenState extends State<AdminScreen> {
     );
   }
 
-  void _tryUnlock(AppState app) {
-    if (_pinCtrl.text == AppState.adminPin) {
+  void _tryUnlock(AppState app) async {
+    final isValid = await app.isValidAdminPin(_pinCtrl.text);
+    if (isValid) {
       setState(() => _unlocked = true);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -249,5 +256,122 @@ class _AdminScreenState extends State<AdminScreen> {
         onTap: onTap,
       ),
     );
+  }
+
+  void _showChangePinDialog(AppState app) async {
+    final currentPin = await app.adminPin;
+    final currentPinController = TextEditingController();
+    final newPinController = TextEditingController();
+    final confirmPinController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Change Admin PIN'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Current PIN: ${'•' * currentPin.length}',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: currentPinController,
+              obscureText: true,
+              keyboardType: TextInputType.number,
+              maxLength: 4,
+              decoration: const InputDecoration(
+                labelText: 'Current PIN',
+                border: OutlineInputBorder(),
+                counterText: '',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: newPinController,
+              obscureText: true,
+              keyboardType: TextInputType.number,
+              maxLength: 4,
+              decoration: const InputDecoration(
+                labelText: 'New PIN (4 digits)',
+                border: OutlineInputBorder(),
+                counterText: '',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: confirmPinController,
+              obscureText: true,
+              keyboardType: TextInputType.number,
+              maxLength: 4,
+              decoration: const InputDecoration(
+                labelText: 'Confirm New PIN',
+                border: OutlineInputBorder(),
+                counterText: '',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => _saveNewPin(
+              app,
+              currentPinController.text,
+              newPinController.text,
+              confirmPinController.text,
+            ),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _saveNewPin(AppState app, String currentPin, String newPin, String confirmPin) async {
+    // Validate current PIN
+    final isCurrentValid = await app.isValidAdminPin(currentPin);
+    if (!isCurrentValid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Current PIN is incorrect')),
+      );
+      return;
+    }
+
+    // Validate new PIN format
+    if (newPin.length != 4 || !RegExp(r'^\d{4}$').hasMatch(newPin)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('New PIN must be exactly 4 digits')),
+      );
+      return;
+    }
+
+    // Validate PIN confirmation
+    if (newPin != confirmPin) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('PIN confirmation does not match')),
+      );
+      return;
+    }
+
+    // Save new PIN
+    try {
+      await app.setAdminPin(newPin);
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Admin PIN updated successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error saving PIN: $e')),
+      );
+    }
   }
 }

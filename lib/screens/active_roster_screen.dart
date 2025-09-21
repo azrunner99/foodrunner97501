@@ -214,8 +214,9 @@ class _ActiveRosterScreenState extends State<ActiveRosterScreen> {
     );
   }
 
-  void _tryUnlock(AppState app) {
-    if (_pinCtrl.text == AppState.adminPin) {
+  void _tryUnlock(AppState app) async {
+    final isValid = await app.isValidAdminPin(_pinCtrl.text);
+    if (isValid) {
       setState(() => _unlocked = true);
     } else {
       ScaffoldMessenger.of(context)
@@ -313,7 +314,7 @@ class _ActiveRosterScreenState extends State<ActiveRosterScreen> {
     });
 
     // Auto-unlock if PIN is complete
-    if (_pinCtrl.text.length >= 4 && _pinCtrl.text == AppState.adminPin) {
+    if (_pinCtrl.text.length >= 4) {
       _tryUnlock(context.read<AppState>());
     }
   }

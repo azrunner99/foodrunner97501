@@ -1,9 +1,10 @@
-class Logger {
-  static bool debugLoggingEnabled = false;
+import 'package:food_runs_counter/utils/log.dart';
 
-  static void log(String message) {
-    if (debugLoggingEnabled) {
-      print('[DEBUG] $message');
-    }
+/// Deprecated: use d(message) from utils/log.dart instead.
+@Deprecated('Use d(message) from utils/log.dart')
+class Logger {
+  static void log(Object? message) {
+    // Delegate to central debug logger (debug/profile only)
+    d(message);
   }
 }

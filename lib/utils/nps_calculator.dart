@@ -3,6 +3,7 @@
 /// This class provides all the calculation logic for the Server NPS system,
 /// including NPS score calculations, trend analysis, and report generation.
 library;
+import 'log.dart';
 
 import '../storage/nps_database.dart';
 import '../models/monthly_report.dart';
@@ -21,7 +22,7 @@ class NPSCalculator {
       final feedback = await _database.getFeedbackForServer(serverId);
       return _calculateNPSFromFeedback(feedback);
     } catch (e) {
-      print('[NPSCalculator] Error calculating all-time NPS: $e');
+      d('[NPSCalculator] Error calculating all-time NPS: $e');
       return null;
     }
   }
@@ -41,7 +42,7 @@ class NPSCalculator {
 
       return _calculateNPSFromFeedback(feedback);
     } catch (e) {
-      print('[NPSCalculator] Error calculating three-month NPS: $e');
+      d('[NPSCalculator] Error calculating three-month NPS: $e');
       return null;
     }
   }
@@ -63,7 +64,7 @@ class NPSCalculator {
 
       return _calculateNPSFromFeedback(feedback);
     } catch (e) {
-      print('[NPSCalculator] Error calculating one-month NPS: $e');
+      d('[NPSCalculator] Error calculating one-month NPS: $e');
       return null;
     }
   }
@@ -86,7 +87,7 @@ class NPSCalculator {
         calculatedAt: now,
       );
     } catch (e) {
-      print('[NPSCalculator] Error generating trend analysis: $e');
+      d('[NPSCalculator] Error generating trend analysis: $e');
       return NPSTrendAnalysis(
         serverId: serverId,
         oneMonthNPS: null,
@@ -101,8 +102,7 @@ class NPSCalculator {
   Future<NPSMonthlyReport> generateMonthlyReport(
       int serverId, int reportMonth) async {
     try {
-      print(
-          '[NPSCalculator] Generating monthly report for server $serverId, month $reportMonth');
+      d('[NPSCalculator] Generating monthly report for server $serverId, month $reportMonth');
 
       final year = reportMonth ~/ 100;
       final month = reportMonth % 100;
@@ -145,7 +145,7 @@ class NPSCalculator {
         dataAsOfDate: DateTime(year, month + 1, 0),
       );
     } catch (e) {
-      print('[NPSCalculator] Error generating monthly report: $e');
+      d('[NPSCalculator] Error generating monthly report: $e');
       rethrow;
     }
   }
@@ -163,17 +163,15 @@ class NPSCalculator {
           final report = await generateMonthlyReport(serverId, reportMonth);
           reports.add(report);
         } catch (e) {
-          print(
-              '[NPSCalculator] Error generating report for server $serverId: $e');
+          d('[NPSCalculator] Error generating report for server $serverId: $e');
           // Continue with other servers
         }
       }
 
-      print('[NPSCalculator] Generated ${reports.length} monthly reports');
+      d('[NPSCalculator] Generated ${reports.length} monthly reports');
       return reports;
     } catch (e) {
-      print(
-          '[NPSCalculator] Error generating monthly reports for all servers: $e');
+      d('[NPSCalculator] Error generating monthly reports for all servers: $e');
       rethrow;
     }
   }
@@ -182,10 +180,9 @@ class NPSCalculator {
   Future<void> saveMonthlyReport(NPSMonthlyReport report) async {
     try {
       await _database.insertOrUpdateMonthlyReport(report.toMap());
-      print(
-          '[NPSCalculator] Saved monthly report for server ${report.serverId}');
+      d('[NPSCalculator] Saved monthly report for server ${report.serverId}');
     } catch (e) {
-      print('[NPSCalculator] Error saving monthly report: $e');
+      d('[NPSCalculator] Error saving monthly report: $e');
       rethrow;
     }
   }
@@ -193,8 +190,7 @@ class NPSCalculator {
   /// Process monthly report generation for a specific month
   Future<List<NPSMonthlyReport>> processMonthlyReports(int reportMonth) async {
     try {
-      print(
-          '[NPSCalculator] Processing monthly reports for month $reportMonth');
+      d('[NPSCalculator] Processing monthly reports for month $reportMonth');
 
       final reports = await generateMonthlyReportsForAllServers(reportMonth);
 
@@ -203,11 +199,10 @@ class NPSCalculator {
         await saveMonthlyReport(report);
       }
 
-      print(
-          '[NPSCalculator] Processed and saved ${reports.length} monthly reports');
+      d('[NPSCalculator] Processed and saved ${reports.length} monthly reports');
       return reports;
     } catch (e) {
-      print('[NPSCalculator] Error processing monthly reports: $e');
+      d('[NPSCalculator] Error processing monthly reports: $e');
       rethrow;
     }
   }
@@ -278,7 +273,7 @@ class NPSCalculator {
 
       return FeedbackCounts(yes: yes, maybe: maybe, no: no);
     } catch (e) {
-      print('[NPSCalculator] Error getting feedback counts: $e');
+      d('[NPSCalculator] Error getting feedback counts: $e');
       return FeedbackCounts();
     }
   }
@@ -314,7 +309,7 @@ class NPSCalculator {
         'tableCount': tableCount,
       };
     } catch (e) {
-      print('[NPSCalculator] Error getting cumulative metrics: $e');
+      d('[NPSCalculator] Error getting cumulative metrics: $e');
       return {'sales': 0.0, 'tableCount': 0};
     }
   }

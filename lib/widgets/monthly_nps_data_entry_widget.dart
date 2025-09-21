@@ -39,12 +39,15 @@ class ServerMetricsData {
     double? allTimeSales,
     int? allTimeTableCount,
   }) {
-    if (allTimeNpsPercentage != null)
+    if (allTimeNpsPercentage != null) {
       allTimeNpsController.text = allTimeNpsPercentage.toStringAsFixed(1);
-    if (threeMonthNpsPercentage != null)
+    }
+    if (threeMonthNpsPercentage != null) {
       threeMonthNpsController.text = threeMonthNpsPercentage.toStringAsFixed(1);
-    if (oneMonthNpsPercentage != null)
+    }
+    if (oneMonthNpsPercentage != null) {
       oneMonthNpsController.text = oneMonthNpsPercentage.toStringAsFixed(1);
+    }
 
     // Only set sales if it's a meaningful value (greater than 0)
     if (allTimeSales != null && allTimeSales > 0) {

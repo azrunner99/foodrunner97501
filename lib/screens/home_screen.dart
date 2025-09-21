@@ -8,6 +8,7 @@ import 'dart:io';
 import '../app_state.dart';
 import '../models.dart';
 import '../theme/app_theme.dart';
+import '../widgets/resilient_avatar.dart';
 import '../services/instant_feedback_service.dart';
 import 'shift_leaderboard_screen.dart';
 import '../gamification.dart';
@@ -18,6 +19,7 @@ import '../widgets/live_countdown_timer.dart';
 import 'app_features_screen.dart';
 import 'level_color_demo_screen.dart';
 import 'server_nps_scorecard_screen.dart';
+import '../utils/log.dart';
 
 // Screens
 import 'update_roster_screen.dart';
@@ -187,7 +189,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    print('HomeScreen.build called');
+  d('HomeScreen.build called');
     final app = Provider.of<AppState>(context);
 
     return Scaffold(
@@ -354,17 +356,15 @@ class _HomeScreenState extends State<HomeScreen> {
               final end = app.todayPlan?.transitionEndMinutes ??
                   app.settings.transitionEndMinutes;
               final lunchIds = app.todayPlan?.lunchRoster ?? [];
-              final dinnerIds = app.todayPlan?.dinnerRoster ?? [];
-              print('[DEBUG] HomeScreen: m=$m, start=$start, end=$end');
-              print(
-                  '[DEBUG] HomeScreen: lunchIds=$lunchIds, dinnerIds=$dinnerIds');
-              print(
-                  '[DEBUG] HomeScreen: activeRosterView=${app.activeRosterView}');
+        final dinnerIds = app.todayPlan?.dinnerRoster ?? [];
+        d('[DEBUG] HomeScreen: m=$m, start=$start, end=$end');
+        d('[DEBUG] HomeScreen: lunchIds=$lunchIds, dinnerIds=$dinnerIds');
+        d('[DEBUG] HomeScreen: activeRosterView=${app.activeRosterView}');
 
               // Use AppState's isOpenNow which properly handles overnight hours
               final inBusinessHours = app.isOpenNow;
 
-              print('[DEBUG] HomeScreen: Using app.isOpenNow=$inBusinessHours');
+              d('[DEBUG] HomeScreen: Using app.isOpenNow=$inBusinessHours');
               
               // Also get business interval for display purposes
               final businessDate = AppState.businessDate(now);
@@ -372,31 +372,25 @@ class _HomeScreenState extends State<HomeScreen> {
               final businessInterval =
                   app.businessDayInterval(businessDate, businessWeekday);
 
-              print(
-                  '[DEBUG] HomeScreen: businessDate=$businessDate, businessWeekday=$businessWeekday');
-              print(
-                  '[DEBUG] HomeScreen: businessInterval=${businessInterval.start} to ${businessInterval.end}');
+        d('[DEBUG] HomeScreen: businessDate=$businessDate, businessWeekday=$businessWeekday');
+        d('[DEBUG] HomeScreen: businessInterval=${businessInterval.start} to ${businessInterval.end}');
 
               List<String> ids = [];
               final showToggle = m >= start && m < end;
-              print(
-                  '[DEBUG] HomeScreen: showToggle=$showToggle (transition period)');
+        d('[DEBUG] HomeScreen: showToggle=$showToggle (transition period)');
 
               // Determine which roster to show based on business day logic
               bool shouldShowDinner = false;
               if (m < start) {
                 shouldShowDinner = false;
-                print(
-                    '[DEBUG] HomeScreen: Before transition, using lunch roster');
+        d('[DEBUG] HomeScreen: Before transition, using lunch roster');
               } else if (m >= end) {
                 shouldShowDinner = true;
-                print(
-                    '[DEBUG] HomeScreen: After transition, using dinner roster');
+        d('[DEBUG] HomeScreen: After transition, using dinner roster');
               } else {
                 // During transition: show correct servers for each view
                 shouldShowDinner = (app.activeRosterView == 'dinner');
-                print(
-                    '[DEBUG] HomeScreen: During transition, activeRosterView=${app.activeRosterView}');
+        d('[DEBUG] HomeScreen: During transition, activeRosterView=${app.activeRosterView}');
               }
 
               if (shouldShowDinner) {
@@ -406,18 +400,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   final dinnerSet = dinnerIds.toSet();
                   final dinnerOnly = dinnerSet.difference(lunchSet);
                   ids = dinnerOnly.toList();
-                  print(
-                      '[DEBUG] HomeScreen: During transition, dinner view selected - showing dinner-only servers: $ids');
+          d('[DEBUG] HomeScreen: During transition, dinner view selected - showing dinner-only servers: $ids');
                 } else {
                   ids = dinnerIds;
-                  print('[DEBUG] HomeScreen: Showing dinner roster: $ids');
+                  d('[DEBUG] HomeScreen: Showing dinner roster: $ids');
                 }
               } else {
                 ids = lunchIds;
-                print('[DEBUG] HomeScreen: Showing lunch roster: $ids');
+                d('[DEBUG] HomeScreen: Showing lunch roster: $ids');
               }
               ids = ids.toSet().toList();
-              print('[DEBUG] HomeScreen: Final ids to display: $ids');
+              d('[DEBUG] HomeScreen: Final ids to display: $ids');
 
               // Sort servers alphabetically by name
               ids.sort((a, b) {
@@ -1387,36 +1380,26 @@ class _HomeScreenState extends State<HomeScreen> {
                             lastId != null ? app.profiles[lastId] : null;
                         final avatarPath = profile?.avatarPath;
                         final bannerPath = profile?.bannerPath;
-                        ImageProvider? avatarImage;
-                        if (avatarPath != null && avatarPath.isNotEmpty) {
-                          if (avatarPath.startsWith('/') ||
-                              avatarPath.contains(':')) {
-                            avatarImage = FileImage(File(avatarPath));
-                          } else {
-                            avatarImage = AssetImage(avatarPath);
-                          }
-                        }
-                        ImageProvider? bannerImage;
-                        if (bannerPath != null && bannerPath.isNotEmpty) {
-                          if (bannerPath.startsWith('/') ||
-                              bannerPath.contains(':')) {
-                            bannerImage = FileImage(File(bannerPath));
-                          } else {
-                            bannerImage = AssetImage(bannerPath);
-                          }
-                        }
+                        final avatarImage = getResilientImageProvider(
+                          avatarPath, 
+                          isAvatar: true
+                        );
+                        final bannerImage = getResilientImageProvider(
+                          bannerPath, 
+                          isAvatar: false
+                        );
                         final serverName = lastId != null
                             ? app.serverById(lastId)?.name ?? ''
                             : '';
                         return Container(
                           decoration: BoxDecoration(
-                            color:
-                                bannerImage == null ? Colors.grey[200] : null,
+                            color: (bannerPath == null || bannerPath.isEmpty) 
+                                ? Colors.grey[200] : null,
                           ),
                           child: Stack(
                             children: [
                               // Banner background (if available)
-                              if (bannerImage != null)
+                              if (bannerPath != null && bannerPath.isNotEmpty)
                                 Positioned.fill(
                                   child: Container(
                                     decoration: BoxDecoration(
@@ -1520,7 +1503,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                     .currentEarnedXP[lastId] ??
                                                 0;
 
-                                            print(
+                                            d(
                                                 '[DEBUG] HOME DISPLAY FIXED: server=$lastId, runs=$runCount, pizookies=$pizookieCount, bonusXp=$bonusXp, actualEarnedXp=$totalShiftXp');
                                             return RichText(
                                               textAlign: TextAlign.right,
@@ -1627,13 +1610,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                           AspectRatio(
                                             aspectRatio: 1,
                                             child: ClipOval(
-                                              child: avatarImage != null
-                                                  ? Image(
+                                              child: Image(
                                                       image: avatarImage,
                                                       fit: BoxFit.cover,
-                                                    )
-                                                  : Container(
-                                                      color: Colors.grey[300],
                                                     ),
                                             ),
                                           ),
@@ -2285,7 +2264,7 @@ class _ActiveGridState extends State<_ActiveGrid>
   void _showAchievement(String text) {
     final app = widget.app;
     if (!app.settings.gamificationEnabled) return;
-    print('[_showAchievement] called with: $text');
+  d('[_showAchievement] called with: $text');
     if (!mounted) return;
     setState(() {
       _achievementText = text;
@@ -2463,14 +2442,11 @@ class _ActiveGridState extends State<_ActiveGrid>
                               padding: const EdgeInsets.all(8),
                             ),
                             onPressed: !widget.inBusinessHours ? null : () {
-                              print(
-                                  '[DEBUG] Server ${s.name} (id: $id) clicked');
-                              print('[DEBUG] isOpenNow: ${app.isOpenNow}');
-                              print('[DEBUG] shiftActive: ${app.shiftActive}');
-                              print(
-                                  '[DEBUG] workingServerIds: ${app.workingServerIds}');
-                              print(
-                                  '[DEBUG] workingServerIds.contains($id): ${app.workingServerIds.contains(id)}');
+                              d('[DEBUG] Server ${s.name} (id: $id) clicked');
+                              d('[DEBUG] isOpenNow: ${app.isOpenNow}');
+                              d('[DEBUG] shiftActive: ${app.shiftActive}');
+                              d('[DEBUG] workingServerIds: ${app.workingServerIds}');
+                              d('[DEBUG] workingServerIds.contains($id): ${app.workingServerIds.contains(id)}');
 
                               // Only increment normal run on tap, not on long press
                               if (!_isLongPress) {
@@ -2587,7 +2563,7 @@ class _ActiveGridState extends State<_ActiveGrid>
                                   app.lastRunServerId = id;
                                 } else {
                                   // Shift not active or server not working - show message
-                                  print(
+                                  d(
                                       '[DEBUG] Click blocked: Shift not active or server not scheduled');
                                   ScaffoldMessenger.of(ctx).clearSnackBars();
                                   ScaffoldMessenger.of(ctx).showSnackBar(
@@ -3238,7 +3214,7 @@ class _ActiveGridState extends State<_ActiveGrid>
                         child: AnimatedBuilder(
                           animation: _achievementController!,
                           builder: (context, child) {
-                            print(
+                            d(
                                 '[AchievementOverlay] builder: _achievementText=$_achievementText, controller.value=${_achievementController!.value}');
                             final opacity = 1.0 - _achievementController!.value;
                             final scale = 1.0 +
@@ -3299,91 +3275,6 @@ class _ActiveGridState extends State<_ActiveGrid>
           ),
         ),
       ],
-    );
-  }
-}
-
-// --- Team Competition Details Screen ---
-class TeamCompetitionDetailsScreen extends StatelessWidget {
-  final Map<String, Color> teamColors;
-  const TeamCompetitionDetailsScreen({required this.teamColors, super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final app = Provider.of<AppState>(context);
-    // Group servers by team
-    final Map<String, List<Server>> teams = {};
-    final Map<String, double> teamTotals = {};
-    for (final s in app.servers) {
-      if (s.teamColor != null) {
-        teams.putIfAbsent(s.teamColor!, () => []).add(s);
-        teamTotals[s.teamColor!] = (teamTotals[s.teamColor!] ?? 0) +
-            ((app.currentCounts[s.id] ?? 0).toDouble());
-      }
-    }
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Team Competition Details'),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: teamColors.keys.map((team) {
-            final members = teams[team] ?? [];
-            final sortedMembers = [...members]..sort((a, b) =>
-                (app.currentCounts[b.id] ?? 0)
-                    .compareTo(app.currentCounts[a.id] ?? 0));
-            final teamTotal = teamTotals[team] ?? 0;
-            return Container(
-              width: 180,
-              margin: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                border: Border.all(color: teamColors[team]!, width: 3),
-                borderRadius: BorderRadius.circular(12),
-                color: teamColors[team]!.withAlpha((0.07 * 255).toInt()),
-              ),
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: Column(
-                      children: [
-                        Text(
-                          team,
-                          style: TextStyle(
-                            color: teamColors[team],
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Total: ${teamTotal.toInt()}',
-                          style: TextStyle(
-                            color: teamColors[team],
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Divider(),
-                  ...sortedMembers.map((s) {
-                    final count = app.currentCounts[s.id] ?? 0;
-                    return ListTile(
-                      title: Text(s.name),
-                      trailing: Text('$count'),
-                    );
-                  }),
-                ],
-              ),
-            );
-          }).toList(),
-        ),
-      ),
     );
   }
 }
@@ -3855,7 +3746,7 @@ class _BoostModeDialogState extends State<BoostModeDialog> {
           _multiplier,
           _duration,
           _description.isEmpty ? 'Manager Boost' : _description,
-          AppState.adminPin);
+          _enteredPin);
     }
 
     Navigator.of(context).pop();

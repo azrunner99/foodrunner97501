@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'log.dart';
 import 'package:flutter/services.dart';
 
 class BannerAssets {
@@ -31,7 +32,7 @@ class BannerAssets {
       bannerPaths.sort();
       return bannerPaths;
     } catch (e) {
-      print('Error loading banner manifest: $e');
+  d('Error loading banner manifest: $e');
       // Return empty list if loading fails
       return [];
     }

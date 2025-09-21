@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:sqflite/sqflite.dart';
+import '../utils/log.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -28,7 +29,7 @@ class NPSDatabase {
       final documentsDirectory = await getApplicationDocumentsDirectory();
       final path = join(documentsDirectory.path, 'nps_database.db');
 
-      print('[NPSDatabase] Initializing database at: $path');
+  d('[NPSDatabase] Initializing database at: $path');
 
       return await openDatabase(
         path,
@@ -38,13 +39,13 @@ class NPSDatabase {
         onDowngrade: _onDowngrade,
       );
     } catch (e) {
-      print('[NPSDatabase] Error initializing database: $e');
+  d('[NPSDatabase] Error initializing database: $e');
       rethrow;
     }
   }
 
   Future<void> _onCreate(Database db, int version) async {
-    print('[NPSDatabase] Creating database schema version $version');
+  d('[NPSDatabase] Creating database schema version $version');
 
     try {
       // Create servers table
@@ -153,31 +154,31 @@ class NPSDatabase {
       await db.execute(
           'CREATE INDEX idx_calc_log_date ON nps_calculation_log(calculation_start)');
 
-      print('[NPSDatabase] Database schema created successfully');
+  d('[NPSDatabase] Database schema created successfully');
     } catch (e) {
-      print('[NPSDatabase] Error creating database schema: $e');
+  d('[NPSDatabase] Error creating database schema: $e');
       rethrow;
     }
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    print(
+  d(
         '[NPSDatabase] Upgrading database from version $oldVersion to $newVersion');
 
     if (oldVersion < 2) {
       // Add original_id column to servers table
       try {
         await db.execute('ALTER TABLE servers ADD COLUMN original_id TEXT');
-        print('[NPSDatabase] ✅ Added original_id column to servers table');
+  d('[NPSDatabase] ✅ Added original_id column to servers table');
       } catch (e) {
-        print(
+  d(
             '[NPSDatabase] ⚠️ Could not add original_id column (may already exist): $e');
       }
     }
   }
 
   Future<void> _onDowngrade(Database db, int oldVersion, int newVersion) async {
-    print(
+  d(
         '[NPSDatabase] Downgrading database from version $oldVersion to $newVersion');
 
     // Handle downgrade scenarios if needed
@@ -191,10 +192,10 @@ class NPSDatabase {
     try {
       final db = await database;
       final id = await db.insert('servers', server);
-      print('[NPSDatabase] Inserted server with ID: $id');
+  d('[NPSDatabase] Inserted server with ID: $id');
       return id;
     } catch (e) {
-      print('[NPSDatabase] Error inserting server: $e');
+  d('[NPSDatabase] Error inserting server: $e');
       rethrow;
     }
   }
@@ -207,10 +208,10 @@ class NPSDatabase {
       final where = activeOnly ? 'active = 1' : null;
       final servers =
           await db.query('servers', where: where, orderBy: 'name ASC');
-      print('[NPSDatabase] Retrieved ${servers.length} servers');
+  d('[NPSDatabase] Retrieved ${servers.length} servers');
       return servers;
     } catch (e) {
-      print('[NPSDatabase] Error getting servers: $e');
+  d('[NPSDatabase] Error getting servers: $e');
       rethrow;
     }
   }
@@ -223,7 +224,7 @@ class NPSDatabase {
           await db.query('servers', where: 'id = ?', whereArgs: [serverId]);
       return servers.isNotEmpty ? servers.first : null;
     } catch (e) {
-      print('[NPSDatabase] Error getting server by ID: $e');
+  d('[NPSDatabase] Error getting server by ID: $e');
       rethrow;
     }
   }
@@ -235,11 +236,11 @@ class NPSDatabase {
       server['updated_at'] = DateTime.now().toIso8601String();
       final rowsAffected = await db
           .update('servers', server, where: 'id = ?', whereArgs: [serverId]);
-      print(
+  d(
           '[NPSDatabase] Updated server $serverId, rows affected: $rowsAffected');
       return rowsAffected;
     } catch (e) {
-      print('[NPSDatabase] Error updating server: $e');
+  d('[NPSDatabase] Error updating server: $e');
       rethrow;
     }
   }
@@ -254,11 +255,11 @@ class NPSDatabase {
         where: 'id = ?',
         whereArgs: [serverId],
       );
-      print(
+  d(
           '[NPSDatabase] Soft deleted server $serverId, rows affected: $rowsAffected');
       return rowsAffected;
     } catch (e) {
-      print('[NPSDatabase] Error deleting server: $e');
+  d('[NPSDatabase] Error deleting server: $e');
       rethrow;
     }
   }
@@ -270,10 +271,10 @@ class NPSDatabase {
     try {
       final db = await database;
       final id = await db.insert('nps_feedback', feedback);
-      print('[NPSDatabase] Inserted feedback with ID: $id');
+  d('[NPSDatabase] Inserted feedback with ID: $id');
       return id;
     } catch (e) {
-      print('[NPSDatabase] Error inserting feedback: $e');
+  d('[NPSDatabase] Error inserting feedback: $e');
       rethrow;
     }
   }
@@ -306,11 +307,11 @@ class NPSDatabase {
         orderBy: 'feedback_date DESC',
       );
 
-      print(
+  d(
           '[NPSDatabase] Retrieved ${feedback.length} feedback entries for server $serverId');
       return feedback;
     } catch (e) {
-      print('[NPSDatabase] Error getting feedback for server: $e');
+  d('[NPSDatabase] Error getting feedback for server: $e');
       rethrow;
     }
   }
@@ -332,11 +333,11 @@ class NPSDatabase {
         orderBy: 'feedback_date DESC',
       );
 
-      print(
+  d(
           '[NPSDatabase] Retrieved ${feedback.length} feedback entries in date range');
       return feedback;
     } catch (e) {
-      print('[NPSDatabase] Error getting feedback in date range: $e');
+  d('[NPSDatabase] Error getting feedback in date range: $e');
       rethrow;
     }
   }
@@ -351,7 +352,7 @@ class NPSDatabase {
       // Try to insert first
       try {
         final id = await db.insert('nps_monthly_reports', report);
-        print('[NPSDatabase] Inserted monthly report with ID: $id');
+  d('[NPSDatabase] Inserted monthly report with ID: $id');
         return id;
       } on DatabaseException catch (e) {
         // If insertion fails due to unique constraint, update instead
@@ -362,7 +363,7 @@ class NPSDatabase {
             where: 'server_id = ? AND report_month = ?',
             whereArgs: [report['server_id'], report['report_month']],
           );
-          print(
+          d(
               '[NPSDatabase] Updated existing monthly report, rows affected: $rowsAffected');
           return rowsAffected;
         } else {
@@ -370,7 +371,7 @@ class NPSDatabase {
         }
       }
     } catch (e) {
-      print('[NPSDatabase] Error inserting/updating monthly report: $e');
+  d('[NPSDatabase] Error inserting/updating monthly report: $e');
       rethrow;
     }
   }
@@ -387,7 +388,7 @@ class NPSDatabase {
       );
       return reports.isNotEmpty ? reports.first : null;
     } catch (e) {
-      print('[NPSDatabase] Error getting monthly report: $e');
+  d('[NPSDatabase] Error getting monthly report: $e');
       rethrow;
     }
   }
@@ -403,11 +404,11 @@ class NPSDatabase {
         whereArgs: [reportMonth],
         orderBy: 'all_time_nps_percentage DESC',
       );
-      print(
+  d(
           '[NPSDatabase] Retrieved ${reports.length} monthly reports for month $reportMonth');
       return reports;
     } catch (e) {
-      print('[NPSDatabase] Error getting monthly reports for month: $e');
+  d('[NPSDatabase] Error getting monthly reports for month: $e');
       rethrow;
     }
   }
@@ -423,10 +424,10 @@ class NPSDatabase {
         GROUP BY report_year, report_month
         ORDER BY report_year DESC, report_month DESC
       ''');
-      print('[NPSDatabase] Retrieved ${months.length} available report months');
+  d('[NPSDatabase] Retrieved ${months.length} available report months');
       return months;
     } catch (e) {
-      print('[NPSDatabase] Error getting available report months: $e');
+  d('[NPSDatabase] Error getting available report months: $e');
       rethrow;
     }
   }
@@ -458,11 +459,11 @@ class NPSDatabase {
         ORDER BY s.name ASC
       ''', [reportMonth, reportYear]);
 
-      print(
+  d(
           '[NPSDatabase] Retrieved NPS data for ${serverData.length} servers for $reportMonth/$reportYear');
       return serverData;
     } catch (e) {
-      print('[NPSDatabase] Error getting server NPS data for month: $e');
+  d('[NPSDatabase] Error getting server NPS data for month: $e');
       rethrow;
     }
   }
@@ -474,7 +475,7 @@ class NPSDatabase {
     if (_database != null) {
       await _database!.close();
       _database = null;
-      print('[NPSDatabase] Database connection closed');
+  d('[NPSDatabase] Database connection closed');
     }
   }
 
@@ -485,7 +486,7 @@ class NPSDatabase {
       final result = await db.rawQuery('SELECT 1');
       return result.isNotEmpty;
     } catch (e) {
-      print('[NPSDatabase] Database readiness check failed: $e');
+  d('[NPSDatabase] Database readiness check failed: $e');
       return false;
     }
   }
@@ -496,7 +497,7 @@ class NPSDatabase {
       final db = await database;
       return await db.getVersion();
     } catch (e) {
-      print('[NPSDatabase] Error getting database version: $e');
+  d('[NPSDatabase] Error getting database version: $e');
       return 0;
     }
   }
@@ -511,9 +512,9 @@ class NPSDatabase {
         await txn.delete('nps_feedback');
         await txn.delete('servers');
       });
-      print('[NPSDatabase] All data cleared successfully');
+  d('[NPSDatabase] All data cleared successfully');
     } catch (e) {
-      print('[NPSDatabase] Error clearing all data: $e');
+  d('[NPSDatabase] Error clearing all data: $e');
       rethrow;
     }
   }

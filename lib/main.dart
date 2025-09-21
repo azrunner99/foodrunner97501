@@ -27,6 +27,7 @@ import 'screens/server_nps_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Storage.init();
+  await Storage.migrateRawKeys(); // Migrate any existing raw SharedPreferences keys
   final appState = AppState();
   await appState.load();
 

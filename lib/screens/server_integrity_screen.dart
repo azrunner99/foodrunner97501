@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/log.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../app_state.dart';
@@ -788,7 +789,7 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
       case 'month':
       case 'custom':
         // For specific date ranges, calculate from tap data
-        print('DEBUG: Processing date range $_dateRange for server $serverId');
+  d('DEBUG: Processing date range $_dateRange for server $serverId');
         final bins = _getIntegrityBinsForDateRange(app, serverId);
         int historicalCount = bins.values.fold(0, (sum, count) => sum + count);
 
@@ -798,14 +799,14 @@ class _ServerIntegrityScreenState extends State<ServerIntegrityScreen> {
 
         // Debug logging for custom range
         if (_dateRange == 'custom' && serverId == '4f55jaewuhldbaoi') {
-          print('DEBUG Custom range for server $serverId:');
-          print('  Start date: $_customStartDate');
-          print('  End date: $_customEndDate');
-          print('  Today: ${DateTime.now()}');
-          print('  Includes today: $includesToday');
-          print('  Historical count: $historicalCount');
-          print('  Current count: $currentCount');
-          print('  Bins: $bins');
+          d('DEBUG Custom range for server $serverId:');
+          d('  Start date: $_customStartDate');
+          d('  End date: $_customEndDate');
+          d('  Today: ${DateTime.now()}');
+          d('  Includes today: $includesToday');
+          d('  Historical count: $historicalCount');
+          d('  Current count: $currentCount');
+          d('  Bins: $bins');
         }
 
         if (includesToday) {

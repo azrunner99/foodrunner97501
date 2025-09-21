@@ -1,9 +1,13 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'utils/log.dart';
 
-class _Box {
+/// Public box API wrapper to avoid exposing private types in public API
+class Box {
   final String prefix;
-  _Box(this.prefix);
+  Box(this.prefix);
 
   Future<dynamic> get(String key) async {
     final sp = await SharedPreferences.getInstance();
@@ -23,33 +27,103 @@ class _Box {
 }
 
 class Storage {
-  static late _Box serversBox;
-  static late _Box totalsBox;
-  static late _Box shiftsBox;
-  static late _Box profilesBox;
-  static late _Box settingsBox;
-  static late _Box dayPlanBox;
-  static late _Box tapBox; // per-minute tap buckets
-  static late _Box tapTimestampsBox; // individual click timestamps
-  static late _Box performanceBox; // server performance data
-  static late _Box businessDataBox; // monthly business data
-  static late _Box performanceSettingsBox; // performance calculation settings
-  static late _Box
-      enhancedBusinessDataBox; // enhanced monthly business data with NPS
+  // Application data schema version. Bump when making breaking storage changes.
+  static const int currentSchemaVersion = 1;
+
+  static late Box serversBox;
+  static late Box totalsBox;
+  static late Box shiftsBox;
+  static late Box profilesBox;
+  static late Box settingsBox;
+  static late Box dayPlanBox;
+  static late Box tapBox; // per-minute tap buckets
+  static late Box tapTimestampsBox; // individual click timestamps
+  static late Box performanceBox; // server performance data
+  static late Box businessDataBox; // monthly business data
+  static late Box performanceSettingsBox; // performance calculation settings
+  static late Box enhancedBusinessDataBox; // enhanced monthly business data with NPS
+  static late Box stationsBox; // station assignments and types
+  static late Box assetsBox; // avatar and banner paths
 
   static Future<void> init() async {
-    serversBox = _Box('servers');
-    totalsBox = _Box('totals');
-    shiftsBox = _Box('shifts');
-    profilesBox = _Box('profiles');
-    settingsBox = _Box('settings');
-    dayPlanBox = _Box('dayplan');
-    tapBox = _Box('taplog');
-    tapTimestampsBox = _Box('tapTimestamps');
-    performanceBox = _Box('performance');
-    businessDataBox = _Box('businessData');
-    performanceSettingsBox = _Box('performanceSettings');
-    enhancedBusinessDataBox = _Box('enhancedBusinessData');
+    serversBox = Box('servers');
+    totalsBox = Box('totals');
+    shiftsBox = Box('shifts');
+    profilesBox = Box('profiles');
+    settingsBox = Box('settings');
+    dayPlanBox = Box('dayplan');
+    tapBox = Box('taplog');
+    tapTimestampsBox = Box('tapTimestamps');
+    performanceBox = Box('performance');
+    businessDataBox = Box('businessData');
+    performanceSettingsBox = Box('performanceSettings');
+    enhancedBusinessDataBox = Box('enhancedBusinessData');
+    stationsBox = Box('stations');
+    assetsBox = Box('assets');
+  }
+
+  /// Export a JSON snapshot for the given box prefixes into docs/backups/autosafe.
+  /// Returns the written file path, or null if write failed.
+  static Future<String?> exportBoxes(List<String> prefixes) async {
+    try {
+      final sp = await SharedPreferences.getInstance();
+      final allKeys = sp.getKeys();
+      final snapshot = <String, Map<String, dynamic>>{};
+
+      for (final prefix in prefixes) {
+        final pfx = '$prefix::';
+        final boxMap = <String, dynamic>{};
+        for (final key in allKeys.where((k) => k.startsWith(pfx))) {
+          final raw = sp.getString(key);
+          if (raw != null) {
+            try {
+              boxMap[key.substring(pfx.length)] = jsonDecode(raw);
+            } catch (_) {
+              // keep raw string if decode fails
+              boxMap[key.substring(pfx.length)] = raw;
+            }
+          }
+        }
+        snapshot[prefix] = boxMap;
+      }
+
+      if (kIsWeb) {
+        d('[SCHEMA] exportBoxes skipped on web environment');
+        return null;
+      }
+
+      final ts = DateTime.now().toIso8601String().replaceAll(':', '-');
+      final dir = Directory('docs/backups/autosafe');
+      await dir.create(recursive: true);
+      final path = '${dir.path}${Platform.pathSeparator}schema-$ts.json';
+      final file = File(path);
+      await file.writeAsString(const JsonEncoder.withIndent('  ').convert(snapshot));
+      d('[SCHEMA] Exported snapshot to $path');
+      return path;
+    } catch (e, st) {
+      d('[SCHEMA] Warning: exportBoxes failed: $e\n$st');
+      return null;
+    }
+  }
+
+  // Settings / Schema helpers
+
+  /// Returns the stored schema version, or 0 if none stored yet.
+  static Future<int> getSchemaVersion() async {
+    final v = await settingsBox.get('schemaVersion');
+    if (v is int) return v;
+    // If stored as string/num accidentally, try to parse
+    if (v is num) return v.toInt();
+    if (v is String) {
+      final parsed = int.tryParse(v);
+      if (parsed != null) return parsed;
+    }
+    return 0;
+  }
+
+  /// Persists the given schema version to settings.
+  static Future<void> setSchemaVersion(int version) async {
+    await settingsBox.put('schemaVersion', version);
   }
 
   // Performance Data Helper Methods
@@ -228,6 +302,151 @@ class Storage {
       Map<String, dynamic> stationKeys) async {
     for (final key in stationKeys.keys) {
       await settingsBox.put(key, stationKeys[key]);
+    }
+  }
+
+  /// Get admin PIN with default fallback
+  static Future<String> getAdminPin() async {
+    final pin = await settingsBox.get('adminPin');
+    return pin ?? '0000'; // Default PIN if none set
+  }
+
+  /// Set admin PIN
+  static Future<void> setAdminPin(String pin) async {
+    await settingsBox.put('adminPin', pin);
+  }
+
+  // Station Data Helper Methods
+
+  /// Get lunch station type data
+  static Future<Map<String, dynamic>> getLunchStationType() async {
+    final data = await stationsBox.get('lunchStationType');
+    return data ?? {};
+  }
+
+  /// Set lunch station type data
+  static Future<void> setLunchStationType(Map<String, dynamic> stationType) async {
+    await stationsBox.put('lunchStationType', stationType);
+  }
+
+  /// Get dinner station type data
+  static Future<Map<String, dynamic>> getDinnerStationType() async {
+    final data = await stationsBox.get('dinnerStationType');
+    return data ?? {};
+  }
+
+  /// Set dinner station type data
+  static Future<void> setDinnerStationType(Map<String, dynamic> stationType) async {
+    await stationsBox.put('dinnerStationType', stationType);
+  }
+
+  /// Get lunch station section data
+  static Future<Map<String, dynamic>> getLunchStationSection() async {
+    final data = await stationsBox.get('lunchStationSection');
+    return data ?? {};
+  }
+
+  /// Set lunch station section data
+  static Future<void> setLunchStationSection(Map<String, dynamic> stationSection) async {
+    await stationsBox.put('lunchStationSection', stationSection);
+  }
+
+  /// Get dinner station section data
+  static Future<Map<String, dynamic>> getDinnerStationSection() async {
+    final data = await stationsBox.get('dinnerStationSection');
+    return data ?? {};
+  }
+
+  /// Set dinner station section data
+  static Future<void> setDinnerStationSection(Map<String, dynamic> stationSection) async {
+    await stationsBox.put('dinnerStationSection', stationSection);
+  }
+
+  // Asset Data Helper Methods
+
+  /// Get avatar path for a server
+  static Future<String?> getAvatarPath(String serverId) async {
+    return await assetsBox.get('avatar_$serverId');
+  }
+
+  /// Set avatar path for a server
+  static Future<void> setAvatarPath(String serverId, String path) async {
+    await assetsBox.put('avatar_$serverId', path);
+  }
+
+  /// Get banner path for a server
+  static Future<String?> getBannerPath(String serverId) async {
+    return await assetsBox.get('banner_$serverId');
+  }
+
+  /// Set banner path for a server
+  static Future<void> setBannerPath(String serverId, String path) async {
+    await assetsBox.put('banner_$serverId', path);
+  }
+
+  // Migration Helper Methods
+
+  /// Migrate raw SharedPreferences keys to Storage boxes
+  static Future<void> migrateRawKeys() async {
+    final sp = await SharedPreferences.getInstance();
+    final allKeys = sp.getKeys();
+
+    // Migrate station data
+    if (allKeys.contains('lunchStationType')) {
+      final value = sp.getString('lunchStationType');
+      if (value != null) {
+        final data = jsonDecode(value);
+        await setLunchStationType(data);
+        await sp.remove('lunchStationType');
+      }
+    }
+
+    if (allKeys.contains('dinnerStationType')) {
+      final value = sp.getString('dinnerStationType');
+      if (value != null) {
+        final data = jsonDecode(value);
+        await setDinnerStationType(data);
+        await sp.remove('dinnerStationType');
+      }
+    }
+
+    if (allKeys.contains('lunchStationSection')) {
+      final value = sp.getString('lunchStationSection');
+      if (value != null) {
+        final data = jsonDecode(value);
+        await setLunchStationSection(data);
+        await sp.remove('lunchStationSection');
+      }
+    }
+
+    if (allKeys.contains('dinnerStationSection')) {
+      final value = sp.getString('dinnerStationSection');
+      if (value != null) {
+        final data = jsonDecode(value);
+        await setDinnerStationSection(data);
+        await sp.remove('dinnerStationSection');
+      }
+    }
+
+    // Migrate avatar and banner data
+    final avatarKeys = allKeys.where((key) => key.startsWith('avatar_')).toList();
+    for (final key in avatarKeys) {
+      final value = sp.getString(key);
+      if (value != null) {
+        final serverId = key.substring('avatar_'.length);
+        await setAvatarPath(serverId, value);
+        await sp.remove(key);
+      }
+    }
+
+    final bannerKeys = allKeys.where((key) => key.startsWith('banner_')).toList();
+    for (final key in bannerKeys) {
+      final value = sp.getString(key);
+      if (value != null) {
+        final serverId = key.substring('banner_'.length);
+        await setBannerPath(serverId, value);
+        await sp.remove(key);
+      }
     }
   }
 }

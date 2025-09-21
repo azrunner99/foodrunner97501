@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../app_state.dart';
+import '../storage.dart';
 import '../theme/app_theme.dart';
+import '../widgets/resilient_avatar.dart';
 
 enum SortOption {
   allTimeRuns('All Time Runs'),
@@ -497,14 +499,10 @@ class _MvpScreenState extends State<MvpScreen> {
 
   Widget _buildLeaderboardItem(_Entry e, int rank, Widget leading) {
     // Determine if we have a banner
-    ImageProvider? bannerImage;
-    if (e.bannerPath != null && e.bannerPath!.isNotEmpty) {
-      if (e.bannerPath!.startsWith('/') || e.bannerPath!.contains(':')) {
-        bannerImage = FileImage(File(e.bannerPath!));
-      } else {
-        bannerImage = AssetImage(e.bannerPath!);
-      }
-    }
+    final bannerImage = getResilientImageProvider(
+      e.bannerPath, 
+      isAvatar: false
+    );
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -720,12 +718,11 @@ class _MvpScreenState extends State<MvpScreen> {
 
   Future<Map<String, Map<String, String?>>> _loadAllAvatarsAndBanners(
       List servers) async {
-    final prefs = await SharedPreferences.getInstance();
     final Map<String, String?> avatarMap = {};
     final Map<String, String?> bannerMap = {};
     for (var s in servers) {
-      avatarMap[s.id] = prefs.getString('avatar_${s.id}');
-      bannerMap[s.id] = prefs.getString('banner_${s.id}');
+      avatarMap[s.id] = await Storage.getAvatarPath(s.id);
+      bannerMap[s.id] = await Storage.getBannerPath(s.id);
     }
     return {
       'avatars': avatarMap,

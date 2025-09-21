@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'log.dart';
 import 'dart:io';
 import 'dart:async';
 import 'package:path_provider/path_provider.dart';
@@ -41,13 +42,13 @@ class BackupManager {
 
       // Save to file
       final file = await _getBackupFile(fileName);
-      print('[BackupManager] Attempting to write backup to: ${file.path}');
+  d('[BackupManager] Attempting to write backup to: ${file.path}');
       await file.writeAsString(jsonString);
 
       // Verify the file was written
       final exists = await file.exists();
       final size = exists ? await file.length() : 0;
-      print(
+  d(
           '[BackupManager] File written successfully: exists=$exists, size=$size bytes');
 
       if (!exists) {
@@ -71,7 +72,7 @@ class BackupManager {
       try {
         await _cleanupOldAutomaticBackups();
       } catch (e) {
-        print(
+  d(
             '[BackupManager] Warning: Cleanup failed after backup creation: $e');
       }
     }
@@ -153,10 +154,10 @@ class BackupManager {
         throw Exception('ZIP file was not created after write operation');
       }
 
-      print('[BackupManager] Comprehensive backup created: $zipFileName');
-      print('[BackupManager] JSON data size: ${jsonBytes.length} bytes');
-      print('[BackupManager] Photos included: $photoCount');
-      print('[BackupManager] Total ZIP size: $size bytes');
+  d('[BackupManager] Comprehensive backup created: $zipFileName');
+  d('[BackupManager] JSON data size: ${jsonBytes.length} bytes');
+  d('[BackupManager] Photos included: $photoCount');
+  d('[BackupManager] Total ZIP size: $size bytes');
 
       return BackupResult(
         success: true,
@@ -176,7 +177,7 @@ class BackupManager {
       try {
         await _cleanupOldAutomaticBackups();
       } catch (e) {
-        print(
+  d(
             '[BackupManager] Warning: Cleanup failed after comprehensive backup creation: $e');
       }
     }
@@ -254,18 +255,18 @@ class BackupManager {
       // Check both external and internal storage locations
       final directories = await _getAllBackupDirectories();
 
-      print(
+  d(
           '[BackupManager] Checking ${directories.length} directories for backups');
 
       for (final directory in directories) {
-        print('[BackupManager] Checking directory: ${directory.path}');
+  d('[BackupManager] Checking directory: ${directory.path}');
 
         if (await directory.exists()) {
-          print('[BackupManager] Directory exists: ${directory.path}');
+          d('[BackupManager] Directory exists: ${directory.path}');
 
           // List all files first for debugging
           final allFiles = directory.listSync();
-          print(
+          d(
               '[BackupManager] All files in directory: ${allFiles.map((f) => f.path.split(Platform.pathSeparator).last).toList()}');
 
           final files = allFiles
@@ -274,10 +275,10 @@ class BackupManager {
               .cast<File>()
               .toList();
 
-          print(
+          d(
               '[BackupManager] Found ${files.length} JSON files in ${directory.path}');
           if (files.isNotEmpty) {
-            print(
+            d(
                 '[BackupManager] JSON files: ${files.map((f) => f.path.split(Platform.pathSeparator).last).toList()}');
           }
 
@@ -296,20 +297,20 @@ class BackupManager {
               );
 
               backups.add(backup);
-              print('[BackupManager] Added backup: ${backup.fileName}');
+              d('[BackupManager] Added backup: ${backup.fileName}');
             } catch (e) {
-              print(
+              d(
                   '[BackupManager] Skipping invalid backup file ${file.path}: $e');
               // Skip invalid backup files
               continue;
             }
           }
         } else {
-          print('[BackupManager] Directory does not exist: ${directory.path}');
+          d('[BackupManager] Directory does not exist: ${directory.path}');
         }
       }
 
-      print(
+  d(
           '[BackupManager] Total backups found before deduplication: ${backups.length}');
 
       // Remove duplicates (same filename) - prefer external storage
@@ -325,15 +326,15 @@ class BackupManager {
       // Sort by creation date (newest first)
       resultList.sort((a, b) => b.created.compareTo(a.created));
 
-      print('[BackupManager] Final unique backup count: ${resultList.length}');
+  d('[BackupManager] Final unique backup count: ${resultList.length}');
       for (final backup in resultList) {
-        print(
+  d(
             '[BackupManager] Available backup: ${backup.fileName} (${backup.fileSize} bytes)');
       }
 
       return resultList;
     } catch (e) {
-      print('[BackupManager] Error getting available backups: $e');
+  d('[BackupManager] Error getting available backups: $e');
       return [];
     }
   }
@@ -401,11 +402,11 @@ class BackupManager {
 
         if (!await newFile.exists()) {
           await oldFile.copy(newFile.path);
-          print('Migrated backup: $fileName');
+          d('Migrated backup: $fileName');
         }
       }
     } catch (e) {
-      print('Migration failed: $e');
+  d('Migration failed: $e');
     }
   }
 
@@ -678,10 +679,10 @@ class BackupManager {
         }
       }
 
-      print('[Backup] Found ${avatarPhotos.length} avatar photos to backup');
+  d('[Backup] Found ${avatarPhotos.length} avatar photos to backup');
       return avatarPhotos;
     } catch (e) {
-      print('[Backup] Error collecting avatar photos: $e');
+  d('[Backup] Error collecting avatar photos: $e');
       return {};
     }
   }
@@ -714,11 +715,11 @@ class BackupManager {
         }
       }
 
-      print(
+  d(
           '[Backup] Found ${avatarPhotos.length} avatar photos paths for comprehensive backup');
       return avatarPhotos;
     } catch (e) {
-      print('[Backup] Error collecting avatar photo paths: $e');
+  d('[Backup] Error collecting avatar photo paths: $e');
       return {};
     }
   }
@@ -749,11 +750,11 @@ class BackupManager {
         }
       }
 
-      print(
+  d(
           '[Backup] Found ${sharedPrefsData.length} SharedPreferences entries to backup');
       return sharedPrefsData;
     } catch (e) {
-      print('[Backup] Error collecting SharedPreferences data: $e');
+  d('[Backup] Error collecting SharedPreferences data: $e');
       return {};
     }
   }
@@ -829,17 +830,17 @@ class BackupManager {
           await file.writeAsBytes(bytes);
           restoredCount++;
 
-          print(
+          d(
               '[Restore] Restored avatar photo: $fileName (${bytes.length} bytes)');
         } catch (e) {
-          print('[Restore] Failed to restore avatar photo ${entry.key}: $e');
+          d('[Restore] Failed to restore avatar photo ${entry.key}: $e');
         }
       }
 
-      print(
+  d(
           '[Restore] Successfully restored $restoredCount/${avatarPhotos.length} avatar photos');
     } catch (e) {
-      print('[Restore] Error restoring avatar photos: $e');
+  d('[Restore] Error restoring avatar photos: $e');
     }
   }
 
@@ -873,16 +874,16 @@ class BackupManager {
             restoredCount++;
           }
 
-          print('[Restore] Restored SharedPreferences: $key');
+          d('[Restore] Restored SharedPreferences: $key');
         } catch (e) {
-          print('[Restore] Failed to restore SharedPreferences entry $key: $e');
+          d('[Restore] Failed to restore SharedPreferences entry $key: $e');
         }
       }
 
-      print(
+  d(
           '[Restore] Successfully restored $restoredCount/${sharedPrefsData.length} SharedPreferences entries');
     } catch (e) {
-      print('[Restore] Error restoring SharedPreferences data: $e');
+  d('[Restore] Error restoring SharedPreferences data: $e');
     }
   }
 
@@ -903,7 +904,7 @@ class BackupManager {
           if (!await downloadsDir.exists()) {
             await downloadsDir.create(recursive: true);
           }
-          print(
+          d(
               '[BackupManager] Using persistent Downloads directory: ${downloadsDir.path}');
           return downloadsDir;
         }
@@ -913,13 +914,13 @@ class BackupManager {
         if (!await appExternalDir.exists()) {
           await appExternalDir.create(recursive: true);
         }
-        print(
+  d(
             '[BackupManager] Using app external directory: ${appExternalDir.path}');
         return appExternalDir;
       }
     } catch (e) {
       // If external storage fails, fall back to app documents directory
-      print('External storage not available, using app documents: $e');
+  d('External storage not available, using app documents: $e');
     }
 
     // Fallback to app documents directory
@@ -928,7 +929,7 @@ class BackupManager {
     if (!await backupsDir.exists()) {
       await backupsDir.create(recursive: true);
     }
-    print('[BackupManager] Using app documents directory: ${backupsDir.path}');
+  d('[BackupManager] Using app documents directory: ${backupsDir.path}');
     return backupsDir;
   }
 
@@ -981,7 +982,7 @@ class BackupManager {
 
     // Perform cleanup on startup to ensure rolling retention
     _cleanupOldAutomaticBackups().catchError((e) {
-      print('[BackupManager] Warning: Initial cleanup failed on startup: $e');
+  d('[BackupManager] Warning: Initial cleanup failed on startup: $e');
     });
 
     // Check every hour for backup opportunities
@@ -1041,17 +1042,17 @@ class BackupManager {
         return; // Already backed up everything today
       }
 
-      print('[AutoBackup] Performing automatic end-of-day backups...');
+  d('[AutoBackup] Performing automatic end-of-day backups...');
 
       // Create automatic server backup if needed
       if (needsRegularBackup) {
         final result = await _createAutomaticBackup();
         if (result.success) {
           await _setLastAutomaticBackupDate(today);
-          print(
+          d(
               '[AutoBackup] Automatic server backup created: ${result.fileName}');
         } else {
-          print(
+          d(
               '[AutoBackup] Failed to create automatic backup: ${result.message}');
         }
       }
@@ -1061,10 +1062,10 @@ class BackupManager {
         final deviceResult = await _createAutomaticDeviceBackup();
         if (deviceResult.success) {
           await _setLastDeviceBackupDate(today);
-          print(
+          d(
               '[AutoBackup] Automatic device backup created: ${deviceResult.fileName}');
         } else {
-          print(
+          d(
               '[AutoBackup] Failed to create device backup: ${deviceResult.message}');
         }
       }
@@ -1072,7 +1073,7 @@ class BackupManager {
       // Clean up old backups (keep only last 30 days)
       await _cleanupOldAutomaticBackups();
     } catch (e) {
-      print('[AutoBackup] Error during automatic backup: $e');
+  d('[AutoBackup] Error during automatic backup: $e');
     }
   }
 
@@ -1113,7 +1114,7 @@ class BackupManager {
         return nowMinutes >= closingWindowStart && nowMinutes < closeMinutes;
       }
     } catch (e) {
-      print('[AutoBackup] Error reading close time settings: $e');
+  d('[AutoBackup] Error reading close time settings: $e');
       // Fallback to default
       return _isDefaultDinnerClosingTime(now);
     }
@@ -1187,7 +1188,7 @@ class BackupManager {
         return DateTime.parse(dateString);
       }
     } catch (e) {
-      print('[AutoBackup] Error getting last backup date: $e');
+  d('[AutoBackup] Error getting last backup date: $e');
     }
     return null;
   }
@@ -1198,7 +1199,7 @@ class BackupManager {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_lastBackupDateKey, date.toIso8601String());
     } catch (e) {
-      print('[AutoBackup] Error setting last backup date: $e');
+  d('[AutoBackup] Error setting last backup date: $e');
     }
   }
 
@@ -1211,7 +1212,7 @@ class BackupManager {
         return DateTime.parse(dateString);
       }
     } catch (e) {
-      print('[AutoBackup] Error getting last device backup date: $e');
+  d('[AutoBackup] Error getting last device backup date: $e');
     }
     return null;
   }
@@ -1222,7 +1223,7 @@ class BackupManager {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_lastDeviceBackupDateKey, date.toIso8601String());
     } catch (e) {
-      print('[AutoBackup] Error setting last device backup date: $e');
+  d('[AutoBackup] Error setting last device backup date: $e');
     }
   }
 
@@ -1309,7 +1310,7 @@ class BackupManager {
           DateTime.now().subtract(Duration(days: _maxBackupDays));
       int deletedCount = 0;
 
-      print(
+  d(
           '[BackupCleanup] Starting cleanup - removing backups older than ${cutoffDate.toIso8601String()}');
 
       for (final directory in directories) {
@@ -1356,10 +1357,10 @@ class BackupManager {
               try {
                 await dailyDeviceBackups[i].delete();
                 deletedCount++;
-                print(
+                d(
                     '[BackupCleanup] Deleted old daily device backup: ${dailyDeviceBackups[i].path}');
               } catch (e) {
-                print(
+                d(
                     '[BackupCleanup] Error deleting daily device backup ${dailyDeviceBackups[i].path}: $e');
               }
             }
@@ -1373,10 +1374,10 @@ class BackupManager {
                 if (stat.modified.isBefore(cutoffDate)) {
                   await file.delete();
                   deletedCount++;
-                  print('[BackupCleanup] Deleted old backup: ${file.path}');
+                  d('[BackupCleanup] Deleted old backup: ${file.path}');
                 }
               } catch (e) {
-                print(
+                d(
                     '[BackupCleanup] Error deleting old backup ${file.path}: $e');
               }
             }
@@ -1384,16 +1385,16 @@ class BackupManager {
         }
       }
 
-      print(
+  d(
           '[BackupCleanup] Cleanup completed - deleted $deletedCount old backup files');
     } catch (e) {
-      print('[BackupCleanup] Error during cleanup: $e');
+  d('[BackupCleanup] Error during cleanup: $e');
     }
   }
 
   /// Manual trigger for automatic backup (for testing)
   static Future<BackupResult> triggerAutomaticBackup() async {
-    print('[AutoBackup] Manual trigger for automatic backup');
+  d('[AutoBackup] Manual trigger for automatic backup');
     final result = await _createAutomaticBackup();
 
     if (result.success) {

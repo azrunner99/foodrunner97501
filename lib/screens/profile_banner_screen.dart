@@ -1,8 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../utils/log.dart';
 import 'package:provider/provider.dart';
 import '../app_state.dart';
 import '../utils/banner_assets.dart';
+import '../widgets/resilient_avatar.dart';
 
 class ProfileBannerScreen extends StatefulWidget {
   final String serverId;
@@ -44,7 +46,7 @@ class _ProfileBannerScreenState extends State<ProfileBannerScreen> {
         isLoadingBanners = false;
       });
     } catch (e) {
-      print('Error loading banners: $e');
+  d('Error loading banners: $e');
       setState(() {
         isLoadingBanners = false;
       });
@@ -209,15 +211,10 @@ class _ProfileBannerScreenState extends State<ProfileBannerScreen> {
                                 child: CircleAvatar(
                                   radius: 34,
                                   backgroundColor: Colors.white,
-                                  backgroundImage: profile?.avatarPath !=
-                                              null &&
-                                          profile!.avatarPath!.isNotEmpty
-                                      ? (profile.avatarPath!.startsWith('/') ||
-                                              profile.avatarPath!.contains(':')
-                                          ? FileImage(File(profile.avatarPath!))
-                                              as ImageProvider
-                                          : AssetImage(profile.avatarPath!))
-                                      : null,
+                                  backgroundImage: getResilientImageProvider(
+                                      profile?.avatarPath, 
+                                      isAvatar: true
+                                  ),
                                   child: profile?.avatarPath == null ||
                                           profile!.avatarPath!.isEmpty
                                       ? Text(

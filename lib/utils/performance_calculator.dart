@@ -3,6 +3,7 @@ import '../models/performance_models.dart';
 import '../models.dart';
 import '../storage.dart';
 import '../providers/nps_provider.dart';
+import 'log.dart';
 
 /// Core performance calculation engine with mathematical algorithms
 class PerformanceCalculator {
@@ -135,30 +136,26 @@ class PerformanceCalculator {
     double periodSales = businessData?.serverSpecificSales[serverId] ??
         (businessData?.totalSales ?? 0.0) / math.max(1, totalServerCount ?? 1);
 
-    print(
-        'DEBUG: Period efficiency inputs for $serverId -> checks: $periodCheckCount, sales: $periodSales');
+  d('DEBUG: Period efficiency inputs for $serverId -> checks: $periodCheckCount, sales: $periodSales');
 
     // Optional NPS all-time totals used for average-check computation
     double npsAllTimeChecks = 0.0;
     double npsAllTimeSales = 0.0;
 
     if (npsHistory != null && npsHistory.isNotEmpty) {
-      print(
-          'DEBUG: Searching for serverId "$serverId" in ${npsHistory.length} NPS history entries');
+    d('DEBUG: Searching for serverId "$serverId" in ${npsHistory.length} NPS history entries');
       final serverNpsData =
           npsHistory.where((nps) => nps.serverId == serverId).toList();
-      print(
-          'DEBUG: Found ${serverNpsData.length} NPS data entries for server $serverId');
+    d('DEBUG: Found ${serverNpsData.length} NPS data entries for server $serverId');
       if (serverNpsData.isNotEmpty) {
         final latestNps =
             serverNpsData.reduce((a, b) => a.month.isAfter(b.month) ? a : b);
         npsAllTimeChecks = latestNps.responseCount.toDouble();
         npsAllTimeSales = latestNps.categoryBreakdown['sales'] ?? 0.0;
-        print(
-            'DEBUG: NPS all-time totals for $serverId -> checks: $npsAllTimeChecks, sales: \$${npsAllTimeSales.toStringAsFixed(2)}');
+    d('DEBUG: NPS all-time totals for $serverId -> checks: $npsAllTimeChecks, sales: \$${npsAllTimeSales.toStringAsFixed(2)}');
       }
     } else {
-      print('DEBUG: No NPS history available for average-check computation');
+  d('DEBUG: No NPS history available for average-check computation');
     }
 
     // Calculate shift complexities
@@ -305,13 +302,11 @@ class PerformanceCalculator {
     // Sales efficiency: food runs per $1000 in sales
     final salesEfficiency = sales > 0 ? totalFoodRuns / (sales / 1000) : 0.0;
 
-    print('DEBUG: Sales Efficiency Calculation for server $serverId:');
-    print('DEBUG:   totalFoodRuns: $totalFoodRuns');
-    print('DEBUG:   sales: \$${sales.toStringAsFixed(2)}');
-    print(
-        'DEBUG:   sales/1000: ${sales > 0 ? (sales / 1000).toStringAsFixed(3) : "N/A"}');
-    print(
-        'DEBUG:   salesEfficiency: ${salesEfficiency.toStringAsFixed(3)} runs per \$1K');
+  d('DEBUG: Sales Efficiency Calculation for server $serverId:');
+  d('DEBUG:   totalFoodRuns: $totalFoodRuns');
+  d('DEBUG:   sales: \$${sales.toStringAsFixed(2)}');
+  d('DEBUG:   sales/1000: ${sales > 0 ? (sales / 1000).toStringAsFixed(3) : "N/A"}');
+  d('DEBUG:   salesEfficiency: ${salesEfficiency.toStringAsFixed(3)} runs per \$1K');
 
     // Enhanced experience factor for monthly data context
     final experienceFactor = _calculateExperienceFactor(daysEmployed,
@@ -530,7 +525,7 @@ class PerformanceCalculator {
       int npsDataMonths,
       double totalSales,
       double totalChecks) {
-    print('DEBUG: Calculating performance score with new weight structure');
+  d('DEBUG: Calculating performance score with new weight structure');
 
     // NEW WEIGHT STRUCTURE (Based on user requirements)
     double npsWeight = 0.50; // 50% - Guest perception (NPS data)
@@ -540,14 +535,13 @@ class PerformanceCalculator {
 
     // Adjust weights only for servers with NO NPS data at all
     if (npsDataMonths == 0) {
-      print('DEBUG: No NPS data available, redistributing weights');
+  d('DEBUG: No NPS data available, redistributing weights');
       npsWeight = 0.0; // No NPS weight
       salesWeight = 0.60; // Increase sales weight to 60%
       foodRunningWeight = 0.40; // Increase food running weight to 40%
     } else if (npsDataMonths < 3) {
       // Servers with some NPS data but limited - slight reduction
-      print(
-          'DEBUG: Limited NPS data ($npsDataMonths months), slight weight adjustment');
+    d('DEBUG: Limited NPS data ($npsDataMonths months), slight weight adjustment');
       final reduction =
           (3 - npsDataMonths) * 0.05; // 5% reduction per missing month
       npsWeight =
@@ -559,12 +553,11 @@ class PerformanceCalculator {
       foodRunningWeight += redistributed;
     }
 
-    print(
-        'DEBUG: Final weights - NPS: ${(npsWeight * 100).toStringAsFixed(1)}%, Sales: ${(salesWeight * 100).toStringAsFixed(1)}%, Food Running: ${(foodRunningWeight * 100).toStringAsFixed(1)}%');
+  d('DEBUG: Final weights - NPS: ${(npsWeight * 100).toStringAsFixed(1)}%, Sales: ${(salesWeight * 100).toStringAsFixed(1)}%, Food Running: ${(foodRunningWeight * 100).toStringAsFixed(1)}%');
 
     // Component 1: NPS/Guest Perception Score (0-100)
     final npsScore = metrics.npsScore;
-    print('DEBUG: NPS Score: ${npsScore.toStringAsFixed(1)}/100');
+  d('DEBUG: NPS Score: ${npsScore.toStringAsFixed(1)}/100');
 
     // Component 2: Sales Ability Score (based on average check performance)
     // Calculate average check from total sales and total checks from NPS data
@@ -600,8 +593,7 @@ class PerformanceCalculator {
       salesAbilityScore = 50.0;
     }
 
-    print(
-        'DEBUG: Sales Ability - Total Sales: \$${totalSales.toStringAsFixed(2)}, Total Checks: ${totalChecks.toStringAsFixed(0)}, Average Check: \$${averageCheck.toStringAsFixed(2)}, Score: ${salesAbilityScore.toStringAsFixed(1)}/100');
+  d('DEBUG: Sales Ability - Total Sales: \$${totalSales.toStringAsFixed(2)}, Total Checks: ${totalChecks.toStringAsFixed(0)}, Average Check: \$${averageCheck.toStringAsFixed(2)}, Score: ${salesAbilityScore.toStringAsFixed(1)}/100');
 
     // Component 3: Food Running Performance Score
     // Combines efficiency, productivity, and willingness to help
@@ -621,22 +613,19 @@ class PerformanceCalculator {
     final foodRunningScore = (adjustedPerformanceScore * 0.6) +
         (efficiencyScore * 0.2) +
         (metrics.consistencyScore * 0.2);
-    print(
-        'DEBUG: Food Running Score: ${foodRunningScore.toStringAsFixed(1)}/100 (Performance: ${adjustedPerformanceScore.toStringAsFixed(1)}, Efficiency: ${efficiencyScore.toStringAsFixed(1)}, Consistency: ${metrics.consistencyScore.toStringAsFixed(1)})');
+  d('DEBUG: Food Running Score: ${foodRunningScore.toStringAsFixed(1)}/100 (Performance: ${adjustedPerformanceScore.toStringAsFixed(1)}, Efficiency: ${efficiencyScore.toStringAsFixed(1)}, Consistency: ${metrics.consistencyScore.toStringAsFixed(1)})');
 
     // Calculate weighted final score
     final weightedScore = ((npsScore * npsWeight) +
         (salesAbilityScore * salesWeight) +
         (foodRunningScore * foodRunningWeight));
 
-    print(
-        'DEBUG: Component Contributions - NPS: ${(npsScore * npsWeight).toStringAsFixed(1)}, Sales: ${(salesAbilityScore * salesWeight).toStringAsFixed(1)}, Food Running: ${(foodRunningScore * foodRunningWeight).toStringAsFixed(1)}');
+  d('DEBUG: Component Contributions - NPS: ${(npsScore * npsWeight).toStringAsFixed(1)}, Sales: ${(salesAbilityScore * salesWeight).toStringAsFixed(1)}, Food Running: ${(foodRunningScore * foodRunningWeight).toStringAsFixed(1)}');
 
     // Apply experience factor (servers improve over time)
     final finalScore = weightedScore * metrics.experienceFactor;
 
-    print(
-        'DEBUG: Final Score: ${finalScore.toStringAsFixed(1)}/100 (Experience Factor: ${metrics.experienceFactor.toStringAsFixed(3)})');
+  d('DEBUG: Final Score: ${finalScore.toStringAsFixed(1)}/100 (Experience Factor: ${metrics.experienceFactor.toStringAsFixed(3)})');
 
     return math.max(0.0, math.min(100.0, finalScore));
   }
@@ -710,26 +699,21 @@ class PerformanceCalculator {
                 lastUpdated: DateTime.now(),
               );
 
-              print(
-                  'DEBUG: Created NPSData for server ${server.id} (original: ${server.originalId}) with responseCount: $allTimeChecks, sales: \$${allTimeSales.toStringAsFixed(2)}');
+        d('DEBUG: Created NPSData for server ${server.id} (original: ${server.originalId}) with responseCount: $allTimeChecks, sales: \$${allTimeSales.toStringAsFixed(2)}');
 
               // Validate the data being stored
               if (allTimeChecks > 0 || allTimeSales > 0) {
-                print(
-                    'DEBUG: ✅ NPSData has valid data - checks: $allTimeChecks, sales: \$${allTimeSales.toStringAsFixed(2)}');
+                d('DEBUG: ✅ NPSData has valid data - checks: $allTimeChecks, sales: \$${allTimeSales.toStringAsFixed(2)}');
               } else {
-                print(
-                    'DEBUG: ⚠️ NPSData has no check/sales data for server ${server.id}');
+                d('DEBUG: ⚠️ NPSData has no check/sales data for server ${server.id}');
               }
 
               npsHistory.add(npsData);
             } else {
-              print(
-                  'DEBUG: No monthly report data found for server ${server.id} month $monthKey');
+        d('DEBUG: No monthly report data found for server ${server.id} month $monthKey');
             }
           } catch (e) {
-            print(
-                'DEBUG: Error loading monthly report for server ${server.id} month $monthKey: $e');
+      d('DEBUG: Error loading monthly report for server ${server.id} month $monthKey: $e');
             continue;
           }
         }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/log.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../providers/nps_provider.dart';
@@ -146,7 +147,7 @@ class _EnhancedNPSAnalyticsWidgetState
       );
       return reportMaps.map((map) => NPSMonthlyReport.fromMap(map)).toList();
     } catch (e) {
-      print('[EnhancedNPSAnalyticsWidget] Error loading monthly reports: $e');
+  d('[EnhancedNPSAnalyticsWidget] Error loading monthly reports: $e');
       rethrow;
     }
   }

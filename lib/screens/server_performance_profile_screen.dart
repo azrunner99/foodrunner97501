@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/log.dart';
 import 'package:provider/provider.dart';
 import '../app_state.dart';
 import '../models.dart';
@@ -48,7 +49,7 @@ class _ServerPerformanceProfileScreenState
       await _loadShiftHistory();
       await _loadNPSData();
     } catch (e) {
-      print('[Server Profile] Error loading data: $e');
+  d('[Server Profile] Error loading data: $e');
     } finally {
       setState(() => _isLoading = false);
     }
@@ -57,9 +58,9 @@ class _ServerPerformanceProfileScreenState
   Future<void> _loadShiftHistory() async {
     final app = context.read<AppState>();
 
-    print(
+  d(
         '[Profile Debug] Loading shift history for server ${widget.server.name} (ID: ${widget.server.id})');
-    print('[Profile Debug] Total shifts in app.history: ${app.history.length}');
+  d('[Profile Debug] Total shifts in app.history: ${app.history.length}');
 
     // Get ALL historical shifts for this server
     _allServerShifts = app.history
@@ -68,16 +69,16 @@ class _ServerPerformanceProfileScreenState
             (shift.counts[widget.server.id] ?? 0) > 0)
         .toList();
 
-    print(
+  d(
         '[Profile Debug] Found ${_allServerShifts.length} shifts for this server');
-    print(
+  d(
         '[Profile Debug] Server ID exists in shift counts: ${app.history.map((s) => s.counts.containsKey(widget.server.id)).toList()}');
 
     // Debug: Check a few sample shifts
     if (app.history.isNotEmpty) {
       final sampleShifts = app.history.take(3);
       for (var shift in sampleShifts) {
-        print(
+  d(
             '[Profile Debug] Sample shift: ${shift.start}, counts: ${shift.counts}, contains ${widget.server.id}: ${shift.counts.containsKey(widget.server.id)}');
       }
     }
@@ -88,14 +89,14 @@ class _ServerPerformanceProfileScreenState
     _totalHistoricalRuns =
         _appAllTimeRuns; // Use authoritative source for consistency
 
-    print(
+  d(
         '[Profile Debug] Using authoritative total from app.totals: $_appAllTimeRuns');
 
     // Calculate pizookie runs from shift data (this is typically accurate)
     _totalPizookieRuns = _allServerShifts.fold<int>(
         0, (sum, shift) => sum + (shift.pizookieCounts[widget.server.id] ?? 0));
 
-    print(
+  d(
         '[Profile Debug] Calculated totals: authoritative=$_appAllTimeRuns, pizookies=$_totalPizookieRuns');
 
     // Current shift data
@@ -105,7 +106,7 @@ class _ServerPerformanceProfileScreenState
         ? (app.currentPizookieCounts[widget.server.id] ?? 0)
         : 0;
 
-    print(
+  d(
         '[Profile Debug] Current shift: active=${app.shiftActive}, runs=$_currentShiftRuns, pizookies=$_currentPizookieRuns');
 
     // Recent shifts (last 90 days)
@@ -129,8 +130,8 @@ class _ServerPerformanceProfileScreenState
     try {
       final npsServers =
           await npsProvider.database.getAllServers(activeOnly: false);
-      print('[NPS Debug] Looking for server name: "${widget.server.name}"');
-      print(
+  d('[NPS Debug] Looking for server name: "${widget.server.name}"');
+  d(
           '[NPS Debug] Available NPS servers: ${npsServers.map((s) => s['name']).toList()}');
 
       // Try exact match first
@@ -148,7 +149,7 @@ class _ServerPerformanceProfileScreenState
           orElse: () => <String, dynamic>{},
         );
         if (npsServer.isNotEmpty) {
-          print(
+          d(
               '[NPS Debug] Found case-insensitive match: "${npsServer['name']}"');
         }
       }
@@ -166,7 +167,7 @@ class _ServerPerformanceProfileScreenState
           orElse: () => <String, dynamic>{},
         );
         if (npsServer.isNotEmpty) {
-          print('[NPS Debug] Found partial match: "${npsServer['name']}"');
+          d('[NPS Debug] Found partial match: "${npsServer['name']}"');
         }
       }
 

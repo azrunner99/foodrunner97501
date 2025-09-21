@@ -1115,6 +1115,58 @@ class TimestampIntegrityAnalyzer {
     return sessions;
   }
 
+  /// Analyze timing regularity to detect mechanical patterns.
+  /// Returns a signature with mean interval, coefficient of variation (CV),
+  /// and flags indicating whether the pattern looks mechanical or suspicious.
+  static TimingSignature analyzeMechanicalConsistency(
+      List<DateTime> timestamps) {
+    if (timestamps.length < 3) {
+      return const TimingSignature(
+        meanInterval: 0.0,
+        coefficientOfVariation: 1.0,
+        isMechanical: false,
+        isSuspicious: false,
+      );
+    }
+
+    // Compute intervals in milliseconds
+    final intervals = <double>[];
+    for (int i = 1; i < timestamps.length; i++) {
+      final ms = timestamps[i].difference(timestamps[i - 1]).inMilliseconds;
+      if (ms > 0) intervals.add(ms.toDouble());
+    }
+
+    if (intervals.isEmpty) {
+      return const TimingSignature(
+        meanInterval: 0.0,
+        coefficientOfVariation: 1.0,
+        isMechanical: false,
+        isSuspicious: false,
+      );
+    }
+
+    final mean = intervals.reduce((a, b) => a + b) / intervals.length;
+    double variance = 0.0;
+    for (final x in intervals) {
+      final d = x - mean;
+      variance += d * d;
+    }
+    variance /= intervals.length;
+    final stdDev = math.sqrt(variance);
+    final cv = mean == 0 ? 0.0 : (stdDev / mean);
+
+    // Classification using tightened thresholds defined above
+    final isMechanical = cv <= MECHANICAL_VARIATION;
+    final isSuspicious = !isMechanical && cv <= SUSPICIOUS_VARIATION;
+
+    return TimingSignature(
+      meanInterval: mean,
+      coefficientOfVariation: cv,
+      isMechanical: isMechanical,
+      isSuspicious: isSuspicious,
+    );
+  }
+
   /// Calculate comprehensive timestamp-based risk score (focused on manual over-clicking)
   static double calculateTimestampRiskScore(List<DateTime> timestamps) {
     if (timestamps.length < 2) return 0.0;
@@ -1319,4 +1371,21 @@ class TimestampIntegrityAnalyzer {
       riskScore: math.min(100.0, riskScore),
     );
   }
+}
+
+/// Summary of timing regularity for click timestamps.
+class TimingSignature {
+  final double meanInterval; // milliseconds
+  final double coefficientOfVariation; // stddev/mean
+  final bool isMechanical; // very low variation => automation
+  final bool isSuspicious; // low variation => possibly dishonest
+
+  const TimingSignature({
+    required this.meanInterval,
+    required this.coefficientOfVariation,
+    required this.isMechanical,
+    required this.isSuspicious,
+  });
+
+  bool get isHuman => !isMechanical && !isSuspicious;
 }

@@ -6,11 +6,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 import '../app_state.dart';
+import '../storage.dart';
 import '../gamification.dart';
+import '../widgets/resilient_avatar.dart';
 import '../theme/app_theme.dart';
 import '../widgets/month_day_picker.dart';
 import 'preset_avatar_gallery_screen.dart';
-import 'profile_banner_screen_new.dart';
+import 'profile_banner_screen.dart';
 // import removed: achievementsCatalog no longer used
 
 class ProfilesScreen extends StatelessWidget {
@@ -142,19 +144,10 @@ class ProfilesScreen extends StatelessWidget {
                                             ),
                                             child: CircleAvatar(
                                               radius: 37,
-                                              backgroundImage: prof
-                                                              ?.avatarPath !=
-                                                          null &&
-                                                      prof!.avatarPath!
-                                                          .isNotEmpty
-                                                  ? (prof.avatarPath!.startsWith(
-                                                              'assets/')
-                                                          ? AssetImage(
-                                                              prof.avatarPath!)
-                                                          : FileImage(File(prof
-                                                              .avatarPath!)))
-                                                      as ImageProvider
-                                                  : null,
+                                              backgroundImage: getResilientImageProvider(
+                                                  prof?.avatarPath, 
+                                                  isAvatar: true
+                                              ),
                                               backgroundColor:
                                                   Colors.grey.shade300,
                                               child: prof?.avatarPath == null ||
@@ -763,8 +756,7 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
       final ext = pickedFile.path.split('.').last;
       final newPath = '${appDir.path}/avatar_${widget.serverId}_$uuid.$ext';
       await File(pickedFile.path).copy(newPath);
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('avatar_${widget.serverId}', newPath);
+      await Storage.setAvatarPath(widget.serverId, newPath);
       // Save avatar path to ServerProfile for global access
       final app = Provider.of<AppState>(context, listen: false);
       app.updateAvatar(widget.serverId, newPath);
@@ -862,8 +854,7 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
             onAvatarSelected: (path) async {
               final app = Provider.of<AppState>(context, listen: false);
               app.updateAvatar(widget.serverId, path);
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.setString('avatar_${widget.serverId}', path);
+              await Storage.setAvatarPath(widget.serverId, path);
               Navigator.pop(context, path);
             },
           ),
@@ -1073,11 +1064,10 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
                               child: CircleAvatar(
                                 radius: 60,
                                 backgroundColor: Colors.deepPurple.shade100,
-                                backgroundImage: (p.avatarPath != null &&
-                                        p.avatarPath!.isNotEmpty &&
-                                        !p.avatarPath!.startsWith('assets/'))
-                                    ? FileImage(File(p.avatarPath!))
-                                    : null,
+                                backgroundImage: getResilientImageProvider(
+                                    p.avatarPath, 
+                                    isAvatar: true
+                                ),
                                 child: (p.avatarPath == null ||
                                         p.avatarPath!.isEmpty)
                                     ? null

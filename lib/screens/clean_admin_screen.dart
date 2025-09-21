@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../app_state.dart';
+import '../storage.dart';
 import '../widgets/wallpaper_background.dart';
 import '../services/nps_security_service.dart';
 import 'manage_servers_screen.dart';
@@ -9,6 +11,7 @@ import 'server_dashboard_screen.dart';
 import 'backup_manager_screen.dart';
 import 'server_performance_screen.dart';
 import 'server_nps_screen.dart';
+import '../utils/log.dart';
 
 class CleanAdminScreen extends StatefulWidget {
   const CleanAdminScreen({super.key});
@@ -23,7 +26,7 @@ class _CleanAdminScreenState extends State<CleanAdminScreen> {
 
   @override
   Widget build(BuildContext context) {
-    print("🚨 DEBUG: CleanAdminScreen.build() called - NEW VERSION ACTIVE!");
+  d("🚨 DEBUG: CleanAdminScreen.build() called - NEW VERSION ACTIVE!");
 
     final app = context.watch<AppState>();
     if (!_unlocked) {
@@ -185,7 +188,7 @@ class _CleanAdminScreenState extends State<CleanAdminScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            print("🚨 DEBUG: Back button pressed, navigating to home");
+            d("🚨 DEBUG: Back button pressed, navigating to home");
             Navigator.pushReplacementNamed(context, '/home');
           },
         ),
@@ -221,6 +224,51 @@ class _CleanAdminScreenState extends State<CleanAdminScreen> {
                 'Management Tools',
                 Icons.settings,
                 [
+                  // Schema version info row
+                  Builder(builder: (context) {
+                    final storedVersionFuture = Storage.getSchemaVersion();
+                    return FutureBuilder<int>(
+                      future: storedVersionFuture,
+                      builder: (context, snapshot) {
+                        final stored = snapshot.data;
+                        final current = Storage.currentSchemaVersion;
+                        final newer = app.schemaNewerDetected;
+                        return ListTile(
+                          leading: const Icon(Icons.schema),
+                          title: Text('Schema: '
+                              '${stored == null ? '...' : stored.toString()}'
+                              '/$current'),
+                          subtitle: newer
+                              ? const Text('Newer schema detected. App is in read-only posture until upgraded.',
+                                  style: TextStyle(color: Colors.orange))
+                              : null,
+                          trailing: (kDebugMode || !kReleaseMode)
+                              ? TextButton.icon(
+                                  onPressed: () async {
+                                    try {
+                                      await app.adminReRunMigrations();
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('Migrations re-run complete.')),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('Migration failed: $e')),
+                                        );
+                                      }
+                                    }
+                                    setState(() {});
+                                  },
+                                  icon: const Icon(Icons.play_circle_outline),
+                                  label: const Text('Re-run migrations'),
+                                )
+                              : null,
+                        );
+                      },
+                    );
+                  }),
                   _buildAdminTile(
                     icon: Icons.manage_accounts,
                     title: 'Manage Servers',
@@ -288,7 +336,7 @@ class _CleanAdminScreenState extends State<CleanAdminScreen> {
                     subtitle: 'Manage server Net Promoter Score tracking',
                     enabled: true,
                     onTap: () {
-                      print("🚨 DEBUG: Navigating to Server NPS screen!");
+                      d("🚨 DEBUG: Navigating to Server NPS screen!");
                       Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -309,6 +357,13 @@ class _CleanAdminScreenState extends State<CleanAdminScreen> {
                       );
                     },
                   ),
+                  _buildAdminTile(
+                    icon: Icons.lock,
+                    title: 'Change Admin PIN',
+                    subtitle: 'Update the administrator PIN',
+                    enabled: true,
+                    onTap: () => _showChangePinDialog(),
+                  ),
                 ],
               ),
               const SizedBox(height: 32),
@@ -320,7 +375,8 @@ class _CleanAdminScreenState extends State<CleanAdminScreen> {
   }
 
   void _tryUnlock(AppState app) async {
-    if (_pinCtrl.text == AppState.adminPin) {
+    final isValid = await app.isValidAdminPin(_pinCtrl.text);
+    if (isValid) {
       // Authenticate with security service as admin
       final securityService = context.read<NPSSecurityService>();
       final success =
@@ -438,7 +494,7 @@ class _CleanAdminScreenState extends State<CleanAdminScreen> {
     });
 
     // Auto-unlock if PIN is complete
-    if (_pinCtrl.text.length >= 4 && _pinCtrl.text == AppState.adminPin) {
+    if (_pinCtrl.text.length >= 4) {
       _tryUnlock(context.read<AppState>());
     }
   }
@@ -594,5 +650,120 @@ class _CleanAdminScreenState extends State<CleanAdminScreen> {
         ),
       ),
     );
+  }
+
+  void _showChangePinDialog() {
+    final TextEditingController currentPinController = TextEditingController();
+    final TextEditingController newPinController = TextEditingController();
+    final TextEditingController confirmPinController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Change Admin PIN'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: currentPinController,
+              decoration: const InputDecoration(
+                labelText: 'Current PIN',
+                border: OutlineInputBorder(),
+              ),
+              obscureText: true,
+              maxLength: 4,
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: newPinController,
+              decoration: const InputDecoration(
+                labelText: 'New PIN',
+                border: OutlineInputBorder(),
+              ),
+              obscureText: true,
+              maxLength: 4,
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: confirmPinController,
+              decoration: const InputDecoration(
+                labelText: 'Confirm New PIN',
+                border: OutlineInputBorder(),
+              ),
+              obscureText: true,
+              maxLength: 4,
+              keyboardType: TextInputType.number,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => _saveNewPin(
+              currentPinController.text,
+              newPinController.text,
+              confirmPinController.text,
+            ),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _saveNewPin(String currentPin, String newPin, String confirmPin) async {
+    final app = context.read<AppState>();
+    
+    // Validate current PIN
+    if (!(await app.isValidAdminPin(currentPin))) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Current PIN is incorrect')),
+        );
+      }
+      return;
+    }
+    
+    // Validate new PIN format
+    if (newPin.length != 4 || !RegExp(r'^\d{4}$').hasMatch(newPin)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('New PIN must be exactly 4 digits')),
+        );
+      }
+      return;
+    }
+    
+    // Validate PIN confirmation
+    if (newPin != confirmPin) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('PIN confirmation does not match')),
+        );
+      }
+      return;
+    }
+    
+    // Save new PIN
+    try {
+      await app.setAdminPin(newPin);
+      if (mounted) {
+        Navigator.of(context).pop(); // Close dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Admin PIN updated successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating PIN: $e')),
+        );
+      }
+    }
   }
 }

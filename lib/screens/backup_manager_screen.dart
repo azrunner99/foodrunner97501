@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../utils/log.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -55,17 +56,17 @@ class _BackupManagerScreenState extends State<BackupManagerScreen> {
   }
 
   Future<void> _loadBackups() async {
-    print('[BackupManagerScreen] _loadBackups() called');
+  d('[BackupManagerScreen] _loadBackups() called');
     setState(() => _isLoading = true);
     try {
       final backups = await BackupManager.getAvailableBackups();
-      print('[BackupManagerScreen] Loaded ${backups.length} backups');
+  d('[BackupManagerScreen] Loaded ${backups.length} backups');
       setState(() {
         _backups = backups;
         _isLoading = false;
       });
     } catch (e) {
-      print('[BackupManagerScreen] Error loading backups: $e');
+  d('[BackupManagerScreen] Error loading backups: $e');
       setState(() => _isLoading = false);
       if (mounted) {
         _showSnackBar('Failed to load backups: $e', isError: true);
@@ -394,7 +395,7 @@ class _BackupManagerScreenState extends State<BackupManagerScreen> {
 
       return foundFiles;
     } catch (e) {
-      print('[BackupSearch] Error searching for backup files: $e');
+  d('[BackupSearch] Error searching for backup files: $e');
       return foundFiles;
     }
   }
@@ -433,7 +434,7 @@ class _BackupManagerScreenState extends State<BackupManagerScreen> {
         // External storage not accessible
       }
     } catch (e) {
-      print('[BackupSearch] Error getting search directories: $e');
+  d('[BackupSearch] Error getting search directories: $e');
     }
 
     return directories;

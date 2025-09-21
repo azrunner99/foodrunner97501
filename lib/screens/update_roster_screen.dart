@@ -3,7 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../app_state.dart';
-import 'station_types_screen.dart';
+import '../storage.dart';
+import '../models/station_type.dart';
+import '../services/stations_repository.dart';
 import '../widgets/wallpaper_background.dart';
 
 class UpdateRosterScreen extends StatefulWidget {
@@ -16,8 +18,6 @@ class UpdateRosterScreen extends StatefulWidget {
 class _UpdateRosterScreenState extends State<UpdateRosterScreen> {
   bool _unlocked = false;
   final _pinCtrl = TextEditingController();
-  final GlobalKey<_RosterBodyState> _rosterBodyKey =
-      GlobalKey<_RosterBodyState>();
 
   @override
   void dispose() {
@@ -224,21 +224,6 @@ class _UpdateRosterScreenState extends State<UpdateRosterScreen> {
         elevation: 0,
         shadowColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.save),
-            onPressed: () async {
-              // Call saveRoster from the _RosterBodyState
-              await _rosterBodyKey.currentState?.saveRoster();
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Roster saved successfully!')),
-                );
-              }
-            },
-            tooltip: 'Save Roster',
-          ),
-        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
           child: Container(
@@ -247,12 +232,14 @@ class _UpdateRosterScreenState extends State<UpdateRosterScreen> {
           ),
         ),
       ),
-      body: _RosterBody(key: _rosterBodyKey, app: app),
+      body: _RosterBody(app: app),
     );
   }
 
-  void _tryUnlock() {
-    if (_pinCtrl.text == AppState.adminPin) {
+  void _tryUnlock() async {
+    final app = context.read<AppState>();
+    final isValid = await app.isValidAdminPin(_pinCtrl.text);
+    if (isValid) {
       setState(() => _unlocked = true);
     } else {
       ScaffoldMessenger.of(context)
@@ -350,7 +337,7 @@ class _UpdateRosterScreenState extends State<UpdateRosterScreen> {
     });
 
     // Auto-unlock if PIN is complete
-    if (_pinCtrl.text.length >= 4 && _pinCtrl.text == AppState.adminPin) {
+    if (_pinCtrl.text.length >= 4) {
       _tryUnlock();
     }
   }
@@ -406,28 +393,20 @@ class _RosterBodyState extends State<_RosterBody> {
   }
 
   void _loadStoredData() async {
-    final prefs = await SharedPreferences.getInstance();
-
     // Load station types
     stationTypes = await loadStationTypes();
 
-    // Load stored station assignments
-    final lunchStationTypeJson = prefs.getString('lunchStationType') ?? '{}';
-    final dinnerStationTypeJson = prefs.getString('dinnerStationType') ?? '{}';
-    final lunchStationSectionJson =
-        prefs.getString('lunchStationSection') ?? '{}';
-    final dinnerStationSectionJson =
-        prefs.getString('dinnerStationSection') ?? '{}';
+    // Load stored station assignments using StationsRepository
+    final lunchStationTypeData = await StationsRepository.getLunchStationType();
+    final dinnerStationTypeData = await StationsRepository.getDinnerStationType();
+    final lunchStationSectionData = await Storage.getLunchStationSection();
+    final dinnerStationSectionData = await Storage.getDinnerStationSection();
 
     setState(() {
-      lunchStationType =
-          Map<String, String?>.from(json.decode(lunchStationTypeJson));
-      dinnerStationType =
-          Map<String, String?>.from(json.decode(dinnerStationTypeJson));
-      lunchStationSection =
-          Map<String, String?>.from(json.decode(lunchStationSectionJson));
-      dinnerStationSection =
-          Map<String, String?>.from(json.decode(dinnerStationSectionJson));
+      lunchStationType = Map<String, String?>.from(lunchStationTypeData);
+      dinnerStationType = Map<String, String?>.from(dinnerStationTypeData);
+      lunchStationSection = Map<String, String?>.from(lunchStationSectionData);
+      dinnerStationSection = Map<String, String?>.from(dinnerStationSectionData);
 
       // Initialize rosters from app state
       lunchRoster = List<String>.from(widget.app.todayPlan?.lunchRoster ?? []);
@@ -439,14 +418,11 @@ class _RosterBodyState extends State<_RosterBody> {
   Future<void> saveRoster() async {
     widget.app.setTodayPlan(lunchRoster, dinnerRoster);
 
-    // Persist station assignments to SharedPreferences
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('lunchStationType', json.encode(lunchStationType));
-    await prefs.setString('dinnerStationType', json.encode(dinnerStationType));
-    await prefs.setString(
-        'lunchStationSection', json.encode(lunchStationSection));
-    await prefs.setString(
-        'dinnerStationSection', json.encode(dinnerStationSection));
+    // Persist station assignments using StationsRepository
+    await StationsRepository.setLunchStationType(lunchStationType);
+    await StationsRepository.setDinnerStationType(dinnerStationType);
+    await Storage.setLunchStationSection(lunchStationSection);
+    await Storage.setDinnerStationSection(dinnerStationSection);
 
     // Sync teamColor assignments to AppState servers
     for (final s in widget.app.servers) {

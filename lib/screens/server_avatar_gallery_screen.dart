@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../widgets/resilient_avatar.dart';
 
 class ServerAvatarGalleryScreen extends StatelessWidget {
   final String serverId;
@@ -54,7 +55,7 @@ class ServerAvatarGalleryScreen extends StatelessWidget {
                       '$month ${dt.day}$daySuffix, $year - $hour:$minute$ampm';
                 }
                 return ListTile(
-                  leading: CircleAvatar(backgroundImage: FileImage(File(path))),
+                  leading: ResilientAvatar(avatarPath: path),
                   title: Text(formatted),
                   trailing: IconButton(
                     icon: const Icon(Icons.delete, color: Colors.red),

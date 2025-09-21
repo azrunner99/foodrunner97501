@@ -200,26 +200,34 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
     final percentage = value as double;
 
     // Enhanced 8-tier color system with distinct visual differences
-    if (percentage >= 95.0)
-      return const Color(
-          0xFF0F7B0F); // Rich emerald green - Outstanding (95-100%)
-    if (percentage >= 90.0)
+    if (percentage >= 95.0) {
+      return const Color(0xFF0F7B0F); // Rich emerald green - Outstanding (95-100%)
+    }
+    if (percentage >= 90.0) {
       return const Color(0xFF228B22); // Forest green - Excellent (90-94.9%)
-    if (percentage >= 85.0)
+    }
+    if (percentage >= 85.0) {
       return const Color(0xFF32CD32); // Lime green - Very Good (85-89.9%)
-    if (percentage >= 80.0)
+    }
+    if (percentage >= 80.0) {
       return const Color(0xFF7CFC00); // Lawn green - Good (80-84.9%)
-    if (percentage >= 75.0)
+    }
+    if (percentage >= 75.0) {
       return const Color(0xFFFFA500); // Orange - Developing (75-79.9%)
-    if (percentage >= 70.0)
+    }
+    if (percentage >= 70.0) {
       return const Color(0xFFFF4500); // Orange red - Growing (70-74.9%)
-    if (percentage >= 60.0)
+    }
+    if (percentage >= 60.0) {
       return const Color(0xFFDC143C); // Crimson - Learning (60-69.9%)
+    }
     return const Color(0xFF8B0000); // Dark red - Building (below 60%)
   }
 
   bool _isTopPerformer(dynamic value) {
-    if (value == null) return false;
+    if (value == null) {
+      return false;
+    }
     final percentage = value as double;
     return percentage >= 95.0;
   }

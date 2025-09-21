@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../utils/log.dart';
 import 'dart:convert';
 import 'dart:math';
 
@@ -377,13 +378,12 @@ class NPSAuditService extends ChangeNotifier {
   void _triggerAlert(AuditLogEntry logEntry) {
     // In production, send to monitoring system, SIEM, or notification service
     if (kDebugMode) {
-      print(
-          '🚨 AUDIT ALERT: ${logEntry.level.name.toUpperCase()} - ${logEntry.action}');
-      print('   User: ${logEntry.userName} (${logEntry.userId})');
-      print('   Resource: ${logEntry.resource}');
-      print('   Description: ${logEntry.description}');
+      d('🚨 AUDIT ALERT: ${logEntry.level.name.toUpperCase()} - ${logEntry.action}');
+      d('   User: ${logEntry.userName} (${logEntry.userId})');
+      d('   Resource: ${logEntry.resource}');
+      d('   Description: ${logEntry.description}');
       if (!logEntry.success && logEntry.errorMessage != null) {
-        print('   Error: ${logEntry.errorMessage}');
+        d('   Error: ${logEntry.errorMessage}');
       }
     }
   }

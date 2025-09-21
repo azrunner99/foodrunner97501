@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../utils/log.dart';
 
 /// GDPR consent types
 enum ConsentType {
@@ -525,15 +526,14 @@ class NPSGDPRComplianceService extends ChangeNotifier {
     if (breach.requiresRegulatorNotification) {
       // In production, would trigger automatic regulator notification
       if (kDebugMode) {
-        print(
-            '🚨 GDPR: High-risk data breach detected - regulator notification required within 72 hours');
+        d('🚨 GDPR: High-risk data breach detected - regulator notification required within 72 hours');
       }
     }
 
     if (breach.requiresUserNotification) {
       // In production, would trigger user notifications
       if (kDebugMode) {
-        print('📧 GDPR: User notification required for data breach');
+        d('📧 GDPR: User notification required for data breach');
       }
     }
 

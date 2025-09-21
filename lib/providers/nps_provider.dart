@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../utils/log.dart';
 import '../models/server.dart';
 import '../models/nps_feedback.dart';
 import '../models/monthly_report.dart';
@@ -580,8 +581,7 @@ class NPSProvider with ChangeNotifier {
 
           // If we found a report with all_time data, use it and break
           if (totalChecks > 0 || totalSales > 0) {
-            print(
-                'DEBUG: Found all-time NPS data for server $serverId: $totalChecks checks, \$${totalSales.toStringAsFixed(2)} sales');
+      d('DEBUG: Found all-time NPS data for server $serverId: $totalChecks checks, \$${totalSales.toStringAsFixed(2)} sales');
             break;
           }
         }
@@ -594,12 +594,11 @@ class NPSProvider with ChangeNotifier {
           'reportsFound': reportsFound,
         };
       } else {
-        print('DEBUG: No all-time NPS data found for server $serverId');
+  d('DEBUG: No all-time NPS data found for server $serverId');
         return null;
       }
     } catch (e) {
-      print(
-          'DEBUG: Error getting all-time NPS metrics for server $serverId: $e');
+    d('DEBUG: Error getting all-time NPS metrics for server $serverId: $e');
       return null;
     }
   }

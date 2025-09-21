@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/log.dart';
 import 'package:provider/provider.dart';
 import '../app_state.dart';
 import '../widgets/wallpaper_background.dart';
@@ -22,7 +23,7 @@ class _FreshAdminScreenState extends State<FreshAdminScreen> {
 
   @override
   Widget build(BuildContext context) {
-    print("🚨 DEBUG: FreshAdminScreen.build() called - NEW VERSION ACTIVE!");
+  d("🚨 DEBUG: FreshAdminScreen.build() called - NEW VERSION ACTIVE!");
 
     final app = context.watch<AppState>();
     if (!_unlocked) {
@@ -280,7 +281,7 @@ class _FreshAdminScreenState extends State<FreshAdminScreen> {
                     subtitle: 'Manage server Net Promoter Score tracking',
                     enabled: true,
                     onTap: () {
-                      print("🚨 DEBUG: Navigating to Server NPS screen!");
+                      d("🚨 DEBUG: Navigating to Server NPS screen!");
                       Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -311,8 +312,9 @@ class _FreshAdminScreenState extends State<FreshAdminScreen> {
     );
   }
 
-  void _tryUnlock(AppState app) {
-    if (_pinCtrl.text == AppState.adminPin) {
+  void _tryUnlock(AppState app) async {
+    final isValid = await app.isValidAdminPin(_pinCtrl.text);
+    if (isValid) {
       setState(() => _unlocked = true);
     } else {
       ScaffoldMessenger.of(context)
@@ -410,7 +412,7 @@ class _FreshAdminScreenState extends State<FreshAdminScreen> {
     });
 
     // Auto-unlock if PIN is complete
-    if (_pinCtrl.text.length >= 4 && _pinCtrl.text == AppState.adminPin) {
+    if (_pinCtrl.text.length >= 4) {
       _tryUnlock(context.read<AppState>());
     }
   }

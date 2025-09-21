@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../utils/log.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../app_state.dart';
@@ -70,15 +71,15 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
     final app = Provider.of<AppState>(context, listen: false);
     final npsProvider = context.read<NPSProvider>();
 
-    print('DEBUG: Starting _loadClickData for date: $_selectedDate');
-    print('DEBUG: NPS Provider initialized: ${npsProvider.isInitialized}');
+  d('DEBUG: Starting _loadClickData for date: $_selectedDate');
+  d('DEBUG: NPS Provider initialized: ${npsProvider.isInitialized}');
 
     // Calculate dynamic timeframe based on actual clicks
     final dynamicTimeframe = _calculateDynamicTimeframe(_selectedDate, app);
     final startTime = dynamicTimeframe['start']!;
     final endTime = dynamicTimeframe['end']!;
 
-    print('DEBUG: Dynamic timeframe calculated: $startTime to $endTime');
+  d('DEBUG: Dynamic timeframe calculated: $startTime to $endTime');
 
     // Generate 15-minute intervals for the dynamic timeframe
     final clickData = _generateClickDataForDynamicRange(
@@ -91,7 +92,7 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
     // Load individual clicks for the day
     final individualClicks = _getIndividualClicksForDate(_selectedDate, app);
 
-    print(
+  d(
         'DEBUG: Generated ${clickData.length} click data points and ${restaurantActivity.length} restaurant activity points');
 
     setState(() {
@@ -106,12 +107,12 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
       DateTime date, DateTime startTime, DateTime endTime, AppState app) {
     final List<ClickDataPoint> dataPoints = [];
 
-    print('DEBUG: Generating chart data from $startTime to $endTime');
+  d('DEBUG: Generating chart data from $startTime to $endTime');
 
     // Calculate the total time span in seconds for precision
     final totalSeconds = endTime.difference(startTime).inSeconds;
     final totalMinutes = totalSeconds / 60.0;
-    print(
+  d(
         'DEBUG: Total time span: $totalSeconds seconds ($totalMinutes minutes)');
 
     // Determine optimal interval and number of bars
@@ -141,7 +142,7 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
       intervalDuration = Duration(minutes: intervalMinutes);
     }
 
-    print(
+  d(
         'DEBUG: Using ${intervalDuration.inSeconds} second intervals (${intervalDuration.inMinutes} minutes) for optimal visualization');
 
     // Generate intervals using the calculated interval size
@@ -155,7 +156,7 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
       final clickCount = _getClickCountForTimeWindow(
           app, widget.server.id, currentTime, actualEnd);
 
-      print(
+  d(
           'DEBUG: Interval $intervalCount: ${currentTime.toString()} to ${actualEnd.toString()} = $clickCount clicks');
 
       dataPoints.add(ClickDataPoint(
@@ -168,7 +169,7 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
       intervalCount++;
     }
 
-    print('DEBUG: Generated ${dataPoints.length} data points for chart');
+  d('DEBUG: Generated ${dataPoints.length} data points for chart');
     return dataPoints;
   }
 
@@ -177,7 +178,7 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
       DateTime startTime, DateTime endTime, AppState app) {
     final List<int> activityData = [];
 
-    print(
+  d(
         'DEBUG: Generating restaurant activity data from $startTime to $endTime');
 
     // Calculate the same interval size as the main chart
@@ -222,7 +223,7 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
       currentTime = intervalEnd;
     }
 
-    print(
+  d(
         'DEBUG: Generated ${activityData.length} restaurant activity data points');
     return activityData;
   }
@@ -234,7 +235,7 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
         app.getIndividualClickTimestamps(serverId, start, end);
     final clickCount = individualClicks.length;
 
-    print(
+  d(
         'DEBUG: Time window ${start.toString()} to ${end.toString()} has $clickCount clicks (from individual timestamps)');
     return clickCount;
   }
@@ -248,11 +249,10 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
     final clicks = app.getIndividualClickTimestamps(
         widget.server.id, startOfDay, endOfDay);
 
-    print(
-        'DEBUG: Found ${clicks.length} total clicks for timeframe calculation');
+  d('DEBUG: Found ${clicks.length} total clicks for timeframe calculation');
     if (clicks.isNotEmpty) {
       clicks.sort((a, b) => a.compareTo(b));
-      print('DEBUG: Clicks range from ${clicks.first} to ${clicks.last}');
+    d('DEBUG: Clicks range from ${clicks.first} to ${clicks.last}');
     }
 
     if (clicks.isEmpty) {
@@ -275,11 +275,11 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
         lastClick.add(Duration(seconds: 5)); // 5 seconds after last click
 
     final totalSpan = adjustedLastClick.difference(adjustedFirstClick);
-    print(
+  d(
         'DEBUG: Dynamic timeframe - First click: $firstClick -> $adjustedFirstClick');
-    print(
+  d(
         'DEBUG: Dynamic timeframe - Last click: $lastClick -> $adjustedLastClick');
-    print(
+  d(
         'DEBUG: Total span: ${totalSpan.inSeconds} seconds (${totalSpan.inMinutes} minutes)');
 
     return {
@@ -297,8 +297,8 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
     final clicks = app.getIndividualClickTimestamps(
         widget.server.id, startOfDay, endOfDay);
 
-    print('DEBUG: Getting real clicks for ${widget.server.id} on $date');
-    print('DEBUG: Individual clicks found: ${clicks.length}');
+  d('DEBUG: Getting real clicks for ${widget.server.id} on $date');
+  d('DEBUG: Individual clicks found: ${clicks.length}');
 
     // Sort clicks by time (newest first for display)
     clicks.sort((a, b) => b.compareTo(a));
@@ -1039,22 +1039,22 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
   // Build the background line chart showing restaurant-wide activity
   Widget _buildRestaurantActivityLineChart(int maxClicks) {
     if (_restaurantActivityData.isEmpty) {
-      print(
+  d(
           'DEBUG: Restaurant activity data is empty, returning empty container');
       return Container();
     }
 
-    print(
+  d(
         'DEBUG: Building line chart with ${_restaurantActivityData.length} data points: $_restaurantActivityData');
-    print('DEBUG: Server max clicks: $maxClicks');
+  d('DEBUG: Server max clicks: $maxClicks');
 
     // Calculate max value for better scaling
     final maxRestaurantActivity = _restaurantActivityData.reduce(max);
-    print('DEBUG: Restaurant max activity: $maxRestaurantActivity');
+  d('DEBUG: Restaurant max activity: $maxRestaurantActivity');
 
     // Use 0-based Y-axis range that matches the server bar chart
     final chartMaxY = maxClicks > 0 ? maxClicks.toDouble() * 1.1 : 10.0;
-    print('DEBUG: Line chart using 0-based Y-axis, maxY: $chartMaxY');
+  d('DEBUG: Line chart using 0-based Y-axis, maxY: $chartMaxY');
 
     return LineChart(
       LineChartData(

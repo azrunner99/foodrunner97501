@@ -6,7 +6,9 @@ import '../app_state.dart';
 import '../models.dart';
 import '../theme/app_theme.dart';
 import '../utils/integrity_analyzer.dart';
+import '../utils/log.dart';
 import 'server_integrity_profile_screen.dart';
+import '../widgets/resilient_avatar.dart';
 import 'shift_click_analysis_screen.dart';
 
 class ShiftLeaderboardScreen extends StatefulWidget {
@@ -178,7 +180,7 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
               ),
               IconButton(
                 onPressed: () {
-                  print('[DEBUG] Manual reconstruction triggered');
+                  d('[DEBUG] Manual reconstruction triggered');
                   appState.manuallyReconstructAllTimeRuns();
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
@@ -458,23 +460,14 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
         final avatarPath = profile?.avatarPath;
         final bannerPath = profile?.bannerPath;
 
-        ImageProvider? avatarImage;
-        if (avatarPath != null && avatarPath.isNotEmpty) {
-          if (avatarPath.startsWith('/') || avatarPath.contains(':')) {
-            avatarImage = FileImage(File(avatarPath));
-          } else {
-            avatarImage = AssetImage(avatarPath);
-          }
-        }
-
-        ImageProvider? bannerImage;
-        if (bannerPath != null && bannerPath.isNotEmpty) {
-          if (bannerPath.startsWith('/') || bannerPath.contains(':')) {
-            bannerImage = FileImage(File(bannerPath));
-          } else {
-            bannerImage = AssetImage(bannerPath);
-          }
-        }
+        final avatarImage = getResilientImageProvider(
+          avatarPath, 
+          isAvatar: true
+        );
+        final bannerImage = getResilientImageProvider(
+          bannerPath, 
+          isAvatar: false
+        );
 
         // Calculate shift XP with boost applied - Pizookies are 25 XP total, not 10+25
         final runCount = appState.currentCounts[server.id] ?? 0;
@@ -538,7 +531,7 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
                   child: Stack(
                     children: [
                       // Banner background (if available)
-                      if (bannerImage != null)
+                      if (bannerPath != null && bannerPath.isNotEmpty)
                         Positioned.fill(
                           child: Container(
                             decoration: BoxDecoration(
@@ -555,7 +548,7 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
                           ),
                         ),
                       // Default background if no banner
-                      if (bannerImage == null)
+                      if (bannerPath == null || bannerPath.isEmpty)
                         Positioned.fill(
                           child: Container(
                             color: Colors.grey[200],
@@ -689,13 +682,9 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
                                   AspectRatio(
                                     aspectRatio: 1,
                                     child: ClipOval(
-                                      child: avatarImage != null
-                                          ? Image(
+                                      child: Image(
                                               image: avatarImage,
                                               fit: BoxFit.cover,
-                                            )
-                                          : Container(
-                                              color: Colors.grey[300],
                                             ),
                                     ),
                                   ),
@@ -1033,8 +1022,10 @@ class _IntegrityPinDialogState extends State<IntegrityPinDialog> {
     });
   }
 
-  void _authenticatePin() {
-    if (_enteredPin == AppState.adminPin) {
+  void _authenticatePin() async {
+    final app = context.read<AppState>();
+    final isValid = await app.isValidAdminPin(_enteredPin);
+    if (isValid) {
       Navigator.of(context).pop();
       _navigateToShiftClickAnalysis();
     } else {

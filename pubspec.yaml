@@ -29,6 +29,7 @@ dependencies:
 
   collection: any
   http: any
+  clock: ^1.1.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

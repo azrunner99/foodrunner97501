@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'models.dart';
+import 'utils/log.dart';
 import 'app_state.dart';
 
 /// Standalone helper: determine open state for a given WeeklyHours and DateTime
@@ -40,9 +41,9 @@ bool isOpenAtFor(WeeklyHours hours, DateTime t) {
   final weekday = businessDate.weekday;
   final todayInterval = businessDayIntervalFor(businessDate, weekday);
   // Debug logging to help diagnose edge cases in tests
-  print(
+  d(
       '[DEBUG isOpenAtFor] t=$t, businessDate=$businessDate, weekday=$weekday');
-  print(
+  d(
       '[DEBUG isOpenAtFor] todayInterval: start=${todayInterval.start}, end=${todayInterval.end}');
   if (!t.isBefore(todayInterval.start) && t.isBefore(todayInterval.end))
     return true;
@@ -51,8 +52,8 @@ bool isOpenAtFor(WeeklyHours hours, DateTime t) {
   final yesterdayWeekday = yesterdayBusinessDate.weekday;
   final yesterdayInterval =
       businessDayIntervalFor(yesterdayBusinessDate, yesterdayWeekday);
-  print('[DEBUG isOpenAtFor] yesterdayBusinessDate=$yesterdayBusinessDate');
-  print(
+  d('[DEBUG isOpenAtFor] yesterdayBusinessDate=$yesterdayBusinessDate');
+  d(
       '[DEBUG isOpenAtFor] yesterdayInterval: start=${yesterdayInterval.start}, end=${yesterdayInterval.end}');
   if (!t.isBefore(yesterdayInterval.start) && t.isBefore(yesterdayInterval.end))
     return true;

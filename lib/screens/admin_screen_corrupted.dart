@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/log.dart';
 import 'package:provider/provider.dart';
 import '../app_state.dart';
 import '../widgets/wallpaper_background.dart';
@@ -22,7 +23,7 @@ class _AdminScreenState extends State<AdminScreen> {
 
   @override
   Widget build(BuildContext context) {
-    print("🚨 DEBUG: AdminScreen.build() called - NEW VERSION ACTIVE!");
+  d("🚨 DEBUG: AdminScreen.build() called - NEW VERSION ACTIVE!");
 
     final app = context.watch<AppState>();
     if (!_unlocked) {
@@ -280,7 +281,7 @@ class _AdminScreenState extends State<AdminScreen> {
                     subtitle: 'Manage server Net Promoter Score tracking',
                     enabled: true,
                     onTap: () {
-                      print("🚨 DEBUG: Navigating to Server NPS screen!");
+                      d("🚨 DEBUG: Navigating to Server NPS screen!");
                       Navigator.push(
                         context,
                         MaterialPageRoute(

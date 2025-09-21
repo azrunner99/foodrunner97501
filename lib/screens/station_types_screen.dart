@@ -1,25 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-
-class StationType {
-  final String name;
-  final String abbreviation;
-  final int sections;
-  StationType(
-      {required this.name, required this.abbreviation, required this.sections});
-
-  Map<String, dynamic> toJson() => {
-        'name': name,
-        'abbreviation': abbreviation,
-        'sections': sections,
-      };
-  factory StationType.fromJson(Map<String, dynamic> json) => StationType(
-        name: json['name'],
-        abbreviation: json['abbreviation'],
-        sections: json['sections'],
-      );
-}
+import '../models/station_type.dart';
 
 class StationTypesScreen extends StatefulWidget {
   const StationTypesScreen({super.key});
@@ -348,17 +330,3 @@ class _StationTypesScreenState extends State<StationTypesScreen> {
   }
 }
 
-// Public function to load station types for other screens
-Future<List<StationType>> loadStationTypes() async {
-  final prefs = await SharedPreferences.getInstance();
-  const prefsKey = 'station_types';
-  final jsonString = prefs.getString(prefsKey);
-  if (jsonString != null) {
-    final List decoded = json.decode(jsonString);
-    return decoded
-        .map((e) => StationType.fromJson(e))
-        .cast<StationType>()
-        .toList();
-  }
-  return [];
-}

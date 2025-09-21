@@ -4,7 +4,10 @@ library;
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'utils/log.dart';
 import 'package:collection/collection.dart';
+import 'package:clock/clock.dart';
 import 'models.dart';
 import 'storage.dart';
 import 'gamification.dart';
@@ -336,6 +339,22 @@ class ServerProfile {
 }
 
 class AppState extends ChangeNotifier {
+  final Clock _clock;
+
+  final Future<String?> Function(List<String>) _exportBoxes;
+
+  AppState(
+      {Clock? clock, Future<String?> Function(List<String>)? exportBoxesFn})
+      : _clock = clock ?? const Clock(),
+        _exportBoxes = exportBoxesFn ?? Storage.exportBoxes;
+
+  DateTime get _now => _clock.now();
+
+  // When true, a manually-started shift should not be auto-switched by clock logic
+  bool _manualShiftOverride = false;
+
+  // Debug logging now handled by utils/log.dart:d()
+
   String? _lastRunServerId;
   String? get lastRunServerId => _lastRunServerId;
   set lastRunServerId(String? id) {
@@ -344,29 +363,27 @@ class AppState extends ChangeNotifier {
   }
 
   Map<String, int> get currentPizookieCounts =>
-      Map.unmodifiable(_currentPizookieCounts);
+      Map.unmodifiable(Map<String, int>.from(_currentPizookieCounts));
 
   /// Register a Pizookie run: counts as a run, +2 points, +1 pizookieRuns
   /// Register a Pizookie run: counts as a run, +2 points, +1 pizookieRuns
   // Tracks per-shift pizookie runs for each server
   final Map<String, int> _currentPizookieCounts = {};
   MilestoneAchievement? incrementPizookie(String id) {
-    print('[DEBUG] incrementPizookie called for server $id');
-    print('[DEBUG] _shiftActive=$_shiftActive');
-    print('[DEBUG] _workingServerIds=$_workingServerIds');
-    print(
-        '[DEBUG] _workingServerIds.contains($id)=${_workingServerIds.contains(id)}');
-    print('[DEBUG] _todayPlan?.lunchRoster=${_todayPlan?.lunchRoster}');
-    print('[DEBUG] _todayPlan?.dinnerRoster=${_todayPlan?.dinnerRoster}');
+    d('[DEBUG] incrementPizookie called for server $id');
+    d('[DEBUG] _shiftActive=$_shiftActive');
+    d('[DEBUG] _workingServerIds=$_workingServerIds');
+    d('[DEBUG] _workingServerIds.contains($id)=${_workingServerIds.contains(id)}');
+    d('[DEBUG] _todayPlan?.lunchRoster=${_todayPlan?.lunchRoster}');
+    d('[DEBUG] _todayPlan?.dinnerRoster=${_todayPlan?.dinnerRoster}');
 
     // Defensive gating: must be open, shift active, and server working
     if (!isOpenNow || !_shiftActive || !_workingServerIds.contains(id)) {
-      print(
-          '[DEBUG] incrementPizookie blocked for $id: isOpenNow=$isOpenNow, _shiftActive=$_shiftActive, contains=${_workingServerIds.contains(id)}');
+      d('[DEBUG] incrementPizookie blocked for $id: isOpenNow=$isOpenNow, _shiftActive=$_shiftActive, contains=${_workingServerIds.contains(id)}');
       return null;
     }
 
-    final now = DateTime.now();
+    final now = _now;
     const delta = 1;
     const basePizookiePoints =
         35; // Increased from 25 to promote pizookie running
@@ -398,8 +415,7 @@ class AppState extends ChangeNotifier {
 
     prof.allTimeRuns += delta;
     prof.pizookieRuns += delta;
-    print(
-        '[DEBUG] Server $id ran a Pizookie: +$boostedPizookiePoints XP (base: $basePizookiePoints, boost: ${_boostActive ? "${_boostMultiplier}x" : "none"}), total now: ${prof.points}');
+    d('[DEBUG] Server $id ran a Pizookie: +$boostedPizookiePoints XP (base: $basePizookiePoints, boost: ${_boostActive ? "${_boostMultiplier}x" : "none"}), total now: ${prof.points}');
 
     final prevIso = prof.lastTapIso;
     prof.lastTapIso = now.toIso8601String();
@@ -493,7 +509,7 @@ class AppState extends ChangeNotifier {
         'subMessage': milestone.subMessage,
         'priority': milestone.priority.name,
         'context': milestone.context,
-        'timestamp': DateTime.now().toIso8601String(),
+        'timestamp': _now.toIso8601String(),
         'actionType': 'pizookie',
       };
 
@@ -501,16 +517,15 @@ class AppState extends ChangeNotifier {
       updatedProf.milestoneHistory.add({
         'type': milestone.type.name,
         'xpReward': roundedMilestoneXP,
-        'timestamp': DateTime.now().toIso8601String(),
+        'timestamp': _now.toIso8601String(),
         'message': milestone.message,
       });
 
       _profiles[id] = updatedProf;
       _persistProfiles(); // Persist immediately
 
-      print(
-          '[DEBUG] Pizookie milestone earned by $id: ${milestone.type.name} (+${milestone.xpReward} XP)');
-      print('[DEBUG] Current shift bonus XP for $id: ${_currentBonusXP[id]}');
+      d('[DEBUG] Pizookie milestone earned by $id: ${milestone.type.name} (+${milestone.xpReward} XP)');
+      d('[DEBUG] Current shift bonus XP for $id: ${_currentBonusXP[id]}');
     }
 
     // Store the total XP gained from this specific pizookie action
@@ -522,9 +537,93 @@ class AppState extends ChangeNotifier {
 
   // For Full Hands! achievement: not persisted, just for session
   final Map<String, List<DateTime>> _recentTapTimes = {};
-  static const adminPin = '5520';
   // Removed legacy hardcoded switch minutes. All timing is user-defined via
   // WeeklyHours (open/close) and DayPlan (transitionStart/End).
+
+  // Admin PIN Management
+  Future<String> get adminPin async => await Storage.getAdminPin();
+
+  Future<bool> isValidAdminPin(String pin) async {
+    final storedPin = await Storage.getAdminPin();
+    return pin == storedPin;
+  }
+
+  Future<void> setAdminPin(String newPin) async {
+    if (newPin.length == 4 && RegExp(r'^\d{4}$').hasMatch(newPin)) {
+      await Storage.setAdminPin(newPin);
+      notifyListeners();
+    } else {
+      throw ArgumentError('PIN must be exactly 4 digits');
+    }
+  }
+
+  // Transition Checkpoint Management
+  Future<Map<String, dynamic>?> _getTransitionCheckpoint() async {
+    return await Storage.settingsBox.get('transition_checkpoint')
+        as Map<String, dynamic>?;
+  }
+
+  Future<void> _setTransitionCheckpoint(Map<String, dynamic> checkpoint) async {
+    checkpoint['timestamp'] = _now.toIso8601String();
+    await Storage.settingsBox.put('transition_checkpoint', checkpoint);
+    d('[CHECKPOINT] Saved: $checkpoint');
+  }
+
+  Future<void> _clearTransitionCheckpoint() async {
+    await Storage.settingsBox.delete('transition_checkpoint');
+    d('[CHECKPOINT] Cleared');
+  }
+
+  /// Check for incomplete transitions on app startup and handle recovery
+  Future<void> _checkStartupTransitionRecovery() async {
+    // Read transition checkpoint on startup for recovery.
+    final checkpoint = await _getTransitionCheckpoint();
+    if (checkpoint == null) {
+      d('[STARTUP] No transition checkpoint found');
+      return; // No incomplete transition
+    }
+
+    final now = _clock.now();
+    final lastTime =
+        DateTime.fromMillisecondsSinceEpoch(checkpoint['timestamp']);
+    final lastShift = checkpoint['from_shift'];
+    final targetShift = checkpoint['to_shift'];
+
+    d('[STARTUP] Found checkpoint: $lastShift → $targetShift at $lastTime');
+
+    // If checkpoint is very old (>24 hours), clear it as stale
+    if (now.difference(lastTime).inHours > 24) {
+      d('[STARTUP] Checkpoint too old, clearing');
+      await _clearTransitionCheckpoint();
+      return;
+    }
+
+    // If checkpoint is recent (within last few minutes), let normal flow handle it
+    if (now.difference(lastTime).inMinutes < 5) {
+      d('[STARTUP] Recent checkpoint, letting normal flow handle');
+      return;
+    }
+
+    // For checkpoints between 5 minutes and 24 hours old, check if transition should complete
+    final currentShift = currentIntendedShiftType(now);
+    if (currentShift.toLowerCase() == targetShift.toLowerCase()) {
+      d('[STARTUP] Completing interrupted transition to $targetShift');
+      // Transition should have happened - complete it now
+      if (_todayPlan != null) {
+        if (currentShift.toLowerCase() == 'dinner' &&
+            lastShift.toLowerCase() == 'lunch') {
+          _beginShift('Dinner', _todayPlan!.dinnerRoster,
+              preserveCounts: false);
+        } else if (currentShift.toLowerCase() == 'lunch') {
+          _beginShift('Lunch', _todayPlan!.lunchRoster);
+        }
+      }
+      await _clearTransitionCheckpoint();
+    } else {
+      d('[STARTUP] Current shift ($currentShift) != target ($targetShift), clearing stale checkpoint');
+      await _clearTransitionCheckpoint();
+    }
+  }
 
   final List<Server> _servers = [];
   final Map<String, int> _totals = {};
@@ -586,7 +685,7 @@ class AppState extends ChangeNotifier {
   bool get shiftPaused => _shiftPaused;
   String get shiftType => _shiftType;
   DateTime? get shiftStart => _shiftStart;
-  Map<String, int> get currentCounts => Map.unmodifiable(_currentCounts);
+  Map<String, int> get currentCounts => Map<String, int>.from(_currentCounts);
   Map<String, int> get currentBonusXP => Map.unmodifiable(_currentBonusXP);
   Map<String, int> get currentEarnedXP => Map.unmodifiable(_currentEarnedXP);
   Map<String, String> get lastFlashMessages =>
@@ -616,7 +715,7 @@ class AppState extends ChangeNotifier {
   String get boostTimeRemaining {
     if (!_boostActive || _boostEndTime == null) return '';
 
-    final remaining = _boostEndTime!.difference(DateTime.now());
+    final remaining = _boostEndTime!.difference(_now);
     if (remaining.isNegative) return '0:00';
 
     final hours = remaining.inHours;
@@ -640,7 +739,7 @@ class AppState extends ChangeNotifier {
 
   /// Get effective transition times - uses plan values if set, otherwise calculates dynamic defaults
   Map<String, int> getEffectiveTransitionTimes([DateTime? forTime]) {
-    final now = forTime ?? DateTime.now();
+    final now = forTime ?? _now;
     final dynamicTransitions = _calculateDynamicTransitions(now);
 
     return {
@@ -652,13 +751,13 @@ class AppState extends ChangeNotifier {
   }
 
   void toggleRosterView() {
-    print('[DEBUG] toggleRosterView: Current view = $_activeRosterView');
+    d('[DEBUG] toggleRosterView: Current view = $_activeRosterView');
     final plan = _todayPlan;
     if (_activeRosterView == 'lunch') {
       _activeRosterView = 'dinner';
-      print('[DEBUG] toggleRosterView: Switching to dinner view');
+      d('[DEBUG] toggleRosterView: Switching to dinner view');
       if (plan != null) {
-        final now = DateTime.now();
+        final now = _now;
         final m = now.hour * 60 + now.minute;
         final start = plan.transitionStartMinutes;
         final end = plan.transitionEndMinutes;
@@ -687,9 +786,9 @@ class AppState extends ChangeNotifier {
       }
     } else if (_activeRosterView == 'dinner') {
       _activeRosterView = 'lunch';
-      print('[DEBUG] toggleRosterView: Switching to lunch view');
+      d('[DEBUG] toggleRosterView: Switching to lunch view');
       if (plan != null) {
-        final now = DateTime.now();
+        final now = _now;
         final m = now.hour * 60 + now.minute;
         final start = plan.transitionStartMinutes;
         final end = plan.transitionEndMinutes;
@@ -701,8 +800,9 @@ class AppState extends ChangeNotifier {
       }
     } else {
       // Auto mode default view based on today's transition window
-      final now = DateTime.now();
-      final start = plan?.transitionStartMinutes ?? settings.transitionStartMinutes;
+      final now = _now;
+      final start =
+          plan?.transitionStartMinutes ?? settings.transitionStartMinutes;
       final end = plan?.transitionEndMinutes ?? settings.transitionEndMinutes;
       final m = now.hour * 60 + now.minute;
       _activeRosterView = (m >= end) ? 'dinner' : 'lunch';
@@ -716,10 +816,12 @@ class AppState extends ChangeNotifier {
   }
 
   List<String> get currentRoster {
-    final now = DateTime.now();
+    final now = _now;
     final m = now.hour * 60 + now.minute;
-    final start = _todayPlan?.transitionStartMinutes ?? settings.transitionStartMinutes;
-    final end = _todayPlan?.transitionEndMinutes ?? settings.transitionEndMinutes;
+    final start =
+        _todayPlan?.transitionStartMinutes ?? settings.transitionStartMinutes;
+    final end =
+        _todayPlan?.transitionEndMinutes ?? settings.transitionEndMinutes;
     if (_activeRosterView == 'lunch') {
       return _todayPlan?.lunchRoster ?? [];
     }
@@ -733,13 +835,13 @@ class AppState extends ChangeNotifier {
   }
 
   // Boost mode methods
-  void activateBoost(
-      double multiplier, int durationMinutes, String description, String pin) {
-    if (pin != adminPin) return;
+  Future<void> activateBoost(double multiplier, int durationMinutes,
+      String description, String pin) async {
+    if (!(await isValidAdminPin(pin))) return;
 
     _boostActive = true;
     _boostMultiplier = multiplier;
-    _boostEndTime = DateTime.now().add(Duration(minutes: durationMinutes));
+    _boostEndTime = _now.add(Duration(minutes: durationMinutes));
     _boostDescription = description;
     notifyListeners();
 
@@ -747,7 +849,7 @@ class AppState extends ChangeNotifier {
     Timer(Duration(minutes: durationMinutes), () {
       if (_boostActive &&
           _boostEndTime != null &&
-          DateTime.now().isAfter(_boostEndTime!)) {
+          _now.isAfter(_boostEndTime!)) {
         deactivateBoost();
       }
     });
@@ -762,9 +864,7 @@ class AppState extends ChangeNotifier {
   }
 
   void checkBoostExpiry() {
-    if (_boostActive &&
-        _boostEndTime != null &&
-        DateTime.now().isAfter(_boostEndTime!)) {
+    if (_boostActive && _boostEndTime != null && _now.isAfter(_boostEndTime!)) {
       deactivateBoost();
     }
   }
@@ -778,7 +878,38 @@ class AppState extends ChangeNotifier {
   int allTimeFor(String id) => (_totals[id] ?? 0) + (_currentCounts[id] ?? 0);
   Server? serverById(String id) => _servers.firstWhereOrNull((s) => s.id == id);
 
+  bool _schemaNewerDetected = false;
+  bool get schemaNewerDetected => _schemaNewerDetected;
+
   Future<void> load() async {
+    // Schema version check & migrations (atomic bump after success)
+    final storedVersion = await Storage.getSchemaVersion();
+    if (storedVersion < Storage.currentSchemaVersion) {
+      d('[SCHEMA] Detected older schemaVersion=$storedVersion, current=${Storage.currentSchemaVersion}. Preparing backup and running migrations...');
+      // Best-effort snapshot
+      await _exportBoxes([
+        'servers',
+        'totals',
+        'shifts',
+        'profiles',
+        'settings',
+        'dayplan',
+        'taplog'
+      ]);
+      // Run migrations; any error bubbles up and prevents bump
+      await _runMigrations(
+          from: storedVersion, to: Storage.currentSchemaVersion);
+      // Only after successful migrations do we bump the stored version
+      await Storage.setSchemaVersion(Storage.currentSchemaVersion);
+      d('[SCHEMA] Migration complete. Updated schemaVersion=${Storage.currentSchemaVersion}');
+    } else if (storedVersion > Storage.currentSchemaVersion) {
+      // Newer schema detected — set flag and proceed
+      _schemaNewerDetected = true;
+      d('[SCHEMA] Warning: Stored schemaVersion=$storedVersion is newer than app (${Storage.currentSchemaVersion}). Proceeding in read-only posture.');
+    } else {
+      d('[SCHEMA] Schema up-to-date at version ${Storage.currentSchemaVersion}.');
+    }
+
     final sl =
         (await Storage.serversBox.get('list') as List?)?.cast<Map>() ?? [];
     final loadedServers =
@@ -825,8 +956,8 @@ class AppState extends ChangeNotifier {
     _hours = hm.isEmpty
         ? WeeklyHours.defaults()
         : WeeklyHours.fromMap(Map<String, dynamic>.from(hm));
-    // Debug: print loaded weekly hours so we can verify persisted settings
-    print('[DEBUG] Loaded weekly_hours from storage: ${_hours.toMap()}');
+    // Debug: log loaded weekly hours so we can verify persisted settings
+    d('[DEBUG] Loaded weekly_hours from storage: ${_hours.toMap()}');
 
     // Temporary debug override: if settingsBox contains 'debug_force_test_hours' = true,
     // force hours to 01:10–04:00 for all weekdays so we can test opening-time behavior.
@@ -841,10 +972,10 @@ class AppState extends ChangeNotifier {
           openMinutes: open,
           closeMinutes: close,
           closeDayOffset: closeDayOffset);
-      print('[DEBUG] Forced test weekly_hours applied: ${_hours.toMap()}');
+      d('[DEBUG] Forced test weekly_hours applied: ${_hours.toMap()}');
     }
 
-    final ymd = _ymd(DateTime.now());
+    final ymd = _ymd(_now);
     final dp = (await Storage.dayPlanBox.get(ymd) as Map?) ?? {};
     _todayPlan =
         dp.isEmpty ? null : DayPlan.fromMap(Map<String, dynamic>.from(dp));
@@ -888,6 +1019,9 @@ class AppState extends ChangeNotifier {
 
     _teamGoal = _computeGoalFromHistory();
 
+    // Check for incomplete transitions on startup
+    await _checkStartupTransitionRecovery();
+
     _startTicker();
     _maybeActivateShiftByClock();
     notifyListeners();
@@ -910,7 +1044,7 @@ class AppState extends ChangeNotifier {
       id: _randId(),
       label: type,
       shiftType: type,
-      start: _shiftStart ?? DateTime.now(),
+      start: _shiftStart ?? _now,
       counts: filteredCounts,
       pizookieCounts: filteredPizookieCounts,
     );
@@ -966,7 +1100,7 @@ class AppState extends ChangeNotifier {
   void _startTicker() {
     _ticker?.cancel();
     _ticker = Timer.periodic(const Duration(seconds: 5), (_) {
-      print('[DEBUG] Timer tick: checking shift activation');
+      d('[DEBUG] Timer tick: checking shift activation');
       _maybeActivateShiftByClock();
       _pruneOldTapBuckets();
 
@@ -992,6 +1126,57 @@ class AppState extends ChangeNotifier {
 
   Future<void> _persistHours() async =>
       Storage.settingsBox.put('weekly_hours', _hours.toMap());
+
+  /// Storage migration entry point. Extend this when bumping schema versions.
+  Future<void> _runMigrations({required int from, required int to}) async {
+    if (from >= to) {
+      d('[SCHEMA] No migrations necessary (from v$from to v$to).');
+      return;
+    }
+    for (var v = from; v < to; v++) {
+      d('[SCHEMA] Migrating from v$v to v${v + 1}');
+      await _migrate_v(v, v + 1);
+    }
+  }
+
+  Future<void> _migrate_v(int from, int to) async {
+    if (from == 0 && to == 1) {
+      await _migrate_v0_to_v1();
+      return;
+    }
+    // Unknown step: by default no-op to avoid throwing in forward-only sequence
+    d('[SCHEMA] No-op migrate step from v$from to v$to');
+  }
+
+  /// Idempotent migration from schema v0 to v1.
+  Future<void> _migrate_v0_to_v1() async {
+    // v1 establishes the schemaVersion key only; ensure it's present if not already
+    final current = await Storage.getSchemaVersion();
+    if (current >= 1) {
+      d('[SCHEMA] v0->v1 already applied (schemaVersion=$current).');
+      return; // idempotent
+    }
+    d('[SCHEMA] Applying v0->v1 migration (establish schemaVersion key).');
+    // Nothing else to transform yet.
+  }
+
+  /// Debug-only convenience to re-run migrations without bumping unless all succeed.
+  Future<void> adminReRunMigrations() async {
+    final stored = await Storage.getSchemaVersion();
+    d('[SCHEMA] Admin requested re-run migrations from v$stored to v${Storage.currentSchemaVersion}');
+    await Storage.exportBoxes([
+      'servers',
+      'totals',
+      'shifts',
+      'profiles',
+      'settings',
+      'dayplan',
+      'taplog'
+    ]);
+    await _runMigrations(from: stored, to: Storage.currentSchemaVersion);
+    await Storage.setSchemaVersion(Storage.currentSchemaVersion);
+    d('[SCHEMA] Admin migration complete. Updated schemaVersion=${Storage.currentSchemaVersion}');
+  }
 
   // Public save method to persist all data changes
   Future<void> save() async {
@@ -1083,6 +1268,10 @@ class AppState extends ChangeNotifier {
       );
       await _persistDayPlan();
     }
+    // Clear any previous transition checkpoint since timing changed
+    await _clearTransitionCheckpoint();
+    // Clear manual override so new timings take effect
+    _manualShiftOverride = false;
     notifyListeners();
   }
 
@@ -1094,7 +1283,7 @@ class AppState extends ChangeNotifier {
   }
 
   void setTodayPlan(List<String> lunch, List<String> dinner) {
-    final ymd = _ymd(DateTime.now());
+    final ymd = _ymd(_now);
     _todayPlan = DayPlan(
       ymd: ymd,
       lunchRoster: List.of(lunch),
@@ -1103,12 +1292,16 @@ class AppState extends ChangeNotifier {
       transitionEndMinutes: settings.transitionEndMinutes,
     );
     _persistDayPlan();
+    // Clear any previous transition checkpoint since plan changed
+    _clearTransitionCheckpoint();
+    // Clear manual override when plan changes
+    _manualShiftOverride = false;
     _maybeActivateShiftByClock();
     notifyListeners();
   }
 
   bool forceStartCurrentShift() {
-    final now = DateTime.now();
+    final now = _now;
     if (_todayPlan == null) return false;
     final intended = currentIntendedShiftType(now);
     final roster = intended == 'Lunch'
@@ -1125,12 +1318,15 @@ class AppState extends ChangeNotifier {
     DateTime? start,
   }) async {
     _shiftActive = true;
-    final now = start ?? DateTime.now();
+    final now = start ?? _now;
     // If caller specifies a known shift label, honor it; otherwise fall back to clock heuristic
     if (label == 'Lunch' || label == 'Dinner') {
       _shiftType = label;
+      // Engage manual override to prevent immediate auto-switch
+      _manualShiftOverride = true;
     } else {
       _shiftType = currentIntendedShiftType(now);
+      _manualShiftOverride = false;
     }
     _shiftStart = now;
 
@@ -1165,53 +1361,34 @@ class AppState extends ChangeNotifier {
   }
 
   bool get isOpenNow {
-    final now = DateTime.now();
-    final businessDate = AppState.businessDate(now);
-    final weekday = businessDate.weekday;
+    final now = _now;
+    final wd = AppState.weekday(now);
+    final open = _hours.openMinutes[wd] ?? 11 * 60;
+    final close = _hours.closeMinutes[wd] ?? 23 * 60;
 
-    print('DEBUG isOpenNow: now=$now');
-    print('DEBUG isOpenNow: businessDate=$businessDate, weekday=$weekday');
-    print(
-        'DEBUG isOpenNow: configured openMinutes[weekday]=${_hours.openMinutes[weekday]}');
-    print(
-        'DEBUG isOpenNow: configured closeMinutes[weekday]=${_hours.closeMinutes[weekday]}');
-    print(
-        'DEBUG isOpenNow: configured closeDayOffset[weekday]=${_hours.closeDayOffset[weekday]}');
+    // Validate business hours data
+    assert(open >= 0 && open < 1440,
+        'Open time must be between 0-1439 minutes, got $open');
+    // Allow close==1440 (exactly midnight next day); treat as 0 with offset logic elsewhere.
+    assert(close >= 0 && close <= 1440,
+        'Close time must be between 0-1440 minutes, got $close');
 
-    // Get business day interval for today's business date
-    final todayInterval = businessDayInterval(businessDate, weekday);
+    final currentMinutes = now.hour * 60 + now.minute;
 
-    print(
-        'DEBUG isOpenNow: todayInterval start=${todayInterval.start}, end=${todayInterval.end}');
-    print(
-        'DEBUG isOpenNow: !now.isBefore(start)=${!now.isBefore(todayInterval.start)}, now.isBefore(end)=${now.isBefore(todayInterval.end)}');
+    d('DEBUG isOpenNow: currentMinutes=$currentMinutes, open=$open, close=$close');
 
-    // Check if current time falls within today's business hours (INCLUSIVE of start time)
-    if (!now.isBefore(todayInterval.start) && now.isBefore(todayInterval.end)) {
-      print('DEBUG isOpenNow: In todays business hours, returning true');
-      return true;
+    if (close > open) {
+      // Normal day operation: open=9:00(540), close=17:00(1020)
+      final isOpen = currentMinutes >= open && currentMinutes < close;
+      d('DEBUG isOpenNow: Normal hours, isOpen=$isOpen');
+      return isOpen;
+    } else {
+      // Overnight operation: open=17:00(1020), close=01:00(60) next day
+      // Open if: current >= open OR current < close
+      final isOpen = currentMinutes >= open || currentMinutes < close;
+      d('DEBUG isOpenNow: Overnight hours, isOpen=$isOpen');
+      return isOpen;
     }
-
-    // Check yesterday's business day (for overnight operations or early morning hours)
-    final yesterdayBusinessDate =
-        businessDate.subtract(const Duration(days: 1));
-    final yesterdayWeekday = yesterdayBusinessDate.weekday;
-    final yesterdayInterval =
-        businessDayInterval(yesterdayBusinessDate, yesterdayWeekday);
-
-    print(
-        'DEBUG isOpenNow: yesterdayInterval start=${yesterdayInterval.start}, end=${yesterdayInterval.end}');
-    print(
-        'DEBUG isOpenNow: !now.isBefore(ystart)=${!now.isBefore(yesterdayInterval.start)}, now.isBefore(yend)=${now.isBefore(yesterdayInterval.end)}');
-
-    if (!now.isBefore(yesterdayInterval.start) &&
-        now.isBefore(yesterdayInterval.end)) {
-      print('DEBUG isOpenNow: In yesterdays business hours, returning true');
-      return true;
-    }
-
-    print('DEBUG isOpenNow: Not in business hours, returning false');
-    return false;
   }
 
   /// Helper to test business hours logic at an arbitrary DateTime (used in tests)
@@ -1291,20 +1468,17 @@ class AppState extends ChangeNotifier {
     final lunchEnd = transitions['lunchEnd']!;
     final dinnerStart = transitions['dinnerStart']!;
 
-    print(
-        '[DEBUG] currentIntendedShiftType: m=$m, open=$open, lunchEnd=$lunchEnd, dinnerStart=$dinnerStart');
+    d('[DEBUG] currentIntendedShiftType: m=$m, open=$open, lunchEnd=$lunchEnd, dinnerStart=$dinnerStart');
 
     if (m < open) {
-      print('[DEBUG] currentIntendedShiftType: Before open, returning Lunch');
+      d('[DEBUG] currentIntendedShiftType: Before open, returning Lunch');
       return 'Lunch';
     }
     if (m < lunchEnd) {
-      print(
-          '[DEBUG] currentIntendedShiftType: Before lunch end, returning Lunch');
+      d('[DEBUG] currentIntendedShiftType: Before lunch end, returning Lunch');
       return 'Lunch';
     }
-    print(
-        '[DEBUG] currentIntendedShiftType: After lunch end, returning Dinner');
+    d('[DEBUG] currentIntendedShiftType: After lunch end, returning Dinner');
     return 'Dinner';
   }
 
@@ -1343,10 +1517,8 @@ class AppState extends ChangeNotifier {
       dinnerStart = transitionMinutes;
     }
 
-    print(
-        '[DEBUG] _calculateDynamicTransitions: open=$open, close=$close, totalMinutes=$totalMinutes');
-    print(
-        '[DEBUG] _calculateDynamicTransitions: lunchEnd=$lunchEnd, dinnerStart=$dinnerStart');
+    d('[DEBUG] _calculateDynamicTransitions: open=$open, close=$close, totalMinutes=$totalMinutes');
+    d('[DEBUG] _calculateDynamicTransitions: lunchEnd=$lunchEnd, dinnerStart=$dinnerStart');
 
     return {
       'lunchEnd': lunchEnd,
@@ -1354,13 +1526,51 @@ class AppState extends ChangeNotifier {
     };
   }
 
-  /// Intended shift timings are heuristics based on static values like dinnerSwitchMinutes.
-  /// Plan-based timings are dynamic and respect todayPlan.transitionEndMinutes for live operations.
-  /// Use intended timings for manual/forced starts and plan-based timings for live behavior.
-  void _maybeActivateShiftByClock() {
-    final now = DateTime.now();
+  /// Improved shift transition logic with reliability features:
+  /// - Uses injected Clock instead of DateTime.now()
+  /// - Persists transition checkpoints to prevent double execution
+  /// - Adds idempotent guards for reliable state transitions
+  /// - Enhanced debug logging with kDebugMode guard
+  Future<void> _maybeActivateShiftByClock() async {
+    final now = _now;
     final ymd = _ymd(now);
-    print('[DEBUG] _maybeActivateShiftByClock called at $now');
+    d('[DEBUG] _maybeActivateShiftByClock called at $now');
+
+    // Check for existing checkpoint to prevent double execution
+    final checkpoint = await _getTransitionCheckpoint();
+    String? lastCheckpointAction;
+    DateTime? lastCheckpointTime;
+    if (checkpoint != null) {
+      final checkpointTime = DateTime.parse(checkpoint['timestamp']);
+      final checkpointYmd = _ymd(checkpointTime);
+      final timeDiff = now.difference(checkpointTime).inMinutes;
+      lastCheckpointAction = checkpoint['action'] as String?;
+      lastCheckpointTime = checkpointTime;
+
+      // If checkpoint is from same day and recent (within 5 minutes), skip to prevent double execution
+      if (checkpointYmd == ymd && timeDiff < 5) {
+        final lastAction = checkpoint['action'];
+        final lastState = checkpoint['state'];
+        d('[DEBUG] Recent checkpoint found: $lastAction at ${checkpoint['timestamp']}, skipping duplicate transition');
+
+        // Validate current state matches checkpoint expectation
+        if (lastState != null) {
+          final expectedShiftType = lastState['shiftType'];
+          final expectedShiftActive = lastState['shiftActive'];
+
+          if (_shiftType == expectedShiftType &&
+              _shiftActive == expectedShiftActive) {
+            d('[DEBUG] Current state matches checkpoint, transition already completed');
+            return;
+          } else {
+            d('[WARNING] State mismatch detected - expected: $lastState, actual: {shiftType: $_shiftType, shiftActive: $_shiftActive}');
+          }
+        }
+      } else {
+        // Clear old checkpoint if it's from a different day or too old
+        await _clearTransitionCheckpoint();
+      }
+    }
 
     if (_todayPlan == null || _todayPlan!.ymd != ymd) {
       // Even without a plan we must still enforce open/closed boundaries
@@ -1371,13 +1581,19 @@ class AppState extends ChangeNotifier {
       final yW = yBDate.weekday;
       final yesterdayInterval = businessDayInterval(yBDate, yW);
 
-      final inToday = !now.isBefore(todayInterval.start) && now.isBefore(todayInterval.end);
-      final inYesterday = !now.isBefore(yesterdayInterval.start) && now.isBefore(yesterdayInterval.end);
+      final inToday =
+          !now.isBefore(todayInterval.start) && now.isBefore(todayInterval.end);
+      final inYesterday = !now.isBefore(yesterdayInterval.start) &&
+          now.isBefore(yesterdayInterval.end);
 
       // If outside any active business interval, ensure we are fully closed
       if (!inToday && !inYesterday) {
-        print('[DEBUG] _maybeActivateShiftByClock: No plan and outside business hours — enforcing closed state');
+        d('[DEBUG] _maybeActivateShiftByClock: No plan and outside business hours — enforcing closed state');
         if (_shiftActive) {
+          await _setTransitionCheckpoint({
+            'action': 'close_no_plan',
+            'state': {'shiftType': _shiftType, 'shiftActive': false}
+          });
           _finalizeAndSaveShift(_shiftType);
         }
         _shiftActive = false;
@@ -1396,106 +1612,170 @@ class AppState extends ChangeNotifier {
 
       // Within business hours but no plan: don't start/switch shifts automatically,
       // just leave current state as-is (gating via increment() will still require isOpenNow & working set)
-      print('[WARNING] _maybeActivateShiftByClock: _todayPlan missing or date mismatch during business hours. Not starting/switching shifts.');
+      d('[WARNING] _maybeActivateShiftByClock: _todayPlan missing or date mismatch during business hours. Not starting/switching shifts.');
       return;
     }
 
     final lunchRoster = _todayPlan!.lunchRoster;
     final dinnerRoster = _todayPlan!.dinnerRoster;
 
-  final wd = AppState.weekday(now);
-  final m = now.hour * 60 + now.minute;
+    final wd = AppState.weekday(now);
+    final m = now.hour * 60 + now.minute;
 
-  // Compute both today's and yesterday's business intervals and choose the one that contains 'now'.
-  // This prevents false "before open" clears for overnight/always-open setups where
-  // the active interval might be yesterday's (for times after midnight but before the 4 AM anchor).
-  final bDate = AppState.businessDate(now);
-  final todayInterval = businessDayInterval(bDate, wd);
-  final yesterdayBusinessDate = bDate.subtract(const Duration(days: 1));
-  final yesterdayWeekday = yesterdayBusinessDate.weekday;
-  final yesterdayInterval =
-    businessDayInterval(yesterdayBusinessDate, yesterdayWeekday);
+    // Compute both today's and yesterday's business intervals and choose the one that contains 'now'.
+    // This prevents false "before open" clears for overnight/always-open setups where
+    // the active interval might be yesterday's (for times after midnight but before the 4 AM anchor).
+    final bDate = AppState.businessDate(now);
+    final todayInterval = businessDayInterval(bDate, wd);
+    final yesterdayBusinessDate = bDate.subtract(const Duration(days: 1));
+    final yesterdayWeekday = yesterdayBusinessDate.weekday;
+    final yesterdayInterval =
+        businessDayInterval(yesterdayBusinessDate, yesterdayWeekday);
 
-  bool inToday = !now.isBefore(todayInterval.start) && now.isBefore(todayInterval.end);
-  bool inYesterday = !now.isBefore(yesterdayInterval.start) && now.isBefore(yesterdayInterval.end);
+    bool inToday =
+        !now.isBefore(todayInterval.start) && now.isBefore(todayInterval.end);
+    bool inYesterday = !now.isBefore(yesterdayInterval.start) &&
+        now.isBefore(yesterdayInterval.end);
 
-  final currentInterval = inToday
-    ? todayInterval
-    : (inYesterday ? yesterdayInterval : todayInterval);
+    final currentInterval = inToday
+        ? todayInterval
+        : (inYesterday ? yesterdayInterval : todayInterval);
 
-  final startDT = currentInterval.start;
-  final endDT = currentInterval.end;
-  final beforeOpen = !inToday && !inYesterday && now.isBefore(todayInterval.start);
-  final atOrAfterClose = now.isAtSameMomentAs(endDT) || now.isAfter(endDT);
+    final startDT = currentInterval.start;
+    final endDT = currentInterval.end;
+    final beforeOpen =
+        !inToday && !inYesterday && now.isBefore(todayInterval.start);
+    final atOrAfterClose = now.isAtSameMomentAs(endDT) || now.isAfter(endDT);
 
     // Use dynamic transitions instead of static dinnerSwitchMinutes
     final transitions = _calculateDynamicTransitions(now);
     final lunchEnd = transitions['lunchEnd']!;
     final dinnerStart = transitions['dinnerStart']!;
 
-  final transitionEnd = _todayPlan?.transitionEndMinutes ?? dinnerStart;
-    print('[DEBUG] _maybeActivateShiftByClock: Plan details:');
-    print('[DEBUG]   transitionStart=${_todayPlan?.transitionStartMinutes}');
-    print('[DEBUG]   transitionEnd=${_todayPlan?.transitionEndMinutes}');
-    print('[DEBUG]   calculated lunchEnd=$lunchEnd, dinnerStart=$dinnerStart');
-    print('[DEBUG]   lunchRoster=${_todayPlan?.lunchRoster}');
-    print('[DEBUG]   dinnerRoster=${_todayPlan?.dinnerRoster}');
+    // Resolve transition window: prefer explicit plan, then settings, else dynamic
+    final int transitionStart =
+        _todayPlan?.transitionStartMinutes ?? settings.transitionStartMinutes;
+    final int transitionEnd =
+        _todayPlan?.transitionEndMinutes ?? settings.transitionEndMinutes;
+    d('[DEBUG] _maybeActivateShiftByClock: Plan details:');
+    d('[DEBUG]   transitionStart=$transitionStart');
+    d('[DEBUG]   transitionEnd=$transitionEnd');
+    d('[DEBUG]   calculated lunchEnd=$lunchEnd, dinnerStart=$dinnerStart');
+    d('[DEBUG]   lunchRoster=${_todayPlan?.lunchRoster}');
+    d('[DEBUG]   dinnerRoster=${_todayPlan?.dinnerRoster}');
 
-  // CRITICAL FIX: Proper transition and closing logic
-  // Enforce pre-open: must be closed before businessInterval.start
-  if (beforeOpen) {
-    print('[DEBUG] _maybeActivateShiftByClock: Before open — enforcing closed state');
-    if (_shiftActive) {
-    print('[DEBUG] _maybeActivateShiftByClock: Finalizing lingering shift before open');
-    _finalizeAndSaveShift(_shiftType);
+    // CRITICAL FIX: Proper transition and closing logic
+    // Enforce pre-open: must be closed before businessInterval.start
+    if (beforeOpen) {
+      d('[DEBUG] _maybeActivateShiftByClock: Before open — enforcing closed state');
+      if (_shiftActive) {
+        d('[DEBUG] _maybeActivateShiftByClock: Finalizing lingering shift before open');
+        await _setTransitionCheckpoint({
+          'action': 'close_before_open',
+          'state': {'shiftType': _shiftType, 'shiftActive': false}
+        });
+        _finalizeAndSaveShift(_shiftType);
+      }
+      _shiftActive = false;
+      _shiftPaused = false;
+      _workingServerIds.clear();
+      _currentCounts.clear();
+      _currentBonusXP.clear();
+      _currentEarnedXP.clear();
+      _lastFlashMessages.clear();
+      _lastActionXP.clear();
+      _lastMilestoneDetails.clear();
+      _currentStreaks.clear();
+      resetRosterView();
+      notifyListeners();
+      return;
     }
-    _shiftActive = false;
-    _shiftPaused = false;
-    _workingServerIds.clear();
-    _currentCounts.clear();
-    _currentBonusXP.clear();
-    _currentEarnedXP.clear();
-    _lastFlashMessages.clear();
-    _lastActionXP.clear();
-    _lastMilestoneDetails.clear();
-    _currentStreaks.clear();
-    resetRosterView();
-    notifyListeners();
-    return;
-  }
 
-  // Lunch should be active: businessInterval.start → transition end
-  final open = _hours.openMinutes[wd]!;
-  final shouldBeActiveLunch = !beforeOpen &&
+    // Lunch should be active: businessInterval.start → transition end
+    final open = _hours.openMinutes[wd]!;
+    final shouldBeActiveLunch = !beforeOpen &&
         m < transitionEnd &&
         lunchRoster.isNotEmpty &&
         !_shiftPaused;
-  // Dinner should be active: transition end → businessInterval.end
-  final shouldBeActiveDinner = m >= transitionEnd &&
-    !(atOrAfterClose) &&
+    // Dinner should be active: transition end → businessInterval.end
+    final shouldBeActiveDinner = m >= transitionEnd &&
+        !(atOrAfterClose) &&
         dinnerRoster.isNotEmpty &&
         !_shiftPaused;
-  // Restaurant should be closed: at or after businessInterval.end
-  final shouldBeClosed = atOrAfterClose;
+    // Restaurant should be closed: at or after businessInterval.end
+    final shouldBeClosed = atOrAfterClose;
 
-  print(
-    '[DEBUG] _maybeActivateShiftByClock: m=$m, open(min)=$open, businessStart=$startDT, businessEnd=$endDT, transitionEnd=$transitionEnd');
-    print(
-        '[DEBUG] _maybeActivateShiftByClock: shiftType=$_shiftType, _shiftActive=$_shiftActive');
-    print(
-        '[DEBUG] _maybeActivateShiftByClock: shouldBeActiveLunch=$shouldBeActiveLunch, shouldBeActiveDinner=$shouldBeActiveDinner, shouldBeClosed=$shouldBeClosed');
-    print(
-        '[DEBUG] _maybeActivateShiftByClock: _workingServerIds=$_workingServerIds');
+    d('[DEBUG] _maybeActivateShiftByClock: m=$m, open(min)=$open, businessStart=$startDT, businessEnd=$endDT, transitionEnd=$transitionEnd');
+    d('[DEBUG] _maybeActivateShiftByClock: shiftType=$_shiftType, _shiftActive=$_shiftActive, manualOverride=$_manualShiftOverride, lastCheckpoint=$lastCheckpointAction at ${lastCheckpointTime?.toIso8601String()}');
+    d('[DEBUG] _maybeActivateShiftByClock: shouldBeActiveLunch=$shouldBeActiveLunch, shouldBeActiveDinner=$shouldBeActiveDinner, shouldBeClosed=$shouldBeClosed');
+    d('[DEBUG] _maybeActivateShiftByClock: _workingServerIds=$_workingServerIds');
 
     // CRITICAL FIX: Detect transition based on time, not intended shift type
-    final isTransitionEnd =
-        m >= transitionEnd && _shiftType == 'Lunch' && _shiftActive;
+    final isTransitionEnd = !_manualShiftOverride &&
+        m >= transitionEnd &&
+        _shiftType == 'Lunch' &&
+        _shiftActive;
     final switchingToDinner = isTransitionEnd;
+
+    // If we're already in Dinner but we have just crossed into/are in dinner window
+    // and no transition checkpoint was recorded today, perform the transition logic
+    // to preserve dinner-only counts and reset both-shift counts exactly once.
+  // If device restarts or manual overrides skip the lunch→dinner boundary,
+  // run the transition once post hoc so dinner-only is preserved and both-shift resets.
+  final needsPosthocDinnerTransition = m >= transitionEnd &&
+        _shiftType == 'Dinner' &&
+        _shiftActive &&
+        lastCheckpointAction != 'transition_to_dinner' &&
+        _todayPlan?.ymd == ymd;
+    if (needsPosthocDinnerTransition) {
+      d('[DEBUG] _maybeActivateShiftByClock: Performing posthoc dinner transition (no checkpoint present)');
+      final lunchSet = lunchRoster.toSet();
+      final dinnerSet = dinnerRoster.toSet();
+      final dinnerOnly = dinnerSet.difference(lunchSet);
+      final bothShifts = dinnerSet.intersection(lunchSet);
+
+      // Preserve dinner-only counts
+      final dinnerOnlyCounts = <String, int>{};
+      final dinnerOnlyPizookieCounts = <String, int>{};
+      for (final id in dinnerOnly) {
+        dinnerOnlyCounts[id] = _currentCounts[id] ?? 0;
+        dinnerOnlyPizookieCounts[id] = _currentPizookieCounts[id] ?? 0;
+        d('[DEBUG] _maybeActivateShiftByClock: Preserving dinner-only server $id: ${dinnerOnlyCounts[id]} counts');
+      }
+
+      // Transition checkpoint to prevent double-run across hot restarts.
+      await _setTransitionCheckpoint({
+        'action': 'transition_to_dinner',
+        'preservedCounts': dinnerOnlyCounts,
+        'preservedPizookieCounts': dinnerOnlyPizookieCounts,
+        'state': {'shiftType': 'Dinner', 'shiftActive': true}
+      });
+
+      // Finalize lunch period workers if any counts exist
+      final lunchOnlyWorkers = lunchSet.difference(dinnerSet);
+      final lunchPeriodWorkers = [...lunchOnlyWorkers, ...bothShifts].toList();
+      _finalizeAndSaveShift('Lunch', lunchPeriodWorkers);
+
+      // Reset working set to dinner roster but preserve dinner-only
+      _beginShift('Dinner', dinnerRoster, preserveCounts: false);
+      for (final id in dinnerOnly) {
+        _currentCounts[id] = dinnerOnlyCounts[id]!;
+        _currentPizookieCounts[id] = dinnerOnlyPizookieCounts[id]!;
+        d('[DEBUG] _maybeActivateShiftByClock: Restored dinner-only server $id to ${_currentCounts[id]} counts');
+      }
+      for (final id in bothShifts) {
+        _currentCounts[id] = 0;
+        _currentPizookieCounts[id] = 0;
+        d('[DEBUG] _maybeActivateShiftByClock: Reset both-shift server $id to 0 for dinner');
+      }
+      _manualShiftOverride = false;
+      notifyListeners();
+      return;
+    }
 
     if (switchingToDinner) {
       // CRITICAL FIX: Transition end logic
-      print(
-          '[DEBUG] _maybeActivateShiftByClock: Transition end detected - switching to dinner shift');
+      d('[DEBUG] _maybeActivateShiftByClock: Transition end detected - switching to dinner shift');
 
       // Save lunch counts and finalize lunch shift
       final lunchSet = lunchRoster.toSet();
@@ -1509,9 +1789,16 @@ class AppState extends ChangeNotifier {
       for (final id in dinnerOnly) {
         dinnerOnlyCounts[id] = _currentCounts[id] ?? 0;
         dinnerOnlyPizookieCounts[id] = _currentPizookieCounts[id] ?? 0;
-        print(
-            '[DEBUG] _maybeActivateShiftByClock: Preserving dinner-only server $id: ${dinnerOnlyCounts[id]} counts');
+        d('[DEBUG] _maybeActivateShiftByClock: Preserving dinner-only server $id: ${dinnerOnlyCounts[id]} counts');
       }
+
+      // Transition checkpoint to prevent double-run across hot restarts.
+      await _setTransitionCheckpoint({
+        'action': 'transition_to_dinner',
+        'preservedCounts': dinnerOnlyCounts,
+        'preservedPizookieCounts': dinnerOnlyPizookieCounts,
+        'state': {'shiftType': 'Dinner', 'shiftActive': true}
+      });
 
       // Finalize lunch shift and save records - include lunch-only + both-shift workers
       final lunchOnlyWorkers = lunchSet.difference(dinnerSet);
@@ -1525,28 +1812,31 @@ class AppState extends ChangeNotifier {
       for (final id in dinnerOnly) {
         _currentCounts[id] = dinnerOnlyCounts[id]!;
         _currentPizookieCounts[id] = dinnerOnlyPizookieCounts[id]!;
-        print(
-            '[DEBUG] _maybeActivateShiftByClock: Restored dinner-only server $id to ${_currentCounts[id]} counts');
+        d('[DEBUG] _maybeActivateShiftByClock: Restored dinner-only server $id to ${_currentCounts[id]} counts');
       }
 
       // Reset both-shift servers to 0 for fresh dinner start
       for (final id in bothShifts) {
         _currentCounts[id] = 0;
         _currentPizookieCounts[id] = 0;
-        print(
-            '[DEBUG] _maybeActivateShiftByClock: Reset both-shift server $id to 0 for dinner');
+        d('[DEBUG] _maybeActivateShiftByClock: Reset both-shift server $id to 0 for dinner');
       }
 
       _shiftActive = true;
+      // After an automatic transition, manual override is no longer applicable
+      _manualShiftOverride = false;
       notifyListeners();
       return;
     }
 
     // CRITICAL FIX: Restaurant closing logic
     if (shouldBeClosed) {
-      print(
-          '[DEBUG] _maybeActivateShiftByClock: Restaurant closed - finalizing shift and clearing state');
+      d('[DEBUG] _maybeActivateShiftByClock: Restaurant closed - finalizing shift and clearing state');
       if (_shiftActive) {
+        await _setTransitionCheckpoint({
+          'action': 'close_restaurant',
+          'state': {'shiftType': _shiftType, 'shiftActive': false}
+        });
         _finalizeAndSaveShift(_shiftType);
       }
       _shiftActive = false;
@@ -1568,14 +1858,19 @@ class AppState extends ChangeNotifier {
     // During transition, keep lunch shift active and do not reset
     if (shouldBeActiveLunch) {
       if (!_shiftActive || _shiftType != 'Lunch') {
-        print(
-            '[DEBUG] _maybeActivateShiftByClock: Starting lunch shift with roster: $lunchRoster');
+        d('[DEBUG] _maybeActivateShiftByClock: Starting lunch shift with roster: $lunchRoster');
+        await _setTransitionCheckpoint({
+          'action': 'start_lunch',
+          'state': {'shiftType': 'Lunch', 'shiftActive': true}
+        });
         _beginShift('Lunch', lunchRoster);
         _shiftActive = true;
+        // Starting a shift via clock clears manual override
+        _manualShiftOverride = false;
         notifyListeners();
       } else {
         // CRITICAL FIX: During transition period, add dinner-only servers to working set
-        final transitionStart = _todayPlan!.transitionStartMinutes;
+        // Use resolved transitionStart to respect plan/settings overrides
         if (m >= transitionStart && m < transitionEnd) {
           final lunchSet = lunchRoster.toSet();
           final dinnerSet = dinnerRoster.toSet();
@@ -1588,27 +1883,80 @@ class AppState extends ChangeNotifier {
               _currentCounts[id] ??= 0;
               _currentStreaks[id] ??= 0;
               _currentPizookieCounts[id] ??= 0;
-              print(
-                  '[DEBUG] _maybeActivateShiftByClock: Added dinner-only server $id to working set during transition');
+              d('[DEBUG] _maybeActivateShiftByClock: Added dinner-only server $id to working set during transition');
             }
           }
         }
 
-        print(
-            '[DEBUG] _maybeActivateShiftByClock: Lunch shift already active, workingServerIds: $_workingServerIds');
+        d('[DEBUG] _maybeActivateShiftByClock: Lunch shift already active, workingServerIds: $_workingServerIds');
       }
       return;
     }
-    if (shouldBeActiveDinner) {
+    if (shouldBeActiveDinner && !_manualShiftOverride) {
       if (!_shiftActive || _shiftType != 'Dinner') {
-        print(
-            '[DEBUG] _maybeActivateShiftByClock: Starting dinner shift, roster: $dinnerRoster');
-        _beginShift('Dinner', dinnerRoster, preserveCounts: false);
-        _shiftActive = true;
-        notifyListeners();
+        // If we are switching from an active Lunch to Dinner because the time window passed
+        // transitionEnd, run the full transition logic (preserve dinner-only, reset both-shift).
+        if (_shiftActive && _shiftType == 'Lunch') {
+          d('[DEBUG] _maybeActivateShiftByClock: Transition to dinner via shouldBeActiveDinner branch');
+          final lunchSet = lunchRoster.toSet();
+          final dinnerSet = dinnerRoster.toSet();
+          final dinnerOnly = dinnerSet.difference(lunchSet);
+          final bothShifts = dinnerSet.intersection(lunchSet);
+
+          // Preserve dinner-only counts
+          final dinnerOnlyCounts = <String, int>{};
+          final dinnerOnlyPizookieCounts = <String, int>{};
+          for (final id in dinnerOnly) {
+            dinnerOnlyCounts[id] = _currentCounts[id] ?? 0;
+            dinnerOnlyPizookieCounts[id] = _currentPizookieCounts[id] ?? 0;
+            d('[DEBUG] _maybeActivateShiftByClock: Preserving dinner-only server $id: ${dinnerOnlyCounts[id]} counts');
+          }
+
+          await _setTransitionCheckpoint({
+            'action': 'transition_to_dinner',
+            'preservedCounts': dinnerOnlyCounts,
+            'preservedPizookieCounts': dinnerOnlyPizookieCounts,
+            'state': {'shiftType': 'Dinner', 'shiftActive': true}
+          });
+
+          // Finalize lunch shift (save lunch-only + both-shift workers)
+          final lunchOnlyWorkers = lunchSet.difference(dinnerSet);
+          final lunchPeriodWorkers =
+              [...lunchOnlyWorkers, ...bothShifts].toList();
+          _finalizeAndSaveShift('Lunch', lunchPeriodWorkers);
+
+          // Start dinner fresh
+          _beginShift('Dinner', dinnerRoster, preserveCounts: false);
+
+          // Restore preserved dinner-only counts
+          for (final id in dinnerOnly) {
+            _currentCounts[id] = dinnerOnlyCounts[id]!;
+            _currentPizookieCounts[id] = dinnerOnlyPizookieCounts[id]!;
+            d('[DEBUG] _maybeActivateShiftByClock: Restored dinner-only server $id to ${_currentCounts[id]} counts');
+          }
+
+          // Reset both-shift servers
+          for (final id in bothShifts) {
+            _currentCounts[id] = 0;
+            _currentPizookieCounts[id] = 0;
+            d('[DEBUG] _maybeActivateShiftByClock: Reset both-shift server $id to 0 for dinner');
+          }
+
+          _shiftActive = true;
+          _manualShiftOverride = false;
+          notifyListeners();
+        } else {
+          d('[DEBUG] _maybeActivateShiftByClock: Starting dinner shift, roster: $dinnerRoster');
+          await _setTransitionCheckpoint({
+            'action': 'start_dinner',
+            'state': {'shiftType': 'Dinner', 'shiftActive': true}
+          });
+          _beginShift('Dinner', dinnerRoster, preserveCounts: false);
+          _shiftActive = true;
+          notifyListeners();
+        }
       } else {
-        print(
-            '[DEBUG] _maybeActivateShiftByClock: Dinner shift already active, workingServerIds: $_workingServerIds');
+        d('[DEBUG] _maybeActivateShiftByClock: Dinner shift already active, workingServerIds: $_workingServerIds');
       }
       return;
     }
@@ -1616,19 +1964,17 @@ class AppState extends ChangeNotifier {
 
   void _beginShift(String type, List<String> roster,
       {bool preserveCounts = false}) {
-    print(
-        '[DEBUG] _beginShift: type=$type, roster=$roster, preserveCounts=$preserveCounts');
+    d('[DEBUG] _beginShift: type=$type, roster=$roster, preserveCounts=$preserveCounts');
     _shiftActive = true;
     _shiftPaused = false;
     _shiftType = type;
-    _shiftStart = DateTime.now();
+    _shiftStart = _now;
 
     _workingServerIds
       ..clear()
       ..addAll(roster);
 
-    print(
-        '[DEBUG] _beginShift: _workingServerIds updated to $_workingServerIds');
+    d('[DEBUG] _beginShift: _workingServerIds updated to $_workingServerIds');
 
     if (preserveCounts) {
       // PRESERVE MODE: Don't clear any existing counts, only add missing servers with 0
@@ -1646,7 +1992,7 @@ class AppState extends ChangeNotifier {
 
       // DO NOT remove any existing counts when preserving - this was the bug!
       // The manual restoration logic will handle preserving dinner-only counts
-      print('[DEBUG] _beginShift: Preserved existing counts, no data removed');
+      d('[DEBUG] _beginShift: Preserved existing counts, no data removed');
     } else {
       // Normal shift start: clear and reset all per-shift data
       _currentCounts
@@ -1682,55 +2028,48 @@ class AppState extends ChangeNotifier {
         ? roster.where((id) => _currentCounts.containsKey(id))
         : _currentCounts.keys;
 
-    print('[SHIFT SAVE DEBUG] ================================');
-    print(
-        '[SHIFT SAVE DEBUG] Finalizing shift: type=$type at ${DateTime.now()}');
-    print(
-        '[SHIFT SAVE DEBUG] Roster filter: ${roster ?? 'none (all servers)'}');
-    print('[SHIFT SAVE DEBUG] Available _currentCounts: $_currentCounts');
-    print(
-        '[SHIFT SAVE DEBUG] Keys to check for saving: ${keysToSave.toList()}');
+    d('[SHIFT SAVE DEBUG] ================================');
+    d('[SHIFT SAVE DEBUG] Finalizing shift: type=$type at ${_now}');
+    d('[SHIFT SAVE DEBUG] Roster filter: ${roster ?? 'none (all servers)'}');
+    d('[SHIFT SAVE DEBUG] Available _currentCounts: $_currentCounts');
+    d('[SHIFT SAVE DEBUG] Keys to check for saving: ${keysToSave.toList()}');
 
     for (final id in keysToSave) {
       final count = _currentCounts[id] ?? 0;
-      print('[SHIFT SAVE DEBUG] Server $id: count=$count');
+      d('[SHIFT SAVE DEBUG] Server $id: count=$count');
       if (count > 0) {
         // Only save servers with actual runs
         filteredCounts[id] = count;
         pizookieCounts[id] = _currentPizookieCounts[id] ?? 0;
-        print(
-            '[SHIFT SAVE DEBUG] Server $id SAVED to $type history with $count runs');
+        d('[SHIFT SAVE DEBUG] Server $id SAVED to $type history with $count runs');
       } else {
-        print('[SHIFT SAVE DEBUG] Server $id SKIPPED (count=$count)');
+        d('[SHIFT SAVE DEBUG] Server $id SKIPPED (count=$count)');
       }
     }
 
-    print('[SHIFT SAVE DEBUG] Final saving counts: $filteredCounts');
-    print('[SHIFT SAVE DEBUG] Final saving pizookieCounts: $pizookieCounts');
+    d('[SHIFT SAVE DEBUG] Final saving counts: $filteredCounts');
+    d('[SHIFT SAVE DEBUG] Final saving pizookieCounts: $pizookieCounts');
 
     // CRITICAL: Don't save empty shifts to history - they pollute the historical data
     if (filteredCounts.isEmpty) {
-      print(
-          '[SHIFT SAVE DEBUG] ⚠️ SKIPPING SAVE: No servers with runs > 0, not saving empty shift');
-      print('[SHIFT SAVE DEBUG] ================================');
+      d('[SHIFT SAVE DEBUG] ⚠️ SKIPPING SAVE: No servers with runs > 0, not saving empty shift');
+      d('[SHIFT SAVE DEBUG] ================================');
       return;
     }
 
-    print(
-        '[SHIFT SAVE DEBUG] ✅ SAVING SHIFT: ${filteredCounts.length} servers with data');
-    print('[SHIFT SAVE DEBUG] Saving pizookieCounts: $pizookieCounts');
+    d('[SHIFT SAVE DEBUG] ✅ SAVING SHIFT: ${filteredCounts.length} servers with data');
+    d('[SHIFT SAVE DEBUG] Saving pizookieCounts: $pizookieCounts');
     final rec = ShiftRecord(
       id: _randId(),
       label: type,
       shiftType: type,
-      start: _shiftStart ?? DateTime.now(),
+      start: _shiftStart ?? _now,
       counts: filteredCounts,
       pizookieCounts: pizookieCounts,
     );
     _history.add(rec);
-    print(
-        '[SHIFT SAVE DEBUG] ✅ Shift saved to history with ${filteredCounts.length} servers');
-    print('[SHIFT SAVE DEBUG] ================================');
+    d('[SHIFT SAVE DEBUG] ✅ Shift saved to history with ${filteredCounts.length} servers');
+    d('[SHIFT SAVE DEBUG] ================================');
 
     String? mvpId;
     int mvpScore = -1;
@@ -1800,7 +2139,7 @@ class AppState extends ChangeNotifier {
   }
 
   Future<bool> endCurrentShiftWithPin(String pin) async {
-    if (pin != adminPin) return false;
+    if (!(await isValidAdminPin(pin))) return false;
     if (_shiftActive) {
       _finalizeAndSaveShift(_shiftType);
       _shiftActive = false;
@@ -1811,7 +2150,7 @@ class AppState extends ChangeNotifier {
   }
 
   Future<bool> pauseCurrentShiftWithPin(String pin) async {
-    if (pin != adminPin) return false;
+    if (!(await isValidAdminPin(pin))) return false;
     if (_shiftActive) {
       _shiftActive = false;
       _shiftPaused = true;
@@ -1821,7 +2160,7 @@ class AppState extends ChangeNotifier {
   }
 
   Future<bool> resumePausedShiftWithPin(String pin) async {
-    if (pin != adminPin) return false;
+    if (!(await isValidAdminPin(pin))) return false;
     if (_shiftPaused) {
       _shiftActive = true;
       _shiftPaused = false;
@@ -1869,7 +2208,7 @@ class AppState extends ChangeNotifier {
 
   Future<bool> renameServer(String id, String newName,
       {required String pin}) async {
-    if (pin != adminPin) return false;
+    if (!(await isValidAdminPin(pin))) return false;
     final s = serverById(id);
     if (s == null) return false;
     s.name = newName.trim();
@@ -1879,7 +2218,7 @@ class AppState extends ChangeNotifier {
   }
 
   Future<bool> removeServer(String id, {required String pin}) async {
-    if (pin != adminPin) return false;
+    if (!(await isValidAdminPin(pin))) return false;
     _servers.removeWhere((s) => s.id == id);
     _totals.remove(id);
     _profiles.remove(id);
@@ -1908,7 +2247,7 @@ class AppState extends ChangeNotifier {
     if (!def.repeatable && p.achievements.contains(id)) return;
 
     if (def.repeatable) {
-      final ymd = _ymd(DateTime.now());
+      final ymd = _ymd(_now);
       final key = '${id}_$ymd';
       if (p.repeatEarnedDates.contains(key)) return;
       p.repeatEarnedDates.add(key);
@@ -1929,7 +2268,7 @@ class AppState extends ChangeNotifier {
         'subMessage': '+$roundedPoints XP Achievement Bonus!',
         'priority': 'medium',
         'context': {'repeatable': def.repeatable},
-        'timestamp': DateTime.now().toIso8601String(),
+        'timestamp': _now.toIso8601String(),
         'actionType': 'achievement',
       };
     } else {
@@ -1951,38 +2290,33 @@ class AppState extends ChangeNotifier {
         'subMessage': '+$roundedPoints XP Achievement Bonus!',
         'priority': 'medium',
         'context': {'repeatable': def.repeatable},
-        'timestamp': DateTime.now().toIso8601String(),
+        'timestamp': _now.toIso8601String(),
         'actionType': 'achievement',
       };
     }
   }
 
   MilestoneAchievement? increment(String id) {
-    final now = DateTime.now();
+    final now = _now;
     final m = now.hour * 60 + now.minute;
     final plan = _todayPlan;
-    print(
-        '[DEBUG] increment attempt: server=$id, shiftActive=$_shiftActive, workingIds=$_workingServerIds');
-    print(
-        '[DEBUG] increment: currentTime=$m, shiftType=$_shiftType, transition=${plan?.transitionStartMinutes}-${plan?.transitionEndMinutes}');
-    print(
-        '[DEBUG] increment: lunchRoster=${plan?.lunchRoster}, dinnerRoster=${plan?.dinnerRoster}');
+    d('[DEBUG] increment attempt: server=$id, shiftActive=$_shiftActive, workingIds=$_workingServerIds');
+    d('[DEBUG] increment: currentTime=$m, shiftType=$_shiftType, transition=${plan?.transitionStartMinutes}-${plan?.transitionEndMinutes}');
+    d('[DEBUG] increment: lunchRoster=${plan?.lunchRoster}, dinnerRoster=${plan?.dinnerRoster}');
 
     // Check if server is in both shifts (critical for tracking Server B)
     final lunchIds = plan?.lunchRoster ?? [];
     final dinnerIds = plan?.dinnerRoster ?? [];
     final inLunch = lunchIds.contains(id);
     final inDinner = dinnerIds.contains(id);
-    print(
-        '[DEBUG] increment: server $id -> inLunch=$inLunch, inDinner=$inDinner, currentCounts=${_currentCounts[id] ?? 0}');
+    d('[DEBUG] increment: server $id -> inLunch=$inLunch, inDinner=$inDinner, currentCounts=${_currentCounts[id] ?? 0}');
 
     // Defensive gating: must be open, shift active, and server working
     if (!isOpenNow || !_shiftActive || !_workingServerIds.contains(id)) {
-      print(
-          '[DEBUG] increment BLOCKED: isOpenNow=$isOpenNow, shiftActive=$_shiftActive, serverInWorking=${_workingServerIds.contains(id)}');
+      d('[DEBUG] increment BLOCKED: isOpenNow=$isOpenNow, shiftActive=$_shiftActive, serverInWorking=${_workingServerIds.contains(id)}');
       return null;
     }
-    print('[DEBUG] increment SUCCESS: server $id proceeding');
+    d('[DEBUG] increment SUCCESS: server $id proceeding');
 
     const delta = 1;
 
@@ -2027,8 +2361,7 @@ class AppState extends ChangeNotifier {
     // Track XP from this specific action
     int actionXP = boostedPoints;
 
-    print(
-        '[DEBUG] +$boostedPoints points awarded to $id (base: $basePoints, boost: ${_boostActive ? "${_boostMultiplier}x" : "none"}), total now: ${prof.points}');
+    d('[DEBUG] +$boostedPoints points awarded to $id (base: $basePoints, boost: ${_boostActive ? "${_boostMultiplier}x" : "none"}), total now: ${prof.points}');
 
     // Award additional XP for Full Hands achievement if applicable
     if (awardedFullHands && settings.gamificationEnabled) {
@@ -2036,12 +2369,10 @@ class AppState extends ChangeNotifier {
           25; // Additional 25 XP for Full Hands (35 total - 10 base = 25 extra)
       _currentEarnedXP[id] = (_currentEarnedXP[id] ?? 0) + 25;
       actionXP += 25; // Add to this action's total
-      print(
-          '[DEBUG] +25 additional XP for Full Hands achievement, total now: ${prof.points}');
+      d('[DEBUG] +25 additional XP for Full Hands achievement, total now: ${prof.points}');
     }
     prof.allTimeRuns += delta;
-    print(
-        '[DEBUG] Server $id now has ${prof.points} XP, level ${prof.level}, allTimeRuns: ${prof.allTimeRuns}');
+    d('[DEBUG] Server $id now has ${prof.points} XP, level ${prof.level}, allTimeRuns: ${prof.allTimeRuns}');
 
     final prevIso = prof.lastTapIso;
     prof.lastTapIso = now.toIso8601String();
@@ -2135,7 +2466,7 @@ class AppState extends ChangeNotifier {
         'subMessage': milestone.subMessage,
         'priority': milestone.priority.name,
         'context': milestone.context,
-        'timestamp': DateTime.now().toIso8601String(),
+        'timestamp': _now.toIso8601String(),
         'actionType': 'regular',
       };
 
@@ -2143,16 +2474,15 @@ class AppState extends ChangeNotifier {
       updatedProf.milestoneHistory.add({
         'type': milestone.type.name,
         'xpReward': roundedMilestoneXP,
-        'timestamp': DateTime.now().toIso8601String(),
+        'timestamp': _now.toIso8601String(),
         'message': milestone.message,
       });
 
       _profiles[id] = updatedProf;
       _persistProfiles(); // Persist immediately
 
-      print(
-          '[DEBUG] Milestone earned by $id: ${milestone.type.name} (+$roundedMilestoneXP XP)');
-      print('[DEBUG] Current shift bonus XP for $id: ${_currentBonusXP[id]}');
+      d('[DEBUG] Milestone earned by $id: ${milestone.type.name} (+$roundedMilestoneXP XP)');
+      d('[DEBUG] Current shift bonus XP for $id: ${_currentBonusXP[id]}');
     }
 
     // Store the total XP gained from this specific action
@@ -2176,7 +2506,7 @@ class AppState extends ChangeNotifier {
   Map<String, int> integrityBinsFor(String serverId, {bool todayOnly = false}) {
     final buckets = _tapPerMinute[serverId];
     if (buckets == null) return {'1': 0, '2': 0, '3': 0, '4+': 0};
-    final now = DateTime.now();
+    final now = _now;
     final ymd = _ymd(now);
     int s1 = 0, s2 = 0, s3 = 0, s4 = 0;
     buckets.forEach((minuteEpoch, count) {
@@ -2206,7 +2536,7 @@ class AppState extends ChangeNotifier {
     final buckets = _tapPerMinute[serverId];
     if (buckets == null) return {'1': 0, '2': 0, '3': 0, '4+': 0};
 
-    final now = DateTime.now();
+    final now = _now;
     final ymd = _ymd(now);
 
     // Default date ranges based on common selections
@@ -2229,10 +2559,10 @@ class AppState extends ChangeNotifier {
     if (serverId == '4f55jaewuhldbaoi' &&
         startDate != null &&
         endDate != null) {
-      print('DEBUG integrityBinsForDateRange for server $serverId:');
-      print('  Filter start: $filterStartDate');
-      print('  Filter end: $filterEndDate');
-      print('  Total tap buckets: ${buckets.length}');
+      d('DEBUG integrityBinsForDateRange for server $serverId:');
+      d('  Filter start: $filterStartDate');
+      d('  Filter end: $filterEndDate');
+      d('  Total tap buckets: ${buckets.length}');
     }
 
     // Properly categorize minutes by click patterns (like integrityBinsFor but with date filtering)
@@ -2241,24 +2571,23 @@ class AppState extends ChangeNotifier {
     int processedCount = 0;
 
     buckets.forEach((minuteEpoch, count) {
-      final d = DateTime.fromMillisecondsSinceEpoch(minuteEpoch);
+      final dt = DateTime.fromMillisecondsSinceEpoch(minuteEpoch);
 
       // Debug first few entries for server '4f55jaewuhldbaoi'
       if (serverId == '4f55jaewuhldbaoi' &&
           startDate != null &&
           endDate != null &&
           processedCount < 3) {
-        print(
-            '  Bucket $processedCount: date=$d, count=$count, inRange=${!d.isBefore(filterStartDate) && !d.isAfter(filterEndDate)}');
+        d('  Bucket $processedCount: date=$dt, count=$count, inRange=${!dt.isBefore(filterStartDate) && !dt.isAfter(filterEndDate)}');
         processedCount++;
       }
 
       // Check if date falls within our filter range
-      if (d.isBefore(filterStartDate) || d.isAfter(filterEndDate)) {
+      if (dt.isBefore(filterStartDate) || dt.isAfter(filterEndDate)) {
         return;
       }
 
-      if (todayOnly && _ymd(d) != ymd) {
+      if (todayOnly && _ymd(dt) != ymd) {
         return;
       }
 
@@ -2279,9 +2608,8 @@ class AppState extends ChangeNotifier {
     if (serverId == '4f55jaewuhldbaoi' &&
         startDate != null &&
         endDate != null) {
-      print('  Total runs in range: $totalRuns');
-      print(
-          '  Click pattern distribution: 1-click=$s1, 2-click=$s2, 3-click=$s3, 4+-click=$s4');
+      d('  Total runs in range: $totalRuns');
+      d('  Click pattern distribution: 1-click=$s1, 2-click=$s2, 3-click=$s3, 4+-click=$s4');
     }
 
     return {'1': s1, '2': s2, '3': s3, '4+': s4};
@@ -2355,9 +2683,8 @@ class AppState extends ChangeNotifier {
   }
 
   void _pruneOldTapBuckets() {
-    final cutoff = DateTime.now()
-        .subtract(const Duration(days: 180))
-        .millisecondsSinceEpoch;
+    final cutoff =
+        _now.subtract(const Duration(days: 180)).millisecondsSinceEpoch;
     for (final m in _tapPerMinute.values) {
       m.removeWhere((k, v) => k < cutoff);
     }
@@ -2378,7 +2705,7 @@ class AppState extends ChangeNotifier {
   void updateBothRosters(
       {required List<String> lunch, required List<String> dinner}) {
     setTodayPlan(lunch, dinner);
-    final now = DateTime.now();
+    final now = _now;
     final currentShift = shiftType;
 
     if (currentShift == 'Lunch') {
@@ -2393,16 +2720,17 @@ class AppState extends ChangeNotifier {
     final newSetOriginal = Set<String>.from(newRoster);
 
     // Time/plan-based gating: restrict which servers may be active right now
-    // - Before transitionStart (Lunch shift): only lunch roster allowed
+    // - Before transitionStart: only lunch roster allowed
     // - Between transitionStart..transitionEnd: allow lunch ∪ dinner
-    // - After transitionEnd (Dinner shift): only dinner roster allowed
+    // - After transitionEnd: only dinner roster allowed
     // If no plan or shift not active, don't gate.
     Set<String> _applyRosterGating(Set<String> requested) {
       final plan = _todayPlan;
       if (plan == null || !_shiftActive) return requested;
 
-      final now = DateTime.now();
+      final now = _now;
       final m = now.hour * 60 + now.minute;
+      // Prefer explicit plan times, then settings
       final ts = plan.transitionStartMinutes;
       final te = plan.transitionEndMinutes;
 
@@ -2412,24 +2740,18 @@ class AppState extends ChangeNotifier {
       final union = lunch.union(dinner);
 
       Set<String> allowed;
-      if (_shiftType == 'Lunch') {
-        if (m < ts) {
-          // Strict lunch only before transition window
-          allowed = lunch;
-        } else if (m >= ts && m < te) {
-          // During transition window, allow both
-          allowed = union;
-        } else {
-          // After transitionEnd, engine should switch to dinner soon.
-          // Be permissive here to avoid surprising removals; allow union.
-          allowed = union;
-        }
-      } else if (_shiftType == 'Dinner') {
-        // For dinner, restrict to dinner set
-        allowed = dinner;
+      if (_manualShiftOverride && _shiftType == 'Lunch' && m < te) {
+        // During manual Lunch (explicitly started), allow union up until transitionEnd
+        allowed = union;
+      } else if (m < ts) {
+        // Strict lunch only before transition window
+        allowed = lunch;
+      } else if (m >= ts && m < te) {
+        // During transition window, allow both
+        allowed = union;
       } else {
-        // Unknown shift type, do not gate
-        allowed = requested;
+        // After transitionEnd: dinner only
+        allowed = dinner;
       }
 
       return requested.intersection(allowed);
@@ -2489,7 +2811,7 @@ class AppState extends ChangeNotifier {
   }
 
   Future<bool> deleteShiftWithPin(ShiftRecord shift, String pin) async {
-    if (pin != adminPin) return false;
+    if (!(await isValidAdminPin(pin))) return false;
     _history.removeWhere((s) => s.id == shift.id);
     await _persistHistory();
     notifyListeners();
@@ -2514,7 +2836,7 @@ class AppState extends ChangeNotifier {
     final closeMinutes = _hours.closeMinutes[weekday] ?? 23 * 60;
     final closeDayOffset = _hours.closeDayOffset[weekday] ?? 0;
 
-    print('DEBUG businessDayInterval: openMinutes=$openMinutes, closeMinutes=$closeMinutes, closeDayOffset=$closeDayOffset');
+    d('DEBUG businessDayInterval: openMinutes=$openMinutes, closeMinutes=$closeMinutes, closeDayOffset=$closeDayOffset');
 
     // Business day starts at opening time on the business date.
     // NOTE: If the configured open time is before the 4:00 anchor (early morning),
@@ -2535,18 +2857,30 @@ class AppState extends ChangeNotifier {
 
     // Calculate end time based on closeDayOffset and whether close extends overnight
     late final DateTime end;
-    
-    // Handle different closing scenarios
+
     // Handle different closing scenarios
     if (closeDayOffset == 0) {
-      // Same day operation: closeMinutes is time of day from midnight
-      end = DateTime(
-        businessDate.year,
-        businessDate.month,
-        businessDate.day,
-        closeMinutes ~/ 60, // hours
-        closeMinutes % 60, // minutes
-      );
+      // Same day operation: but we need to check if close time is actually before open time
+      // If closeMinutes < openMinutes, it means we close the next day despite closeDayOffset=0
+      if (closeMinutes < openMinutes) {
+        // Close time is next day despite closeDayOffset=0 (e.g., open at 23:00, close at 01:00)
+        end = DateTime(
+          startDate.year,
+          startDate.month,
+          startDate.day + 1,
+          closeMinutes ~/ 60, // hours
+          closeMinutes % 60, // minutes
+        );
+      } else {
+        // Normal same day operation - use startDate, not businessDate
+        end = DateTime(
+          startDate.year,
+          startDate.month,
+          startDate.day,
+          closeMinutes ~/ 60, // hours
+          closeMinutes % 60, // minutes
+        );
+      }
     } else {
       // Multi-day operation: closeMinutes represents total operation time from start
       // For overnight operations, calculate the actual close time correctly
@@ -2555,7 +2889,7 @@ class AppState extends ChangeNotifier {
         // Calculate end time by adding the full duration from start
         final operationDurationMinutes = closeMinutes - openMinutes;
         end = start.add(Duration(minutes: operationDurationMinutes));
-        print('DEBUG businessDayInterval: Overnight operation - duration=${operationDurationMinutes} minutes, end=$end');
+        d('DEBUG businessDayInterval: Overnight operation - duration=${operationDurationMinutes} minutes, end=$end');
       } else {
         // Normal overnight operation within 24 hours
         final operationDurationMinutes = closeMinutes - openMinutes;
@@ -2563,7 +2897,7 @@ class AppState extends ChangeNotifier {
       }
     }
 
-    print('DEBUG businessDayInterval: Final interval start=$start, end=$end');
+    d('DEBUG businessDayInterval: Final interval start=$start, end=$end');
     return DateTimeRange(start: start, end: end);
   }
 
@@ -2594,8 +2928,8 @@ class AppState extends ChangeNotifier {
 
   /// Reconstructs allTimeRuns from historical tap data
   void reconstructAllTimeRuns() {
-    print('[DEBUG] Starting allTimeRuns reconstruction from tap data...');
-    print('[DEBUG] _tapPerMinute has ${_tapPerMinute.length} servers');
+    d('[DEBUG] Starting allTimeRuns reconstruction from tap data...');
+    d('[DEBUG] _tapPerMinute has ${_tapPerMinute.length} servers');
 
     for (final serverId in _tapPerMinute.keys) {
       final tapData = _tapPerMinute[serverId];
@@ -2604,8 +2938,7 @@ class AppState extends ChangeNotifier {
       // Sum all taps for this server across all time periods
       final totalTaps =
           tapData.values.fold<int>(0, (sum, count) => sum + count);
-      print(
-          '[DEBUG] Server $serverId has ${tapData.length} time periods, $totalTaps total taps');
+      d('[DEBUG] Server $serverId has ${tapData.length} time periods, $totalTaps total taps');
 
       // Get or create profile
       final profile = _profiles[serverId] ?? ServerProfile();
@@ -2616,11 +2949,9 @@ class AppState extends ChangeNotifier {
         profile.allTimeRuns = totalTaps;
         _profiles[serverId] = profile;
 
-        print(
-            '[DEBUG] Reconstructed profile $serverId: allTimeRuns $oldValue → $totalTaps');
+        d('[DEBUG] Reconstructed profile $serverId: allTimeRuns $oldValue → $totalTaps');
       } else {
-        print(
-            '[DEBUG] Server $serverId: profile.allTimeRuns=${profile.allTimeRuns} already >= taps=$totalTaps, no change needed');
+        d('[DEBUG] Server $serverId: profile.allTimeRuns=${profile.allTimeRuns} already >= taps=$totalTaps, no change needed');
       }
 
       // ALSO update _totals which is used by MVP screen
@@ -2628,11 +2959,9 @@ class AppState extends ChangeNotifier {
       if (currentTotals < totalTaps) {
         final oldTotals = currentTotals;
         _totals[serverId] = totalTaps;
-        print(
-            '[DEBUG] Reconstructed totals $serverId: _totals $oldTotals → $totalTaps');
+        d('[DEBUG] Reconstructed totals $serverId: _totals $oldTotals → $totalTaps');
       } else {
-        print(
-            '[DEBUG] Server $serverId: _totals=$currentTotals already >= taps=$totalTaps, no change needed');
+        d('[DEBUG] Server $serverId: _totals=$currentTotals already >= taps=$totalTaps, no change needed');
       }
     }
 
@@ -2640,15 +2969,15 @@ class AppState extends ChangeNotifier {
     _persistProfiles();
     _persistTotals();
     notifyListeners();
-    print('[DEBUG] allTimeRuns reconstruction complete!');
+    d('[DEBUG] allTimeRuns reconstruction complete!');
   }
 
   void updateAvatar(String serverId, String avatarPath) {
-    print('AppState.updateAvatar called for $serverId with $avatarPath');
+    d('AppState.updateAvatar called for $serverId with $avatarPath');
     final profile = _profiles[serverId];
     if (profile != null) {
       profile.avatarPath = avatarPath;
-      final now = DateTime.now();
+      final now = _now;
       final entry = {
         'path': avatarPath,
         'timestamp': now.toIso8601String(),
@@ -2662,7 +2991,7 @@ class AppState extends ChangeNotifier {
   }
 
   void updateBanner(String serverId, String bannerPath) {
-    print('AppState.updateBanner called for $serverId with $bannerPath');
+    d('AppState.updateBanner called for $serverId with $bannerPath');
     final profile = _profiles[serverId];
     if (profile != null) {
       profile.bannerPath = bannerPath;
