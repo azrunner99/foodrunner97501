@@ -584,12 +584,21 @@ class AppState extends ChangeNotifier {
     }
 
     final now = _clock.now();
-    final lastTime =
-        DateTime.fromMillisecondsSinceEpoch(checkpoint['timestamp']);
-    final lastShift = checkpoint['from_shift'];
-    final targetShift = checkpoint['to_shift'];
+    final timestampValue = checkpoint['timestamp'];
+    final lastTime = timestampValue is String 
+        ? DateTime.parse(timestampValue)
+        : DateTime.fromMillisecondsSinceEpoch(timestampValue as int);
+    final lastShift = checkpoint['from_shift'] as String?;
+    final targetShift = checkpoint['to_shift'] as String?;
 
     d('[STARTUP] Found checkpoint: $lastShift → $targetShift at $lastTime');
+
+    // Skip if checkpoint doesn't have shift information
+    if (lastShift == null || targetShift == null) {
+      d('[STARTUP] Checkpoint missing shift information, clearing');
+      await _clearTransitionCheckpoint();
+      return;
+    }
 
     // If checkpoint is very old (>24 hours), clear it as stale
     if (now.difference(lastTime).inHours > 24) {
@@ -1536,6 +1545,43 @@ class AppState extends ChangeNotifier {
     final ymd = _ymd(now);
     d('[DEBUG] _maybeActivateShiftByClock called at $now');
 
+    // FIRST: Check if we need to close the restaurant - this overrides everything
+    // BUT NOT during transition period - transition should be allowed to complete
+    final plan = _todayPlan;
+    if (plan != null) {
+      final currentMinutes = now.hour * 60 + now.minute;
+      final tStart = plan.transitionStartMinutes;
+      final tEnd = plan.transitionEndMinutes;
+      final isInTransition = currentMinutes >= tStart && currentMinutes < tEnd;
+      
+      if (!isOpenNow && _shiftActive && !isInTransition) {
+        d('[DEBUG] _maybeActivateShiftByClock: Restaurant closed (not in transition), finalizing active shift');
+        await _setTransitionCheckpoint({
+          'action': 'close_end_of_day',
+          'state': {'shiftType': _shiftType, 'shiftActive': false}
+        });
+        _finalizeAndSaveShift(_shiftType);
+        _shiftActive = false;
+        _shiftPaused = false;
+        _shiftType = '';  // Clear shift type to fully reset
+        _workingServerIds.clear();
+        _currentCounts.clear();
+        _currentStreaks.clear();
+        _currentBonusXP.clear();
+        _currentEarnedXP.clear();
+        _currentPizookieCounts.clear();
+        _lunchPeakCount.clear();
+        _dinnerPeakCount.clear();
+        _lunchCloserCount.clear();
+        _dinnerCloserCount.clear();
+        await _clearTransitionCheckpoint();
+        d('[DEBUG] _maybeActivateShiftByClock: Restaurant closed, all state cleared, returning to roster selection');
+        print('RESTAURANT CLOSED: Clearing all UI state, should return to who is working today screen');
+        notifyListeners();
+        return;
+      }
+    }
+
     // Check for existing checkpoint to prevent double execution
     final checkpoint = await _getTransitionCheckpoint();
     String? lastCheckpointAction;
@@ -1551,19 +1597,27 @@ class AppState extends ChangeNotifier {
       if (checkpointYmd == ymd && timeDiff < 5) {
         final lastAction = checkpoint['action'];
         final lastState = checkpoint['state'];
-        d('[DEBUG] Recent checkpoint found: $lastAction at ${checkpoint['timestamp']}, skipping duplicate transition');
+        
+        // CRITICAL FIX: Clear start_lunch checkpoint if it's blocking transition logic
+        if (lastAction == 'start_lunch') {
+          d('[TRANSITION FIX] Clearing start_lunch checkpoint to allow transition logic to proceed');
+          await _clearTransitionCheckpoint();
+          // Don't return - let transition logic continue
+        } else {
+          d('[DEBUG] Recent checkpoint found: $lastAction at ${checkpoint['timestamp']}, skipping duplicate transition');
 
-        // Validate current state matches checkpoint expectation
-        if (lastState != null) {
-          final expectedShiftType = lastState['shiftType'];
-          final expectedShiftActive = lastState['shiftActive'];
+          // Validate current state matches checkpoint expectation
+          if (lastState != null) {
+            final expectedShiftType = lastState['shiftType'];
+            final expectedShiftActive = lastState['shiftActive'];
 
-          if (_shiftType == expectedShiftType &&
-              _shiftActive == expectedShiftActive) {
-            d('[DEBUG] Current state matches checkpoint, transition already completed');
-            return;
-          } else {
-            d('[WARNING] State mismatch detected - expected: $lastState, actual: {shiftType: $_shiftType, shiftActive: $_shiftActive}');
+            if (_shiftType == expectedShiftType &&
+                _shiftActive == expectedShiftActive) {
+              d('[DEBUG] Current state matches checkpoint, transition already completed');
+              return;
+            } else {
+              d('[WARNING] State mismatch detected - expected: $lastState, actual: {shiftType: $_shiftType, shiftActive: $_shiftActive}');
+            }
           }
         }
       } else {
@@ -1600,8 +1654,17 @@ class AppState extends ChangeNotifier {
         _shiftPaused = false;
         _workingServerIds.clear();
         _currentCounts.clear();
+        _currentStreaks.clear();
         _currentBonusXP.clear();
         _currentEarnedXP.clear();
+        _currentPizookieCounts.clear();
+        _lunchPeakCount.clear();
+        _dinnerPeakCount.clear();
+        _lunchCloserCount.clear();
+        _dinnerCloserCount.clear();
+        await _clearTransitionCheckpoint();
+        d('[DEBUG] _maybeActivateShiftByClock: Restaurant closed, all state cleared');
+        notifyListeners();
         _lastFlashMessages.clear();
         _lastActionXP.clear();
         _lastMilestoneDetails.clear();
@@ -1680,8 +1743,17 @@ class AppState extends ChangeNotifier {
       _shiftPaused = false;
       _workingServerIds.clear();
       _currentCounts.clear();
+      _currentStreaks.clear();
       _currentBonusXP.clear();
       _currentEarnedXP.clear();
+      _currentPizookieCounts.clear();
+      _lunchPeakCount.clear();
+      _dinnerPeakCount.clear();
+      _lunchCloserCount.clear();
+      _dinnerCloserCount.clear();
+      await _clearTransitionCheckpoint();
+      d('[DEBUG] _maybeActivateShiftByClock: Before open, all state cleared');
+      notifyListeners();
       _lastFlashMessages.clear();
       _lastActionXP.clear();
       _lastMilestoneDetails.clear();
@@ -1699,6 +1771,12 @@ class AppState extends ChangeNotifier {
         !_shiftPaused;
     // Dinner should be active: transition end → businessInterval.end
     final shouldBeActiveDinner = m >= transitionEnd &&
+        !(atOrAfterClose) &&
+        dinnerRoster.isNotEmpty &&
+        !_shiftPaused;
+        
+    // Also trigger transition logic if we're exactly at transition time (not just after)
+    final shouldTriggerTransition = (m >= transitionEnd || (m >= transitionEnd - 1 && m < transitionEnd + 5)) &&
         !(atOrAfterClose) &&
         dinnerRoster.isNotEmpty &&
         !_shiftPaused;
@@ -1750,6 +1828,9 @@ class AppState extends ChangeNotifier {
         'preservedPizookieCounts': dinnerOnlyPizookieCounts,
         'state': {'shiftType': 'Dinner', 'shiftActive': true}
       });
+
+      // Set UI state to dinner mode
+      _activeRosterView = 'dinner';
 
       // Finalize lunch period workers if any counts exist
       final lunchOnlyWorkers = lunchSet.difference(dinnerSet);
@@ -1892,16 +1973,34 @@ class AppState extends ChangeNotifier {
       }
       return;
     }
-    if (shouldBeActiveDinner && !_manualShiftOverride) {
+    print('DINNER TIMING: shouldBeActiveDinner=$shouldBeActiveDinner, shouldTriggerTransition=$shouldTriggerTransition, _manualShiftOverride=$_manualShiftOverride');
+    print('TIMING DEBUG: m=$m, transitionEnd=$transitionEnd, atOrAfterClose=$atOrAfterClose, dinnerRoster.length=${dinnerRoster.length}');
+    
+    // FORCE clear manual override during automatic dinner transition time
+    if (shouldTriggerTransition && _shiftActive && _shiftType == 'Lunch') {
+      print('FORCE AUTO TRANSITION: Clearing manual override for automatic lunch->dinner transition');
+      // Clear any existing checkpoint that might block the transition
+      await _clearTransitionCheckpoint();
+      _manualShiftOverride = false;
+    }
+    if (shouldTriggerTransition && !_manualShiftOverride) {
+      print('DINNER CHECK: shouldTriggerTransition=true, _manualShiftOverride=$_manualShiftOverride');
       if (!_shiftActive || _shiftType != 'Dinner') {
+        print('DINNER CHECK: _shiftActive=$_shiftActive, _shiftType=$_shiftType');
         // If we are switching from an active Lunch to Dinner because the time window passed
         // transitionEnd, run the full transition logic (preserve dinner-only, reset both-shift).
         if (_shiftActive && _shiftType == 'Lunch') {
+          print('TRANSITION STARTING: Lunch to Dinner transition beginning now!');
           d('[DEBUG] _maybeActivateShiftByClock: Transition to dinner via shouldBeActiveDinner branch');
           final lunchSet = lunchRoster.toSet();
           final dinnerSet = dinnerRoster.toSet();
           final dinnerOnly = dinnerSet.difference(lunchSet);
           final bothShifts = dinnerSet.intersection(lunchSet);
+          print('TRANSITION ROSTERS: Lunch=$lunchSet, Dinner=$dinnerSet, BothShifts=$bothShifts, DinnerOnly=$dinnerOnly');
+          
+          // Debug: Check which servers should be reset vs preserved
+          print('SERVER ACTIONS: Reset both-shift servers: $bothShifts');
+          print('SERVER ACTIONS: Preserve dinner-only servers: $dinnerOnly');
 
           // Preserve dinner-only counts
           final dinnerOnlyCounts = <String, int>{};
@@ -1925,6 +2024,16 @@ class AppState extends ChangeNotifier {
               [...lunchOnlyWorkers, ...bothShifts].toList();
           _finalizeAndSaveShift('Lunch', lunchPeriodWorkers);
 
+          // Reset both-shift servers BEFORE starting dinner
+          d('[DEBUG] _maybeActivateShiftByClock: About to reset ${bothShifts.length} both-shift servers: $bothShifts');
+          for (final id in bothShifts) {
+            final oldCount = _currentCounts[id] ?? 0;
+            _currentCounts[id] = 0;
+            _currentPizookieCounts[id] = 0;
+            d('[DEBUG] _maybeActivateShiftByClock: Reset both-shift server $id from $oldCount to 0 BEFORE dinner start');
+            print('TRANSITION RESET: Server $id reset from $oldCount to 0 for dinner start');
+          }
+
           // Start dinner fresh
           _beginShift('Dinner', dinnerRoster, preserveCounts: false);
 
@@ -1933,13 +2042,6 @@ class AppState extends ChangeNotifier {
             _currentCounts[id] = dinnerOnlyCounts[id]!;
             _currentPizookieCounts[id] = dinnerOnlyPizookieCounts[id]!;
             d('[DEBUG] _maybeActivateShiftByClock: Restored dinner-only server $id to ${_currentCounts[id]} counts');
-          }
-
-          // Reset both-shift servers
-          for (final id in bothShifts) {
-            _currentCounts[id] = 0;
-            _currentPizookieCounts[id] = 0;
-            d('[DEBUG] _maybeActivateShiftByClock: Reset both-shift server $id to 0 for dinner');
           }
 
           _shiftActive = true;
@@ -1969,6 +2071,10 @@ class AppState extends ChangeNotifier {
     _shiftPaused = false;
     _shiftType = type;
     _shiftStart = _now;
+
+    // CRITICAL FIX: Set activeRosterView to match the shift type
+    _activeRosterView = type.toLowerCase();
+    d('[DEBUG] _beginShift: Set _activeRosterView to $_activeRosterView');
 
     _workingServerIds
       ..clear()
