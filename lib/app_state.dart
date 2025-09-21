@@ -2536,26 +2536,9 @@ class AppState extends ChangeNotifier {
     // Calculate end time based on closeDayOffset and whether close extends overnight
     late final DateTime end;
     
-    // Special case: If closeMinutes > 24*60 (1440) with closeDayOffset=1, 
-    // this usually indicates a configuration error where the intended close time
-    // should be same-day. Convert closeMinutes to same-day minutes.
-    if (closeMinutes > 1440 && closeDayOffset == 1) {
-      print('DEBUG businessDayInterval: Detected configuration error - closeMinutes=$closeMinutes > 1440 with closeDayOffset=1');
-      
-      // Convert to same-day minutes by taking remainder after full day
-      final correctedCloseMinutes = closeMinutes % 1440; // This gives us 625 for closeMinutes=2065
-      print('DEBUG businessDayInterval: Correcting closeMinutes from $closeMinutes to $correctedCloseMinutes');
-      
-      // Create same-day operation with corrected close time
-      end = DateTime(
-        businessDate.year,
-        businessDate.month,
-        businessDate.day,
-        correctedCloseMinutes ~/ 60, // hours
-        correctedCloseMinutes % 60, // minutes
-      );
-      print('DEBUG businessDayInterval: Created corrected same-day end time: $end');
-    } else if (closeDayOffset == 0) {
+    // Handle different closing scenarios
+    // Handle different closing scenarios
+    if (closeDayOffset == 0) {
       // Same day operation: closeMinutes is time of day from midnight
       end = DateTime(
         businessDate.year,
@@ -2566,8 +2549,18 @@ class AppState extends ChangeNotifier {
       );
     } else {
       // Multi-day operation: closeMinutes represents total operation time from start
-      final operationDurationMinutes = closeMinutes - openMinutes;
-      end = start.add(Duration(minutes: operationDurationMinutes));
+      // For overnight operations, calculate the actual close time correctly
+      if (closeMinutes > 1440) {
+        // closeMinutes > 1440 means operation extends past midnight
+        // Calculate end time by adding the full duration from start
+        final operationDurationMinutes = closeMinutes - openMinutes;
+        end = start.add(Duration(minutes: operationDurationMinutes));
+        print('DEBUG businessDayInterval: Overnight operation - duration=${operationDurationMinutes} minutes, end=$end');
+      } else {
+        // Normal overnight operation within 24 hours
+        final operationDurationMinutes = closeMinutes - openMinutes;
+        end = start.add(Duration(minutes: operationDurationMinutes));
+      }
     }
 
     print('DEBUG businessDayInterval: Final interval start=$start, end=$end');
