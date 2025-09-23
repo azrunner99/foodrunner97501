@@ -58,6 +58,31 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
     super.dispose();
   }
 
+  // Helper method to get XP rank color based on position
+  Color _getXpRankColor(int rank, int totalServers) {
+    if (totalServers <= 1) return Color(0xFFFFD700); // Default gold if only one server
+    
+    // Calculate percentile position (0.0 = top, 1.0 = bottom)
+    final percentile = (rank - 1) / (totalServers - 1);
+    
+    if (percentile <= 0.2) {
+      // Top 20% - Dark Green
+      return Color(0xFF2E7D32);
+    } else if (percentile <= 0.4) {
+      // Next 20% - Light Green  
+      return Color(0xFF66BB6A);
+    } else if (percentile <= 0.6) {
+      // Middle 20% - Yellow
+      return Color(0xFFFFD700);
+    } else if (percentile <= 0.8) {
+      // Next 20% - Orange
+      return Color(0xFFFF9800);
+    } else {
+      // Bottom 20% - Red
+      return Color(0xFFE53935);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<AppState>(
@@ -527,7 +552,7 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: SizedBox(
-                  height: 120,
+                  height: 180, // Increased from 140 to accommodate much larger metrics
                   child: Stack(
                     children: [
                       // Banner background (if available)
@@ -555,67 +580,279 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
                           ),
                         ),
 
-                      // Server name at top right
+                      // Server name removed from top-left (moved to be next to avatar)
+
+                      // XP stats at top right
                       Positioned(
                         top: 8,
                         right: 12,
                         child: Container(
-                          constraints: const BoxConstraints(maxWidth: 200),
+                          constraints: const BoxConstraints(maxWidth: 300), // Increased from 250 to prevent overflow
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(
-                                server.name,
-                                style: const TextStyle(
-                                  fontFamily: 'Montserrat',
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 28,
-                                  color: Colors.white,
-                                  shadows: [
-                                    Shadow(
-                                      blurRadius: 4,
-                                      color: Colors.black,
-                                      offset: Offset(2, 2),
+                              // Primary metric based on sort order - adjusted size
+                              if (_sortBy == 'xp') ...[
+                                Text(
+                                  'XP: $shiftXp',
+                                  style: TextStyle(
+                                    fontSize: 47, // 60% of 78 (was too large)
+                                    fontWeight: FontWeight.w900,
+                                    color: _getXpRankColor(rank, workingServers.length), // Dynamic color based on XP rank
+                                    fontFamily: 'Montserrat',
+                                    shadows: [
+                                      Shadow(
+                                        blurRadius: 6,
+                                        color: Colors.black,
+                                        offset: Offset(3, 3),
+                                      ),
+                                      Shadow(
+                                        blurRadius: 12,
+                                        color: Colors.black87,
+                                        offset: Offset(0, 0),
+                                      ),
+                                      Shadow(
+                                        blurRadius: 20,
+                                        color: Colors.black54,
+                                        offset: Offset(0, 0),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                SizedBox(height: 2), // Reduced from 4 to move metrics up slightly
+                                Text(
+                                  'Runs: $runCount • Pizookies: $pizookieCount',
+                                  style: const TextStyle(
+                                    fontSize: 28, // Increased from 20 to be more prominent
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                    shadows: [
+                                      Shadow(
+                                        blurRadius: 4,
+                                        color: Colors.black,
+                                        offset: Offset(2, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  textAlign: TextAlign.right, // Right justify the text
+                                ),
+                              ] else if (_sortBy == 'runs') ...[
+                                Text(
+                                  'Runs: $runCount',
+                                  style: TextStyle(
+                                    fontSize: 47, // 60% of 78 (was too large)
+                                    fontWeight: FontWeight.w900,
+                                    color: Color(0xFF00E676), // Bright green for runs
+                                    fontFamily: 'Montserrat',
+                                    shadows: [
+                                      Shadow(
+                                        blurRadius: 6,
+                                        color: Colors.black,
+                                        offset: Offset(3, 3),
+                                      ),
+                                      Shadow(
+                                        blurRadius: 12,
+                                        color: Colors.black87,
+                                        offset: Offset(0, 0),
+                                      ),
+                                      Shadow(
+                                        blurRadius: 20,
+                                        color: Colors.black54,
+                                        offset: Offset(0, 0),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                SizedBox(height: 2), // Reduced from 4 to move metrics up slightly
+                                Text(
+                                  'XP: $shiftXp • Pizookies: $pizookieCount',
+                                  style: const TextStyle(
+                                    fontSize: 28, // Increased from 20 to be more prominent
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                    shadows: [
+                                      Shadow(
+                                        blurRadius: 4,
+                                        color: Colors.black,
+                                        offset: Offset(2, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  textAlign: TextAlign.right, // Right justify the text
+                                ),
+                              ] else ...[
+                                Text(
+                                  'Pizookies: $pizookieCount',
+                                  style: TextStyle(
+                                    fontSize: 47, // 60% of 78 (was too large)
+                                    fontWeight: FontWeight.w900,
+                                    color: Color(0xFFFF6D00), // Bright orange for pizookies
+                                    fontFamily: 'Montserrat',
+                                    shadows: [
+                                      Shadow(
+                                        blurRadius: 6,
+                                        color: Colors.black,
+                                        offset: Offset(3, 3),
+                                      ),
+                                      Shadow(
+                                        blurRadius: 12,
+                                        color: Colors.black87,
+                                        offset: Offset(0, 0),
+                                      ),
+                                      Shadow(
+                                        blurRadius: 20,
+                                        color: Colors.black54,
+                                        offset: Offset(0, 0),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                SizedBox(height: 2), // Reduced from 4 to move metrics up slightly
+                                Text(
+                                  'XP: $shiftXp • Runs: $runCount',
+                                  style: const TextStyle(
+                                    fontSize: 28, // Increased from 20 to be more prominent
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                    shadows: [
+                                      Shadow(
+                                        blurRadius: 4,
+                                        color: Colors.black,
+                                        offset: Offset(2, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  textAlign: TextAlign.right, // Right justify the text
+                                ),
+                              ],
+                              SizedBox(height: 20), // Increased from 10 to add more space before XP progression
+                              // Ranking information
+                              if (_sortBy == 'runs')
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      'Rank: $runRank/$totalServers',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                        shadows: [
+                                          Shadow(
+                                            blurRadius: 3,
+                                            color: Colors.black,
+                                            offset: Offset(1, 1),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                    Shadow(
-                                      blurRadius: 8,
-                                      color: Colors.black54,
-                                      offset: Offset(0, 0),
+                                    if (runRank == 1)
+                                      Padding(
+                                        padding: const EdgeInsets.only(left: 6),
+                                        child: Icon(Icons.emoji_events,
+                                            color: Color(0xFFFFD700), size: 20),
+                                      )
+                                    else if (runRank == 2)
+                                      Padding(
+                                        padding: const EdgeInsets.only(left: 6),
+                                        child: Icon(Icons.emoji_events,
+                                            color: Color(0xFFC0C0C0), size: 20),
+                                      )
+                                    else if (runRank == 3)
+                                      Padding(
+                                        padding: const EdgeInsets.only(left: 6),
+                                        child: Icon(Icons.emoji_events,
+                                            color: Color(0xFFCD7F32), size: 20),
+                                      ),
+                                  ],
+                                )
+                              else if (_sortBy == 'pizookies')
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      'Rank: $pizookieRank/$totalServers',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                        shadows: [
+                                          Shadow(
+                                            blurRadius: 3,
+                                            color: Colors.black,
+                                            offset: Offset(1, 1),
+                                          ),
+                                        ],
+                                      ),
                                     ),
+                                    if (pizookieRank == 1)
+                                      Padding(
+                                        padding: const EdgeInsets.only(left: 6),
+                                        child: Icon(Icons.emoji_events,
+                                            color: Color(0xFFFFD700), size: 20),
+                                      )
+                                    else if (pizookieRank == 2)
+                                      Padding(
+                                        padding: const EdgeInsets.only(left: 6),
+                                        child: Icon(Icons.emoji_events,
+                                            color: Color(0xFFC0C0C0), size: 20),
+                                      )
+                                    else if (pizookieRank == 3)
+                                      Padding(
+                                        padding: const EdgeInsets.only(left: 6),
+                                        child: Icon(Icons.emoji_events,
+                                            color: Color(0xFFCD7F32), size: 20),
+                                      ),
+                                  ],
+                                )
+                              else
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      'Rank: $rank/$totalServers',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                        shadows: [
+                                          Shadow(
+                                            blurRadius: 3,
+                                            color: Colors.black,
+                                            offset: Offset(1, 1),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    if (rank == 1)
+                                      Padding(
+                                        padding: const EdgeInsets.only(left: 6),
+                                        child: Icon(Icons.emoji_events,
+                                            color: Color(0xFFFFD700), size: 20),
+                                      )
+                                    else if (rank == 2)
+                                      Padding(
+                                        padding: const EdgeInsets.only(left: 6),
+                                        child: Icon(Icons.emoji_events,
+                                            color: Color(0xFFC0C0C0), size: 20),
+                                      )
+                                    else if (rank == 3)
+                                      Padding(
+                                        padding: const EdgeInsets.only(left: 6),
+                                        child: Icon(Icons.emoji_events,
+                                            color: Color(0xFFCD7F32), size: 20),
+                                      ),
                                   ],
                                 ),
-                                textAlign: TextAlign.right,
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                              ),
-                              // Line under name - moved up and made shorter
-                              Container(
-                                margin:
-                                    const EdgeInsets.only(top: 6, bottom: 8),
-                                height: 2,
-                                width:
-                                    120, // Made shorter so it doesn't interfere with stats
-                                decoration: BoxDecoration(
-                                  color: Colors.grey,
-                                  borderRadius: BorderRadius.circular(2),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black26,
-                                      blurRadius: 2,
-                                      offset: Offset(0, 1),
-                                    ),
-                                  ],
-                                ),
-                              ),
                             ],
                           ),
                         ),
                       ),
 
-                      // XP info positioned separately to avoid line overlap
+                      // Current XP progression info positioned separately to avoid overlap
                       Positioned(
-                        top: 50,
+                        bottom: 10,
                         right: 12,
                         child: Container(
                           constraints: const BoxConstraints(maxWidth: 180),
@@ -623,25 +860,7 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
                             crossAxisAlignment: CrossAxisAlignment.end,
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              // Shift XP Earned
-                              Text(
-                                'Shift XP Earned: $shiftXp',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                  shadows: [
-                                    Shadow(
-                                      blurRadius: 3,
-                                      color: Colors.black,
-                                      offset: Offset(1, 1),
-                                    ),
-                                  ],
-                                ),
-                                textAlign: TextAlign.right,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              // Current XP / Next at XP
+                              // Current XP / Next at XP (positioned lower to avoid overlap)
                               if (profile != null)
                                 Text(
                                   '${profile.points} / Next at ${profile.nextLevelAt}',
@@ -665,12 +884,14 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
                         ),
                       ),
 
-                      // Avatar and stats row
+                      // Avatar and server name - positioned on left side, centered vertically and horizontally
                       Positioned(
-                        bottom: 8,
-                        left: 16,
-                        right: 8,
+                        left: 20,
+                        top: 0,
+                        bottom: 0,
                         child: Row(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             // Avatar with level badge
                             SizedBox(
@@ -725,121 +946,34 @@ class _ShiftLeaderboardScreenState extends State<ShiftLeaderboardScreen>
                                 ],
                               ),
                             ),
-                            SizedBox(width: 12),
+                            SizedBox(width: 16),
 
-                            // Stats column
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'Runs: $runCount',
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w900,
-                                    color: Colors.white,
-                                    shadows: [
-                                      Shadow(
-                                        blurRadius: 3,
-                                        color: Colors.black,
-                                        offset: Offset(1, 1),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      'Rank: $runRank/$totalServers',
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w500,
-                                        color: Colors.white,
-                                        shadows: [
-                                          Shadow(
-                                            blurRadius: 2,
-                                            color: Colors.black,
-                                            offset: Offset(1, 1),
-                                          ),
-                                        ],
-                                      ),
+                            // Server name next to avatar
+                            Container(
+                              constraints: const BoxConstraints(maxWidth: 150),
+                              child: Text(
+                                server.name,
+                                style: const TextStyle(
+                                  fontFamily: 'Montserrat',
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 34,
+                                  color: Colors.white,
+                                  shadows: [
+                                    Shadow(
+                                      blurRadius: 4,
+                                      color: Colors.black,
+                                      offset: Offset(2, 2),
                                     ),
-                                    if (runRank == 1)
-                                      Padding(
-                                        padding: const EdgeInsets.only(left: 4),
-                                        child: Icon(Icons.emoji_events,
-                                            color: Color(0xFFFFD700), size: 14),
-                                      )
-                                    else if (runRank == 2)
-                                      Padding(
-                                        padding: const EdgeInsets.only(left: 4),
-                                        child: Icon(Icons.emoji_events,
-                                            color: Color(0xFFC0C0C0), size: 14),
-                                      )
-                                    else if (runRank == 3)
-                                      Padding(
-                                        padding: const EdgeInsets.only(left: 4),
-                                        child: Icon(Icons.emoji_events,
-                                            color: Color(0xFFCD7F32), size: 14),
-                                      ),
+                                    Shadow(
+                                      blurRadius: 8,
+                                      color: Colors.black54,
+                                      offset: Offset(0, 0),
+                                    ),
                                   ],
                                 ),
-                                SizedBox(height: 4),
-                                Text(
-                                  'Pizookies: $pizookieCount',
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w900,
-                                    color: Colors.white,
-                                    shadows: [
-                                      Shadow(
-                                        blurRadius: 3,
-                                        color: Colors.black,
-                                        offset: Offset(1, 1),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      'Rank: $pizookieRank/$totalServers',
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w500,
-                                        color: Colors.white,
-                                        shadows: [
-                                          Shadow(
-                                            blurRadius: 2,
-                                            color: Colors.black,
-                                            offset: Offset(1, 1),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    if (pizookieRank == 1)
-                                      Padding(
-                                        padding: const EdgeInsets.only(left: 4),
-                                        child: Icon(Icons.emoji_events,
-                                            color: Color(0xFFFFD700), size: 14),
-                                      )
-                                    else if (pizookieRank == 2)
-                                      Padding(
-                                        padding: const EdgeInsets.only(left: 4),
-                                        child: Icon(Icons.emoji_events,
-                                            color: Color(0xFFC0C0C0), size: 14),
-                                      )
-                                    else if (pizookieRank == 3)
-                                      Padding(
-                                        padding: const EdgeInsets.only(left: 4),
-                                        child: Icon(Icons.emoji_events,
-                                            color: Color(0xFFCD7F32), size: 14),
-                                      ),
-                                  ],
-                                ),
-                              ],
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
                             ),
                           ],
                         ),

@@ -33,6 +33,12 @@ class ResilientAvatar extends StatelessWidget {
       return const AssetImage('assets/avatars/image001.png');
     }
 
+    // Check if this is an asset path
+    if (avatarPath!.startsWith('assets/')) {
+      return AssetImage(avatarPath!);
+    }
+
+    // Handle file system paths
     try {
       final file = File(avatarPath!);
       if (!file.existsSync()) {
@@ -108,6 +114,12 @@ ImageProvider getResilientImageProvider(String? imagePath, {bool isAvatar = fals
       : 'assets/runner.png');
   }
 
+  // Check if this is an asset path
+  if (imagePath.startsWith('assets/')) {
+    return AssetImage(imagePath);
+  }
+
+  // Handle file system paths
   try {
     final file = File(imagePath);
     if (!file.existsSync()) {
