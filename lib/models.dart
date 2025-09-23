@@ -45,6 +45,8 @@ class ShiftRecord {
   DateTime start; // start of that shift
   Map<String, int> counts; // serverId -> runs
   Map<String, int> pizookieCounts; // serverId -> pizookie runs for this shift
+  Map<String, String>? stationAssignments; // serverId -> stationType
+  Map<String, String>? sectionAssignments; // serverId -> sectionNumber
 
   ShiftRecord({
     required this.id,
@@ -53,7 +55,11 @@ class ShiftRecord {
     required this.start,
     required this.counts,
     Map<String, int>? pizookieCounts,
-  }) : pizookieCounts = pizookieCounts ?? <String, int>{};
+    Map<String, String>? stationAssignments,
+    Map<String, String>? sectionAssignments,
+  }) : pizookieCounts = pizookieCounts ?? <String, int>{},
+       stationAssignments = stationAssignments ?? <String, String>{},
+       sectionAssignments = sectionAssignments ?? <String, String>{};
 
   Map<String, dynamic> toMap() => {
         'id': id,
@@ -62,6 +68,8 @@ class ShiftRecord {
         'start': start.toIso8601String(),
         'counts': counts,
         'pizookieCounts': pizookieCounts,
+        'stationAssignments': stationAssignments,
+        'sectionAssignments': sectionAssignments,
       };
   static ShiftRecord fromMap(Map<String, dynamic> m) => ShiftRecord(
         id: m['id'],
@@ -74,6 +82,14 @@ class ShiftRecord {
             ? Map<String, int>.from((m['pizookieCounts'] as Map)
                 .map((k, v) => MapEntry(k as String, v as int)))
             : <String, int>{},
+        stationAssignments: m['stationAssignments'] != null
+            ? Map<String, String>.from((m['stationAssignments'] as Map)
+                .map((k, v) => MapEntry(k as String, v as String)))
+            : <String, String>{},
+        sectionAssignments: m['sectionAssignments'] != null
+            ? Map<String, String>.from((m['sectionAssignments'] as Map)
+                .map((k, v) => MapEntry(k as String, v as String)))
+            : <String, String>{},
       );
 }
 

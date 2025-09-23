@@ -11,6 +11,8 @@ import 'server_dashboard_screen.dart';
 import 'backup_manager_screen.dart';
 import 'server_performance_screen.dart';
 import 'server_nps_screen.dart';
+import 'station_analytics_screen.dart';
+import 'smart_scheduling_screen.dart';
 import '../utils/log.dart';
 
 class CleanAdminScreen extends StatefulWidget {
@@ -341,6 +343,30 @@ class _CleanAdminScreenState extends State<CleanAdminScreen> {
                         context,
                         MaterialPageRoute(
                             builder: (_) => const ServerNPSScreen()),
+                      );
+                    },
+                  ),
+                  _buildAdminTile(
+                    icon: Icons.location_on,
+                    title: 'Station Analytics',
+                    subtitle: 'Monitor station performance and efficiency metrics',
+                    enabled: true,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const StationAnalyticsScreen()),
+                      );
+                    },
+                  ),
+                  _buildAdminTile(
+                    icon: Icons.auto_awesome,
+                    title: 'Smart Scheduling',
+                    subtitle: 'AI-powered predictive scheduling and optimization',
+                    enabled: true,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const SmartSchedulingScreen()),
                       );
                     },
                   ),

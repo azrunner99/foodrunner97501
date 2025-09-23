@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Food Runs Counter — End‑User Manual</title>
+<link rel="stylesheet" href="user-manual.css" />
+</head>
+<body>
+  <div class="container">
+    <header class="cover">
+      <h1>Food Runs Counter — End‑User Manual</h1>
+      <div class="meta">Version 1.0 • Updated: 2025‑09‑22</div>
+    </header>
+
+    <section class="toc">
+      <h2>Table of Contents</h2>
+      <ol>
+        <li><a href="#intro">Introduction</a></li>
+        <li><a href="#quick-start">Quick Start</a></li>
+        <li><a href="#navigation">Navigation Basics</a></li>
+        <li><a href="#screens-ref">Screens Reference (by feature)</a></li>
+        <li><a href="#home">Home Screen</a></li>
+        <li><a href="#roster">Roster Management</a></li>
+        <li><a href="#shifts">Starting and Managing Shifts</a></li>
+        <li><a href="#counting">Counting Runs and Special Items</a></li>
+        <li><a href="#boost">Boost Mode and XP</a></li>
+        <li><a href="#badges">Badges and Milestones</a></li>
+        <li><a href="#analytics">Analytics and Dashboards</a></li>
+        <li><a href="#nps">NPS Feedback and Monthly Reports</a></li>
+        <li><a href="#integrity">Integrity and Compliance</a></li>
+        <li><a href="#smart">Smart Scheduling and Recommendations</a></li>
+        <li><a href="#data">Data Management (Backup, Export, Import)</a></li>
+        <li><a href="#admin">Admin and Settings</a></li>
+        <li><a href="#profiles">User Profiles, Avatars, and Themes</a></li>
+        <li><a href="#tips">Tips, Shortcuts, and Edge Cases</a></li>
+        <li><a href="#troubleshooting">Troubleshooting</a></li>
+        <li><a href="#faq">FAQ</a></li>
+        <li><a href="#glossary">Glossary</a></li>
+      </ol>
+    </section>
+
+    <section id="intro">
+      <h2>1. Introduction</h2>
+      <p>Food Runs Counter helps restaurants track server runs during lunch and dinner, manage rosters, and motivate teams with goals, boosts, achievements, and analytics. It also supports guest feedback and monthly NPS reports. This manual explains how to use every feature step by step.</p>
+      <div class="callout"><div class="title">Who should read this?</div>
+        <ul>
+          <li>Managers and shift leads who set rosters, start/close shifts, and review performance</li>
+          <li>Servers who interact with counters, achievements, and feedback</li>
+          <li>Owners/analysts who review analytics, NPS, and exports</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="quick-start">
+      <h2>2. Quick Start</h2>
+      <ol>
+        <li>Add or confirm your servers in Admin/Settings.</li>
+        <li>Set business hours and weekly schedule.</li>
+        <li>Assign today’s lunch and dinner roster.</li>
+        <li>Start the shift on the Home/Start screens.</li>
+        <li>Tap a server’s tile to log runs.</li>
+        <li>During the transition window: both lunch and dinner may be active.</li>
+        <li>End of day: close the shift and review history/analytics.</li>
+        <li>Optional: enter guest feedback (NPS), check monthly reports, export backups.</li>
+      </ol>
+    </section>
+
+    <section id="navigation">
+      <h2>3. Navigation Basics</h2>
+      <p>Use the app bar or menu buttons to switch between screens:</p>
+      <ul>
+        <li><strong>Home</strong>: Live counters, roster, goals, boost status</li>
+        <li><strong>Roster / Start Shift / Update Roster</strong>: Who’s working lunch vs dinner today</li>
+        <li><strong>Analytics / Advanced Analytics / Station Analytics</strong></li>
+        <li><strong>NPS</strong>: Feedback entry, trends, monthly reports</li>
+        <li><strong>Integrity</strong>: Data integrity and fairness tools</li>
+        <li><strong>Backup / Export / Data Entry</strong></li>
+        <li><strong>Admin / Settings</strong>: Protected or advanced options</li>
+        <li><strong>About / App Features</strong></li>
+      </ul>
+    </section>
+
+    <section id="screens-ref">
+      <h2>3a. Screens Reference (by feature)</h2>
+      <p>Below is a quick reference of common screens you may encounter. Names may vary slightly depending on your build, but the functions are consistent.</p>
+      <table class="table">
+        <tr><th>Screen</th><th>Purpose</th><th>Typical Actions</th></tr>
+        <tr><td>Home</td><td>Live counters and roster</td><td>Tap to log runs, monitor goals/boost, view notifications</td></tr>
+        <tr><td>Start Shift</td><td>Begin today’s shift</td><td>Confirm roster, choose or override Lunch/Dinner start</td></tr>
+        <tr><td>Update Roster</td><td>Adjust active servers</td><td>Add/remove servers; during transition allow both lunch and dinner</td></tr>
+        <tr><td>Active Roster</td><td>Review who’s active now</td><td>Verify who is tappable at the current time</td></tr>
+        <tr><td>Assign Servers</td><td>Plan today’s lunch/dinner</td><td>Select teams for each shift, save day plan</td></tr>
+        <tr><td>Archived Servers</td><td>Clean up server list</td><td>Archive former employees while keeping history</td></tr>
+        <tr><td>Analytics</td><td>Performance overview</td><td>Totals, comparisons, date filters</td></tr>
+        <tr><td>Advanced Analytics Dashboard</td><td>Deep-dive charts</td><td>Line/Bar/Pie/Heatmap visualizations and trends</td></tr>
+        <tr><td>Station Analytics</td><td>Station/section insights</td><td>Review by station, identify imbalances</td></tr>
+        <tr><td>Click Instances Detail</td><td>Tap integrity detail</td><td>Inspect minute-by-minute tap patterns</td></tr>
+        <tr><td>NPS Feedback</td><td>Enter guest feedback</td><td>Record Yes/Maybe/No, sales, table, guests, notes</td></tr>
+        <tr><td>NPS Reports</td><td>Monthly and trend views</td><td>All-Time/3-Month/1-Month scores and counts</td></tr>
+        <tr><td>Integrity Compliance</td><td>Fair play monitoring</td><td>Review flags and coach teams</td></tr>
+        <tr><td>Smart Scheduling</td><td>Staffing suggestions</td><td>Use recommendations for lunch/dinner coverage</td></tr>
+        <tr><td>Predictive Scheduling</td><td>Forecast volume</td><td>Expectations by shift to plan teams</td></tr>
+        <tr><td>Backup Manager</td><td>Safeguard data</td><td>Create backups, restore when needed</td></tr>
+        <tr><td>Data Export</td><td>External analysis</td><td>Export CSV/JSON snapshots</td></tr>
+        <tr><td>Business Data Entry</td><td>Configure hours</td><td>Set open/close times and overnight offsets</td></tr>
+        <tr><td>Bulk Data Entry</td><td>Large updates</td><td>Import server lists or historical data</td></tr>
+        <tr><td>Badges</td><td>Gamification overview</td><td>Review achievements and progress</td></tr>
+        <tr><td>Gamification / Encouragement</td><td>Motivation tuning</td><td>Adjust achievement/notification preferences</td></tr>
+        <tr><td>Admin</td><td>Protected actions</td><td>Set admin PIN, advanced tools</td></tr>
+        <tr><td>About / App Features</td><td>Info & help</td><td>Read about features and version</td></tr>
+      </table>
+    </section>
+
+    <section id="home">
+      <h2>4. Home Screen</h2>
+      <ul>
+        <li><strong>Business Status</strong>: Shows if the restaurant is open.</li>
+        <li><strong>Working Roster</strong>: Active servers based on current time (lunch/transition/dinner).</li>
+        <li><strong>Server Tiles</strong>: Tap to log a run; see counts, XP, and streaks.</li>
+        <li><strong>Team Goal and Total</strong>: Dynamic target and progress.</li>
+        <li><strong>Boost Mode</strong>: XP multiplier when active.</li>
+        <li><strong>Notifications</strong>: Milestones, NPS events, and alerts.</li>
+      </ul>
+      <div class="callout tip"><div class="title">Tip</div>If a tap doesn’t register, ensure the server is in the working roster and the business is currently open.</div>
+    </section>
+
+    <section id="roster">
+      <h2>5. Roster Management</h2>
+      <h3>Assign Today’s Roster</h3>
+      <ul>
+        <li>Select lunch and dinner servers; save the plan.</li>
+        <li>The Home Screen will show who is active right now.</li>
+      </ul>
+      <h3>Update Roster (During Shift)</h3>
+      <ul>
+        <li>Add/remove servers from the working set.</li>
+        <li>During transition, lunch ∪ dinner can be active; after, dinner-only.</li>
+        <li>Choose whether to preserve existing counts for continuing servers.</li>
+      </ul>
+      <h3>Archived Servers</h3>
+      <ul><li>Archive former employees while keeping their history.</li></ul>
+    </section>
+
+    <section id="shifts">
+      <h2>6. Starting and Managing Shifts</h2>
+      <ul>
+        <li><strong>Start Shift</strong>: Confirms roster and starts Lunch or Dinner based on time. Manual override available near the transition.</li>
+        <li><strong>Transition Window</strong>: Lunch winds down, dinner begins; both may be active until the window ends.</li>
+        <li><strong>Closing</strong>: End-of-day finalizes the shift and clears live counters.</li>
+      </ul>
+      <div class="callout warn"><div class="title">Note</div>Business hours (including overnight closing) determine when the app considers the restaurant open vs closed.</div>
+    </section>
+
+    <section id="counting">
+      <h2>7. Counting Runs and Special Items</h2>
+      <ul>
+        <li>Tap a server to log a run; team totals update immediately.</li>
+        <li>Special items (e.g., desserts) can be logged separately if enabled.</li>
+        <li>Streaks build with consecutive taps and can unlock badges.</li>
+        <li>Tap integrity groups per-minute activity and flags anomalies.</li>
+      </ul>
+    </section>
+
+    <section id="boost">
+      <h2>8. Boost Mode and XP</h2>
+      <ul>
+        <li>Boost temporarily multiplies XP awarded per run.</li>
+        <li>Base XP is awarded on each run; achievements add more.</li>
+        <li>Use boost for peak windows or competitions.</li>
+      </ul>
+    </section>
+
+    <section id="badges">
+      <h2>9. Badges and Milestones</h2>
+      <ul>
+        <li>Earn achievements by reaching conditions (streaks, totals, timing).</li>
+        <li>Milestones are larger accomplishments with bonus XP and history.</li>
+        <li>Configure gamification and encouragement in Settings/Admin.</li>
+      </ul>
+    </section>
+
+    <section id="analytics">
+      <h2>10. Analytics and Dashboards</h2>
+      <ul>
+        <li><strong>Analytics Overview</strong>: Totals, trends, comparisons.</li>
+        <li><strong>Advanced Analytics</strong>: Rich charts (line, bar, pie, heatmaps).</li>
+        <li><strong>Station Analytics</strong>: By station/section if used.</li>
+        <li><strong>Real-Time Monitor</strong>: Live activity view.</li>
+        <li><strong>Trends</strong>: Identify improvement areas by period.</li>
+      </ul>
+      <div class="callout tip"><div class="title">Tip</div>Use date filters to zoom into a specific day, week, or month.</div>
+    </section>
+
+    <section id="nps">
+      <h2>11. NPS Feedback and Monthly Reports</h2>
+      <h3>Enter Feedback</h3>
+      <ul>
+        <li>Record <em>Yes / Maybe / No</em>, plus optional sales, table, guests, and notes.</li>
+      </ul>
+      <h3>Monthly Reports</h3>
+      <ul>
+        <li>View All-Time, 3-Month, and 1-Month NPS percentages and counts.</li>
+        <li>Trend indicators: Improving, Stable, Declining.</li>
+        <li>Data quality improves with more complete feedback entries.</li>
+      </ul>
+    </section>
+
+    <section id="integrity">
+      <h2>12. Integrity and Compliance</h2>
+      <ul>
+        <li>Integrity tools detect unusual click patterns and mechanical behavior.</li>
+        <li>Use findings to coach teams and keep competition fair.</li>
+      </ul>
+    </section>
+
+    <section id="smart">
+      <h2>13. Smart Scheduling and Recommendations</h2>
+      <ul>
+        <li>Smart scheduling suggests staffing mixes based on history.</li>
+        <li>Predictive scheduling forecasts volume by shift.</li>
+        <li>Shift optimizer helps place the right people at the right times.</li>
+      </ul>
+    </section>
+
+    <section id="data">
+      <h2>14. Data Management (Backup, Export, Import)</h2>
+      <ul>
+        <li><strong>Backups</strong>: Create and restore application data snapshots.</li>
+        <li><strong>Exports</strong>: CSV/JSON for outside analysis or archiving.</li>
+        <li><strong>Imports</strong>: Business or bulk data entry when needed.</li>
+      </ul>
+      <div class="callout danger"><div class="title">Security</div>Backups may contain sensitive performance/guest-related data. Store them securely.</div>
+    </section>
+
+    <section id="admin">
+      <h2>15. Admin and Settings</h2>
+      <ul>
+        <li><strong>Admin PIN</strong>: Required for protected actions (e.g., deleting a shift).</li>
+        <li><strong>Business Hours</strong>: Set open/close per day; configure overnight closing.</li>
+        <li><strong>Roster Defaults</strong>: Lunch/dinner plans and transition timing.</li>
+        <li><strong>Gamification & Notifications</strong>: Enable/disable features and thresholds.</li>
+        <li><strong>About / App Features</strong>: Version info and overview.</li>
+      </ul>
+    </section>
+
+    <section id="profiles">
+      <h2>16. User Profiles, Avatars, and Themes</h2>
+      <ul>
+        <li>Each server accumulates XP, levels, badges, and milestones.</li>
+        <li>Choose avatars, banners, and wallpapers from built-in assets.</li>
+        <li>Use high-contrast or simpler themes where available for readability.</li>
+      </ul>
+    </section>
+
+    <section id="tips">
+      <h2>17. Tips, Shortcuts, and Edge Cases</h2>
+      <ul>
+        <li>If tapping doesn’t register: ensure the server is active and the business is open now.</li>
+        <li>Transition window: lunch and dinner can both be active; afterward, dinner only.</li>
+        <li>Overnight hours: set “close day” offset so business day spans correctly.</li>
+        <li>Use boost during peak windows or competitions.</li>
+      </ul>
+    </section>
+
+    <section id="troubleshooting">
+      <h2>18. Troubleshooting</h2>
+      <ul>
+        <li><strong>Shows Closed but we’re open</strong>: Check business hours and AM/PM/overnight configuration.</li>
+        <li><strong>Server tile missing</strong>: Ensure they’re on today’s roster for the current period.</li>
+        <li><strong>Shift closes unexpectedly</strong>: Confirm the time is within business hours and today’s plan exists; check device time.</li>
+        <li><strong>Can’t delete a shift</strong>: Requires the admin PIN.</li>
+      </ul>
+    </section>
+
+    <section id="faq">
+      <h2>19. FAQ</h2>
+      <ul>
+        <li><strong>Can I log special items separately?</strong> Yes—use the special item flow if enabled.</li>
+        <li><strong>Do analytics include NPS?</strong> Yes—use NPS screens for entry and monthly summaries.</li>
+        <li><strong>How do I restore data?</strong> Use Backup Manager to restore from a prior backup.</li>
+        <li><strong>How do we keep competition fair?</strong> Monitor integrity tools and set clear tapping rules.</li>
+      </ul>
+    </section>
+
+    <section id="glossary">
+      <h2>20. Glossary</h2>
+      <table class="table">
+        <tr><th>Term</th><th>Meaning</th></tr>
+        <tr><td>Run</td><td>A unit of work performed by a server; tap to log it</td></tr>
+        <tr><td>Shift</td><td>Lunch or Dinner operating period</td></tr>
+        <tr><td>Transition Window</td><td>Period where lunch winds down and dinner begins</td></tr>
+        <tr><td>Boost</td><td>Temporary XP multiplier</td></tr>
+        <tr><td>XP</td><td>Points from activity and achievements</td></tr>
+        <tr><td>NPS</td><td>Guest feedback metric derived from Yes/Maybe/No</td></tr>
+        <tr><td>Station/Section</td><td>Where a server is assigned on the floor</td></tr>
+      </table>
+    </section>
+
+    <footer>
+      © 2025 Food Runs Counter • This manual is provided for end users and can be printed or saved as a PDF.
+    </footer>
+  </div>
+</body>
+</html>

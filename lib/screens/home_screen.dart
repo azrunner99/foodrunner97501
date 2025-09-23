@@ -943,7 +943,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Padding(
                       padding: const EdgeInsets.only(
                           bottom:
-                              140.0), // Add bottom padding to prevent overlap with "last run" area
+                              220.0), // Small increase to prevent tiny overlap with notification card
                       child: _ActiveGrid(
                           ids: ids, shiftActive: app.shiftActive, app: app, inBusinessHours: inBusinessHours),
                     ),

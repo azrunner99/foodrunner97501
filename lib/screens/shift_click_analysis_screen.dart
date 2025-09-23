@@ -23,7 +23,7 @@ class ShiftClickAnalysisScreen extends StatefulWidget {
 class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
   DateTime _selectedDate = DateTime.now();
   List<ClickDataPoint> _clickData = [];
-  List<DateTime> _individualClicks = [];
+  List<Map<String, dynamic>> _individualClicksWithType = [];
   List<int> _restaurantActivityData =
       []; // Restaurant-wide activity for underlay
   bool _isLoading = true;
@@ -90,7 +90,7 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
         _generateRestaurantActivityData(startTime, endTime, app);
 
     // Load individual clicks for the day
-    final individualClicks = _getIndividualClicksForDate(_selectedDate, app);
+    final individualClicksWithType = _getIndividualClicksWithTypeForDate(_selectedDate, app);
 
   d(
         'DEBUG: Generated ${clickData.length} click data points and ${restaurantActivity.length} restaurant activity points');
@@ -98,7 +98,7 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
     setState(() {
       _clickData = clickData;
       _restaurantActivityData = restaurantActivity;
-      _individualClicks = individualClicks;
+      _individualClicksWithType = individualClicksWithType;
       _isLoading = false;
     });
   }
@@ -288,21 +288,22 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
     };
   }
 
-  List<DateTime> _getIndividualClicksForDate(DateTime date, AppState app) {
+  List<Map<String, dynamic>> _getIndividualClicksWithTypeForDate(DateTime date, AppState app) {
     // Get start and end of the selected date
     final startOfDay = DateTime(date.year, date.month, date.day);
     final endOfDay = startOfDay.add(Duration(days: 1));
 
-    // Use new individual timestamp method instead of artificial generation
-    final clicks = app.getIndividualClickTimestamps(
+    // Use new individual timestamp method with type information
+    final clicksWithType = app.getIndividualClicksWithType(
         widget.server.id, startOfDay, endOfDay);
 
-  d('DEBUG: Getting real clicks for ${widget.server.id} on $date');
-  d('DEBUG: Individual clicks found: ${clicks.length}');
+    d('DEBUG: Getting real clicks with type for ${widget.server.id} on $date');
+    d('DEBUG: Individual clicks found: ${clicksWithType.length}');
 
     // Sort clicks by time (newest first for display)
-    clicks.sort((a, b) => b.compareTo(a));
-    return clicks;
+    clicksWithType.sort((a, b) => 
+        (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
+    return clicksWithType;
   }
 
   // Handle bar selection in chart
@@ -347,7 +348,7 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
 
   // Scroll to clicks that fall within the selected time interval
   void _scrollToClicksInInterval(int barIndex) {
-    if (_individualClicks.isEmpty || barIndex >= _clickData.length) return;
+    if (_individualClicksWithType.isEmpty || barIndex >= _clickData.length) return;
 
     final selectedDataPoint = _clickData[barIndex];
     final intervalStart = selectedDataPoint.timeWindow;
@@ -356,8 +357,8 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
 
     // Find the first click that falls within this interval
     int firstClickIndex = -1;
-    for (int i = 0; i < _individualClicks.length; i++) {
-      final clickTime = _individualClicks[i];
+    for (int i = 0; i < _individualClicksWithType.length; i++) {
+      final clickTime = _individualClicksWithType[i]['timestamp'] as DateTime;
       if (clickTime.isAfter(intervalStart.subtract(Duration(seconds: 1))) &&
           clickTime.isBefore(intervalEnd)) {
         firstClickIndex = i;
@@ -601,7 +602,7 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
                             Icon(Icons.list, color: Colors.blue[600], size: 24),
                             SizedBox(width: 8),
                             Text(
-                              'Individual Clicks (${_individualClicks.length})',
+                              'Individual Clicks (${_individualClicksWithType.length})',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w600,
@@ -614,7 +615,7 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
                         if (_clickData
                                 .map((d) => d.clickCount)
                                 .fold(0, (a, b) => a + b) !=
-                            _individualClicks.length) ...[
+                            _individualClicksWithType.length) ...[
                           SizedBox(height: 8),
                           Container(
                             padding: EdgeInsets.all(12),
@@ -630,7 +631,7 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
                                 SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
-                                    'Data Discrepancy: Chart shows ${_clickData.map((d) => d.clickCount).fold(0, (a, b) => a + b)} total clicks, but only ${_individualClicks.length} individual timestamps found. This suggests data is stored in different formats.',
+                                    'Data Discrepancy: Chart shows ${_clickData.map((d) => d.clickCount).fold(0, (a, b) => a + b)} total clicks, but only ${_individualClicksWithType.length} individual timestamps found. This suggests data is stored in different formats.',
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: Colors.orange[800],
@@ -647,7 +648,7 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
 
                   // Clicks List
                   Expanded(
-                    child: _individualClicks.isEmpty
+                    child: _individualClicksWithType.isEmpty
                         ? Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -667,9 +668,11 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
                           )
                         : ListView.builder(
                             controller: _clicksScrollController,
-                            itemCount: _individualClicks.length,
+                            itemCount: _individualClicksWithType.length,
                             itemBuilder: (context, index) {
-                              final clickTime = _individualClicks[index];
+                              final clickData = _individualClicksWithType[index];
+                              final clickTime = clickData['timestamp'] as DateTime;
+                              final isPizookie = clickData['isPizookie'] as bool;
                               final isToday = _isToday(clickTime);
                               final timeAgo = _getTimeAgo(clickTime);
                               final isInSelectedInterval =
@@ -696,33 +699,67 @@ class _ShiftClickAnalysisScreenState extends State<ShiftClickAnalysisScreen> {
                                     leading: CircleAvatar(
                                       backgroundColor: isInSelectedInterval
                                           ? Colors.blue[200]
-                                          : (isToday
-                                              ? Colors.green[100]
-                                              : Colors.blue[100]),
+                                          : (isPizookie
+                                              ? Colors.orange[100]
+                                              : (isToday
+                                                  ? Colors.green[100]
+                                                  : Colors.blue[100])),
                                       child: Icon(
-                                        Icons.touch_app,
+                                        isPizookie ? Icons.cake : Icons.touch_app,
                                         color: isInSelectedInterval
                                             ? Colors.blue[800]
-                                            : (isToday
-                                                ? Colors.green[600]
-                                                : Colors.blue[600]),
+                                            : (isPizookie
+                                                ? Colors.orange[600]
+                                                : (isToday
+                                                    ? Colors.green[600]
+                                                    : Colors.blue[600])),
                                         size: 20,
                                       ),
                                     ),
-                                    title: Text(
-                                      _formatFullDateTime(clickTime),
-                                      style: TextStyle(
-                                        fontWeight: isInSelectedInterval
-                                            ? FontWeight.bold
-                                            : FontWeight.w500,
-                                        fontSize: 14,
-                                        color: isInSelectedInterval
-                                            ? Colors.blue[800]
-                                            : null,
-                                      ),
+                                    title: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            _formatFullDateTime(clickTime),
+                                            style: TextStyle(
+                                              fontWeight: isInSelectedInterval
+                                                  ? FontWeight.bold
+                                                  : FontWeight.w500,
+                                              fontSize: 14,
+                                              color: isInSelectedInterval
+                                                  ? Colors.blue[800]
+                                                  : null,
+                                            ),
+                                          ),
+                                        ),
+                                        if (isPizookie) ...[
+                                          Container(
+                                            padding: EdgeInsets.symmetric(
+                                                horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: Colors.orange[100],
+                                              borderRadius: BorderRadius.circular(10),
+                                              border: Border.all(
+                                                color: Colors.orange[300]!,
+                                                width: 1,
+                                              ),
+                                            ),
+                                            child: Text(
+                                              'PIZOOKIE',
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.orange[700],
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
                                     ),
                                     subtitle: Text(
-                                      timeAgo,
+                                      isPizookie 
+                                          ? '$timeAgo • Long Press' 
+                                          : timeAgo,
                                       style: TextStyle(
                                         color: isInSelectedInterval
                                             ? Colors.blue[600]

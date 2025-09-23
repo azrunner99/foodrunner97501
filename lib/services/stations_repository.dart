@@ -39,4 +39,23 @@ class StationsRepository {
       await setDinnerStationType(stationType);
     }
   }
+
+  /// Get lunch station section assignments
+  static Future<Map<String, dynamic>> getLunchStationSection() async {
+    return await Storage.getLunchStationSection();
+  }
+
+  /// Get dinner station section assignments
+  static Future<Map<String, dynamic>> getDinnerStationSection() async {
+    return await Storage.getDinnerStationSection();
+  }
+
+  /// Get station section assignments for a specific shift type
+  static Future<Map<String, dynamic>> getStationSectionForShift(String shiftType) async {
+    if (shiftType.toLowerCase() == 'lunch') {
+      return await getLunchStationSection();
+    } else {
+      return await getDinnerStationSection();
+    }
+  }
 }

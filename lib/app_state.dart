@@ -12,6 +12,7 @@ import 'models.dart';
 import 'storage.dart';
 import 'gamification.dart';
 import 'services/milestone_detection_service.dart';
+import 'services/stations_repository.dart';
 
 String _randId() {
   final r = Random();
@@ -480,8 +481,12 @@ class AppState extends ChangeNotifier {
     _tapTimestamps
         .putIfAbsent(id, () => <int>[])
         .add(now.millisecondsSinceEpoch);
+    _pizookieTimestamps
+        .putIfAbsent(id, () => <int>[])
+        .add(now.millisecondsSinceEpoch);
     _persistTapLog();
     _persistTapTimestamps();
+    _persistPizookieTimestamps();
     _persistProfiles();
     _persistTotals();
 
@@ -671,6 +676,11 @@ class AppState extends ChangeNotifier {
   final Map<String, Map<int, int>> _tapPerMinute = {};
   final Map<String, List<int>> _tapTimestamps =
       {}; // Individual timestamp storage
+  
+  // Store pizookie click timestamps separately for visual distinction
+  final Map<String, List<int>> _pizookieTimestamps =
+      {}; // Individual pizookie click timestamps
+      
   String? _recentBadgeBubble;
   Timer? _ticker;
 
@@ -697,6 +707,21 @@ class AppState extends ChangeNotifier {
   Map<String, int> get currentCounts => Map<String, int>.from(_currentCounts);
   Map<String, int> get currentBonusXP => Map.unmodifiable(_currentBonusXP);
   Map<String, int> get currentEarnedXP => Map.unmodifiable(_currentEarnedXP);
+  
+  /// Get current station assignments for real-time analytics
+  Map<String, String> get currentStationAssignments {
+    // Return current station assignments based on working server IDs
+    // This is a simplified implementation for real-time monitoring
+    final assignments = <String, String>{};
+    
+    // For now, return a map with working servers mapped to their shift type
+    // In a full implementation, this would query the current station configuration
+    for (final serverId in _workingServerIds) {
+      assignments[serverId] = _shiftType; // Simplified: use shift type as station
+    }
+    
+    return assignments;
+  }
   Map<String, String> get lastFlashMessages =>
       Map.unmodifiable(_lastFlashMessages);
   Map<String, int> get lastActionXP => Map.unmodifiable(_lastActionXP);
@@ -1005,6 +1030,14 @@ class AppState extends ChangeNotifier {
       ..addAll(timestamps.map((serverId, timestampList) =>
           MapEntry(serverId as String, List<int>.from(timestampList as List))));
 
+    // Load individual pizookie timestamps
+    final pizookieTimestamps =
+        (await Storage.tapTimestampsBox.get('pizookie_timestamps') as Map?) ?? {};
+    _pizookieTimestamps
+      ..clear()
+      ..addAll(pizookieTimestamps.map((serverId, timestampList) =>
+          MapEntry(serverId as String, List<int>.from(timestampList as List))));
+
     // Reconstruct allTimeRuns from historical tap data if needed
     reconstructAllTimeRuns();
 
@@ -1261,6 +1294,10 @@ class AppState extends ChangeNotifier {
 
   Future<void> _persistTapTimestamps() async {
     await Storage.tapTimestampsBox.put('timestamps', _tapTimestamps);
+  }
+
+  Future<void> _persistPizookieTimestamps() async {
+    await Storage.tapTimestampsBox.put('pizookie_timestamps', _pizookieTimestamps);
   }
 
   Future<void> saveSettings(GamificationSettings s) async {
@@ -1560,7 +1597,7 @@ class AppState extends ChangeNotifier {
           'action': 'close_end_of_day',
           'state': {'shiftType': _shiftType, 'shiftActive': false}
         });
-        _finalizeAndSaveShift(_shiftType);
+        await _finalizeAndSaveShift(_shiftType);
         _shiftActive = false;
         _shiftPaused = false;
         _shiftType = '';  // Clear shift type to fully reset
@@ -1648,7 +1685,7 @@ class AppState extends ChangeNotifier {
             'action': 'close_no_plan',
             'state': {'shiftType': _shiftType, 'shiftActive': false}
           });
-          _finalizeAndSaveShift(_shiftType);
+          await _finalizeAndSaveShift(_shiftType);
         }
         _shiftActive = false;
         _shiftPaused = false;
@@ -1737,7 +1774,7 @@ class AppState extends ChangeNotifier {
           'action': 'close_before_open',
           'state': {'shiftType': _shiftType, 'shiftActive': false}
         });
-        _finalizeAndSaveShift(_shiftType);
+        await _finalizeAndSaveShift(_shiftType);
       }
       _shiftActive = false;
       _shiftPaused = false;
@@ -1835,7 +1872,7 @@ class AppState extends ChangeNotifier {
       // Finalize lunch period workers if any counts exist
       final lunchOnlyWorkers = lunchSet.difference(dinnerSet);
       final lunchPeriodWorkers = [...lunchOnlyWorkers, ...bothShifts].toList();
-      _finalizeAndSaveShift('Lunch', lunchPeriodWorkers);
+      await _finalizeAndSaveShift('Lunch', lunchPeriodWorkers);
 
       // Reset working set to dinner roster but preserve dinner-only
       _beginShift('Dinner', dinnerRoster, preserveCounts: false);
@@ -1884,7 +1921,7 @@ class AppState extends ChangeNotifier {
       // Finalize lunch shift and save records - include lunch-only + both-shift workers
       final lunchOnlyWorkers = lunchSet.difference(dinnerSet);
       final lunchPeriodWorkers = [...lunchOnlyWorkers, ...bothShifts].toList();
-      _finalizeAndSaveShift('Lunch', lunchPeriodWorkers);
+      await _finalizeAndSaveShift('Lunch', lunchPeriodWorkers);
 
       // Start dinner shift normally (this clears all counts)
       _beginShift('Dinner', dinnerRoster, preserveCounts: false);
@@ -1918,7 +1955,7 @@ class AppState extends ChangeNotifier {
           'action': 'close_restaurant',
           'state': {'shiftType': _shiftType, 'shiftActive': false}
         });
-        _finalizeAndSaveShift(_shiftType);
+        await _finalizeAndSaveShift(_shiftType);
       }
       _shiftActive = false;
       _shiftPaused = false;
@@ -2022,7 +2059,7 @@ class AppState extends ChangeNotifier {
           final lunchOnlyWorkers = lunchSet.difference(dinnerSet);
           final lunchPeriodWorkers =
               [...lunchOnlyWorkers, ...bothShifts].toList();
-          _finalizeAndSaveShift('Lunch', lunchPeriodWorkers);
+          await _finalizeAndSaveShift('Lunch', lunchPeriodWorkers);
 
           // Reset both-shift servers BEFORE starting dinner
           d('[DEBUG] _maybeActivateShiftByClock: About to reset ${bothShifts.length} both-shift servers: $bothShifts');
@@ -2125,7 +2162,7 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  void _finalizeAndSaveShift(String type, [List<String>? roster]) {
+  Future<void> _finalizeAndSaveShift(String type, [List<String>? roster]) async {
     // Filter counts to only include servers assigned to this shift
     final filteredCounts = <String, int>{};
     final pizookieCounts = <String, int>{};
@@ -2163,6 +2200,30 @@ class AppState extends ChangeNotifier {
       return;
     }
 
+    // Capture current station assignments for correlation analysis
+    final stationAssignments = <String, String>{};
+    final sectionAssignments = <String, String>{};
+    
+    try {
+      final stationTypes = await StationsRepository.getStationTypeForShift(type);
+      final stationSections = await StationsRepository.getStationSectionForShift(type);
+      
+      // Only capture assignments for servers with runs
+      for (final serverId in filteredCounts.keys) {
+        if (stationTypes.containsKey(serverId)) {
+          stationAssignments[serverId] = stationTypes[serverId]?.toString() ?? '';
+        }
+        if (stationSections.containsKey(serverId)) {
+          sectionAssignments[serverId] = stationSections[serverId]?.toString() ?? '';
+        }
+      }
+      
+      d('[SHIFT SAVE DEBUG] Station assignments captured: $stationAssignments');
+      d('[SHIFT SAVE DEBUG] Section assignments captured: $sectionAssignments');
+    } catch (e) {
+      d('[SHIFT SAVE DEBUG] Warning: Could not capture station assignments: $e');
+    }
+
     d('[SHIFT SAVE DEBUG] ✅ SAVING SHIFT: ${filteredCounts.length} servers with data');
     d('[SHIFT SAVE DEBUG] Saving pizookieCounts: $pizookieCounts');
     final rec = ShiftRecord(
@@ -2172,6 +2233,8 @@ class AppState extends ChangeNotifier {
       start: _shiftStart ?? _now,
       counts: filteredCounts,
       pizookieCounts: pizookieCounts,
+      stationAssignments: stationAssignments.isNotEmpty ? stationAssignments : null,
+      sectionAssignments: sectionAssignments.isNotEmpty ? sectionAssignments : null,
     );
     _history.add(rec);
     d('[SHIFT SAVE DEBUG] ✅ Shift saved to history with ${filteredCounts.length} servers');
@@ -2247,7 +2310,7 @@ class AppState extends ChangeNotifier {
   Future<bool> endCurrentShiftWithPin(String pin) async {
     if (!(await isValidAdminPin(pin))) return false;
     if (_shiftActive) {
-      _finalizeAndSaveShift(_shiftType);
+      await _finalizeAndSaveShift(_shiftType);
       _shiftActive = false;
       _shiftPaused = false;
     }
@@ -2277,7 +2340,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> endDay() async {
     if (_shiftActive) {
-      _finalizeAndSaveShift(_shiftType);
+      await _finalizeAndSaveShift(_shiftType);
       _shiftActive = false;
     }
     _shiftPaused = false;
@@ -2788,6 +2851,45 @@ class AppState extends ChangeNotifier {
     return getIndividualClickTimestamps(serverId, start, end).length;
   }
 
+  /// Get individual pizookie click timestamps for a server within a time range
+  List<DateTime> getIndividualPizookieTimestamps(
+      String serverId, DateTime start, DateTime end) {
+    final timestamps = _pizookieTimestamps[serverId] ?? [];
+    final startEpoch = start.millisecondsSinceEpoch;
+    final endEpoch = end.millisecondsSinceEpoch;
+
+    return timestamps
+        .where((timestamp) => timestamp >= startEpoch && timestamp < endEpoch)
+        .map((timestamp) => DateTime.fromMillisecondsSinceEpoch(timestamp))
+        .toList()
+      ..sort(); // Sort chronologically
+  }
+
+  /// Get all clicks with type information for click analysis
+  List<Map<String, dynamic>> getIndividualClicksWithType(
+      String serverId, DateTime start, DateTime end) {
+    final regularClicks = getIndividualClickTimestamps(serverId, start, end);
+    final pizookieClicks = getIndividualPizookieTimestamps(serverId, start, end);
+    
+    final allClicksWithType = <Map<String, dynamic>>[];
+    
+    // Add regular clicks
+    for (final click in regularClicks) {
+      final isPizookie = pizookieClicks.any((pizookie) => 
+          pizookie.millisecondsSinceEpoch == click.millisecondsSinceEpoch);
+      allClicksWithType.add({
+        'timestamp': click,
+        'isPizookie': isPizookie,
+      });
+    }
+    
+    // Sort by timestamp
+    allClicksWithType.sort((a, b) => 
+        (a['timestamp'] as DateTime).compareTo(b['timestamp'] as DateTime));
+    
+    return allClicksWithType;
+  }
+
   void _pruneOldTapBuckets() {
     final cutoff =
         _now.subtract(const Duration(days: 180)).millisecondsSinceEpoch;
@@ -2796,6 +2898,10 @@ class AppState extends ChangeNotifier {
     }
     // Also prune old individual timestamps
     for (final timestamps in _tapTimestamps.values) {
+      timestamps.removeWhere((timestamp) => timestamp < cutoff);
+    }
+    // Also prune old pizookie timestamps
+    for (final timestamps in _pizookieTimestamps.values) {
       timestamps.removeWhere((timestamp) => timestamp < cutoff);
     }
   }
