@@ -9,6 +9,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:archive/archive.dart';
 import '../storage.dart';
 import '../models.dart'; // For WeeklyHours
+import '../services/file_service.dart';
 
 class BackupManager {
   /// Creates a comprehensive backup of all app data
@@ -120,7 +121,7 @@ class BackupManager {
           ArchiveFile('backup_data.json', jsonBytes.length, jsonBytes));
 
       // 2. Add all avatar photo files to the archive
-      final appDir = await getApplicationDocumentsDirectory();
+      final appDir = await FileService.instance.getDocumentsDirectory();
       final directory = Directory(appDir.path);
 
       final photoFiles = await directory
@@ -339,74 +340,48 @@ class BackupManager {
     }
   }
 
-  /// Gets all possible backup directories (external and internal)
+  /// Gets all possible backup directories using the FileService
   static Future<List<Directory>> _getAllBackupDirectories() async {
-    final directories = <Directory>[];
-
-    try {
-      // First try: Downloads directory (survives app data clearing)
-      final externalDir = await getExternalStorageDirectory();
-      if (externalDir != null) {
-        // Navigate to Downloads directory which persists across app data clearing
-        final pathParts = externalDir.path.split('/');
-        final rootIndex = pathParts.indexOf('0');
-        if (rootIndex != -1) {
-          final downloadsPath =
-              '${pathParts.sublist(0, rootIndex + 1).join('/')}/Download/FoodRunsBackups';
-          directories.add(Directory(downloadsPath));
-        }
-
-        // Second try: App-specific external storage
-        directories.add(Directory('${externalDir.path}/FoodRunsBackups'));
-      }
-    } catch (e) {
-      // External storage not available
-    }
-
-    // Fallback: Internal app documents directory
-    try {
-      final documentsDir = await getApplicationDocumentsDirectory();
-      directories.add(Directory('${documentsDir.path}/backups'));
-    } catch (e) {
-      // App documents not available
-    }
-
-    return directories;
+    return await FileService.instance.getBackupDirectories();
   }
 
-  /// Migrates backups from internal to external storage
+  /// Migrates backups from internal to external storage using FileService
   static Future<void> migrateBackupsToExternal() async {
     try {
-      final documentsDir = await getApplicationDocumentsDirectory();
-      final oldBackupsDir = Directory('${documentsDir.path}/backups');
-
-      if (!await oldBackupsDir.exists()) return;
-
-      final externalDir = await getExternalStorageDirectory();
-      if (externalDir == null) return;
-
-      final newBackupsDir = Directory('${externalDir.path}/FoodRunsBackups');
-      if (!await newBackupsDir.exists()) {
-        await newBackupsDir.create(recursive: true);
+      final fileService = FileService.instance;
+      final backupDirectories = await fileService.getBackupDirectories();
+      
+      if (backupDirectories.length < 2) {
+        d('[BackupManager] Not enough backup directories for migration');
+        return;
       }
 
-      final oldFiles = oldBackupsDir
-          .listSync()
-          .where((entity) => entity is File && entity.path.endsWith('.json'))
-          .cast<File>()
-          .toList();
+      final sourceDir = backupDirectories.last; // Usually internal directory
+      final targetDir = backupDirectories.first; // Usually external directory
+
+      if (!await sourceDir.exists()) {
+        d('[BackupManager] Source directory does not exist: ${sourceDir.path}');
+        return;
+      }
+
+      // Ensure target directory exists
+      if (!await targetDir.exists()) {
+        await targetDir.create(recursive: true);
+      }
+
+      final oldFiles = await fileService.getFilesInDirectory(sourceDir, extension: '.json');
 
       for (final oldFile in oldFiles) {
-        final fileName = oldFile.path.split(Platform.pathSeparator).last;
-        final newFile = File('${newBackupsDir.path}/$fileName');
+        final fileName = fileService.getFileName(oldFile.path);
+        final newFile = await fileService.createFile(targetDir, fileName);
 
         if (!await newFile.exists()) {
-          await oldFile.copy(newFile.path);
-          d('Migrated backup: $fileName');
+          await fileService.copyFile(oldFile, targetDir, newFileName: fileName);
+          d('[BackupManager] Migrated backup: $fileName');
         }
       }
     } catch (e) {
-  d('Migration failed: $e');
+      d('[BackupManager] Migration failed: $e');
     }
   }
 
@@ -545,20 +520,32 @@ class BackupManager {
     }
   }
 
-  /// Gets information about backup storage location
+  /// Gets information about backup storage location using FileService
   static Future<Map<String, dynamic>> getBackupLocationInfo() async {
     try {
-      final externalDir = await getExternalStorageDirectory();
-      final documentsDir = await getApplicationDocumentsDirectory();
-
-      String primaryLocation = 'Internal App Storage';
-      String primaryPath = '${documentsDir.path}/backups';
+      final fileService = FileService.instance;
+      final backupDirectories = await fileService.getBackupDirectories();
+      
+      String primaryLocation = 'App Data Directory';
+      String primaryPath = 'No backup directories available';
       bool externalAvailable = false;
 
-      if (externalDir != null) {
-        primaryLocation = 'External Storage';
-        primaryPath = '${externalDir.path}/FoodRunsBackups';
-        externalAvailable = true;
+      if (backupDirectories.isNotEmpty) {
+        final primaryDir = backupDirectories.first;
+        primaryPath = primaryDir.path;
+        
+        final externalDir = await fileService.getExternalDirectory();
+        final documentsDir = await fileService.getDocumentsDirectory();
+        
+        if (externalDir != null && primaryPath.contains(externalDir.path)) {
+          primaryLocation = 'External Storage';
+          externalAvailable = true;
+        } else if (primaryPath.contains(documentsDir.path)) {
+          primaryLocation = 'Documents Directory';
+        }
+        
+        // Check if we have multiple directories (external available)
+        externalAvailable = backupDirectories.length > 1;
       }
 
       return {
@@ -656,7 +643,7 @@ class BackupManager {
     final avatarPhotos = <String, dynamic>{};
 
     try {
-      final appDir = await getApplicationDocumentsDirectory();
+      final appDir = await FileService.instance.getDocumentsDirectory();
       final directory = Directory(appDir.path);
 
       // Find all avatar photo files (avatar_serverId_uuid.ext pattern)
@@ -692,7 +679,7 @@ class BackupManager {
     final avatarPhotos = <String, dynamic>{};
 
     try {
-      final appDir = await getApplicationDocumentsDirectory();
+      final appDir = await FileService.instance.getDocumentsDirectory();
       final directory = Directory(appDir.path);
 
       // Find all avatar photo files (avatar_serverId_uuid.ext pattern)
@@ -812,7 +799,7 @@ class BackupManager {
     if (data == null) return;
 
     try {
-      final appDir = await getApplicationDocumentsDirectory();
+      final appDir = await FileService.instance.getDocumentsDirectory();
       final avatarPhotos = data as Map<String, dynamic>;
 
       int restoredCount = 0;
@@ -924,7 +911,7 @@ class BackupManager {
     }
 
     // Fallback to app documents directory
-    final documentsDir = await getApplicationDocumentsDirectory();
+    final documentsDir = await FileService.instance.getDocumentsDirectory();
     final backupsDir = Directory('${documentsDir.path}/backups');
     if (!await backupsDir.exists()) {
       await backupsDir.create(recursive: true);
@@ -1254,10 +1241,10 @@ class BackupManager {
         // Get Documents directory or Downloads as fallback for automatic saves
         Directory? targetDirectory;
         try {
-          targetDirectory = await getApplicationDocumentsDirectory();
+          targetDirectory = await FileService.instance.getDocumentsDirectory();
         } catch (e) {
           // Fallback to external storage if available
-          targetDirectory = await getExternalStorageDirectory();
+          targetDirectory = await FileService.instance.getExternalDirectory();
         }
 
         if (targetDirectory == null) {

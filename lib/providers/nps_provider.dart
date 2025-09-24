@@ -3,14 +3,15 @@ import '../utils/log.dart';
 import '../models/server.dart';
 import '../models/nps_feedback.dart';
 import '../models/monthly_report.dart';
-import '../storage/nps_database.dart';
+import '../storage/database_factory.dart';
+import '../storage/nps_database_adapter.dart';
 import '../utils/nps_calculator.dart';
 import '../app_state.dart';
 
 /// Centralized state management for the NPS system
 /// Handles all server data, feedback processing, and report generation
 class NPSProvider with ChangeNotifier {
-  final NPSDatabase _database;
+  final NPSDatabaseAdapter _database;
   final NPSCalculator _calculator;
 
   // State variables
@@ -23,7 +24,7 @@ class NPSProvider with ChangeNotifier {
 
   // Constructor
   NPSProvider()
-      : _database = NPSDatabase.instance,
+      : _database = NPSDatabaseAdapter(DatabaseFactory.instance),
         _calculator = NPSCalculator();
 
   // Getters
@@ -31,7 +32,7 @@ class NPSProvider with ChangeNotifier {
   List<NPSFeedback> get recentFeedback => List.unmodifiable(_recentFeedback);
   NPSMonthlyReport? get currentReport => _currentReport;
   NPSCalculator get calculator => _calculator;
-  NPSDatabase get database => _database;
+  NPSDatabaseAdapter get database => _database;
   bool get isLoading => _isLoading;
   bool get isInitialized => _isInitialized;
   String? get errorMessage => _errorMessage;

@@ -1,0 +1,233 @@
+{
+  "servers": {
+    "list": [
+      {
+        "id": "fcqajcpp9unoq8wy",
+        "name": "David",
+        "teamColor": null,
+        "stationType": null,
+        "hireDate": null
+      },
+      {
+        "id": "dkxnmm5f3ruosny1",
+        "name": "Gabe",
+        "teamColor": null,
+        "stationType": null,
+        "hireDate": null
+      }
+    ]
+  },
+  "totals": {
+    "totals": {
+      "fcqajcpp9unoq8wy": 18,
+      "dkxnmm5f3ruosny1": 12
+    }
+  },
+  "shifts": {
+    "list": [
+      {
+        "id": "rvdw968x2c3a41m4",
+        "label": "Lunch",
+        "shiftType": "Lunch",
+        "start": "2025-09-14T21:54:23.170706",
+        "counts": {},
+        "pizookieCounts": {}
+      }
+    ]
+  },
+  "profiles": {
+    "dkxnmm5f3ruosny1": {
+      "allTimeRuns": 12,
+      "pizookieRuns": 0,
+      "bestShiftRuns": 0,
+      "streakBest": 12,
+      "shiftsAsMvp": 0,
+      "achievements": [
+        "three_streak",
+        "five_streak",
+        "ten_in_shift"
+      ],
+      "repeatEarnedDates": [
+        "first_run_today_2025-09-14",
+        "full_hands_2025-09-14",
+        "dinner_closer_8_2025-09-14"
+      ],
+      "points": 515,
+      "tapIntervalsMsSum": 4185,
+      "tapIntervalsCount": 11,
+      "lastTapIso": "2025-09-14T21:55:09.424866",
+      "avatarPath": null,
+      "bannerPath": null,
+      "avatarHistory": [],
+      "hireDate": "",
+      "birthday": "",
+      "isArchived": false,
+      "archiveNotes": "",
+      "dailyFirsts": {},
+      "recentTapTimes": [],
+      "lastKnownRank": null,
+      "milestoneHistory": [],
+      "behaviorPatterns": {},
+      "personalityTraits": {},
+      "performanceHistory": [],
+      "preferredShifts": [
+        "lunch",
+        "dinner"
+      ],
+      "competitiveLevel": 0.5,
+      "socialLevel": 0.5,
+      "achievementDrive": 0.5,
+      "lastPersonalityAnalysis": null,
+      "personalityAnalysisVersion": 1,
+      "recentMessages": [],
+      "messageLastUsed": {},
+      "messageUsageCount": {},
+      "messageEngagement": {}
+    },
+    "fcqajcpp9unoq8wy": {
+      "allTimeRuns": 18,
+      "pizookieRuns": 0,
+      "bestShiftRuns": 0,
+      "streakBest": 7,
+      "shiftsAsMvp": 0,
+      "achievements": [
+        "three_streak",
+        "five_streak"
+      ],
+      "repeatEarnedDates": [
+        "first_run_today_2025-09-14",
+        "full_hands_2025-09-14"
+      ],
+      "points": 310,
+      "tapIntervalsMsSum": 1229,
+      "tapIntervalsCount": 6,
+      "lastTapIso": "2025-09-14T21:55:07.108111",
+      "avatarPath": null,
+      "bannerPath": null,
+      "avatarHistory": [],
+      "hireDate": "",
+      "birthday": "",
+      "isArchived": false,
+      "archiveNotes": "",
+      "dailyFirsts": {},
+      "recentTapTimes": [],
+      "lastKnownRank": null,
+      "milestoneHistory": [],
+      "behaviorPatterns": {},
+      "personalityTraits": {},
+      "performanceHistory": [],
+      "preferredShifts": [
+        "lunch",
+        "dinner"
+      ],
+      "competitiveLevel": 0.5,
+      "socialLevel": 0.5,
+      "achievementDrive": 0.5,
+      "lastPersonalityAnalysis": null,
+      "personalityAnalysisVersion": 1,
+      "recentMessages": [],
+      "messageLastUsed": {},
+      "messageUsageCount": {},
+      "messageEngagement": {}
+    }
+  },
+  "settings": {
+    "auto_rotate_wallpaper": true,
+    "gamification": {
+      "encouragementFlashEnabled": true
+    },
+    "last_auto_rotate_date": "2025-09-06",
+    "selected_wallpaper": "image024",
+    "weekly_hours": {
+      "open": {
+        "1": 660,
+        "2": 660,
+        "3": 660,
+        "4": 660,
+        "5": 660,
+        "6": 660,
+        "7": 660
+      },
+      "close": {
+        "1": 1380,
+        "2": 1380,
+        "3": 1380,
+        "4": 1380,
+        "5": 1440,
+        "6": 1455,
+        "7": 1320
+      },
+      "closeDayOffset": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 1,
+        "6": 1,
+        "7": 0
+      }
+    }
+  },
+  "dayplan": {
+    "2025-08-25": {
+      "ymd": "2025-08-25",
+      "lunchRoster": [
+        "fcqajcpp9unoq8wy"
+      ],
+      "dinnerRoster": [
+        "dkxnmm5f3ruosny1"
+      ]
+    },
+    "2025-09-03": {
+      "ymd": "2025-09-03",
+      "lunchRoster": [],
+      "dinnerRoster": [],
+      "transitionStartMinutes": 930,
+      "transitionEndMinutes": 1020
+    },
+    "2025-09-05": {
+      "ymd": "2025-09-05",
+      "lunchRoster": [],
+      "dinnerRoster": [],
+      "transitionStartMinutes": 930,
+      "transitionEndMinutes": 1020
+    },
+    "2025-09-14": {
+      "ymd": "2025-09-14",
+      "lunchRoster": [
+        "fcqajcpp9unoq8wy",
+        "dkxnmm5f3ruosny1"
+      ],
+      "dinnerRoster": [
+        "fcqajcpp9unoq8wy",
+        "dkxnmm5f3ruosny1"
+      ],
+      "transitionStartMinutes": 930,
+      "transitionEndMinutes": 1020
+    },
+    "2025-09-19": {
+      "ymd": "2025-09-19",
+      "lunchRoster": [
+        "fcqajcpp9unoq8wy",
+        "dkxnmm5f3ruosny1"
+      ],
+      "dinnerRoster": [
+        "fcqajcpp9unoq8wy",
+        "dkxnmm5f3ruosny1"
+      ],
+      "transitionStartMinutes": 930,
+      "transitionEndMinutes": 1020
+    }
+  },
+  "taplog": {
+    "per_minute": {
+      "fcqajcpp9unoq8wy": {
+        "1756148520000": 11,
+        "1757912100000": 7
+      },
+      "dkxnmm5f3ruosny1": {
+        "1757912100000": 12
+      }
+    }
+  }
+}

@@ -1,0 +1,89 @@
+-- NPS System Database Schema for Drift ORM
+-- This schema defines tables for cross-platform SQLite operations
+
+-- Servers table
+CREATE TABLE servers (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    original_id TEXT,
+    hire_date DATE NOT NULL,
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes for servers table
+CREATE INDEX idx_servers_active ON servers(active);
+CREATE INDEX idx_servers_hire_date ON servers(hire_date);
+
+-- NPS Feedback table  
+CREATE TABLE nps_feedback (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    server_id INTEGER NOT NULL,
+    feedback_type TEXT NOT NULL CHECK(feedback_type IN ('yes', 'maybe', 'no')),
+    feedback_date DATE NOT NULL,
+    sales_amount REAL,
+    table_number INTEGER,
+    shift_period TEXT CHECK(shift_period IN ('breakfast', 'lunch', 'dinner', 'late_night')),
+    guest_count INTEGER,
+    notes TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (server_id) REFERENCES servers (id) ON DELETE RESTRICT
+);
+
+-- Indexes for nps_feedback table
+CREATE INDEX idx_feedback_server_id ON nps_feedback(server_id);
+CREATE INDEX idx_feedback_date ON nps_feedback(feedback_date);
+CREATE INDEX idx_feedback_server_date ON nps_feedback(server_id, feedback_date);
+CREATE INDEX idx_feedback_type ON nps_feedback(feedback_type);
+
+-- Monthly reports table
+CREATE TABLE nps_monthly_reports (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    server_id INTEGER NOT NULL,
+    report_month INTEGER NOT NULL,
+    report_year INTEGER NOT NULL,
+    all_time_nps_percentage REAL,
+    three_month_nps_percentage REAL,
+    one_month_nps_percentage REAL,
+    all_time_sales REAL DEFAULT 0.00,
+    all_time_table_count INTEGER DEFAULT 0,
+    month_feedback_yes INTEGER DEFAULT 0,
+    month_feedback_maybe INTEGER DEFAULT 0,
+    month_feedback_no INTEGER DEFAULT 0,
+    three_month_feedback_yes INTEGER DEFAULT 0,
+    three_month_feedback_maybe INTEGER DEFAULT 0,
+    three_month_feedback_no INTEGER DEFAULT 0,
+    all_time_feedback_yes INTEGER DEFAULT 0,
+    all_time_feedback_maybe INTEGER DEFAULT 0,
+    all_time_feedback_no INTEGER DEFAULT 0,
+    generated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    data_as_of_date DATE NOT NULL,
+    FOREIGN KEY (server_id) REFERENCES servers (id) ON DELETE RESTRICT,
+    UNIQUE(server_id, report_month)
+);
+
+-- Indexes for nps_monthly_reports table
+CREATE INDEX idx_monthly_reports_server_id ON nps_monthly_reports(server_id);
+CREATE INDEX idx_monthly_reports_month ON nps_monthly_reports(report_month);
+CREATE INDEX idx_monthly_reports_year ON nps_monthly_reports(report_year);
+CREATE INDEX idx_monthly_reports_server_month ON nps_monthly_reports(server_id, report_month);
+
+-- Calculation log table for audit trail
+CREATE TABLE nps_calculation_log (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    calculation_type TEXT NOT NULL,
+    server_id INTEGER,
+    report_month INTEGER,
+    calculation_start TEXT NOT NULL,
+    calculation_end TEXT NOT NULL,
+    records_processed INTEGER NOT NULL,
+    success INTEGER NOT NULL,
+    error_message TEXT,
+    created_by TEXT,
+    FOREIGN KEY (server_id) REFERENCES servers (id) ON DELETE SET NULL
+);
+
+-- Indexes for calculation log
+CREATE INDEX idx_calc_log_type ON nps_calculation_log(calculation_type);
+CREATE INDEX idx_calc_log_date ON nps_calculation_log(calculation_start);

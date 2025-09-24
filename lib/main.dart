@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'storage.dart';
 import 'app_state.dart';
 import 'providers/nps_provider.dart';
+import 'storage/database_factory.dart';
 import 'services/nps_filter_service.dart';
 import 'services/nps_notification_service.dart';
 import 'services/nps_benchmarking_service.dart';
@@ -28,6 +29,10 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Storage.init();
   await Storage.migrateRawKeys(); // Migrate any existing raw SharedPreferences keys
+  
+  // Initialize database factory for cross-platform database support
+  await DatabaseFactory.initialize();
+  
   final appState = AppState();
   await appState.load();
 

@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 import '../models/nps_score_feedback.dart';
 import '../models/server.dart';
 import 'advanced_analytics_service.dart';
+import 'file_service.dart';
 
 /// Service for exporting NPS data and analytics to various formats
 class DataExportService {
@@ -226,8 +227,8 @@ class DataExportService {
     String fileName,
   ) async {
     try {
-      final directory = await getApplicationDocumentsDirectory();
-      final file = File('${directory.path}/$fileName');
+      final directory = await FileService.instance.getExportDirectory();
+      final file = await FileService.instance.createFile(directory, fileName);
       await file.writeAsString(csvContent);
 
       await Share.shareXFiles(
@@ -256,31 +257,40 @@ class DataExportService {
       final timeSeriesCSV = await exportTimeSeriesDataToCSV(feedback);
 
       // Save all files
-      final directory = await getApplicationDocumentsDirectory();
+      final directory = await FileService.instance.getExportDirectory();
+      final fileService = FileService.instance;
 
       final files = <XFile>[];
 
       // Save feedback data
-      final feedbackFile =
-          File('${directory.path}/nps_feedback_$timestamp.csv');
+      final feedbackFile = await fileService.createFile(
+        directory, 
+        'nps_feedback_$timestamp.csv'
+      );
       await feedbackFile.writeAsString(feedbackCSV);
       files.add(XFile(feedbackFile.path));
 
       // Save analytics summary
-      final analyticsFile =
-          File('${directory.path}/nps_analytics_$timestamp.csv');
+      final analyticsFile = await fileService.createFile(
+        directory,
+        'nps_analytics_$timestamp.csv'
+      );
       await analyticsFile.writeAsString(analyticsCSV);
       files.add(XFile(analyticsFile.path));
 
       // Save comprehensive report
-      final comprehensiveFile =
-          File('${directory.path}/nps_comprehensive_report_$timestamp.csv');
+      final comprehensiveFile = await fileService.createFile(
+        directory,
+        'nps_comprehensive_report_$timestamp.csv'
+      );
       await comprehensiveFile.writeAsString(comprehensiveCSV);
       files.add(XFile(comprehensiveFile.path));
 
       // Save time series data
-      final timeSeriesFile =
-          File('${directory.path}/nps_time_series_$timestamp.csv');
+      final timeSeriesFile = await fileService.createFile(
+        directory,
+        'nps_time_series_$timestamp.csv'
+      );
       await timeSeriesFile.writeAsString(timeSeriesCSV);
       files.add(XFile(timeSeriesFile.path));
 

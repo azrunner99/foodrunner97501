@@ -3,26 +3,59 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'utils/log.dart';
+import 'storage/storage_interface.dart';
+import 'storage/storage_factory.dart';
+import 'storage/storage_migration_service.dart';
 
 /// Public box API wrapper to avoid exposing private types in public API
+/// 
+/// This wrapper maintains the existing API while delegating to platform-appropriate
+/// storage backends. The Box abstraction remains unchanged for all existing code.
 class Box {
   final String prefix;
+  static StorageInterface? _storage;
+  
   Box(this.prefix);
 
+  /// Get the singleton storage instance, initializing if needed
+  static Future<StorageInterface> _getStorage() async {
+    if (_storage == null) {
+      _storage = StorageFactory.create();
+      await _storage!.init();
+      
+      // Perform migration if needed (Windows/Desktop platforms)
+      try {
+        final migrated = await StorageMigrationService.migrateIfNeeded();
+        if (migrated) {
+          d('[Storage] Data migration completed successfully');
+        }
+      } catch (e) {
+        d('[Storage] Migration failed, but continuing: $e');
+        // Don't fail initialization if migration fails
+      }
+    }
+    return _storage!;
+  }
+
   Future<dynamic> get(String key) async {
-    final sp = await SharedPreferences.getInstance();
-    final raw = sp.getString('$prefix::$key');
-    return raw == null ? null : jsonDecode(raw);
+    final storage = await _getStorage();
+    return await storage.get('$prefix::$key');
   }
 
   Future<void> put(String key, dynamic value) async {
-    final sp = await SharedPreferences.getInstance();
-    await sp.setString('$prefix::$key', jsonEncode(value));
+    final storage = await _getStorage();
+    await storage.put('$prefix::$key', value);
   }
 
   Future<void> delete(String key) async {
-    final sp = await SharedPreferences.getInstance();
-    await sp.remove('$prefix::$key');
+    final storage = await _getStorage();
+    await storage.delete('$prefix::$key');
+  }
+  
+  /// Check if a key exists in this box
+  Future<bool> containsKey(String key) async {
+    final storage = await _getStorage();
+    return await storage.containsKey('$prefix::$key');
   }
 }
 
@@ -66,22 +99,17 @@ class Storage {
   /// Returns the written file path, or null if write failed.
   static Future<String?> exportBoxes(List<String> prefixes) async {
     try {
-      final sp = await SharedPreferences.getInstance();
-      final allKeys = sp.getKeys();
+      final storage = await Box._getStorage();
+      final allKeys = await storage.getKeys();
       final snapshot = <String, Map<String, dynamic>>{};
 
       for (final prefix in prefixes) {
         final pfx = '$prefix::';
         final boxMap = <String, dynamic>{};
         for (final key in allKeys.where((k) => k.startsWith(pfx))) {
-          final raw = sp.getString(key);
-          if (raw != null) {
-            try {
-              boxMap[key.substring(pfx.length)] = jsonDecode(raw);
-            } catch (_) {
-              // keep raw string if decode fails
-              boxMap[key.substring(pfx.length)] = raw;
-            }
+          final value = await storage.get(key);
+          if (value != null) {
+            boxMap[key.substring(pfx.length)] = value;
           }
         }
         snapshot[prefix] = boxMap;

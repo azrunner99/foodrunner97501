@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import '../app_state.dart';
 import '../utils/backup_manager.dart';
 import '../widgets/wallpaper_background.dart';
+import '../services/file_service.dart';
 
 class BackupManagerScreen extends StatefulWidget {
   const BackupManagerScreen({super.key});
@@ -404,37 +405,23 @@ class _BackupManagerScreenState extends State<BackupManagerScreen> {
     final directories = <Directory>[];
 
     try {
-      // Documents directory
-      final documentsDir = await getApplicationDocumentsDirectory();
-      directories.add(documentsDir);
+      // Get all backup directories from FileService
+      final backupDirectories = await FileService.instance.getBackupDirectories();
+      directories.addAll(backupDirectories);
 
-      // Download folder (common location for exported files)
-      final downloadPaths = [
-        '/storage/emulated/0/Download',
-        '/sdcard/Download',
-        Platform.isAndroid ? '/storage/emulated/0/Downloads' : null,
-      ].where((path) => path != null).cast<String>();
-
-      for (final path in downloadPaths) {
-        final dir = Directory(path);
-        if (await dir.exists()) {
-          directories.add(dir);
-        }
+      // Also add documents directory if not already included
+      final documentsDir = await FileService.instance.getDocumentsDirectory();
+      if (!directories.any((dir) => dir.path == documentsDir.path)) {
+        directories.add(documentsDir);
       }
 
-      // External storage (if available)
-      try {
-        if (Platform.isAndroid) {
-          final externalDir = Directory('/storage/emulated/0/');
-          if (await externalDir.exists()) {
-            directories.add(externalDir);
-          }
-        }
-      } catch (e) {
-        // External storage not accessible
+      // Add external directory if available and not already included
+      final externalDir = await FileService.instance.getExternalDirectory();
+      if (externalDir != null && !directories.any((dir) => dir.path == externalDir.path)) {
+        directories.add(externalDir);
       }
     } catch (e) {
-  d('[BackupSearch] Error getting search directories: $e');
+      d('[BackupSearch] Error getting search directories: $e');
     }
 
     return directories;

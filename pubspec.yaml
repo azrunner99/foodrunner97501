@@ -26,6 +26,13 @@ dependencies:
   sqflite: ^2.3.0
   path: ^1.8.3
   csv: ^6.0.0
+  # Cross-platform storage for Windows compatibility
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  # Cross-platform SQLite for Windows compatibility
+  drift: ^2.12.0
+  drift_flutter: ^0.1.0
+  sqlite3_flutter_libs: ^0.5.0
 
   collection: any
   http: any
@@ -34,6 +41,9 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  # Code generation for Phase 3 database
+  drift_dev: ^2.12.0
+  build_runner: ^2.4.6
 
 flutter:
   uses-material-design: true

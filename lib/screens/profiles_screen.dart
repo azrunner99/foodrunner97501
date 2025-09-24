@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 import '../app_state.dart';
 import '../storage.dart';
 import '../gamification.dart';
+import '../services/file_service.dart';
 import '../widgets/resilient_avatar.dart';
 import '../theme/app_theme.dart';
 import '../widgets/month_day_picker.dart';
@@ -751,7 +752,7 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
     final pickedFile = await picker.pickImage(source: ImageSource.camera);
     if (pickedFile != null) {
       // Save photo to a unique file path
-      final appDir = await getApplicationDocumentsDirectory();
+      final appDir = await FileService.instance.getDocumentsDirectory();
       final uuid = Uuid().v4();
       final ext = pickedFile.path.split('.').last;
       final newPath = '${appDir.path}/avatar_${widget.serverId}_$uuid.$ext';
