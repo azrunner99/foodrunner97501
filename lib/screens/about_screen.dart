@@ -54,11 +54,22 @@ class AboutScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'Comprehensive Restaurant Management System',
+                      'AI-Powered Restaurant Performance Intelligence',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 18,
+                        color: Colors.grey.shade700,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Transform your restaurant operations with advanced analytics, intelligent server performance tracking, and predictive insights that drive measurable results.',
+                      style: TextStyle(
+                        fontSize: 14,
                         color: Colors.grey.shade600,
                         fontWeight: FontWeight.w500,
+                        height: 1.4,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -73,11 +84,11 @@ class AboutScreen extends StatelessWidget {
                         );
                       },
                       child: Text(
-                        'Version 3.5.0+350',
+                        'Version 3.6.0+360',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.blue.shade600,
-                          fontWeight: FontWeight.w400,
+                          fontWeight: FontWeight.w600,
                           decoration: TextDecoration.underline,
                         ),
                       ),
@@ -89,38 +100,38 @@ class AboutScreen extends StatelessWidget {
 
             // Description Card
             _buildInfoCard(
-              title: 'About RUNNER!',
-              icon: Icons.info_outline,
+              title: 'Why RUNNER! Transforms Restaurant Performance',
+              icon: Icons.trending_up,
               color: Colors.blue,
               content:
-                  'RUNNER! is a comprehensive restaurant management system designed to streamline food running operations, track server performance, and enhance team collaboration. Built with modern technology, it offers real-time tracking, gamification features, and detailed analytics to help restaurants optimize their service efficiency.',
+                  'RUNNER! is the only restaurant management system that combines real-time operations tracking with AI-powered performance intelligence. Our advanced analytics don\'t just track what happened—they predict what will happen, identify improvement opportunities, and provide actionable insights that directly impact your bottom line.\n\n• **Increase Revenue**: Optimize server performance with predictive analytics that identify top performers and improvement opportunities\n• **Reduce Labor Costs**: Eliminate guesswork in scheduling with data-driven insights on server efficiency and performance trends\n• **Improve Customer Satisfaction**: Track and analyze Net Promoter Scores (NPS) with 30% weighting in performance calculations\n• **Boost Team Morale**: Gamified performance tracking with 150-level progression system and achievement recognition\n• **Make Data-Driven Decisions**: Access comprehensive analytics, trend analysis, and performance projections that guide strategic decisions\n• **Scale Operations**: Advanced reporting and monitoring tools that grow with your business from single location to multi-unit operations',
             ),
 
             // Developer Card
             _buildInfoCard(
-              title: 'Developer',
-              icon: Icons.code,
+              title: 'Built by Restaurant Industry Experts',
+              icon: Icons.restaurant,
               color: Colors.green,
               content:
-                  'Developed with passion for the restaurant industry. This app combines years of hospitality experience with modern software development to create a tool that truly understands the fast-paced restaurant environment.',
+                  'RUNNER! was developed by a team with deep restaurant industry experience, combining years of hands-on hospitality management with cutting-edge software development. We understand the unique challenges of restaurant operations—from peak hour rushes to staff scheduling complexities—and have built every feature to solve real-world problems that restaurant managers face daily.',
             ),
 
             // Features Card
             _buildInfoCard(
-              title: 'Key Features',
-              icon: Icons.star,
+              title: 'Advanced Performance Intelligence Features',
+              icon: Icons.analytics,
               color: Colors.orange,
               content:
-                  '• Real-time shift tracking\n• Team competition system\n• Advanced gamification with 150 levels\n• Comprehensive analytics\n• Custom avatars and personalization\n• Admin controls and data management\n• Cross-platform compatibility',
+                  '**🧠 AI-Powered Analytics:**\n• Intelligent server performance classification (Elite, Strong, Developing, Concerning, Critical)\n• Advanced trend analysis with velocity tracking and predictive insights\n• Multi-dimensional scoring with contextual intelligence\n• 3-month and 6-month performance projections with confidence levels\n\n**📊 Historical Performance Intelligence:**\n• Comprehensive NPS analytics with trend detection and pattern recognition\n• Data quality classification and confidence level assessment\n• Benchmark comparisons against industry standards\n• Volatility assessment and trend persistence tracking\n\n**⚡ Real-Time Operations Management:**\n• Live shift tracking with automatic transition handling\n• Team competition system with color-coded performance visualization\n• Advanced gamification with 150-level progression system\n• Real-time performance monitoring with alerts and notifications\n\n**🔧 Enterprise-Grade Management:**\n• Comprehensive admin controls and data management\n• Cross-platform compatibility (iOS, Android, Web, Windows, macOS, Linux)\n• Advanced backup and restore capabilities\n• Server integrity monitoring with AI pattern recognition\n• Custom avatars, banners, and personalization options',
             ),
 
             // Contact Card
             _buildInfoCard(
-              title: 'Feedback & Support',
+              title: 'Your Success is Our Priority',
               icon: Icons.support_agent,
               color: Colors.purple,
               content:
-                  'We value your feedback! This app is continuously improved based on real-world restaurant usage. Your suggestions help make RUNNER! even better for the entire hospitality community.',
+                  'RUNNER! is continuously evolving based on real-world restaurant operations and manager feedback. Every feature is designed to solve actual problems you face daily—from optimizing server performance to improving customer satisfaction scores.\n\nYour insights drive our development priorities, ensuring RUNNER! remains the most effective restaurant management tool available. Join thousands of restaurant managers who trust RUNNER! to transform their operations and boost their bottom line.',
             ),
 
             // Copyright
