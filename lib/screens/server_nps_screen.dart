@@ -4,6 +4,7 @@ import '../providers/nps_provider.dart';
 import '../widgets/enhanced_nps_analytics_widget.dart';
 import '../widgets/monthly_nps_data_entry_widget.dart';
 import '../widgets/impact_analytics_widget.dart';
+import '../widgets/server_nps_status_widget.dart';
 import '../app_state.dart';
 
 class ServerNPSScreen extends StatefulWidget {
@@ -27,7 +28,7 @@ class _ServerNPSScreenState extends State<ServerNPSScreen> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3, // Updated to 3 tabs
+      length: 4, // Updated to 4 tabs
       child: Scaffold(
         appBar: AppBar(
           title: Text(
@@ -44,6 +45,7 @@ class _ServerNPSScreenState extends State<ServerNPSScreen> {
             tabs: const [
               Tab(icon: Icon(Icons.dashboard), text: 'Analytics'),
               Tab(icon: Icon(Icons.trending_up), text: 'IMPACT'),
+              Tab(icon: Icon(Icons.person), text: 'Server NPS Status'),
               Tab(
                   icon: Icon(Icons.calendar_month),
                   text: 'Monthly NPS Data Entry'),
@@ -57,6 +59,7 @@ class _ServerNPSScreenState extends State<ServerNPSScreen> {
           children: [
             const EnhancedNPSAnalyticsWidget(),
             const ImpactAnalyticsWidget(),
+            const ServerNPSStatusWidget(),
             MonthlyNPSDataEntryWidget(),
           ],
         ),
