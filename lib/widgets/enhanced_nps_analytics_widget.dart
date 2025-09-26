@@ -9,6 +9,7 @@ import '../services/nps_benchmarking_service.dart';
 import '../models/nps_score_feedback.dart';
 import '../models/monthly_report.dart';
 import '../storage/nps_database.dart';
+import '../storage/database_factory.dart';
 import 'secured_nps_widgets.dart';
 import '../screens/nps_benchmarking_screen.dart';
 
@@ -139,15 +140,43 @@ class _EnhancedNPSAnalyticsWidgetState
   /// Load all available monthly reports from database
   Future<List<NPSMonthlyReport>> _loadMonthlyReports() async {
     try {
-      // Get all monthly reports across all months
-      final db = await NPSDatabase.instance.database;
-      final reportMaps = await db.query(
-        'nps_monthly_reports',
-        orderBy: 'report_year DESC, report_month DESC',
-      );
+      d('[EnhancedNPSAnalyticsWidget] Starting to load monthly reports...');
+      
+      // Use the database factory to get the correct database instance
+      final db = DatabaseFactory.instance;
+      d('[EnhancedNPSAnalyticsWidget] Database factory type: ${DatabaseFactory.implementationType}');
+      
+      List<Map<String, dynamic>> reportMaps;
+      
+      // Handle different database schemas
+      final dbType = DatabaseFactory.implementationType;
+      d('[EnhancedNPSAnalyticsWidget] Detected database type: $dbType');
+      
+      if (dbType.contains('Sqflite')) {
+        // Sqflite uses month_year column (YYYYMM format)
+        d('[EnhancedNPSAnalyticsWidget] Using Sqflite schema with month_year column');
+        reportMaps = await db.queryTable(
+          'nps_monthly_reports',
+          orderBy: 'month_year DESC',
+        );
+      } else {
+        // Drift uses separate report_month and report_year columns
+        d('[EnhancedNPSAnalyticsWidget] Using Drift schema with report_month and report_year columns');
+        reportMaps = await db.queryTable(
+          'nps_monthly_reports',
+          orderBy: 'report_year DESC, report_month DESC',
+        );
+      }
+      
+      d('[EnhancedNPSAnalyticsWidget] Loaded ${reportMaps.length} monthly reports');
+      
+      if (reportMaps.isNotEmpty) {
+        d('[EnhancedNPSAnalyticsWidget] First report: ${reportMaps.first}');
+      }
+      
       return reportMaps.map((map) => NPSMonthlyReport.fromMap(map)).toList();
     } catch (e) {
-  d('[EnhancedNPSAnalyticsWidget] Error loading monthly reports: $e');
+      d('[EnhancedNPSAnalyticsWidget] Error loading monthly reports: $e');
       rethrow;
     }
   }

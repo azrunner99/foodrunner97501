@@ -5,16 +5,14 @@
 library;
 import 'log.dart';
 
-import '../storage/nps_database.dart';
+import '../storage/nps_database_adapter.dart';
 import '../models/monthly_report.dart';
 
 /// Core calculation engine for NPS metrics
 class NPSCalculator {
-  static final NPSCalculator _instance = NPSCalculator._internal();
-  factory NPSCalculator() => _instance;
-  NPSCalculator._internal();
+  final NPSDatabaseAdapter _database;
 
-  final NPSDatabase _database = NPSDatabase.instance;
+  NPSCalculator(this._database);
 
   /// Calculate all-time NPS for a specific server
   Future<double?> calculateAllTimeNPS(int serverId) async {
@@ -34,7 +32,7 @@ class NPSCalculator {
       final end = endDate ?? DateTime.now();
       final start = DateTime(end.year, end.month - 3, end.day);
 
-      final feedback = await _database.getFeedbackForServer(
+      final feedback = await _database.getFeedbackForServerInRange(
         serverId,
         startDate: start,
         endDate: end,
@@ -56,7 +54,7 @@ class NPSCalculator {
       final startDate = DateTime(year, month, 1);
       final endDate = DateTime(year, month + 1, 0); // Last day of month
 
-      final feedback = await _database.getFeedbackForServer(
+      final feedback = await _database.getFeedbackForServerInRange(
         serverId,
         startDate: startDate,
         endDate: endDate,
@@ -179,7 +177,11 @@ class NPSCalculator {
   /// Save monthly report to database
   Future<void> saveMonthlyReport(NPSMonthlyReport report) async {
     try {
-      await _database.insertOrUpdateMonthlyReport(report.toMap());
+      // Use Android Sqflite format for all database operations
+      final reportMap = report.toMap();
+      d('[NPSCalculator] Using Android Sqflite format for saving report');
+      
+      await _database.insertOrUpdateMonthlyReport(reportMap);
       d('[NPSCalculator] Saved monthly report for server ${report.serverId}');
     } catch (e) {
       d('[NPSCalculator] Error saving monthly report: $e');
@@ -246,7 +248,7 @@ class NPSCalculator {
     DateTime? endDate,
   ]) async {
     try {
-      final feedback = await _database.getFeedbackForServer(
+      final feedback = await _database.getFeedbackForServerInRange(
         serverId,
         startDate: startDate,
         endDate: endDate,

@@ -12,7 +12,7 @@ import '../app_state.dart';
 /// Handles all server data, feedback processing, and report generation
 class NPSProvider with ChangeNotifier {
   final NPSDatabaseAdapter _database;
-  final NPSCalculator _calculator;
+  late final NPSCalculator _calculator;
 
   // State variables
   List<NPSServer> _servers = [];
@@ -24,8 +24,9 @@ class NPSProvider with ChangeNotifier {
 
   // Constructor
   NPSProvider()
-      : _database = NPSDatabaseAdapter(DatabaseFactory.instance),
-        _calculator = NPSCalculator();
+      : _database = NPSDatabaseAdapter(DatabaseFactory.instance) {
+    _calculator = NPSCalculator(_database);
+  }
 
   // Getters
   List<NPSServer> get servers => List.unmodifiable(_servers);
@@ -538,8 +539,15 @@ class NPSProvider with ChangeNotifier {
   Future<List<Map<String, dynamic>>> getServerNPSDataForMonth(
       int reportMonth, int reportYear) async {
     try {
-      return await _database.getServerNPSDataForMonth(reportMonth, reportYear);
+      print('[NPSProvider] getServerNPSDataForMonth called with month: $reportMonth, year: $reportYear');
+      final result = await _database.getServerNPSDataForMonth(reportMonth, reportYear);
+      print('[NPSProvider] Database returned ${result.length} records');
+      for (int i = 0; i < result.length; i++) {
+        print('[NPSProvider] Record $i: ${result[i]}');
+      }
+      return result;
     } catch (e) {
+      print('[NPSProvider] Error in getServerNPSDataForMonth: $e');
       _setError('Failed to load server NPS data for month: $e');
       return [];
     }

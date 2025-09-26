@@ -35,7 +35,9 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
       final npsProvider = context.read<NPSProvider>();
       await npsProvider.initialize();
 
-      final months = await npsProvider.database.getAvailableReportMonths();
+  // Adapter now returns legacy-compatible List<Map<String,dynamic>> with
+  // keys: report_month, report_year, server_count
+  final months = await npsProvider.database.getAvailableReportMonths();
 
       setState(() {
         _availableMonths = months;
@@ -114,13 +116,29 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
           return bValue.compareTo(aValue); // Descending order
         });
         break;
+      case 'check_average':
+        sortedData.sort((a, b) {
+          final aSales = a['all_time_sales'] as double? ?? 0.0;
+          final aTables = a['all_time_table_count'] as int? ?? 0;
+          final bSales = b['all_time_sales'] as double? ?? 0.0;
+          final bTables = b['all_time_table_count'] as int? ?? 0;
+          
+          final aAverage = aTables > 0 ? aSales / aTables : 0.0;
+          final bAverage = bTables > 0 ? bSales / bTables : 0.0;
+          
+          return bAverage.compareTo(aAverage); // Descending order
+        });
+        break;
     }
 
     return sortedData;
   }
 
   Future<void> _loadServerNPSData() async {
-    if (_selectedMonthKey == null) return;
+    if (_selectedMonthKey == null) {
+      print('[NPS Scorecard] No selected month key');
+      return;
+    }
 
     try {
       setState(() {
@@ -129,20 +147,33 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
       });
 
       final selectedMonth = _getSelectedMonthData();
-      if (selectedMonth == null) return;
+      if (selectedMonth == null) {
+        print('[NPS Scorecard] No selected month data found');
+        return;
+      }
+
+      print('[NPS Scorecard] Selected month data: $selectedMonth');
 
       final npsProvider = context.read<NPSProvider>();
       final reportMonth = selectedMonth['report_month'] as int;
       final reportYear = selectedMonth['report_year'] as int;
 
+      print('[NPS Scorecard] Loading data for month: $reportMonth, year: $reportYear');
+
       final serverData =
           await npsProvider.getServerNPSDataForMonth(reportMonth, reportYear);
+
+      print('[NPS Scorecard] Retrieved ${serverData.length} server records');
+      for (int i = 0; i < serverData.length; i++) {
+        print('[NPS Scorecard] Server $i: ${serverData[i]}');
+      }
 
       setState(() {
         _serverNPSData = serverData;
         _isLoadingServerData = false;
       });
     } catch (e) {
+      print('[NPS Scorecard] Error loading server data: $e');
       setState(() {
         _errorMessage = 'Failed to load server NPS data: $e';
         _isLoadingServerData = false;
@@ -506,6 +537,10 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
                                             value: 'one_month_nps',
                                             child: Text('1 Month NPS'),
                                           ),
+                                          DropdownMenuItem(
+                                            value: 'check_average',
+                                            child: Text('Check Average'),
+                                          ),
                                         ],
                                         onChanged: (value) {
                                           if (value != null) {
@@ -681,6 +716,17 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
                                               flex: 2,
                                               child: Text(
                                                 '1 Month NPS',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 14,
+                                                ),
+                                                textAlign: TextAlign.center,
+                                              ),
+                                            ),
+                                            Expanded(
+                                              flex: 2,
+                                              child: Text(
+                                                'Check Average',
                                                 style: TextStyle(
                                                   fontWeight: FontWeight.bold,
                                                   fontSize: 14,
@@ -1047,6 +1093,22 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
                                                           ),
                                                         ),
                                                       ),
+                                                      Expanded(
+                                                        flex: 2,
+                                                        child: Center(
+                                                          child: Text(
+                                                            _formatCheckAverage(
+                                                                _calculateCheckAverage(serverData)),
+                                                            style: TextStyle(
+                                                              color: _getCheckAverageColor(
+                                                                  _calculateCheckAverage(serverData)),
+                                                              fontWeight: FontWeight.w800,
+                                                              fontSize: 16,
+                                                            ),
+                                                            textAlign: TextAlign.center,
+                                                          ),
+                                                        ),
+                                                      ),
                                                     ],
                                                   ),
                                                 );
@@ -1064,5 +1126,33 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
                       ),
                     ),
     );
+  }
+
+  /// Calculate check average from sales and table count
+  double _calculateCheckAverage(Map<String, dynamic> serverData) {
+    final sales = serverData['all_time_sales'] as double? ?? 0.0;
+    final tableCount = serverData['all_time_table_count'] as int? ?? 0;
+    
+    if (tableCount == 0) return 0.0;
+    return sales / tableCount;
+  }
+
+  /// Format check average as currency
+  String _formatCheckAverage(double average) {
+    if (average == 0.0) return 'N/A';
+    return '\$${average.toStringAsFixed(2)}';
+  }
+
+  /// Get color for check average based on performance tiers (matching NPS progression)
+  Color _getCheckAverageColor(double average) {
+    if (average == 0.0) return Colors.grey;
+    if (average >= 100.0) return const Color(0xFF0F7B0F); // Outstanding - Dark Green
+    if (average >= 80.0) return const Color(0xFF228B22);  // Excellent - Green
+    if (average >= 60.0) return const Color(0xFF32CD32);  // Very Good - Light Green
+    if (average >= 40.0) return const Color(0xFF90EE90);  // Good - Very Light Green
+    if (average >= 30.0) return const Color(0xFFFF8C00);  // Developing - Orange
+    if (average >= 20.0) return const Color(0xFFFF6347);  // Growing - Light Orange/Red
+    if (average >= 15.0) return const Color(0xFFDC143C);  // Learning - Red
+    return const Color(0xFF8B0000); // Building - Dark Red
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/nps_provider.dart';
 import '../models/monthly_report.dart';
+import '../services/error_handling_service.dart';
 
 /// Data class for holding server metrics input data
 class ServerMetricsData {
@@ -39,6 +40,14 @@ class ServerMetricsData {
     double? allTimeSales,
     int? allTimeTableCount,
   }) {
+    // Clear all fields first
+    allTimeNpsController.clear();
+    threeMonthNpsController.clear();
+    oneMonthNpsController.clear();
+    allTimeSalesController.clear();
+    allTimeTableCountController.clear();
+    
+    // Then set the provided values
     if (allTimeNpsPercentage != null) {
       allTimeNpsController.text = allTimeNpsPercentage.toStringAsFixed(1);
     }
@@ -137,6 +146,8 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
       final reportMonth = int.parse(
           '${_selectedMonth.year}${_selectedMonth.month.toString().padLeft(2, '0')}');
 
+      debugPrint('🔍 Loading data for month: ${_selectedMonth.year}-${_selectedMonth.month} (reportMonth: $reportMonth)');
+
       // Load existing data for each server
       for (final entry in _serverData.entries) {
         final serverId = entry.key;
@@ -144,6 +155,8 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
           // First try to load saved data from database
           final existingReportMap = await npsProvider.database
               .getMonthlyReport(serverId, reportMonth);
+
+          debugPrint('🔍 Server $serverId - existingReportMap: $existingReportMap');
 
           if (existingReportMap != null) {
             // Load saved data from database
@@ -155,22 +168,14 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
               allTimeSales: report.allTimeSales,
               allTimeTableCount: report.allTimeTableCount,
             );
-            debugPrint('✅ Loaded saved data for server $serverId');
+            debugPrint('✅ Loaded saved data for server $serverId: NPS=${report.allTimeNpsPercentage}, Sales=${report.allTimeSales}');
           } else {
-            // No saved data found, generate fresh report for reference
-            final report = await npsProvider.calculator
-                .generateMonthlyReport(serverId, reportMonth);
-            _serverData[serverId] = _serverData[serverId]!.copyWith(
-              allTimeNpsPercentage: report.allTimeNpsPercentage,
-              threeMonthNpsPercentage: report.threeMonthNpsPercentage,
-              oneMonthNpsPercentage: report.oneMonthNpsPercentage,
-              allTimeSales: report.allTimeSales,
-              allTimeTableCount: report.allTimeTableCount,
-            );
-            debugPrint('📊 Generated fresh data for server $serverId');
+            // No saved data found - clear all fields for this month
+            _serverData[serverId]!.clear();
+            debugPrint('🧹 Cleared data for server $serverId (no saved data for month $reportMonth)');
           }
         } catch (e) {
-          debugPrint('Error loading data for server $serverId: $e');
+          debugPrint('❌ Error loading data for server $serverId: $e');
         }
       }
     } finally {
@@ -337,16 +342,27 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
           ),
           const SizedBox(height: 16),
           Expanded(
-            child: ListView.builder(
-              itemCount: npsProvider.servers.where((s) => s.active).length,
-              itemBuilder: (context, index) {
-                final server =
-                    npsProvider.servers.where((s) => s.active).toList()[index];
-                final serverData = _serverData[server.id] ??
-                    ServerMetricsData(
-                      serverId: server.id ?? 0,
-                      serverName: server.name,
-                    );
+            child: _isLoading
+                ? const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(height: 16),
+                        Text('Loading server data...'),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: npsProvider.servers.where((s) => s.active).length,
+                    itemBuilder: (context, index) {
+                      final server =
+                          npsProvider.servers.where((s) => s.active).toList()[index];
+                      final serverData = _serverData[server.id] ??
+                          ServerMetricsData(
+                            serverId: server.id ?? 0,
+                            serverName: server.name,
+                          );
 
                 return Card(
                   margin: const EdgeInsets.only(bottom: 16),
@@ -457,8 +473,17 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
       width: double.infinity,
       child: ElevatedButton.icon(
         onPressed: _isLoading ? null : _saveData,
-        icon: const Icon(Icons.save),
-        label: const Text('Save All Data'),
+        icon: _isLoading 
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : const Icon(Icons.save),
+        label: Text(_isLoading ? 'Saving...' : 'Save All Data'),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.orange.shade600,
           foregroundColor: Colors.white,
@@ -470,6 +495,8 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
 
   void _selectMonth() async {
     debugPrint('🔘 Month selector tapped!');
+    debugPrint('🔘 Current month: ${_selectedMonth.year}-${_selectedMonth.month}');
+    
     final selectedDate = await showDialog<DateTime>(
       context: context,
       builder: (BuildContext context) {
@@ -480,12 +507,25 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
       },
     );
 
+    debugPrint('🔘 Dialog returned: $selectedDate');
+
     if (selectedDate != null) {
       debugPrint('🔘 Month selected: $selectedDate');
+      debugPrint('🔘 Previous month: ${_selectedMonth.year}-${_selectedMonth.month}');
+      debugPrint('🔘 New month: ${selectedDate.year}-${selectedDate.month}');
+      
+      // Check if the month actually changed
+      if (selectedDate.year == _selectedMonth.year && selectedDate.month == _selectedMonth.month) {
+        debugPrint('🔘 Same month selected, no action needed');
+        return;
+      }
+      
       setState(() {
         _selectedMonth = selectedDate;
-        _loadExistingData();
       });
+      debugPrint('🔘 About to call _loadExistingData() for month: ${_selectedMonth.year}-${_selectedMonth.month}');
+      await _loadExistingData();
+      debugPrint('🔘 _loadExistingData() completed');
     } else {
       debugPrint('🔘 Month selection cancelled');
     }
@@ -545,10 +585,15 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
       final npsProvider = Provider.of<NPSProvider>(context, listen: false);
       final activeServers = npsProvider.servers.where((s) => s.active).toList();
 
+      debugPrint('💾 Starting save for month: ${_selectedMonth.year}-${_selectedMonth.month}');
+      debugPrint('💾 Active servers: ${activeServers.length}');
+
       int savedCount = 0;
 
       for (final server in activeServers) {
         final serverData = _serverData[server.id];
+        debugPrint('💾 Server ${server.name} (ID: ${server.id}) - hasData: ${serverData?.hasData()}');
+        
         if (serverData != null && serverData.hasData()) {
           // Create NPSMonthlyReport from the server data
           final monthKey = _selectedMonth.year * 100 + _selectedMonth.month;
@@ -574,6 +619,8 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
             dataAsOfDate: DateTime.now(),
           );
 
+          debugPrint('💾 Saving report for server ${server.name}: NPS=${report.allTimeNpsPercentage}, Sales=${report.allTimeSales}, MonthKey=$monthKey');
+
           // Save the report using the calculator
           await npsProvider.calculator.saveMonthlyReport(report);
           savedCount++;
@@ -585,23 +632,15 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
       await _loadExistingData();
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content:
-                Text('Successfully saved NPS data for $savedCount servers!'),
-            backgroundColor: Colors.green,
-          ),
+        ErrorHandlingService.showSuccessSnackBar(
+          context,
+          'Successfully saved NPS data for $savedCount servers!',
         );
       }
     } catch (e) {
       debugPrint('❌ Error saving NPS data: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error saving data: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ErrorHandlingService.showErrorSnackBar(context, e);
       }
     } finally {
       setState(() {

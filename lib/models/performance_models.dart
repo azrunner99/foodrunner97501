@@ -1,5 +1,150 @@
 import 'package:flutter/material.dart';
 
+/// Data quality classification for performance scoring
+/// Phase 1: Data Hygiene & Safeguards
+enum DataQuality {
+  complete,    // NPS + sales + shifts ≥ threshold
+  partial,     // Some components missing
+  sparse,      // Below shift or feedback threshold
+  missing      // Insufficient data for scoring
+}
+
+/// Confidence level for performance calculations
+/// Phase 2: Baseline & Fallback Reform
+enum ConfidenceLevel {
+  high,        // 90-100% confidence - all data present
+  medium,      // 70-89% confidence - most data present
+  low,         // 50-69% confidence - limited data
+  veryLow      // <50% confidence - minimal data
+}
+
+/// Performance tier classification for differentiation
+/// Phase 3: Differentiation Mechanics
+enum PerformanceTier {
+  topPerformer,    // Top 20% - exceptional performance
+  good,            // 20-60% - above average performance
+  average,         // 60-80% - average performance
+  needsImprovement // Bottom 20% - below average performance
+}
+
+/// Performance trend direction for temporal analysis
+/// Phase 4: Temporal Derivation Layer
+enum PerformanceTrendDirection {
+  improving,       // Performance is getting better over time
+  stable,          // Performance is consistent
+  declining,       // Performance is getting worse over time
+  volatile         // Performance is inconsistent/erratic
+}
+
+/// Seasonal pattern classification
+/// Phase 4: Temporal Derivation Layer
+enum SeasonalPattern {
+  none,            // No clear seasonal pattern
+  monthly,         // Monthly patterns (e.g., end-of-month busy)
+  weekly,          // Weekly patterns (e.g., weekend busy)
+  daily,           // Daily patterns (e.g., lunch vs dinner)
+  holiday,         // Holiday-related patterns
+  mixed            // Multiple seasonal patterns
+}
+
+/// Time weighting strategy for performance calculations
+/// Phase 4: Temporal Derivation Layer
+enum TimeWeightingStrategy {
+  linear,          // Linear decay over time
+  exponential,     // Exponential decay (recent data weighted more)
+  seasonal,        // Seasonal-aware weighting
+  adaptive         // Adaptive based on data patterns
+}
+
+/// Adaptive weighting strategy for performance calculations
+/// Phase 5: Adaptive Weighting & Confidence
+enum AdaptiveWeightingStrategy {
+  static,          // Fixed weights based on data quality
+  dynamic,         // Weights adjust based on data patterns
+  learning,        // Machine learning-based weight optimization
+  hybrid           // Combination of static and dynamic approaches
+}
+
+/// Confidence interval type for uncertainty quantification
+/// Phase 5: Adaptive Weighting & Confidence
+enum ConfidenceIntervalType {
+  standard,        // Standard statistical confidence interval
+  bootstrap,       // Bootstrap-based confidence interval
+  bayesian,        // Bayesian credible interval
+  empirical        // Empirical distribution-based interval
+}
+
+/// Uncertainty level for performance scores
+/// Phase 5: Adaptive Weighting & Confidence
+enum UncertaintyLevel {
+  veryLow,         // <5% uncertainty - highly reliable
+  low,             // 5-15% uncertainty - reliable
+  medium,          // 15-30% uncertainty - moderate reliability
+  high,            // 30-50% uncertainty - low reliability
+  veryHigh         // >50% uncertainty - very low reliability
+}
+
+/// Performance monitoring event types
+/// Phase 6: Monitoring & Telemetry
+enum PerformanceEventType {
+  scoreCalculation,    // Performance score calculated
+  dataQualityChange,   // Data quality assessment changed
+  confidenceUpdate,    // Confidence level updated
+  trendDetection,      // Performance trend detected
+  anomalyDetected,     // Performance anomaly detected
+  alertTriggered,      // Performance alert triggered
+  systemHealth,        // System health check
+  userInteraction      // User interaction with performance data
+}
+
+/// Alert severity levels for performance monitoring
+/// Phase 6: Monitoring & Telemetry
+enum AlertSeverity {
+  info,            // Informational alert
+  warning,         // Warning level alert
+  critical,        // Critical performance issue
+  emergency        // Emergency performance failure
+}
+
+/// Performance monitoring status
+/// Phase 6: Monitoring & Telemetry
+enum MonitoringStatus {
+  active,          // Monitoring is active
+  paused,          // Monitoring is paused
+  maintenance,     // System in maintenance mode
+  error            // Monitoring system error
+}
+
+/// Rollout deployment status
+/// Phase 7: Rollout & Reconciliation
+enum RolloutStatus {
+  pending,         // Rollout is pending
+  inProgress,      // Rollout is currently in progress
+  completed,       // Rollout completed successfully
+  failed,          // Rollout failed
+  rolledBack,      // Rollout was rolled back
+  paused           // Rollout is paused
+}
+
+/// Validation result status
+/// Phase 7: Rollout & Reconciliation
+enum ValidationStatus {
+  passed,          // Validation passed
+  failed,          // Validation failed
+  warning,         // Validation passed with warnings
+  skipped          // Validation was skipped
+}
+
+/// Reconciliation operation type
+/// Phase 7: Rollout & Reconciliation
+enum ReconciliationType {
+  dataMigration,   // Data migration between systems
+  scoreRecalculation, // Recalculation of performance scores
+  validationCheck, // Validation of data integrity
+  rollback,        // Rollback operation
+  cleanup          // Cleanup operation
+}
+
 /// Represents shift complexity factors for performance calculation
 class ShiftComplexity {
   final String shiftType; // "lunch", "dinner", "double"
@@ -44,6 +189,7 @@ class NPSData {
       categoryBreakdown; // service, food, atmosphere, etc.
   final List<String> guestComments;
   final DateTime lastUpdated;
+  final bool hasActualNpsData; // Phase 2: Distinguish between no data vs 0% data
 
   NPSData({
     required this.serverId,
@@ -54,6 +200,7 @@ class NPSData {
     required this.categoryBreakdown,
     required this.guestComments,
     required this.lastUpdated,
+    this.hasActualNpsData = true, // Default to true for backward compatibility
   });
 
   Map<String, dynamic> toMap() => {
@@ -65,6 +212,7 @@ class NPSData {
         'categoryBreakdown': categoryBreakdown,
         'guestComments': guestComments,
         'lastUpdated': lastUpdated.toIso8601String(),
+        'hasActualNpsData': hasActualNpsData,
       };
 
   static NPSData fromMap(Map<String, dynamic> map) => NPSData(
@@ -78,6 +226,7 @@ class NPSData {
                 .map((k, v) => MapEntry(k.toString(), (v as num).toDouble()))),
         guestComments: List<String>.from(map['guestComments'] as List),
         lastUpdated: DateTime.parse(map['lastUpdated'] as String),
+        hasActualNpsData: map['hasActualNpsData'] as bool? ?? true, // Default to true for backward compatibility
       );
 
   /// Get NPS category based on score
@@ -366,6 +515,35 @@ class PerformanceMetrics {
       );
 }
 
+
+extension DataQualityExtension on DataQuality {
+  String get label {
+    switch (this) {
+      case DataQuality.complete:
+        return 'Complete';
+      case DataQuality.partial:
+        return 'Partial';
+      case DataQuality.sparse:
+        return 'Sparse';
+      case DataQuality.missing:
+        return 'Missing';
+    }
+  }
+
+  String get emoji {
+    switch (this) {
+      case DataQuality.complete:
+        return '✅';
+      case DataQuality.partial:
+        return '🟡';
+      case DataQuality.sparse:
+        return '⚠️';
+      case DataQuality.missing:
+        return '❌';
+    }
+  }
+}
+
 /// Monthly business data for the entire restaurant
 class MonthlyBusinessData {
   final DateTime month;
@@ -469,6 +647,18 @@ class ServerPerformanceData {
   final List<PerformanceFlag> flags;
   final List<PerformanceInsight> insights;
   final DateTime calculatedDate;
+  final DataQuality? dataQuality; // Nullable until Phase 1 flag enabled
+  final double? dataConfidence; // 0-1 scale (future phases)
+  // Phase 2 transparency fields (all nullable for backward compatibility)
+  final double? npsComponentScore; // Post-weight raw NPS component before experience factor
+  final double? salesAbilityScore; // Raw 0-100 sales ability score
+  final double? foodRunningScore; // Composite food running sub-score
+  final double? averageCheck; // Derived or estimated average check used
+  final double? npsWeight; // Applied weights after adjustments
+  final double? salesWeight;
+  final double? foodRunningWeight;
+  // Newly exposed for Phase 2 transparency reconstruction: experience factor applied to weighted score
+  final double? experienceFactor;
 
   ServerPerformanceData({
     required this.serverId,
@@ -486,6 +676,16 @@ class ServerPerformanceData {
     required this.flags,
     required this.insights,
     required this.calculatedDate,
+    this.dataQuality,
+    this.dataConfidence,
+    this.npsComponentScore,
+    this.salesAbilityScore,
+    this.foodRunningScore,
+    this.averageCheck,
+    this.npsWeight,
+    this.salesWeight,
+    this.foodRunningWeight,
+    this.experienceFactor,
   });
 
   Map<String, dynamic> toMap() => {
@@ -504,6 +704,16 @@ class ServerPerformanceData {
         'flags': flags.map((f) => f.index).toList(),
         'insights': insights.map((i) => i.toMap()).toList(),
         'calculatedDate': calculatedDate.toIso8601String(),
+    if (dataQuality != null) 'dataQuality': dataQuality!.index,
+    if (dataConfidence != null) 'dataConfidence': dataConfidence,
+  if (npsComponentScore != null) 'npsComponentScore': npsComponentScore,
+  if (salesAbilityScore != null) 'salesAbilityScore': salesAbilityScore,
+  if (foodRunningScore != null) 'foodRunningScore': foodRunningScore,
+  if (averageCheck != null) 'averageCheck': averageCheck,
+  if (npsWeight != null) 'npsWeight': npsWeight,
+  if (salesWeight != null) 'salesWeight': salesWeight,
+  if (foodRunningWeight != null) 'foodRunningWeight': foodRunningWeight,
+  if (experienceFactor != null) 'experienceFactor': experienceFactor,
       };
 
   static ServerPerformanceData fromMap(Map<String, dynamic> map) =>
@@ -529,6 +739,18 @@ class ServerPerformanceData {
             .map((i) => PerformanceInsight.fromMap(i))
             .toList(),
         calculatedDate: DateTime.parse(map['calculatedDate'] as String),
+    dataQuality: map['dataQuality'] != null
+      ? DataQuality.values[map['dataQuality'] as int]
+      : null,
+    dataConfidence: (map['dataConfidence'] as num?)?.toDouble(),
+    npsComponentScore: (map['npsComponentScore'] as num?)?.toDouble(),
+    salesAbilityScore: (map['salesAbilityScore'] as num?)?.toDouble(),
+    foodRunningScore: (map['foodRunningScore'] as num?)?.toDouble(),
+    averageCheck: (map['averageCheck'] as num?)?.toDouble(),
+    npsWeight: (map['npsWeight'] as num?)?.toDouble(),
+    salesWeight: (map['salesWeight'] as num?)?.toDouble(),
+    foodRunningWeight: (map['foodRunningWeight'] as num?)?.toDouble(),
+    experienceFactor: (map['experienceFactor'] as num?)?.toDouble(),
       );
 
   /// Get the primary performance insight for display
@@ -566,6 +788,11 @@ class ServerPerformanceData {
 
   /// Get formatted performance score as percentage
   String get formattedScore => '${performanceScore.toStringAsFixed(1)}%';
+
+  /// Convenience badge string combining emoji + label when available.
+  String? get dataQualityBadge => dataQuality != null
+      ? '${dataQuality!.emoji} ${dataQuality!.label}'
+      : null;
 }
 
 /// Performance trend data for visualization
@@ -595,4 +822,710 @@ class PerformanceTrend {
         foodRuns: map['foodRuns'] as int,
         shifts: map['shifts'] as int,
       );
+}
+
+/// Temporal analysis data for performance calculations
+/// Phase 4: Temporal Derivation Layer
+class TemporalAnalysis {
+  final PerformanceTrendDirection trend;
+  final double trendStrength; // 0-1, how strong the trend is
+  final double performanceVelocity; // Rate of change over time
+  final SeasonalPattern seasonalPattern;
+  final double seasonalStrength; // 0-1, how strong seasonal patterns are
+  final Map<String, double> seasonalFactors; // Month/day factors
+  final double timeWeightedScore; // Score adjusted for recency
+  final DateTime analysisDate;
+  final int dataPointsAnalyzed;
+
+  TemporalAnalysis({
+    required this.trend,
+    required this.trendStrength,
+    required this.performanceVelocity,
+    required this.seasonalPattern,
+    required this.seasonalStrength,
+    required this.seasonalFactors,
+    required this.timeWeightedScore,
+    required this.analysisDate,
+    required this.dataPointsAnalyzed,
+  });
+
+  Map<String, dynamic> toMap() => {
+    'trend': trend.index,
+    'trendStrength': trendStrength,
+    'performanceVelocity': performanceVelocity,
+    'seasonalPattern': seasonalPattern.index,
+    'seasonalStrength': seasonalStrength,
+    'seasonalFactors': seasonalFactors,
+    'timeWeightedScore': timeWeightedScore,
+    'analysisDate': analysisDate.toIso8601String(),
+    'dataPointsAnalyzed': dataPointsAnalyzed,
+  };
+
+  factory TemporalAnalysis.fromMap(Map<String, dynamic> map) => TemporalAnalysis(
+    trend: PerformanceTrendDirection.values[map['trend']],
+    trendStrength: map['trendStrength'].toDouble(),
+    performanceVelocity: map['performanceVelocity'].toDouble(),
+    seasonalPattern: SeasonalPattern.values[map['seasonalPattern']],
+    seasonalStrength: map['seasonalStrength'].toDouble(),
+    seasonalFactors: Map<String, double>.from(map['seasonalFactors']),
+    timeWeightedScore: map['timeWeightedScore'].toDouble(),
+    analysisDate: DateTime.parse(map['analysisDate']),
+    dataPointsAnalyzed: map['dataPointsAnalyzed'],
+  );
+}
+
+/// Time-weighted performance data point
+/// Phase 4: Temporal Derivation Layer
+class TemporalDataPoint {
+  final DateTime date;
+  final double performanceScore;
+  final double weight; // Time-based weight (0-1)
+  final Map<String, double> contextFactors; // Business context factors
+
+  TemporalDataPoint({
+    required this.date,
+    required this.performanceScore,
+    required this.weight,
+    required this.contextFactors,
+  });
+
+  Map<String, dynamic> toMap() => {
+    'date': date.toIso8601String(),
+    'performanceScore': performanceScore,
+    'weight': weight,
+    'contextFactors': contextFactors,
+  };
+
+  factory TemporalDataPoint.fromMap(Map<String, dynamic> map) => TemporalDataPoint(
+    date: DateTime.parse(map['date']),
+    performanceScore: map['performanceScore'].toDouble(),
+    weight: map['weight'].toDouble(),
+    contextFactors: Map<String, double>.from(map['contextFactors']),
+  );
+}
+
+/// Adaptive weighting configuration for performance calculations
+/// Phase 5: Adaptive Weighting & Confidence
+class AdaptiveWeightingConfig {
+  final AdaptiveWeightingStrategy strategy;
+  final Map<String, double> baseWeights; // Component weights (NPS, sales, runs, etc.)
+  final Map<String, double> qualityMultipliers; // Quality-based weight adjustments
+  final Map<String, double> recencyMultipliers; // Time-based weight adjustments
+  final double learningRate; // Rate of weight adaptation
+  final int minDataPoints; // Minimum data points for reliable weighting
+  final DateTime lastUpdated;
+
+  AdaptiveWeightingConfig({
+    required this.strategy,
+    required this.baseWeights,
+    required this.qualityMultipliers,
+    required this.recencyMultipliers,
+    required this.learningRate,
+    required this.minDataPoints,
+    required this.lastUpdated,
+  });
+
+  Map<String, dynamic> toMap() => {
+    'strategy': strategy.index,
+    'baseWeights': baseWeights,
+    'qualityMultipliers': qualityMultipliers,
+    'recencyMultipliers': recencyMultipliers,
+    'learningRate': learningRate,
+    'minDataPoints': minDataPoints,
+    'lastUpdated': lastUpdated.toIso8601String(),
+  };
+
+  factory AdaptiveWeightingConfig.fromMap(Map<String, dynamic> map) => AdaptiveWeightingConfig(
+    strategy: AdaptiveWeightingStrategy.values[map['strategy']],
+    baseWeights: Map<String, double>.from(map['baseWeights']),
+    qualityMultipliers: Map<String, double>.from(map['qualityMultipliers']),
+    recencyMultipliers: Map<String, double>.from(map['recencyMultipliers']),
+    learningRate: map['learningRate'].toDouble(),
+    minDataPoints: map['minDataPoints'],
+    lastUpdated: DateTime.parse(map['lastUpdated']),
+  );
+}
+
+/// Confidence interval for performance scores
+/// Phase 5: Adaptive Weighting & Confidence
+class ConfidenceInterval {
+  final double lowerBound;
+  final double upperBound;
+  final double confidenceLevel; // 0.95 for 95% confidence
+  final ConfidenceIntervalType type;
+  final UncertaintyLevel uncertaintyLevel;
+  final double marginOfError;
+
+  ConfidenceInterval({
+    required this.lowerBound,
+    required this.upperBound,
+    required this.confidenceLevel,
+    required this.type,
+    required this.uncertaintyLevel,
+    required this.marginOfError,
+  });
+
+  /// Check if a score falls within this confidence interval
+  bool contains(double score) => score >= lowerBound && score <= upperBound;
+
+  /// Get the width of the confidence interval
+  double get width => upperBound - lowerBound;
+
+  /// Get the relative uncertainty as a percentage
+  double get relativeUncertainty => (width / ((lowerBound + upperBound) / 2)) * 100;
+
+  Map<String, dynamic> toMap() => {
+    'lowerBound': lowerBound,
+    'upperBound': upperBound,
+    'confidenceLevel': confidenceLevel,
+    'type': type.index,
+    'uncertaintyLevel': uncertaintyLevel.index,
+    'marginOfError': marginOfError,
+  };
+
+  factory ConfidenceInterval.fromMap(Map<String, dynamic> map) => ConfidenceInterval(
+    lowerBound: map['lowerBound'].toDouble(),
+    upperBound: map['upperBound'].toDouble(),
+    confidenceLevel: map['confidenceLevel'].toDouble(),
+    type: ConfidenceIntervalType.values[map['type']],
+    uncertaintyLevel: UncertaintyLevel.values[map['uncertaintyLevel']],
+    marginOfError: map['marginOfError'].toDouble(),
+  );
+}
+
+/// Adaptive performance score with confidence information
+/// Phase 5: Adaptive Weighting & Confidence
+class AdaptivePerformanceScore {
+  final double score;
+  final ConfidenceInterval confidenceInterval;
+  final Map<String, double> componentScores; // Individual component scores
+  final Map<String, double> componentWeights; // Weights used for each component
+  final AdaptiveWeightingConfig weightingConfig;
+  final DataQuality dataQuality;
+  final ConfidenceLevel confidenceLevel;
+  final DateTime calculatedAt;
+
+  AdaptivePerformanceScore({
+    required this.score,
+    required this.confidenceInterval,
+    required this.componentScores,
+    required this.componentWeights,
+    required this.weightingConfig,
+    required this.dataQuality,
+    required this.confidenceLevel,
+    required this.calculatedAt,
+  });
+
+  /// Get formatted score with uncertainty range
+  String get formattedScoreWithUncertainty {
+    final uncertainty = confidenceInterval.relativeUncertainty;
+    return '${score.toStringAsFixed(1)}% ±${uncertainty.toStringAsFixed(1)}%';
+  }
+
+  /// Check if this score is significantly different from another score
+  bool isSignificantlyDifferent(AdaptivePerformanceScore other, {double significanceLevel = 0.05}) {
+    // Check if confidence intervals overlap
+    return !(confidenceInterval.contains(other.score) || other.confidenceInterval.contains(score));
+  }
+
+  Map<String, dynamic> toMap() => {
+    'score': score,
+    'confidenceInterval': confidenceInterval.toMap(),
+    'componentScores': componentScores,
+    'componentWeights': componentWeights,
+    'weightingConfig': weightingConfig.toMap(),
+    'dataQuality': dataQuality.index,
+    'confidenceLevel': confidenceLevel.index,
+    'calculatedAt': calculatedAt.toIso8601String(),
+  };
+
+  factory AdaptivePerformanceScore.fromMap(Map<String, dynamic> map) => AdaptivePerformanceScore(
+    score: map['score'].toDouble(),
+    confidenceInterval: ConfidenceInterval.fromMap(map['confidenceInterval']),
+    componentScores: Map<String, double>.from(map['componentScores']),
+    componentWeights: Map<String, double>.from(map['componentWeights']),
+    weightingConfig: AdaptiveWeightingConfig.fromMap(map['weightingConfig']),
+    dataQuality: DataQuality.values[map['dataQuality']],
+    confidenceLevel: ConfidenceLevel.values[map['confidenceLevel']],
+    calculatedAt: DateTime.parse(map['calculatedAt']),
+  );
+}
+
+/// Performance telemetry event for monitoring and analytics
+/// Phase 6: Monitoring & Telemetry
+class PerformanceTelemetryEvent {
+  final String id;
+  final PerformanceEventType eventType;
+  final String serverId;
+  final Map<String, dynamic> eventData;
+  final Map<String, dynamic> contextData;
+  final DateTime timestamp;
+  final String sessionId;
+  final String userId;
+
+  PerformanceTelemetryEvent({
+    required this.id,
+    required this.eventType,
+    required this.serverId,
+    required this.eventData,
+    required this.contextData,
+    required this.timestamp,
+    required this.sessionId,
+    required this.userId,
+  });
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'eventType': eventType.index,
+    'serverId': serverId,
+    'eventData': eventData,
+    'contextData': contextData,
+    'timestamp': timestamp.toIso8601String(),
+    'sessionId': sessionId,
+    'userId': userId,
+  };
+
+  factory PerformanceTelemetryEvent.fromMap(Map<String, dynamic> map) => PerformanceTelemetryEvent(
+    id: map['id'],
+    eventType: PerformanceEventType.values[map['eventType']],
+    serverId: map['serverId'],
+    eventData: Map<String, dynamic>.from(map['eventData']),
+    contextData: Map<String, dynamic>.from(map['contextData']),
+    timestamp: DateTime.parse(map['timestamp']),
+    sessionId: map['sessionId'],
+    userId: map['userId'],
+  );
+}
+
+/// Performance alert for monitoring system
+/// Phase 6: Monitoring & Telemetry
+class PerformanceAlert {
+  final String id;
+  final String serverId;
+  final AlertSeverity severity;
+  final String title;
+  final String description;
+  final Map<String, dynamic> alertData;
+  final DateTime triggeredAt;
+  final DateTime? acknowledgedAt;
+  final String? acknowledgedBy;
+  final bool isResolved;
+  final DateTime? resolvedAt;
+  final String? resolvedBy;
+
+  PerformanceAlert({
+    required this.id,
+    required this.serverId,
+    required this.severity,
+    required this.title,
+    required this.description,
+    required this.alertData,
+    required this.triggeredAt,
+    this.acknowledgedAt,
+    this.acknowledgedBy,
+    this.isResolved = false,
+    this.resolvedAt,
+    this.resolvedBy,
+  });
+
+  /// Get alert age in minutes
+  int get ageInMinutes => DateTime.now().difference(triggeredAt).inMinutes;
+
+  /// Check if alert is stale (older than 24 hours)
+  bool get isStale => ageInMinutes > 1440;
+
+  /// Get alert status
+  String get status {
+    if (isResolved) return 'Resolved';
+    if (acknowledgedAt != null) return 'Acknowledged';
+    return 'Active';
+  }
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'serverId': serverId,
+    'severity': severity.index,
+    'title': title,
+    'description': description,
+    'alertData': alertData,
+    'triggeredAt': triggeredAt.toIso8601String(),
+    'acknowledgedAt': acknowledgedAt?.toIso8601String(),
+    'acknowledgedBy': acknowledgedBy,
+    'isResolved': isResolved,
+    'resolvedAt': resolvedAt?.toIso8601String(),
+    'resolvedBy': resolvedBy,
+  };
+
+  factory PerformanceAlert.fromMap(Map<String, dynamic> map) => PerformanceAlert(
+    id: map['id'],
+    serverId: map['serverId'],
+    severity: AlertSeverity.values[map['severity']],
+    title: map['title'],
+    description: map['description'],
+    alertData: Map<String, dynamic>.from(map['alertData']),
+    triggeredAt: DateTime.parse(map['triggeredAt']),
+    acknowledgedAt: map['acknowledgedAt'] != null ? DateTime.parse(map['acknowledgedAt']) : null,
+    acknowledgedBy: map['acknowledgedBy'],
+    isResolved: map['isResolved'] ?? false,
+    resolvedAt: map['resolvedAt'] != null ? DateTime.parse(map['resolvedAt']) : null,
+    resolvedBy: map['resolvedBy'],
+  );
+}
+
+/// Performance monitoring configuration
+/// Phase 6: Monitoring & Telemetry
+class PerformanceMonitoringConfig {
+  final bool isEnabled;
+  final MonitoringStatus status;
+  final Map<String, double> alertThresholds;
+  final Map<String, int> monitoringIntervals;
+  final List<String> enabledMetrics;
+  final Map<String, dynamic> customSettings;
+  final DateTime lastUpdated;
+
+  PerformanceMonitoringConfig({
+    required this.isEnabled,
+    required this.status,
+    required this.alertThresholds,
+    required this.monitoringIntervals,
+    required this.enabledMetrics,
+    required this.customSettings,
+    required this.lastUpdated,
+  });
+
+  Map<String, dynamic> toMap() => {
+    'isEnabled': isEnabled,
+    'status': status.index,
+    'alertThresholds': alertThresholds,
+    'monitoringIntervals': monitoringIntervals,
+    'enabledMetrics': enabledMetrics,
+    'customSettings': customSettings,
+    'lastUpdated': lastUpdated.toIso8601String(),
+  };
+
+  factory PerformanceMonitoringConfig.fromMap(Map<String, dynamic> map) => PerformanceMonitoringConfig(
+    isEnabled: map['isEnabled'],
+    status: MonitoringStatus.values[map['status']],
+    alertThresholds: Map<String, double>.from(map['alertThresholds']),
+    monitoringIntervals: Map<String, int>.from(map['monitoringIntervals']),
+    enabledMetrics: List<String>.from(map['enabledMetrics']),
+    customSettings: Map<String, dynamic>.from(map['customSettings']),
+    lastUpdated: DateTime.parse(map['lastUpdated']),
+  );
+}
+
+/// Performance analytics summary for monitoring dashboard
+/// Phase 6: Monitoring & Telemetry
+class PerformanceAnalyticsSummary {
+  final DateTime generatedAt;
+  final Map<String, double> averageScores;
+  final Map<String, int> scoreDistribution;
+  final List<String> topPerformers;
+  final List<String> bottomPerformers;
+  final Map<String, int> alertCounts;
+  final Map<String, double> trendMetrics;
+  final Map<String, dynamic> systemHealth;
+
+  PerformanceAnalyticsSummary({
+    required this.generatedAt,
+    required this.averageScores,
+    required this.scoreDistribution,
+    required this.topPerformers,
+    required this.bottomPerformers,
+    required this.alertCounts,
+    required this.trendMetrics,
+    required this.systemHealth,
+  });
+
+  Map<String, dynamic> toMap() => {
+    'generatedAt': generatedAt.toIso8601String(),
+    'averageScores': averageScores,
+    'scoreDistribution': scoreDistribution,
+    'topPerformers': topPerformers,
+    'bottomPerformers': bottomPerformers,
+    'alertCounts': alertCounts,
+    'trendMetrics': trendMetrics,
+    'systemHealth': systemHealth,
+  };
+
+  factory PerformanceAnalyticsSummary.fromMap(Map<String, dynamic> map) => PerformanceAnalyticsSummary(
+    generatedAt: DateTime.parse(map['generatedAt']),
+    averageScores: Map<String, double>.from(map['averageScores']),
+    scoreDistribution: Map<String, int>.from(map['scoreDistribution']),
+    topPerformers: List<String>.from(map['topPerformers']),
+    bottomPerformers: List<String>.from(map['bottomPerformers']),
+    alertCounts: Map<String, int>.from(map['alertCounts']),
+    trendMetrics: Map<String, double>.from(map['trendMetrics']),
+    systemHealth: Map<String, dynamic>.from(map['systemHealth']),
+  );
+}
+
+/// Performance rollout deployment record
+/// Phase 7: Rollout & Reconciliation
+class PerformanceRollout {
+  final String id;
+  final String version;
+  final List<int> phases;
+  final RolloutStatus status;
+  final DateTime startedAt;
+  final DateTime? completedAt;
+  final String? initiatedBy;
+  final Map<String, dynamic> configuration;
+  final List<String> affectedServers;
+  final Map<String, dynamic> metrics;
+  final String? errorMessage;
+  final Map<String, dynamic> rollbackData;
+
+  PerformanceRollout({
+    required this.id,
+    required this.version,
+    required this.phases,
+    required this.status,
+    required this.startedAt,
+    this.completedAt,
+    this.initiatedBy,
+    required this.configuration,
+    required this.affectedServers,
+    required this.metrics,
+    this.errorMessage,
+    required this.rollbackData,
+  });
+
+  /// Get rollout duration
+  Duration? get duration {
+    if (completedAt != null) {
+      return completedAt!.difference(startedAt);
+    }
+    return null;
+  }
+
+  /// Check if rollout is active
+  bool get isActive => status == RolloutStatus.inProgress || status == RolloutStatus.pending;
+
+  /// Check if rollout was successful
+  bool get isSuccessful => status == RolloutStatus.completed;
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'version': version,
+    'phases': phases,
+    'status': status.index,
+    'startedAt': startedAt.toIso8601String(),
+    'completedAt': completedAt?.toIso8601String(),
+    'initiatedBy': initiatedBy,
+    'configuration': configuration,
+    'affectedServers': affectedServers,
+    'metrics': metrics,
+    'errorMessage': errorMessage,
+    'rollbackData': rollbackData,
+  };
+
+  factory PerformanceRollout.fromMap(Map<String, dynamic> map) => PerformanceRollout(
+    id: map['id'],
+    version: map['version'],
+    phases: List<int>.from(map['phases']),
+    status: RolloutStatus.values[map['status']],
+    startedAt: DateTime.parse(map['startedAt']),
+    completedAt: map['completedAt'] != null ? DateTime.parse(map['completedAt']) : null,
+    initiatedBy: map['initiatedBy'],
+    configuration: Map<String, dynamic>.from(map['configuration']),
+    affectedServers: List<String>.from(map['affectedServers']),
+    metrics: Map<String, dynamic>.from(map['metrics']),
+    errorMessage: map['errorMessage'],
+    rollbackData: Map<String, dynamic>.from(map['rollbackData']),
+  );
+}
+
+/// Performance validation result
+/// Phase 7: Rollout & Reconciliation
+class PerformanceValidation {
+  final String id;
+  final String rolloutId;
+  final ValidationStatus status;
+  final String validationType;
+  final Map<String, dynamic> criteria;
+  final Map<String, dynamic> results;
+  final List<String> warnings;
+  final List<String> errors;
+  final DateTime validatedAt;
+  final String? validatedBy;
+  final Map<String, dynamic> metadata;
+
+  PerformanceValidation({
+    required this.id,
+    required this.rolloutId,
+    required this.status,
+    required this.validationType,
+    required this.criteria,
+    required this.results,
+    required this.warnings,
+    required this.errors,
+    required this.validatedAt,
+    this.validatedBy,
+    required this.metadata,
+  });
+
+  /// Check if validation passed
+  bool get passed => status == ValidationStatus.passed;
+
+  /// Check if validation has warnings
+  bool get hasWarnings => warnings.isNotEmpty;
+
+  /// Check if validation has errors
+  bool get hasErrors => errors.isNotEmpty;
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'rolloutId': rolloutId,
+    'status': status.index,
+    'validationType': validationType,
+    'criteria': criteria,
+    'results': results,
+    'warnings': warnings,
+    'errors': errors,
+    'validatedAt': validatedAt.toIso8601String(),
+    'validatedBy': validatedBy,
+    'metadata': metadata,
+  };
+
+  factory PerformanceValidation.fromMap(Map<String, dynamic> map) => PerformanceValidation(
+    id: map['id'],
+    rolloutId: map['rolloutId'],
+    status: ValidationStatus.values[map['status']],
+    validationType: map['validationType'],
+    criteria: Map<String, dynamic>.from(map['criteria']),
+    results: Map<String, dynamic>.from(map['results']),
+    warnings: List<String>.from(map['warnings']),
+    errors: List<String>.from(map['errors']),
+    validatedAt: DateTime.parse(map['validatedAt']),
+    validatedBy: map['validatedBy'],
+    metadata: Map<String, dynamic>.from(map['metadata']),
+  );
+}
+
+/// Performance reconciliation operation
+/// Phase 7: Rollout & Reconciliation
+class PerformanceReconciliation {
+  final String id;
+  final String rolloutId;
+  final ReconciliationType type;
+  final String description;
+  final Map<String, dynamic> parameters;
+  final Map<String, dynamic> beforeState;
+  final Map<String, dynamic> afterState;
+  final DateTime startedAt;
+  final DateTime? completedAt;
+  final String? initiatedBy;
+  final bool isSuccessful;
+  final String? errorMessage;
+  final Map<String, dynamic> metrics;
+
+  PerformanceReconciliation({
+    required this.id,
+    required this.rolloutId,
+    required this.type,
+    required this.description,
+    required this.parameters,
+    required this.beforeState,
+    required this.afterState,
+    required this.startedAt,
+    this.completedAt,
+    this.initiatedBy,
+    required this.isSuccessful,
+    this.errorMessage,
+    required this.metrics,
+  });
+
+  /// Get operation duration
+  Duration? get duration {
+    if (completedAt != null) {
+      return completedAt!.difference(startedAt);
+    }
+    return null;
+  }
+
+  /// Check if operation is complete
+  bool get isComplete => completedAt != null;
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'rolloutId': rolloutId,
+    'type': type.index,
+    'description': description,
+    'parameters': parameters,
+    'beforeState': beforeState,
+    'afterState': afterState,
+    'startedAt': startedAt.toIso8601String(),
+    'completedAt': completedAt?.toIso8601String(),
+    'initiatedBy': initiatedBy,
+    'isSuccessful': isSuccessful,
+    'errorMessage': errorMessage,
+    'metrics': metrics,
+  };
+
+  factory PerformanceReconciliation.fromMap(Map<String, dynamic> map) => PerformanceReconciliation(
+    id: map['id'],
+    rolloutId: map['rolloutId'],
+    type: ReconciliationType.values[map['type']],
+    description: map['description'],
+    parameters: Map<String, dynamic>.from(map['parameters']),
+    beforeState: Map<String, dynamic>.from(map['beforeState']),
+    afterState: Map<String, dynamic>.from(map['afterState']),
+    startedAt: DateTime.parse(map['startedAt']),
+    completedAt: map['completedAt'] != null ? DateTime.parse(map['completedAt']) : null,
+    initiatedBy: map['initiatedBy'],
+    isSuccessful: map['isSuccessful'],
+    errorMessage: map['errorMessage'],
+    metrics: Map<String, dynamic>.from(map['metrics']),
+  );
+}
+
+/// Performance rollout configuration
+/// Phase 7: Rollout & Reconciliation
+class PerformanceRolloutConfig {
+  final String version;
+  final List<int> enabledPhases;
+  final Map<String, bool> featureFlags;
+  final Map<String, dynamic> rolloutSettings;
+  final Map<String, dynamic> validationCriteria;
+  final Map<String, dynamic> rollbackSettings;
+  final DateTime createdAt;
+  final String createdBy;
+  final bool isActive;
+
+  PerformanceRolloutConfig({
+    required this.version,
+    required this.enabledPhases,
+    required this.featureFlags,
+    required this.rolloutSettings,
+    required this.validationCriteria,
+    required this.rollbackSettings,
+    required this.createdAt,
+    required this.createdBy,
+    required this.isActive,
+  });
+
+  Map<String, dynamic> toMap() => {
+    'version': version,
+    'enabledPhases': enabledPhases,
+    'featureFlags': featureFlags,
+    'rolloutSettings': rolloutSettings,
+    'validationCriteria': validationCriteria,
+    'rollbackSettings': rollbackSettings,
+    'createdAt': createdAt.toIso8601String(),
+    'createdBy': createdBy,
+    'isActive': isActive,
+  };
+
+  factory PerformanceRolloutConfig.fromMap(Map<String, dynamic> map) => PerformanceRolloutConfig(
+    version: map['version'],
+    enabledPhases: List<int>.from(map['enabledPhases']),
+    featureFlags: Map<String, bool>.from(map['featureFlags']),
+    rolloutSettings: Map<String, dynamic>.from(map['rolloutSettings']),
+    validationCriteria: Map<String, dynamic>.from(map['validationCriteria']),
+    rollbackSettings: Map<String, dynamic>.from(map['rollbackSettings']),
+    createdAt: DateTime.parse(map['createdAt']),
+    createdBy: map['createdBy'],
+    isActive: map['isActive'],
+  );
 }

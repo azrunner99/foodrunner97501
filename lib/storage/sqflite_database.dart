@@ -20,7 +20,7 @@ class SqfliteNPSDatabase implements DatabaseInterface {
 
       _database = await sqflite.openDatabase(
         _databasePath!,
-        version: 2,
+        version: 5, // Increment to force schema recreation with new indexes
         onCreate: _createDatabase,
         onUpgrade: _upgradeDatabase,
       );
@@ -66,15 +66,24 @@ class SqfliteNPSDatabase implements DatabaseInterface {
         id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
         server_id INTEGER NOT NULL,
         month_year TEXT NOT NULL,
-        total_responses INTEGER NOT NULL DEFAULT 0,
-        average_score REAL NOT NULL DEFAULT 0.0,
-        nps_score INTEGER NOT NULL DEFAULT 0,
-        promoters INTEGER NOT NULL DEFAULT 0,
-        passives INTEGER NOT NULL DEFAULT 0,
-        detractors INTEGER NOT NULL DEFAULT 0,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (server_id) REFERENCES servers (id)
+        all_time_nps_percentage REAL,
+        three_month_nps_percentage REAL,
+        one_month_nps_percentage REAL,
+        all_time_sales REAL DEFAULT 0.00,
+        all_time_table_count INTEGER DEFAULT 0,
+        month_feedback_yes INTEGER DEFAULT 0,
+        month_feedback_maybe INTEGER DEFAULT 0,
+        month_feedback_no INTEGER DEFAULT 0,
+        three_month_feedback_yes INTEGER DEFAULT 0,
+        three_month_feedback_maybe INTEGER DEFAULT 0,
+        three_month_feedback_no INTEGER DEFAULT 0,
+        all_time_feedback_yes INTEGER DEFAULT 0,
+        all_time_feedback_maybe INTEGER DEFAULT 0,
+        all_time_feedback_no INTEGER DEFAULT 0,
+        generated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        data_as_of_date DATE NOT NULL,
+        FOREIGN KEY (server_id) REFERENCES servers (id) ON DELETE RESTRICT,
+        UNIQUE(server_id, month_year)
       )
     ''');
 
@@ -95,18 +104,77 @@ class SqfliteNPSDatabase implements DatabaseInterface {
       )
     ''');
 
-    // Create indexes for performance
+    // Create comprehensive indexes for performance optimization
     await db.execute('CREATE INDEX idx_servers_active ON servers (active)');
+    await db.execute('CREATE INDEX idx_servers_name ON servers (name)');
+    await db.execute('CREATE INDEX idx_servers_hire_date ON servers (hire_date)');
+    
+    // NPS Feedback indexes - optimized for frequent queries
     await db.execute('CREATE INDEX idx_nps_feedback_server_id ON nps_feedback (server_id)');
     await db.execute('CREATE INDEX idx_nps_feedback_shift_date ON nps_feedback (shift_date)');
+    await db.execute('CREATE INDEX idx_nps_feedback_server_date ON nps_feedback (server_id, shift_date)');
+    await db.execute('CREATE INDEX idx_nps_feedback_type ON nps_feedback (feedback_type)');
+    await db.execute('CREATE INDEX idx_nps_feedback_server_type ON nps_feedback (server_id, feedback_type)');
+    
+    // Monthly reports indexes - critical for data entry performance
     await db.execute('CREATE INDEX idx_nps_monthly_reports_server_month ON nps_monthly_reports (server_id, month_year)');
+    await db.execute('CREATE INDEX idx_nps_monthly_reports_month_year ON nps_monthly_reports (month_year)');
+    await db.execute('CREATE INDEX idx_nps_monthly_reports_server_id ON nps_monthly_reports (server_id)');
+    await db.execute('CREATE INDEX idx_nps_monthly_reports_nps_score ON nps_monthly_reports (all_time_nps_percentage)');
+    
+    // Calculation log indexes
     await db.execute('CREATE INDEX idx_nps_calculation_log_server_date ON nps_calculation_log (server_id, calculation_date)');
+    await db.execute('CREATE INDEX idx_nps_calculation_log_date ON nps_calculation_log (calculation_date)');
   }
 
   /// Upgrade database schema
   Future<void> _upgradeDatabase(sqflite.Database db, int oldVersion, int newVersion) async {
-    // Handle schema migrations if needed
     d('[SqfliteNPSDatabase] Upgrading database from version $oldVersion to $newVersion');
+    
+    if (oldVersion < 5) {
+      // Migrate from old schema to new schema
+      try {
+        // Drop the old table if it exists
+        await db.execute('DROP TABLE IF EXISTS nps_monthly_reports');
+        
+        // Create the new table with Android Sqflite schema
+        await db.execute('''
+          CREATE TABLE nps_monthly_reports (
+            id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            server_id INTEGER NOT NULL,
+            month_year TEXT NOT NULL,
+            all_time_nps_percentage REAL,
+            three_month_nps_percentage REAL,
+            one_month_nps_percentage REAL,
+            all_time_sales REAL DEFAULT 0.00,
+            all_time_table_count INTEGER DEFAULT 0,
+            month_feedback_yes INTEGER DEFAULT 0,
+            month_feedback_maybe INTEGER DEFAULT 0,
+            month_feedback_no INTEGER DEFAULT 0,
+            three_month_feedback_yes INTEGER DEFAULT 0,
+            three_month_feedback_maybe INTEGER DEFAULT 0,
+            three_month_feedback_no INTEGER DEFAULT 0,
+            all_time_feedback_yes INTEGER DEFAULT 0,
+            all_time_feedback_maybe INTEGER DEFAULT 0,
+            all_time_feedback_no INTEGER DEFAULT 0,
+            generated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            data_as_of_date DATE NOT NULL,
+            FOREIGN KEY (server_id) REFERENCES servers (id) ON DELETE RESTRICT,
+            UNIQUE(server_id, month_year)
+          )
+        ''');
+        
+        // Create indexes
+        await db.execute('CREATE INDEX idx_monthly_reports_server_id ON nps_monthly_reports(server_id)');
+        await db.execute('CREATE INDEX idx_monthly_reports_month_year ON nps_monthly_reports(month_year)');
+        await db.execute('CREATE INDEX idx_monthly_reports_server_month ON nps_monthly_reports(server_id, month_year)');
+        
+        d('[SqfliteNPSDatabase] Successfully migrated nps_monthly_reports table to new schema');
+      } catch (e) {
+        d('[SqfliteNPSDatabase] Error during migration: $e');
+        rethrow;
+      }
+    }
   }
 
   @override

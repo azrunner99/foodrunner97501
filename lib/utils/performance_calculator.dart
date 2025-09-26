@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import '../models/performance_models.dart';
+import '../feature_flags.dart';
 import '../models.dart';
 import '../storage.dart';
 import '../providers/nps_provider.dart';
@@ -7,6 +8,17 @@ import 'log.dart';
 
 /// Core performance calculation engine with mathematical algorithms
 class PerformanceCalculator {
+  // Simple in-memory cache for restaurant baseline average check within a batch
+  static final Map<String, double> _baselineAvgCheckCache = {};
+  static String _baselineCacheKey(MonthlyBusinessData? businessData, List<NPSData>? npsHistory) {
+    final bdKey = businessData == null
+        ? 'null'
+        : '${businessData.totalSales.toStringAsFixed(0)}:${businessData.totalGuestCount.toStringAsFixed(0)}';
+    final npsKey = (npsHistory == null || npsHistory.isEmpty)
+        ? 'null'
+        : npsHistory.length.toString();
+    return '$bdKey|$npsKey';
+  }
   /// Default shift difficulty multipliers
   static const Map<String, double> defaultDifficultyMultipliers = {
     'lunch': 1.0, // Baseline
@@ -181,36 +193,72 @@ class PerformanceCalculator {
     );
 
     // Calculate NPS data availability for fair scoring
-    final npsDataMonths = npsHistory
-            ?.where((nps) => nps.serverId == serverId)
-            .where((nps) =>
-                nps.month.isAfter(startDate.subtract(const Duration(days: 90))))
-            .length ??
-        0;
+  // Timeframe aligned NPS month count: only months inside evaluation window.
+  final npsDataMonths = npsHistory
+      ?.where((nps) => nps.serverId == serverId)
+      .where((nps) => !nps.month.isBefore(startDate) && !nps.month.isAfter(endDate))
+      .length ?? 0;
 
     // Calculate overall performance score
     // For Sales Ability (average check), prefer NPS all-time totals when available; fallback to period inputs
-    final avgCheckSalesSource =
-        npsAllTimeSales > 0 ? npsAllTimeSales : periodSales;
-    final avgCheckChecksSource =
-        npsAllTimeChecks > 0 ? npsAllTimeChecks : periodCheckCount;
+    // Enhanced timeframe-aware derivation: if month-level fields captured in categoryBreakdown, aggregate those for the window;
+    // else fallback to all-time cumulative values (previous behavior) or period approximations.
+    double timeframeSales = 0.0;
+    double timeframeChecks = 0.0;
+    if (npsHistory != null && npsHistory.isNotEmpty) {
+      // Filter months in window for this server and sum month-level values if present.
+      final windowMonths = npsHistory.where((n) => n.serverId == serverId && !n.month.isBefore(startDate) && !n.month.isAfter(endDate)).toList();
+      if (windowMonths.isNotEmpty) {
+        for (final m in windowMonths) {
+          final ms = m.categoryBreakdown['month_sales'];
+          final mc = m.categoryBreakdown['month_checks'];
+          if (ms != null && mc != null) {
+            timeframeSales += ms;
+            timeframeChecks += mc;
+          }
+        }
+      }
+    }
+    final avgCheckSalesSource = timeframeSales > 0 ? timeframeSales : (npsAllTimeSales > 0 ? npsAllTimeSales : periodSales);
+    final avgCheckChecksSource = timeframeChecks > 0 ? timeframeChecks : (npsAllTimeChecks > 0 ? npsAllTimeChecks : periodCheckCount);
 
-    final performanceScore = _calculateOverallScore(
+    // Baseline caching (reuse across batch when inputs identical)
+    final baselineCacheKey = _baselineCacheKey(businessData, npsHistory);
+    final restaurantBaseline = _baselineAvgCheckCache.putIfAbsent(
+      baselineCacheKey,
+      () => _calculateRestaurantBaselineAverageCheck(
+        businessData: businessData,
+        npsHistory: npsHistory,
+        focalServerId: serverId,
+      ),
+    );
+
+    final scoreComponents = _calculateOverallScore(
       metrics,
       daysEmployed,
       npsDataMonths,
       avgCheckSalesSource,
       avgCheckChecksSource,
+      restaurantBaseline,
     );
 
+    // Zero-run guard: if the server has no recorded runs in the window AND no NPS months
+    // and no sales/check evidence, collapse score toward minimal to avoid misleading baseline.
+    double adjustedFinalScore = scoreComponents.finalScore;
+    bool zeroRunGuardApplied = false;
+    if (totalFoodRuns == 0 && npsDataMonths == 0 && periodCheckCount == 0 && periodSales == 0) {
+      adjustedFinalScore = 0.0; // hard floor; business wants clearly separated non-participants
+      zeroRunGuardApplied = true;
+    }
+
     // Determine rating and flags
-    final rating = _getRatingFromScore(performanceScore);
-    final flags = _generatePerformanceFlags(
-        metrics, performanceScore, daysEmployed, serverShifts);
+  final rating = _getRatingFromScore(scoreComponents.finalScore);
+  final flags = _generatePerformanceFlags(
+    metrics, scoreComponents.finalScore, daysEmployed, serverShifts);
 
     // Generate insights
-    final insights = _generateInsights(
-        serverId, metrics, performanceScore, flags, daysEmployed);
+  final insights = _generateInsights(
+    serverId, metrics, scoreComponents.finalScore, flags, daysEmployed);
 
     return ServerPerformanceData(
       serverId: serverId,
@@ -223,12 +271,61 @@ class PerformanceCalculator {
       totalSales: periodSales,
       shiftTypes: shiftComplexities,
       metrics: metrics,
-      performanceScore: performanceScore,
+      performanceScore: adjustedFinalScore,
       rating: rating,
       flags: flags,
       insights: insights,
       calculatedDate: DateTime.now(),
+      dataQuality: FeatureFlags.perfV2DataHygiene
+          ? _classifyDataQuality(
+              shiftsWorked: shiftsWorked,
+              npsMonths: npsDataMonths,
+              guestCount: periodCheckCount,
+              sales: periodSales,
+            )
+          : null,
+      // Phase 2 transparency enrichment
+      npsComponentScore: scoreComponents.npsScore,
+      salesAbilityScore: scoreComponents.salesAbilityScore,
+      foodRunningScore: scoreComponents.foodRunningScore,
+      averageCheck: scoreComponents.averageCheck,
+      npsWeight: scoreComponents.npsWeight,
+      salesWeight: scoreComponents.salesWeight,
+      foodRunningWeight: scoreComponents.foodRunningWeight,
+      experienceFactor: metrics.experienceFactor,
     );
+  }
+
+  /// Batch helper: calculates performance for multiple servers reusing shared baselines.
+  static List<ServerPerformanceData> calculateBatchPerformance({
+    required List<String> serverIds,
+    required DateTime startDate,
+    required DateTime endDate,
+    required List<ShiftRecord> shifts,
+    required MonthlyBusinessData? businessData,
+    required Map<String, DateTime> hireDates,
+    Map<String, double>? customDifficultyMultipliers,
+    List<NPSData>? npsHistory,
+    int? totalServerCount,
+    bool resetCache = false,
+  }) {
+    if (resetCache) _baselineAvgCheckCache.clear();
+    final results = <ServerPerformanceData>[];
+    for (final id in serverIds) {
+      final hire = hireDates[id] ?? DateTime.now().subtract(const Duration(days: 30));
+      results.add(calculateServerPerformance(
+        serverId: id,
+        startDate: startDate,
+        endDate: endDate,
+        shifts: shifts,
+        businessData: businessData,
+        hireDate: hire,
+        customDifficultyMultipliers: customDifficultyMultipliers,
+        npsHistory: npsHistory,
+        totalServerCount: totalServerCount ?? serverIds.length,
+      ));
+    }
+    return results;
   }
 
   /// Extract shifts where the specified server worked
@@ -393,13 +490,13 @@ class PerformanceCalculator {
       };
     }
 
-    // Filter NPS data for this server within the evaluation period
-    final serverNPS = npsHistory
-        .where((nps) => nps.serverId == serverId)
-        .where((nps) =>
-            nps.month.isAfter(startDate.subtract(const Duration(days: 90))) &&
-            nps.month.isBefore(endDate.add(const Duration(days: 1))))
-        .toList();
+  // Filter NPS data for this server strictly within evaluation timeframe.
+  // Previously we reached back 90 days which could leak older context when a shorter window (e.g. 30 days) was requested.
+  // Phase 2 timeframe alignment: honor caller's startDate/endDate fully here; multi-month weighting still uses up to 3 entries inside this bounded slice.
+  final serverNPS = npsHistory
+    .where((nps) => nps.serverId == serverId)
+    .where((nps) => !nps.month.isBefore(startDate) && !nps.month.isAfter(endDate))
+    .toList();
 
     if (serverNPS.isEmpty) {
       return {
@@ -444,7 +541,25 @@ class PerformanceCalculator {
     final weightedNPSScore = (threeMonthAverage * 0.8) + (oneMonthScore * 0.2);
 
     // Apply trend factor
-    final finalNPSScore = weightedNPSScore * trendFactor;
+    var finalNPSScore = weightedNPSScore * trendFactor;
+
+    // Smoothing: If very limited NPS sample (fewer than 2 months or <30 responses total),
+    // shrink toward neutral (50) using a simple Bayesian-like blend.
+    int totalResponses = serverNPS.isNotEmpty
+        ? serverNPS.first.responseCount
+        : 0; // latest all-time total
+    // If responseCount encoded as all-time, approximate recent by diff of top entries
+    if (serverNPS.length >= 2) {
+      totalResponses = serverNPS.first.responseCount - serverNPS.last.responseCount;
+      if (totalResponses < 0) totalResponses = serverNPS.first.responseCount; // fallback
+    }
+    final limitedMonths = serverNPS.length < 2;
+    final lowResponses = totalResponses < 30; // heuristic threshold
+    if (limitedMonths || lowResponses) {
+      final strength = math.max(0.15, math.min(0.6, (totalResponses / 60.0)));
+      // Blend: smoothed = neutral* (1-strength) + raw*strength
+      finalNPSScore = 50 + (finalNPSScore - 50) * strength;
+    }
 
     return {
       'npsScore': math.max(0.0, math.min(100.0, finalNPSScore)),
@@ -519,12 +634,13 @@ class PerformanceCalculator {
 
   /// Calculate overall performance score (0-100) with new weight structure:
   /// 50% NPS/Guest Perception, 30% Sales Ability, 20% Food Running Performance
-  static double _calculateOverallScore(
-      PerformanceMetrics metrics,
-      int daysEmployed,
-      int npsDataMonths,
-      double totalSales,
-      double totalChecks) {
+  static _ScoreComponents _calculateOverallScore(
+    PerformanceMetrics metrics,
+    int daysEmployed,
+    int npsDataMonths,
+    double totalSales,
+    double totalChecks,
+    double restaurantBaselineAvgCheck) {
   d('DEBUG: Calculating performance score with new weight structure');
 
     // NEW WEIGHT STRUCTURE (Based on user requirements)
@@ -559,41 +675,20 @@ class PerformanceCalculator {
     final npsScore = metrics.npsScore;
   d('DEBUG: NPS Score: ${npsScore.toStringAsFixed(1)}/100');
 
-    // Component 2: Sales Ability Score (based on average check performance)
-    // Calculate average check from total sales and total checks from NPS data
-    double averageCheck = 0.0;
-    double salesAbilityScore = 0.0;
+    // Component 2: Sales Ability Score (dynamic baseline average check)
+    final salesAbility = _computeSalesAbilityScore(
+      npsDataMonths: npsDataMonths,
+      totalSales: totalSales,
+      totalChecks: totalChecks,
+      restaurantBaselineAvgCheck: restaurantBaselineAvgCheck,
+      guestEfficiency: metrics.guestEfficiency,
+      salesEfficiency: metrics.salesEfficiency,
+    );
 
-    if (npsDataMonths > 0) {
-      // Use the actual sales and check data from NPS reports for accurate average check
-      if (totalChecks > 0 && totalSales > 0) {
-        averageCheck = totalSales / totalChecks;
-        // Winsorize to reduce skew from anomalies
-        averageCheck =
-            _winsorize(averageCheck, averageCheckMinCap, averageCheckMaxCap);
-        // Normalize average check to 0-100 scale using same caps
-        salesAbilityScore = _normalizeToScore(
-            averageCheck, averageCheckMinCap, averageCheckMaxCap);
-      }
-    } else {
-      // Fallback for servers without NPS data - estimate from efficiency ratios
-      if (metrics.guestEfficiency > 0 && metrics.salesEfficiency > 0) {
-        // Estimate: if server does X runs per check and Y runs per $1K, what's the average check?
-        averageCheck =
-            (metrics.salesEfficiency * 1000) / metrics.guestEfficiency;
-        averageCheck =
-            _winsorize(averageCheck, averageCheckMinCap, averageCheckMaxCap);
-        salesAbilityScore = _normalizeToScore(
-            averageCheck, averageCheckMinCap, averageCheckMaxCap);
-      }
-    }
+    final averageCheck = salesAbility['averageCheck']!;
+    final salesAbilityScore = salesAbility['score']!;
 
-    // Neutral fallback if we couldn't compute a sales ability score (avoid unfair penalties)
-    if (salesAbilityScore == 0.0) {
-      salesAbilityScore = 50.0;
-    }
-
-  d('DEBUG: Sales Ability - Total Sales: \$${totalSales.toStringAsFixed(2)}, Total Checks: ${totalChecks.toStringAsFixed(0)}, Average Check: \$${averageCheck.toStringAsFixed(2)}, Score: ${salesAbilityScore.toStringAsFixed(1)}/100');
+  d('DEBUG: Sales Ability (dynamic) - Total Sales: \$${totalSales.toStringAsFixed(2)}, Total Checks: ${totalChecks.toStringAsFixed(0)}, Average Check: \$${averageCheck.toStringAsFixed(2)}, Baseline: \$${restaurantBaselineAvgCheck.toStringAsFixed(2)}, Score: ${salesAbilityScore.toStringAsFixed(1)}/100');
 
     // Component 3: Food Running Performance Score
     // Combines efficiency, productivity, and willingness to help
@@ -616,19 +711,29 @@ class PerformanceCalculator {
   d('DEBUG: Food Running Score: ${foodRunningScore.toStringAsFixed(1)}/100 (Performance: ${adjustedPerformanceScore.toStringAsFixed(1)}, Efficiency: ${efficiencyScore.toStringAsFixed(1)}, Consistency: ${metrics.consistencyScore.toStringAsFixed(1)})');
 
     // Calculate weighted final score
-    final weightedScore = ((npsScore * npsWeight) +
-        (salesAbilityScore * salesWeight) +
-        (foodRunningScore * foodRunningWeight));
+  final weightedScore = ((npsScore * npsWeight) +
+    (salesAbilityScore * salesWeight) +
+    (foodRunningScore * foodRunningWeight));
 
   d('DEBUG: Component Contributions - NPS: ${(npsScore * npsWeight).toStringAsFixed(1)}, Sales: ${(salesAbilityScore * salesWeight).toStringAsFixed(1)}, Food Running: ${(foodRunningScore * foodRunningWeight).toStringAsFixed(1)}');
 
     // Apply experience factor (servers improve over time)
-    final finalScore = weightedScore * metrics.experienceFactor;
+  final finalScore = weightedScore * metrics.experienceFactor;
 
   d('DEBUG: Final Score: ${finalScore.toStringAsFixed(1)}/100 (Experience Factor: ${metrics.experienceFactor.toStringAsFixed(3)})');
 
-    return math.max(0.0, math.min(100.0, finalScore));
+    return _ScoreComponents(
+      finalScore: math.max(0.0, math.min(100.0, finalScore)),
+      npsScore: npsScore,
+      salesAbilityScore: salesAbilityScore,
+      foodRunningScore: foodRunningScore,
+      averageCheck: averageCheck,
+      npsWeight: npsWeight,
+      salesWeight: salesWeight,
+      foodRunningWeight: foodRunningWeight,
+    );
   }
+  // (Remaining static helper methods continue below inside class)
 
   /// Load historical NPS data for performance calculations using NPSProvider
   static Future<List<NPSData>> loadNPSHistory({
@@ -668,32 +773,42 @@ class PerformanceCalculator {
                 .getMonthlyReport(server.id!, monthKey);
 
             if (reportData != null && reportData.isNotEmpty) {
-              // Extract all-time data from the saved monthly report
-              final allTimeSales =
-                  (reportData['all_time_sales'] as num?)?.toDouble() ?? 0.0;
-              final allTimeChecks =
-                  (reportData['all_time_table_count'] as int?) ?? 0;
-              final allTimeNps =
-                  (reportData['all_time_nps_percentage'] as num?)?.toDouble() ??
-                      0.0;
+              // Preferred month-level granular fields (if schema evolved)
+              final monthSales = (reportData['month_sales'] as num?)?.toDouble();
+              final monthChecks = (reportData['month_table_count'] as int?);
+              final monthNps = (reportData['month_nps_percentage'] as num?)?.toDouble();
 
-              // Convert saved monthly report to NPSData format expected by performance calculator
+              // All-time cumulative snapshot fields
+              final allTimeSales = (reportData['all_time_sales'] as num?)?.toDouble() ?? 0.0;
+              final allTimeChecks = (reportData['all_time_table_count'] as int?) ?? 0;
+              final allTimeNps = (reportData['all_time_nps_percentage'] as num?)?.toDouble() ?? 0.0;
+
+              // One-month explicit score fallback chain
+              final oneMonthExplicit = (reportData['one_month_nps_percentage'] as num?)?.toDouble();
+
+              // Effective monthly NPS score preference: month_nps_percentage → one_month_nps_percentage → all-time
+              final effectiveMonthlyScore = monthNps ?? oneMonthExplicit ?? allTimeNps;
+              final effectiveThreeMonth = allTimeNps; // Until rolling window is explicitly stored
+
+              // Month-level sales/checks with fallback to cumulative (will later support delta diff logic)
+              final monthSalesVal = monthSales ?? allTimeSales;
+              final monthChecksVal = (monthChecks ?? allTimeChecks).toDouble();
+
               final npsData = NPSData(
-                serverId: server.originalId ??
-                    server.id
-                        .toString(), // Use original main app ID if available
+                serverId: server.originalId ?? server.id.toString(),
                 month: targetDate,
-                monthlyScore: (reportData['one_month_nps_percentage'] as num?)
-                        ?.toDouble() ??
-                    allTimeNps,
-                threeMonthAverage: allTimeNps,
-                responseCount:
-                    allTimeChecks, // Use actual check count from admin-entered data
+                monthlyScore: effectiveMonthlyScore,
+                threeMonthAverage: effectiveThreeMonth,
+                responseCount: allTimeChecks,
                 categoryBreakdown: {
-                  'service': allTimeNps,
-                  'overall': allTimeNps,
-                  'sales':
-                      allTimeSales, // Store sales data here for access by performance calculator
+                  'service': effectiveThreeMonth,
+                  'overall': effectiveThreeMonth,
+                  'sales': allTimeSales, // legacy key preserved
+                  // Extended keys for timeframe-aware computations
+                  'month_sales': monthSalesVal,
+                  'month_checks': monthChecksVal,
+                  'all_time_sales': allTimeSales,
+                  'all_time_checks': allTimeChecks.toDouble(),
                 },
                 guestComments: [],
                 lastUpdated: DateTime.now(),
@@ -708,7 +823,12 @@ class PerformanceCalculator {
                 d('DEBUG: ⚠️ NPSData has no check/sales data for server ${server.id}');
               }
 
-              npsHistory.add(npsData);
+              final isBlankMonth = (allTimeChecks == 0 && allTimeSales == 0);
+              if (FeatureFlags.perfV2DataHygiene && isBlankMonth) {
+        d('DEBUG: Hygiene: skipping blank NPSData month $monthKey for server ${server.id}');
+              } else {
+                npsHistory.add(npsData);
+              }
             } else {
         d('DEBUG: No monthly report data found for server ${server.id} month $monthKey');
             }
@@ -743,6 +863,109 @@ class PerformanceCalculator {
   static double _winsorize(double value, double minCap, double maxCap) {
     if (minCap > maxCap) return value;
     return math.max(minCap, math.min(maxCap, value));
+  }
+
+  /// Determine restaurant baseline average check using business or NPS aggregate data.
+  /// Falls back to a mid-range neutral if unavailable.
+  static double _calculateRestaurantBaselineAverageCheck({
+    MonthlyBusinessData? businessData,
+    List<NPSData>? npsHistory,
+    String? focalServerId,
+  }) {
+    // 1. Prefer business data totals for the selected period
+    if (businessData != null && businessData.totalGuestCount > 0) {
+      final avg = businessData.totalSales / businessData.totalGuestCount;
+      if (avg > 10) return _winsorize(avg, 30, 120); // sanity bounds
+    }
+
+    // 2. Aggregate NPSData (all-time totals) if available
+    if (npsHistory != null && npsHistory.isNotEmpty) {
+      double totalSales = 0;
+      double totalChecks = 0;
+      for (final n in npsHistory) {
+        if (focalServerId != null && n.serverId == focalServerId) continue; // exclude focal server to create comparative baseline
+        final sales = n.categoryBreakdown['sales'] ?? 0.0;
+        totalSales += sales;
+        totalChecks += n.responseCount.toDouble();
+      }
+      if (totalChecks > 0) {
+        final avg = totalSales / totalChecks;
+        if (avg > 10) return _winsorize(avg, 30, 120);
+      }
+    }
+
+    // 3. Fallback neutral (approx middle of historical caps)
+    return 70.0; // neutral baseline (between 40 and 120 caps)
+  }
+
+  /// Compute sales ability score with dynamic baseline and low-volume confidence adjustment.
+  /// Returns map with 'averageCheck' and 'score'.
+  static Map<String, double> _computeSalesAbilityScore({
+    required int npsDataMonths,
+    required double totalSales,
+    required double totalChecks,
+    required double restaurantBaselineAvgCheck,
+    required double guestEfficiency,
+    required double salesEfficiency,
+  }) {
+    double averageCheck = 0.0;
+    double score = 50.0; // neutral default
+
+    // If we have NPS-derived sales & checks, use them directly
+    if (npsDataMonths > 0 && totalSales > 0 && totalChecks > 0) {
+      averageCheck = totalSales / totalChecks;
+    } else if (npsDataMonths == 0 && guestEfficiency > 0 && salesEfficiency > 0) {
+      // Estimation path (less reliable) -> keep neutral leaning
+      averageCheck = (salesEfficiency * 1000) / guestEfficiency;
+    }
+
+    if (averageCheck <= 0) {
+      return {'averageCheck': 0.0, 'score': 50.0};
+    }
+
+    // Winsorize to protect extreme outliers
+    averageCheck = _winsorize(averageCheck, averageCheckMinCap, averageCheckMaxCap);
+
+    // Dynamic ratio against restaurant baseline
+    final baseline = restaurantBaselineAvgCheck > 0 ? restaurantBaselineAvgCheck : 70.0;
+    final ratio = averageCheck / baseline;
+
+    // Piecewise mapping:
+    // Revised mapping for clearer differentiation:
+    // ratio <= 0.8 => 25
+    // 0.8..1.0 => 25..55 (slight reward up to baseline)
+    // 1.0..1.4 => 55..85
+    // 1.4..1.8 => 85..100
+    // >1.8 => 100
+    if (ratio <= 0.8) {
+      score = 25.0;
+    } else if (ratio <= 1.0) {
+      score = 25.0 + ((ratio - 0.8) / 0.2) * 30.0; // 25..55
+    } else if (ratio <= 1.4) {
+      score = 55.0 + ((ratio - 1.0) / 0.4) * 30.0; // 55..85
+    } else if (ratio <= 1.8) {
+      score = 85.0 + ((ratio - 1.4) / 0.4) * 15.0; // 85..100
+    } else {
+      score = 100.0;
+    }
+
+    // Confidence adjustment: if low check volume, shrink deviation from neutral
+    final checkVolume = totalChecks; // all-time check count path
+    const minConfidenceChecks = 40.0; // threshold for full confidence after smoothing change
+    // Two-stage smoothing: (1) existing confidence shrink, (2) mild global shrink if extremely low volume
+    final confidence = math.max(0.2, math.min(1.0, checkVolume / minConfidenceChecks));
+    final deviation = score - 50.0;
+    score = 50.0 + deviation * confidence;
+
+    if (checkVolume < 15) {
+      // Additional shrink for very low volume to prevent extremes
+      score = 50 + (score - 50) * 0.6;
+    }
+
+    return {
+      'averageCheck': averageCheck,
+      'score': math.max(0.0, math.min(100.0, score)),
+    };
   }
 
   /// Generate performance flags based on metrics
@@ -964,4 +1187,43 @@ class PerformanceCalculator {
     if (score >= 45.0) return PerformanceRating.needsAttention;
     return PerformanceRating.critical;
   }
+
+  // Data quality classification helper (Phase 1 hygiene)
+  static DataQuality _classifyDataQuality({
+    required int shiftsWorked,
+    required int npsMonths,
+    required double guestCount,
+    required double sales,
+  }) {
+    if (shiftsWorked == 0 && npsMonths == 0) return DataQuality.missing;
+    final hasVolume = guestCount > 0 || sales > 0;
+    final hasShifts = shiftsWorked >= 3;
+    final hasNps = npsMonths >= 1;
+    if (hasShifts && hasNps && hasVolume) return DataQuality.complete;
+    if ((hasShifts && hasVolume) || (hasNps && hasVolume)) return DataQuality.partial;
+    if (shiftsWorked > 0 || hasNps) return DataQuality.sparse;
+    return DataQuality.missing;
+  }
+}
+
+/// Internal structure for returning decomposed score components
+class _ScoreComponents {
+  final double finalScore;
+  final double npsScore;
+  final double salesAbilityScore;
+  final double foodRunningScore;
+  final double averageCheck;
+  final double npsWeight;
+  final double salesWeight;
+  final double foodRunningWeight;
+  const _ScoreComponents({
+    required this.finalScore,
+    required this.npsScore,
+    required this.salesAbilityScore,
+    required this.foodRunningScore,
+    required this.averageCheck,
+    required this.npsWeight,
+    required this.salesWeight,
+    required this.foodRunningWeight,
+  });
 }

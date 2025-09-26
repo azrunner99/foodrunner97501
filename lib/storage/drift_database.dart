@@ -1,5 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
+// Native database import for in-memory / test fallback
+import 'package:drift/native.dart' as drift_native;
 import '../services/platform_service.dart';
 import '../utils/log.dart';
 import 'database_interface.dart';
@@ -12,16 +14,27 @@ part 'drift_database.g.dart';
 /// the Drift ORM while maintaining the same API as the sqflite implementation.
 @DriftDatabase(include: {'nps_schema.drift'})
 class DriftNPSDatabase extends _$DriftNPSDatabase implements DatabaseInterface {
-  DriftNPSDatabase() : super(_openConnection());
+  /// Primary constructor using on-disk (path_provider) backed Drift database.
+  DriftNPSDatabase() : this._internal(_openConnection());
+
+  /// Internal constructor allowing custom executors.
+  DriftNPSDatabase._internal(QueryExecutor executor) : super(executor);
+
+  /// In-memory constructor used for test environments where method channel
+  /// plugins (e.g. path_provider) are unavailable, preventing normal
+  /// file system database initialization.
+  factory DriftNPSDatabase.testInMemory() =>
+      DriftNPSDatabase._internal(drift_native.NativeDatabase.memory());
 
   @override
   int get schemaVersion => 2;
 
   /// Open database connection with platform-appropriate configuration
   static QueryExecutor _openConnection() {
-    return driftDatabase(
-      name: 'nps_database',
-    );
+    // Use drift_flutter helper (will attempt to resolve application documents
+    // directory via path_provider). This can throw a MissingPluginException in
+    // pure Dart test environments where the plugin channel isn't registered.
+    return driftDatabase(name: 'nps_database');
   }
 
   @override

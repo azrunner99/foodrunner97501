@@ -13,6 +13,7 @@ import 'server_performance_screen.dart';
 import 'server_nps_screen.dart';
 import 'station_analytics_screen.dart';
 import 'smart_scheduling_screen.dart';
+import 'comprehensive_analytics_dashboard.dart';
 import '../utils/log.dart';
 
 class CleanAdminScreen extends StatefulWidget {
@@ -328,7 +329,7 @@ class _CleanAdminScreenState extends State<CleanAdminScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (_) => const ServerPerformanceScreen()),
+                            builder: (_) => ServerPerformanceScreen()),
                       );
                     },
                   ),
@@ -355,6 +356,18 @@ class _CleanAdminScreenState extends State<CleanAdminScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const StationAnalyticsScreen()),
+                      );
+                    },
+                  ),
+                  _buildAdminTile(
+                    icon: Icons.dashboard,
+                    title: 'Comprehensive Analytics',
+                    subtitle: 'Advanced analytics, reporting, and backup management',
+                    enabled: true,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ComprehensiveAnalyticsDashboard()),
                       );
                     },
                   ),

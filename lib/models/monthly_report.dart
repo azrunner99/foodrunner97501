@@ -86,13 +86,30 @@ class NPSMonthlyReport {
     required this.dataAsOfDate,
   });
 
-  /// Create NPSMonthlyReport from a database map
+  /// Create NPSMonthlyReport from a database map (handles both Drift and Sqflite formats)
   factory NPSMonthlyReport.fromMap(Map<String, dynamic> map) {
+    // Handle both Drift format (report_month, report_year) and Sqflite format (month_year)
+    int reportMonth;
+    int reportYear;
+    
+    if (map.containsKey('report_month') && map.containsKey('report_year')) {
+      // Drift format
+      reportMonth = map['report_month'] as int;
+      reportYear = map['report_year'] as int;
+    } else if (map.containsKey('month_year')) {
+      // Sqflite format
+      final monthYearStr = map['month_year'] as String;
+      reportMonth = int.parse(monthYearStr);
+      reportYear = reportMonth ~/ 100; // Extract year from YYYYMM format
+    } else {
+      throw ArgumentError('Map must contain either (report_month, report_year) or month_year');
+    }
+    
     return NPSMonthlyReport(
       id: map['id'] as int?,
       serverId: map['server_id'] as int,
-      reportMonth: map['report_month'] as int,
-      reportYear: map['report_year'] as int,
+      reportMonth: reportMonth,
+      reportYear: reportYear,
       allTimeNpsPercentage: map['all_time_nps_percentage'] != null
           ? (map['all_time_nps_percentage'] as num).toDouble()
           : null,
@@ -126,13 +143,12 @@ class NPSMonthlyReport {
     );
   }
 
-  /// Convert NPSMonthlyReport to a database map
+  /// Convert NPSMonthlyReport to a database map (Android Sqflite format)
   Map<String, dynamic> toMap() {
     return {
       if (id != null) 'id': id,
       'server_id': serverId,
-      'report_month': reportMonth,
-      'report_year': reportYear,
+      'month_year': reportMonth.toString(), // Android Sqflite format
       'all_time_nps_percentage': allTimeNpsPercentage,
       'three_month_nps_percentage': threeMonthNpsPercentage,
       'one_month_nps_percentage': oneMonthNpsPercentage,
