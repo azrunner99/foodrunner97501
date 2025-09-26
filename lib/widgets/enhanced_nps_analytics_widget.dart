@@ -2312,7 +2312,7 @@ class _EnhancedNPSAnalyticsWidgetState
 
     for (final report in serverReports) {
       final performance =
-          report.oneMonthNpsPercentage ?? report.allTimeNpsPercentage ?? 0.0;
+          report.threeMonthNpsPercentage ?? report.oneMonthNpsPercentage ?? report.allTimeNpsPercentage ?? 0.0;
       performanceHistory.add(performance);
 
       // Extract month name from YYYYMM format
