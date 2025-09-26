@@ -217,6 +217,14 @@ class _AdminScreenState extends State<AdminScreen> {
               ],
             ),
             const SizedBox(height: 24),
+            _buildSectionCard(
+              'In Development',
+              Icons.construction,
+              [
+                // Empty - ready for you to add features as needed
+              ],
+            ),
+            const SizedBox(height: 24),
           ],
         ),
       ),

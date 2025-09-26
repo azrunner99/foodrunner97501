@@ -227,51 +227,6 @@ class _CleanAdminScreenState extends State<CleanAdminScreen> {
                 'Management Tools',
                 Icons.settings,
                 [
-                  // Schema version info row
-                  Builder(builder: (context) {
-                    final storedVersionFuture = Storage.getSchemaVersion();
-                    return FutureBuilder<int>(
-                      future: storedVersionFuture,
-                      builder: (context, snapshot) {
-                        final stored = snapshot.data;
-                        final current = Storage.currentSchemaVersion;
-                        final newer = app.schemaNewerDetected;
-                        return ListTile(
-                          leading: const Icon(Icons.schema),
-                          title: Text('Schema: '
-                              '${stored == null ? '...' : stored.toString()}'
-                              '/$current'),
-                          subtitle: newer
-                              ? const Text('Newer schema detected. App is in read-only posture until upgraded.',
-                                  style: TextStyle(color: Colors.orange))
-                              : null,
-                          trailing: (kDebugMode || !kReleaseMode)
-                              ? TextButton.icon(
-                                  onPressed: () async {
-                                    try {
-                                      await app.adminReRunMigrations();
-                                      if (context.mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('Migrations re-run complete.')),
-                                        );
-                                      }
-                                    } catch (e) {
-                                      if (context.mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(content: Text('Migration failed: $e')),
-                                        );
-                                      }
-                                    }
-                                    setState(() {});
-                                  },
-                                  icon: const Icon(Icons.play_circle_outline),
-                                  label: const Text('Re-run migrations'),
-                                )
-                              : null,
-                        );
-                      },
-                    );
-                  }),
                   _buildAdminTile(
                     icon: Icons.manage_accounts,
                     title: 'Manage Servers',
@@ -348,43 +303,6 @@ class _CleanAdminScreenState extends State<CleanAdminScreen> {
                     },
                   ),
                   _buildAdminTile(
-                    icon: Icons.location_on,
-                    title: 'Station Analytics',
-                    subtitle: 'Monitor station performance and efficiency metrics',
-                    enabled: true,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const StationAnalyticsScreen()),
-                      );
-                    },
-                  ),
-                  _buildAdminTile(
-                    icon: Icons.dashboard,
-                    title: 'Comprehensive Analytics',
-                    subtitle: 'Advanced analytics, reporting, and backup management',
-                    enabled: true,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        // MaterialPageRoute(builder: (_) => const ComprehensiveAnalyticsDashboard()), // Commented out - file removed
-                        MaterialPageRoute(builder: (_) => const Text('Analytics Dashboard temporarily disabled')),
-                      );
-                    },
-                  ),
-                  _buildAdminTile(
-                    icon: Icons.auto_awesome,
-                    title: 'Smart Scheduling',
-                    subtitle: 'AI-powered predictive scheduling and optimization',
-                    enabled: true,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const SmartSchedulingScreen()),
-                      );
-                    },
-                  ),
-                  _buildAdminTile(
                     icon: Icons.backup,
                     title: 'Data Backup & Restore',
                     subtitle: 'Backup and restore all app data',
@@ -403,6 +321,50 @@ class _CleanAdminScreenState extends State<CleanAdminScreen> {
                     subtitle: 'Update the administrator PIN',
                     enabled: true,
                     onTap: () => _showChangePinDialog(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              _buildExpandableSectionCard(
+                'In Development',
+                Icons.construction,
+                [
+                  _buildAdminTile(
+                    icon: Icons.location_on,
+                    title: 'Station Analytics',
+                    subtitle: 'Monitor station performance and efficiency metrics (In Development)',
+                    enabled: true,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const StationAnalyticsScreen()),
+                      );
+                    },
+                  ),
+                  _buildAdminTile(
+                    icon: Icons.dashboard,
+                    title: 'Comprehensive Analytics',
+                    subtitle: 'Advanced analytics, reporting, and backup management (In Development)',
+                    enabled: true,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        // MaterialPageRoute(builder: (_) => const ComprehensiveAnalyticsDashboard()), // Commented out - file removed
+                        MaterialPageRoute(builder: (_) => const Text('Analytics Dashboard temporarily disabled')),
+                      );
+                    },
+                  ),
+                  _buildAdminTile(
+                    icon: Icons.auto_awesome,
+                    title: 'Smart Scheduling',
+                    subtitle: 'AI-powered predictive scheduling and optimization (In Development)',
+                    enabled: true,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const SmartSchedulingScreen()),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -605,6 +567,81 @@ class _CleanAdminScreenState extends State<CleanAdminScreen> {
               ...children,
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExpandableSectionCard(String title, IconData icon, List<Widget> children) {
+    return Card(
+      elevation: 8,
+      shadowColor: Colors.orange.withOpacity(0.3),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.orange.shade50.withOpacity(0.9),
+              Colors.orange.shade100.withOpacity(0.7),
+            ],
+          ),
+          border: Border.all(
+            color: Colors.orange.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: ExpansionTile(
+          leading: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.orange.shade600,
+                  Colors.orange.shade400,
+                ],
+              ),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.orange.withOpacity(0.3),
+                  spreadRadius: 2,
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Icon(icon, color: Colors.white, size: 24),
+          ),
+          title: Text(
+            title,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          subtitle: Text(
+            '${children.length} features in development',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.orange.shade700,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: children,
+              ),
+            ),
+          ],
         ),
       ),
     );
