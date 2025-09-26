@@ -1965,7 +1965,7 @@ class _EnhancedNPSAnalyticsWidgetState
                         ),
                       ),
                       Text(
-                        'Who\'s helping vs hurting the restaurant - based on sales impact & NPS performance',
+                        'Who\'s helping vs hurting the restaurant - based on sales impact & most recent 3-month NPS performance',
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey.shade600,
