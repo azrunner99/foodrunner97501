@@ -20,7 +20,7 @@ class SqfliteNPSDatabase implements DatabaseInterface {
 
       _database = await sqflite.openDatabase(
         _databasePath!,
-        version: 6, // Increment to add performance trends and insights tables
+        version: 7, // Fix feedback_type index issue
         onCreate: _createDatabase,
         onUpgrade: _upgradeDatabase,
       );
@@ -160,8 +160,8 @@ class SqfliteNPSDatabase implements DatabaseInterface {
     await db.execute('CREATE INDEX idx_nps_feedback_server_id ON nps_feedback (server_id)');
     await db.execute('CREATE INDEX idx_nps_feedback_shift_date ON nps_feedback (shift_date)');
     await db.execute('CREATE INDEX idx_nps_feedback_server_date ON nps_feedback (server_id, shift_date)');
-    await db.execute('CREATE INDEX idx_nps_feedback_type ON nps_feedback (feedback_type)');
-    await db.execute('CREATE INDEX idx_nps_feedback_server_type ON nps_feedback (server_id, feedback_type)');
+    await db.execute('CREATE INDEX idx_nps_feedback_shift_type ON nps_feedback (shift_type)');
+    await db.execute('CREATE INDEX idx_nps_feedback_server_shift_type ON nps_feedback (server_id, shift_type)');
     
     // Monthly reports indexes - critical for data entry performance
     await db.execute('CREATE INDEX idx_nps_monthly_reports_server_month ON nps_monthly_reports (server_id, month_year)');
@@ -274,6 +274,24 @@ class SqfliteNPSDatabase implements DatabaseInterface {
         d('[SqfliteNPSDatabase] Successfully added performance trends and insights tables');
       } catch (e) {
         d('[SqfliteNPSDatabase] Error adding performance tables: $e');
+        rethrow;
+      }
+    }
+    
+    if (oldVersion < 7) {
+      // Fix feedback_type index issue - drop incorrect indexes and create correct ones
+      try {
+        // Drop the problematic indexes if they exist
+        await db.execute('DROP INDEX IF EXISTS idx_nps_feedback_type');
+        await db.execute('DROP INDEX IF EXISTS idx_nps_feedback_server_type');
+        
+        // Create the correct indexes on shift_type instead
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_nps_feedback_shift_type ON nps_feedback (shift_type)');
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_nps_feedback_server_shift_type ON nps_feedback (server_id, shift_type)');
+        
+        d('[SqfliteNPSDatabase] Successfully fixed feedback_type index issue');
+      } catch (e) {
+        d('[SqfliteNPSDatabase] Error fixing feedback_type indexes: $e');
         rethrow;
       }
     }

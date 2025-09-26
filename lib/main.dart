@@ -43,55 +43,8 @@ void main() async {
   // Initialize database factory for cross-platform database support
   await DatabaseFactory.initialize();
   
-  // Initialize Performance Flags for Phase 1 rollout
-  await PerformanceFlags.initialize();
-  
-  // Enable Phase 1: Data Hygiene & Safeguards for testing
-  await PerformanceFlags.enablePhase(1);
-  
-  // Enable Phase 2: Baseline & Fallback Reform
-  await PerformanceFlags.enablePhase(2);
-  
-  // Enable Phase 3: Differentiation Mechanics
-  await PerformanceFlags.enablePhase(3);
-  
-  // Enable Phase 4: Temporal Derivation Layer
-  await PerformanceFlags.enablePhase(4);
-  
-  // Enable Phase 5: Adaptive Weighting & Confidence
-  await PerformanceFlags.enablePhase(5);
-  
-  // Enable Phase 6: Monitoring & Telemetry
-  await PerformanceFlags.enablePhase(6);
-  
-  // Enable Phase 7: Rollout & Reconciliation
-  await PerformanceFlags.enablePhase(7);
-  
-  // Initialize Performance Monitoring Service
-  await PerformanceMonitoringService.instance.initialize();
-  
-  // Initialize Performance Rollout Service
-  await PerformanceRolloutService().initialize();
-  
-  // Initialize Phase 1: Historical Data Services
-  await HistoricalNPSAggregationService.instance.initialize();
-  await PerformanceTimelineService.instance.initialize();
-  await HistoricalDataValidationService.instance.initialize();
-  
-  // Initialize Enhanced Error Handling Service
-  await EnhancedErrorHandlingService.instance.handleError(
-    'app_startup',
-    'Application starting up',
-    context: 'Main',
-    severity: ErrorSeverity.low,
-    showToUser: false,
-  );
-  
-  // Initialize Data Consistency Service
-  await DataConsistencyService.instance.initialize();
-  
-  // Initialize Fallback Mechanisms Service
-  await FallbackMechanismsService.instance.initialize();
+  // Temporarily disable complex service initializations for debugging
+  print('Skipping complex service initializations for debugging...');
   
   final appState = AppState();
   await appState.load();
