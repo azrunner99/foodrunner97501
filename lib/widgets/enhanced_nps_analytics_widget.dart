@@ -679,7 +679,7 @@ class _EnhancedNPSAnalyticsWidgetState
     );
   }
 
-  /// Build individual classification card
+  /// Build individual classification card (collapsible)
   Widget _buildClassificationCard(String serverId, performance_models.PerformanceClassification classification) {
     final serverData = _historicalData.firstWhere(
       (data) => data.serverId == serverId,
@@ -688,107 +688,142 @@ class _EnhancedNPSAnalyticsWidgetState
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: _getTierColor(classification.tier).withOpacity(0.05),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: _getTierColor(classification.tier).withOpacity(0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                classification.tier.emoji,
-                style: const TextStyle(fontSize: 24),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  serverData.serverName,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18, // Increased font size
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: _getTierColor(classification.tier).withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Text(
-                  classification.tier.displayName,
-                  style: TextStyle(
-                    color: _getTierColor(classification.tier),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14, // Increased font size
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _buildClassificationMetric(
-                  'Score',
-                  '${classification.score.toStringAsFixed(1)}%',
-                  _getClassificationScoreColor(classification.score),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildClassificationMetric(
-                  'Confidence',
-                  '${classification.confidence.toStringAsFixed(1)}%',
-                  _getConfidenceColor(classification.confidence),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Reasoning:',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              fontSize: 14, // Increased font size
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            classification.reasoning.split('\n').first, // Show first line only
-            style: TextStyle(
-              color: Colors.grey.shade700,
-              fontSize: 14, // Increased font size
-            ),
-          ),
-          if (classification.recommendations.isNotEmpty) ...[
-            const SizedBox(height: 8),
+      child: ExpansionTile(
+        title: Row(
+          children: [
             Text(
-              'Recommendations:',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                fontSize: 14, // Increased font size
+              classification.tier.emoji,
+              style: const TextStyle(fontSize: 20),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                serverData.serverName,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
             ),
-            const SizedBox(height: 4),
-            ...classification.recommendations.take(2).map((rec) => 
-              Padding(
-                padding: const EdgeInsets.only(left: 8, bottom: 2),
-                child: Text(
-                  '• $rec',
-                  style: TextStyle(
-                    color: Colors.grey.shade700,
-                    fontSize: 13, // Increased font size
-                  ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: _getTierColor(classification.tier).withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _getTierColor(classification.tier)),
+              ),
+              child: Text(
+                classification.tier.displayName,
+                style: TextStyle(
+                  color: _getTierColor(classification.tier),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
                 ),
               ),
             ),
           ],
+        ),
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Score and Confidence Metrics
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildClassificationMetric(
+                        'Score',
+                        '${classification.score.toStringAsFixed(1)}%',
+                        _getClassificationScoreColor(classification.score),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildClassificationMetric(
+                        'Confidence',
+                        '${classification.confidence.toStringAsFixed(1)}%',
+                        _getConfidenceColor(classification.confidence),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                
+                // Reasoning Section
+                Text(
+                  'Reasoning:',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  classification.reasoning,
+                  style: TextStyle(
+                    color: Colors.grey.shade700,
+                    fontSize: 14,
+                  ),
+                ),
+                
+                // Recommendations Section
+                if (classification.recommendations.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    'Recommendations:',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ...classification.recommendations.map((rec) => 
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            margin: const EdgeInsets.only(top: 6, right: 8),
+                            decoration: BoxDecoration(
+                              color: _getTierColor(classification.tier),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              rec,
+                              style: TextStyle(
+                                color: Colors.grey.shade700,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -3537,5 +3572,113 @@ class _EnhancedNPSAnalyticsWidgetState
     if (volatility < 10) return Colors.green;
     if (volatility < 20) return Colors.orange;
     return Colors.red;
+  }
+
+
+
+  /// Build individual metric card
+  Widget _buildMetricCard(String label, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper methods for trend analysis
+  IconData _getClassificationIcon(dynamic tier) {
+    if (tier is performance_models.IntelligentPerformanceTier) {
+      switch (tier) {
+        case performance_models.IntelligentPerformanceTier.elite:
+          return Icons.emoji_events;
+        case performance_models.IntelligentPerformanceTier.strong:
+          return Icons.thumb_up;
+        case performance_models.IntelligentPerformanceTier.developing:
+          return Icons.trending_up;
+        case performance_models.IntelligentPerformanceTier.concerning:
+          return Icons.warning;
+        case performance_models.IntelligentPerformanceTier.critical:
+          return Icons.error;
+        case performance_models.IntelligentPerformanceTier.unknown:
+          return Icons.help;
+      }
+    }
+    return Icons.help;
+  }
+
+  Color _getTrendDirectionColor(trend_analysis.TrendDirection direction) {
+    switch (direction) {
+      case trend_analysis.TrendDirection.improving:
+      case trend_analysis.TrendDirection.stronglyImproving:
+        return Colors.green;
+      case trend_analysis.TrendDirection.declining:
+      case trend_analysis.TrendDirection.stronglyDeclining:
+        return Colors.red;
+      case trend_analysis.TrendDirection.stable:
+        return Colors.blue;
+      case trend_analysis.TrendDirection.unknown:
+        return Colors.grey;
+    }
+  }
+
+  String _getTrendDirectionLabel(trend_analysis.TrendDirection direction) {
+    switch (direction) {
+      case trend_analysis.TrendDirection.improving:
+        return 'Improving';
+      case trend_analysis.TrendDirection.declining:
+        return 'Declining';
+      case trend_analysis.TrendDirection.stable:
+        return 'Stable';
+      case trend_analysis.TrendDirection.stronglyImproving:
+        return 'Strongly Improving';
+      case trend_analysis.TrendDirection.stronglyDeclining:
+        return 'Strongly Declining';
+      case trend_analysis.TrendDirection.unknown:
+        return 'Unknown';
+    }
+  }
+
+  String _getMomentumTypeLabel(trend_analysis.MomentumType momentum) {
+    switch (momentum) {
+      case trend_analysis.MomentumType.strongPositive:
+        return 'Strong +';
+      case trend_analysis.MomentumType.positive:
+        return 'Positive';
+      case trend_analysis.MomentumType.weakPositive:
+        return 'Weak +';
+      case trend_analysis.MomentumType.neutral:
+        return 'Neutral';
+      case trend_analysis.MomentumType.negative:
+        return 'Negative';
+      case trend_analysis.MomentumType.weakNegative:
+        return 'Weak -';
+      case trend_analysis.MomentumType.strongNegative:
+        return 'Strong -';
+    }
   }
 }
