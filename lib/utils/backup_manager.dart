@@ -10,6 +10,7 @@ import 'package:archive/archive.dart';
 import '../storage.dart';
 import '../models.dart'; // For WeeklyHours
 import '../services/file_service.dart';
+import '../services/sqlite_backup_service.dart';
 
 class BackupManager {
   /// Creates a comprehensive backup of all app data
@@ -22,11 +23,13 @@ class BackupManager {
       // Collect all data from all storage boxes
       final backupData = <String, dynamic>{
         'metadata': {
-          'version': '1.0',
+          'version': '2.0',
           'timestamp': timestamp.toIso8601String(),
           'app_version': 'food_runs_counter',
-          'backup_type': 'full',
+          'backup_type': 'comprehensive',
+          'includes_sqlite': true,
         },
+        // Hive storage data
         'servers': await _getServersData(),
         'totals': await _getTotalsData(),
         'shifts': await _getShiftsData(),
@@ -36,6 +39,8 @@ class BackupManager {
         'tapLogs': await _getTapLogsData(),
         'avatarPhotos': await _getAvatarPhotosData(),
         'sharedPreferences': await _getSharedPreferencesData(),
+        // SQLite database data (NEW!)
+        'sqlite_data': await _getSQLiteData(),
       };
 
       // Convert to JSON
@@ -223,6 +228,11 @@ class BackupManager {
       await _restoreTapLogsData(backupData['tapLogs']);
       await _restoreAvatarPhotosData(backupData['avatarPhotos']);
       await _restoreSharedPreferencesData(backupData['sharedPreferences']);
+      
+      // Restore SQLite data (NEW!)
+      if (backupData.containsKey('sqlite_data')) {
+        await _restoreSQLiteData(backupData['sqlite_data']);
+      }
 
       return RestoreResult(
         success: true,
@@ -237,7 +247,8 @@ class BackupManager {
           'dayPlans',
           'tapLogs',
           'avatarPhotos',
-          'sharedPreferences'
+          'sharedPreferences',
+          if (backupData.containsKey('sqlite_data')) 'sqlite_data'
         ],
       );
     } catch (e) {
@@ -746,6 +757,20 @@ class BackupManager {
     }
   }
 
+  /// Get SQLite database data (NEW!)
+  static Future<Map<String, dynamic>> _getSQLiteData() async {
+    try {
+      d('[BackupManager] Collecting SQLite data...');
+      final sqliteBackupService = SQLiteBackupService.instance;
+      final sqliteData = await sqliteBackupService.backupSQLiteData();
+      d('[BackupManager] SQLite data collection complete');
+      return sqliteData;
+    } catch (e) {
+      d('[BackupManager] Error collecting SQLite data: $e');
+      return {'error': e.toString()};
+    }
+  }
+
   // Private helper methods for data restoration
   static Future<void> _restoreServersData(dynamic data) async {
     if (data != null) {
@@ -871,6 +896,24 @@ class BackupManager {
           '[Restore] Successfully restored $restoredCount/${sharedPrefsData.length} SharedPreferences entries');
     } catch (e) {
   d('[Restore] Error restoring SharedPreferences data: $e');
+    }
+  }
+
+  /// Restore SQLite data (NEW!)
+  static Future<void> _restoreSQLiteData(dynamic data) async {
+    if (data == null) return;
+
+    try {
+      d('[BackupManager] Restoring SQLite data...');
+      final sqliteBackupService = SQLiteBackupService.instance;
+      final success = await sqliteBackupService.restoreSQLiteData(data as Map<String, dynamic>);
+      if (success) {
+        d('[BackupManager] SQLite data restored successfully');
+      } else {
+        d('[BackupManager] SQLite data restore failed');
+      }
+    } catch (e) {
+      d('[BackupManager] Error restoring SQLite data: $e');
     }
   }
 

@@ -8,7 +8,7 @@ import '../services/nps_security_service.dart';
 import 'manage_servers_screen.dart';
 import 'server_avatar_settings_screen.dart';
 import 'server_dashboard_screen.dart';
-import 'backup_manager_screen.dart';
+import 'unified_backup_screen.dart';
 import 'server_performance_screen.dart';
 import 'server_nps_screen.dart';
 import 'station_analytics_screen.dart';
@@ -304,14 +304,14 @@ class _CleanAdminScreenState extends State<CleanAdminScreen> {
                   ),
                   _buildAdminTile(
                     icon: Icons.backup,
-                    title: 'Data Backup & Restore',
-                    subtitle: 'Backup and restore all app data',
+                    title: 'Backup & Restore',
+                    subtitle: 'All backup options: Quick, USB-C, and Local backup methods',
                     enabled: true,
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (_) => const BackupManagerScreen()),
+                            builder: (_) => const UnifiedBackupScreen()),
                       );
                     },
                   ),
