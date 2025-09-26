@@ -404,7 +404,7 @@ class _ServerPerformanceProfileScreenState
                       ],
                     ),
                     Text(
-                      'Based on food running + NPS',
+                      'Based on NPS (50%), Sales Ability (30%), Food Running Performance (20%)',
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.9),
                         fontSize: 14,
@@ -412,7 +412,7 @@ class _ServerPerformanceProfileScreenState
                     ),
                     if (widget.performance.performanceScore < 50)
                       Text(
-                        '⚠️ Low score may indicate missing NPS data',
+                        '⚠️ Low score may indicate missing NPS data or poor performance metrics',
                         style: TextStyle(
                           color: Colors.orange[100],
                           fontSize: 11,

@@ -21,6 +21,7 @@ class _ServerNPSStatusWidgetState extends State<ServerNPSStatusWidget> {
   List<HistoricalNPSData> _historicalData = [];
   Map<String, performance_models.PerformanceClassification> _serverClassifications = {};
   bool _isLoading = true;
+  performance_models.IntelligentPerformanceTier? _selectedTierFilter;
 
   @override
   void initState() {
@@ -207,28 +208,11 @@ class _ServerNPSStatusWidgetState extends State<ServerNPSStatusWidget> {
                     fontSize: 24,
                   ),
                 ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.purple.shade100,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.purple.shade300),
-                  ),
-                  child: Text(
-                    'Phase 2',
-                    style: TextStyle(
-                      color: Colors.purple.shade700,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
               ],
             ),
             const SizedBox(height: 16),
             Text(
-              'AI-powered performance analysis using multi-dimensional scoring and contextual intelligence.',
+              'Get a quick overview of your team\'s performance health, identify top performers, and spot who might need extra coaching or support.',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: Colors.grey.shade600,
                 fontSize: 16,
@@ -368,64 +352,178 @@ class _ServerNPSStatusWidgetState extends State<ServerNPSStatusWidget> {
   /// Build tier summary item
   Widget _buildTierSummaryItem(performance_models.IntelligentPerformanceTier tier, int count, int total) {
     final percentage = total > 0 ? (count / total * 100).round() : 0;
+    final isSelected = _selectedTierFilter == tier;
     
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: _getTierColor(tier).withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: _getTierColor(tier).withOpacity(0.3)),
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                tier.emoji,
-                style: const TextStyle(fontSize: 20),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                tier.displayName,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: _getTierColor(tier),
-                  fontSize: 14,
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          if (_selectedTierFilter == tier) {
+            _selectedTierFilter = null; // Clear filter if same tier is clicked
+          } else {
+            _selectedTierFilter = tier; // Set filter to selected tier
+          }
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isSelected 
+            ? _getTierColor(tier).withOpacity(0.2)
+            : _getTierColor(tier).withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected 
+              ? _getTierColor(tier)
+              : _getTierColor(tier).withOpacity(0.3),
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  tier.emoji,
+                  style: const TextStyle(fontSize: 20),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '$count ($percentage%)',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: _getTierColor(tier),
+                const SizedBox(width: 4),
+                Text(
+                  tier.displayName,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: _getTierColor(tier),
+                    fontSize: 14,
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
+            const SizedBox(height: 4),
+            Text(
+              '$count ($percentage%)',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: _getTierColor(tier),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   /// Build detailed classifications
   Widget _buildDetailedClassifications() {
+    // Filter classifications based on selected tier
+    final filteredClassifications = _selectedTierFilter != null
+        ? _serverClassifications.entries
+            .where((entry) => entry.value.tier == _selectedTierFilter)
+            .toList()
+        : _serverClassifications.entries.toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Detailed Classifications',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-          ),
+        Row(
+          children: [
+            Text(
+              'Detailed Classifications',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+            if (_selectedTierFilter != null) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _getTierColor(_selectedTierFilter!).withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: _getTierColor(_selectedTierFilter!)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _selectedTierFilter!.emoji,
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Filtered by ${_selectedTierFilter!.displayName}',
+                      style: TextStyle(
+                        color: _getTierColor(_selectedTierFilter!),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedTierFilter = null;
+                        });
+                      },
+                      child: Icon(
+                        Icons.close,
+                        size: 16,
+                        color: _getTierColor(_selectedTierFilter!),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
         ),
         const SizedBox(height: 12),
-        ..._serverClassifications.entries.map((entry) => 
-          _buildClassificationCard(entry.key, entry.value)
-        ),
+        if (filteredClassifications.isEmpty && _selectedTierFilter != null)
+          Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.filter_list_off,
+                  size: 48,
+                  color: Colors.grey.shade400,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No servers found in ${_selectedTierFilter!.displayName} tier',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Try selecting a different performance tier',
+                  style: TextStyle(
+                    color: Colors.grey.shade500,
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          SizedBox(
+            height: 400, // Fixed height to enable scrolling
+            child: ListView.builder(
+              itemCount: filteredClassifications.length,
+              itemBuilder: (context, index) {
+                final entry = filteredClassifications[index];
+                return _buildClassificationCard(entry.key, entry.value);
+              },
+            ),
+          ),
       ],
     );
   }

@@ -186,12 +186,20 @@ class AdvancedTrendAnalysisService {
 
   /// Calculate trend strength (R-squared value)
   double _calculateTrendStrength(List<NPSMonthlyReport> reports) {
+    d('[AdvancedTrendAnalysisService] Calculating trend strength for ${reports.length} reports');
+    
     final npsScores = reports
         .map((r) => r.allTimeNpsPercentage ?? 0.0)
         .where((score) => score > 0)
         .toList();
 
-    if (npsScores.length < 3) return 0.0;
+    d('[AdvancedTrendAnalysisService] NPS scores after filtering: $npsScores');
+    d('[AdvancedTrendAnalysisService] Raw allTimeNpsPercentage values: ${reports.map((r) => r.allTimeNpsPercentage).toList()}');
+
+    if (npsScores.length < 3) {
+      d('[AdvancedTrendAnalysisService] Insufficient data for strength calculation: ${npsScores.length} < 3');
+      return -1.0; // Special value to indicate insufficient data
+    }
 
     // Calculate R-squared
     final n = npsScores.length;
@@ -328,12 +336,20 @@ class AdvancedTrendAnalysisService {
 
   /// Calculate volatility (standard deviation of changes)
   double _calculateVolatility(List<NPSMonthlyReport> reports) {
+    d('[AdvancedTrendAnalysisService] Calculating volatility for ${reports.length} reports');
+    
     final npsScores = reports
         .map((r) => r.allTimeNpsPercentage ?? 0.0)
         .where((score) => score > 0)
         .toList();
 
-    if (npsScores.length < 2) return 0.0;
+    d('[AdvancedTrendAnalysisService] NPS scores for volatility: $npsScores');
+    d('[AdvancedTrendAnalysisService] Raw allTimeNpsPercentage values: ${reports.map((r) => r.allTimeNpsPercentage).toList()}');
+
+    if (npsScores.length < 2) {
+      d('[AdvancedTrendAnalysisService] Insufficient data for volatility calculation: ${npsScores.length} < 2');
+      return -1.0; // Special value to indicate insufficient data
+    }
 
     // Calculate changes
     final changes = <double>[];
@@ -341,11 +357,16 @@ class AdvancedTrendAnalysisService {
       changes.add(npsScores[i] - npsScores[i - 1]);
     }
     
+    d('[AdvancedTrendAnalysisService] Month-to-month changes: $changes');
+    
     // Calculate standard deviation
     final mean = changes.reduce((a, b) => a + b) / changes.length;
     final variance = changes.map((change) => (change - mean) * (change - mean)).reduce((a, b) => a + b) / changes.length;
+    final volatility = math.sqrt(variance);
     
-    return math.sqrt(variance);
+    d('[AdvancedTrendAnalysisService] Mean change: $mean, Variance: $variance, Volatility: $volatility');
+    
+    return volatility;
   }
 
   /// Determine momentum type
