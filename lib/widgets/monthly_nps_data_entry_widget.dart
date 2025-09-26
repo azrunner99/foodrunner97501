@@ -197,19 +197,40 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
   Widget build(BuildContext context) {
     return Consumer<NPSProvider>(
       builder: (context, npsProvider, child) {
-        return Container(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeaderSection(npsProvider),
-              const SizedBox(height: 24),
-              _buildMonthSelector(),
-              const SizedBox(height: 24),
-              _buildServerListSection(npsProvider),
-              const SizedBox(height: 16),
-              _buildActionButtons(),
-            ],
+        return Scaffold(
+          backgroundColor: Colors.grey.shade50,
+          appBar: AppBar(
+            title: const Text(
+              'Monthly NPS Data Entry',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            backgroundColor: Colors.orange.shade600,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ),
+          body: Container(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeaderSection(npsProvider),
+                const SizedBox(height: 16),
+                _buildDataEntryWarning(),
+                const SizedBox(height: 24),
+                _buildMonthSelector(),
+                const SizedBox(height: 24),
+                _buildServerListSection(npsProvider),
+                const SizedBox(height: 16),
+                _buildActionButtons(),
+              ],
+            ),
           ),
         );
       },
@@ -231,58 +252,116 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.orange.shade200),
       ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade600,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(
+              Icons.calendar_month,
+              color: Colors.white,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Enter NPS scores and feedback for servers by month',
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${npsProvider.servers.where((s) => s.active).length} servers available',
+                  style: TextStyle(
+                    color: Colors.orange.shade700,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Clear All button
+          OutlinedButton.icon(
+            onPressed: _clearAllDataWithConfirmation,
+            icon: const Icon(Icons.clear_all, size: 18),
+            label: const Text('Clear All'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.red.shade700,
+              side: BorderSide(color: Colors.red.shade300),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDataEntryWarning() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.orange.shade200, width: 2),
+      ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade600,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.calendar_month,
-                  color: Colors.white,
-                  size: 24,
-                ),
+              Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.orange.shade700,
+                size: 24,
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Monthly NPS Data Entry',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Enter NPS scores and feedback for servers by month',
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Clear All button moved to header
-              OutlinedButton.icon(
-                onPressed: _clearAllDataWithConfirmation,
-                icon: const Icon(Icons.clear_all, size: 18),
-                label: const Text('Clear All'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.red.shade700,
-                  side: BorderSide(color: Colors.red.shade300),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              const SizedBox(width: 8),
+              Text(
+                'IMPORTANT DATA ENTRY GUIDELINES',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange.shade800,
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '• Leave fields BLANK if no reviews were received',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade700,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '• Enter 0 only if actual 0% score was received',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade700,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '• Incorrect entries will skew performance calculations',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.red.shade700,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ],
       ),
