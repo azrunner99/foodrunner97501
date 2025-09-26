@@ -12,6 +12,12 @@ import '../storage/nps_database.dart';
 import '../storage/database_factory.dart';
 import 'secured_nps_widgets.dart';
 import '../screens/nps_benchmarking_screen.dart';
+import '../services/historical_nps_aggregation_service.dart';
+import '../services/performance_timeline_service.dart';
+import '../services/intelligent_performance_classifier.dart';
+import '../services/advanced_trend_analysis_service.dart' as trend_analysis;
+import '../models/historical_nps_data.dart';
+import '../models/performance_models.dart' as performance_models;
 
 /// Enhanced analytics dashboard with charts and visualizations
 class EnhancedNPSAnalyticsWidget extends StatefulWidget {
@@ -26,6 +32,77 @@ class _EnhancedNPSAnalyticsWidgetState
     extends State<EnhancedNPSAnalyticsWidget> {
   int _selectedTimeRange = 30; // Days
   String _selectedChartType = 'trend';
+  
+  // Historical analytics state
+  List<HistoricalNPSData> _historicalData = [];
+  List<PerformanceTimeline> _timelines = [];
+  bool _isLoadingHistorical = false;
+  String _selectedServerId = '';
+  Map<String, performance_models.PerformanceClassification> _serverClassifications = {};
+  Map<String, trend_analysis.AdvancedTrendAnalysis> _serverTrendAnalyses = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHistoricalData();
+  }
+
+  Future<void> _loadHistoricalData() async {
+    setState(() {
+      _isLoadingHistorical = true;
+    });
+
+    try {
+      d('[EnhancedNPSAnalyticsWidget] Loading historical data...');
+
+      // Load historical data for all servers
+      final historicalData = await HistoricalNPSAggregationService.instance.getAllHistoricalData();
+
+      // Load performance timelines
+      final timelines = await PerformanceTimelineService.instance.getAllTimelines();
+
+      // Load intelligent performance classifications and trend analyses
+      final classifications = <String, performance_models.PerformanceClassification>{};
+      final trendAnalyses = <String, trend_analysis.AdvancedTrendAnalysis>{};
+      
+      for (final data in historicalData) {
+        // Get monthly reports for this server
+        final monthlyReports = await _getMonthlyReportsForServer(data.serverId);
+        
+        // Classify performance
+        final classification = IntelligentPerformanceClassifier().classifyServerPerformance(
+          monthlyReports: monthlyReports,
+          serverName: data.serverName,
+          serverId: int.parse(data.serverId),
+        );
+        
+        // Analyze trends
+        final trendAnalysis = trend_analysis.AdvancedTrendAnalysisService().analyzeServerTrends(
+          monthlyReports: monthlyReports,
+          serverName: data.serverName,
+          serverId: int.parse(data.serverId),
+        );
+        
+        classifications[data.serverId] = classification;
+        trendAnalyses[data.serverId] = trendAnalysis;
+      }
+
+      setState(() {
+        _historicalData = historicalData;
+        _timelines = timelines;
+        _serverClassifications = classifications;
+        _serverTrendAnalyses = trendAnalyses;
+        _isLoadingHistorical = false;
+      });
+
+      d('[EnhancedNPSAnalyticsWidget] Loaded ${historicalData.length} servers with historical data and classifications');
+    } catch (e) {
+      d('[EnhancedNPSAnalyticsWidget] Error loading historical data: $e');
+      setState(() {
+        _isLoadingHistorical = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -125,6 +202,9 @@ class _EnhancedNPSAnalyticsWidgetState
                         // Key Metrics from Monthly Reports
                         _buildKeyMetricsFromReports(monthlyReports),
                         const SizedBox(height: 20),
+                        // Historical Analytics Section
+                        _buildHistoricalAnalyticsSection(),
+                        const SizedBox(height: 20),
                       ],
                     ),
                   );
@@ -174,7 +254,12 @@ class _EnhancedNPSAnalyticsWidgetState
         d('[EnhancedNPSAnalyticsWidget] First report: ${reportMaps.first}');
       }
       
-      return reportMaps.map((map) => NPSMonthlyReport.fromMap(map)).toList();
+      final reports = reportMaps.map((map) => NPSMonthlyReport.fromMap(map)).toList();
+      
+      // Debug: Log the actual reports to see what we're getting
+      d('[EnhancedNPSAnalyticsWidget] Loaded ${reports.length} total reports');
+      
+      return reports;
     } catch (e) {
       d('[EnhancedNPSAnalyticsWidget] Error loading monthly reports: $e');
       rethrow;
@@ -193,15 +278,44 @@ class _EnhancedNPSAnalyticsWidgetState
     }
 
     // Calculate aggregate metrics
-    final totalServers = reports.length;
-    final avgNPS = reports
-            .map((r) => r.allTimeNpsPercentage ?? 0.0)
-            .reduce((a, b) => a + b) /
-        totalServers;
-    final totalSales =
-        reports.map((r) => r.allTimeSales).reduce((a, b) => a + b);
-    final totalChecks =
-        reports.map((r) => r.allTimeTableCount).reduce((a, b) => a + b);
+    // Group reports by server to get unique servers
+    final serverReports = <int, List<NPSMonthlyReport>>{};
+    for (final report in reports) {
+      serverReports.putIfAbsent(report.serverId, () => []).add(report);
+    }
+    
+    final totalServers = serverReports.length;
+    
+    // Calculate average all-time NPS per server, then average those
+    final serverAverages = <double>[];
+    for (final serverReportList in serverReports.values) {
+      // Get the most recent report for this server (highest month/year)
+      final mostRecentReport = serverReportList.reduce((a, b) {
+        if (a.reportYear > b.reportYear) return a;
+        if (a.reportYear < b.reportYear) return b;
+        return a.reportMonth > b.reportMonth ? a : b;
+      });
+      
+      if (mostRecentReport.allTimeNpsPercentage != null) {
+        serverAverages.add(mostRecentReport.allTimeNpsPercentage!);
+      }
+    }
+    
+    final avgNPS = serverAverages.isEmpty 
+        ? 0.0 
+        : serverAverages.reduce((a, b) => a + b) / serverAverages.length;
+    // Calculate total sales and checks from most recent report per server
+    double totalSales = 0.0;
+    int totalChecks = 0;
+    for (final serverReportList in serverReports.values) {
+      final mostRecentReport = serverReportList.reduce((a, b) {
+        if (a.reportYear > b.reportYear) return a;
+        if (a.reportYear < b.reportYear) return b;
+        return a.reportMonth > b.reportMonth ? a : b;
+      });
+      totalSales += mostRecentReport.allTimeSales;
+      totalChecks += mostRecentReport.allTimeTableCount;
+    }
 
     // Get unique months represented in the data
     final months = reports.map((r) => r.reportMonth % 100).toSet().toList()
@@ -292,8 +406,1035 @@ class _EnhancedNPSAnalyticsWidgetState
     );
   }
 
+  /// Count unique months across all reports
+  int _getUniqueMonthsCount(List<NPSMonthlyReport> reports) {
+    final uniqueMonths = <String>{};
+    for (final report in reports) {
+      final monthKey = '${report.reportYear}-${report.reportMonth.toString().padLeft(2, '0')}';
+      uniqueMonths.add(monthKey);
+    }
+    return uniqueMonths.length;
+  }
+
+  /// Get monthly reports for a specific server
+  Future<List<NPSMonthlyReport>> _getMonthlyReportsForServer(String serverId) async {
+    try {
+      final database = DatabaseFactory.instance;
+      final isSqflite = database.runtimeType.toString().contains('Sqflite');
+      
+      final results = await database.queryTable(
+        'nps_monthly_reports',
+        where: 'server_id = ?',
+        whereArgs: [int.parse(serverId)],
+        orderBy: isSqflite ? 'month_year DESC' : 'report_year DESC, report_month DESC',
+      );
+      
+      return results.map((row) => NPSMonthlyReport.fromMap(row)).toList();
+    } catch (e) {
+      d('[EnhancedNPSAnalyticsWidget] Error loading monthly reports for server $serverId: $e');
+      return [];
+    }
+  }
+
+  /// Build intelligent performance classifications section
+  Widget _buildIntelligentClassifications() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.psychology, color: Colors.purple.shade600),
+                const SizedBox(width: 8),
+                Text(
+                  'Intelligent Performance Classification',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.purple.shade800,
+                    fontSize: 24, // Increased font size
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.purple.shade100,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.purple.shade300),
+                  ),
+                  child: Text(
+                    'Phase 2',
+                    style: TextStyle(
+                      color: Colors.purple.shade700,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'AI-powered performance analysis using multi-dimensional scoring and contextual intelligence.',
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: Colors.grey.shade600,
+                fontSize: 16, // Increased font size
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (_serverClassifications.isEmpty)
+              _buildNoClassificationsMessage()
+            else
+              Column(
+                children: [
+                  _buildClassificationSummary(),
+                  const SizedBox(height: 16),
+                  _buildDetailedClassifications(),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Build message when no classifications are available
+  Widget _buildNoClassificationsMessage() {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(32),
+        child: Column(
+          children: [
+            Icon(Icons.psychology, size: 64, color: Colors.grey),
+            SizedBox(height: 16),
+            Text(
+              'No Performance Classifications Available',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Enter monthly NPS data to enable intelligent performance analysis',
+              style: TextStyle(color: Colors.grey),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Build classification summary
+  Widget _buildClassificationSummary() {
+    final tierCounts = <performance_models.IntelligentPerformanceTier, int>{};
+    for (final classification in _serverClassifications.values) {
+      tierCounts[classification.tier] = (tierCounts[classification.tier] ?? 0) + 1;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Performance Distribution',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+              fontSize: 18, // Increased font size
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildTierSummaryItem(
+                  performance_models.IntelligentPerformanceTier.elite,
+                  tierCounts[performance_models.IntelligentPerformanceTier.elite] ?? 0,
+                  _serverClassifications.length,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildTierSummaryItem(
+                  performance_models.IntelligentPerformanceTier.strong,
+                  tierCounts[performance_models.IntelligentPerformanceTier.strong] ?? 0,
+                  _serverClassifications.length,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _buildTierSummaryItem(
+                  performance_models.IntelligentPerformanceTier.developing,
+                  tierCounts[performance_models.IntelligentPerformanceTier.developing] ?? 0,
+                  _serverClassifications.length,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildTierSummaryItem(
+                  performance_models.IntelligentPerformanceTier.concerning,
+                  tierCounts[performance_models.IntelligentPerformanceTier.concerning] ?? 0,
+                  _serverClassifications.length,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _buildTierSummaryItem(
+                  performance_models.IntelligentPerformanceTier.critical,
+                  tierCounts[performance_models.IntelligentPerformanceTier.critical] ?? 0,
+                  _serverClassifications.length,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildTierSummaryItem(
+                  performance_models.IntelligentPerformanceTier.unknown,
+                  tierCounts[performance_models.IntelligentPerformanceTier.unknown] ?? 0,
+                  _serverClassifications.length,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build tier summary item
+  Widget _buildTierSummaryItem(performance_models.IntelligentPerformanceTier tier, int count, int total) {
+    final percentage = total > 0 ? (count / total * 100).round() : 0;
+    
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: _getTierColor(tier).withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: _getTierColor(tier).withOpacity(0.3)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                tier.emoji,
+                style: const TextStyle(fontSize: 20),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                tier.displayName,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: _getTierColor(tier),
+                  fontSize: 14, // Increased font size
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '$count ($percentage%)',
+            style: TextStyle(
+              fontSize: 16, // Increased font size
+              fontWeight: FontWeight.bold,
+              color: _getTierColor(tier),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build detailed classifications
+  Widget _buildDetailedClassifications() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Detailed Classifications',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+            fontSize: 18, // Increased font size
+          ),
+        ),
+        const SizedBox(height: 12),
+        ..._serverClassifications.entries.map((entry) => 
+          _buildClassificationCard(entry.key, entry.value)
+        ),
+      ],
+    );
+  }
+
+  /// Build individual classification card
+  Widget _buildClassificationCard(String serverId, performance_models.PerformanceClassification classification) {
+    final serverData = _historicalData.firstWhere(
+      (data) => data.serverId == serverId,
+      orElse: () => _historicalData.first,
+    );
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _getTierColor(classification.tier).withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _getTierColor(classification.tier).withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                classification.tier.emoji,
+                style: const TextStyle(fontSize: 24),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  serverData.serverName,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18, // Increased font size
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _getTierColor(classification.tier).withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  classification.tier.displayName,
+                  style: TextStyle(
+                    color: _getTierColor(classification.tier),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14, // Increased font size
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildClassificationMetric(
+                  'Score',
+                  '${classification.score.toStringAsFixed(1)}%',
+                  _getClassificationScoreColor(classification.score),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildClassificationMetric(
+                  'Confidence',
+                  '${classification.confidence.toStringAsFixed(1)}%',
+                  _getConfidenceColor(classification.confidence),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Reasoning:',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+              fontSize: 14, // Increased font size
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            classification.reasoning.split('\n').first, // Show first line only
+            style: TextStyle(
+              color: Colors.grey.shade700,
+              fontSize: 14, // Increased font size
+            ),
+          ),
+          if (classification.recommendations.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Recommendations:',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                fontSize: 14, // Increased font size
+              ),
+            ),
+            const SizedBox(height: 4),
+            ...classification.recommendations.take(2).map((rec) => 
+              Padding(
+                padding: const EdgeInsets.only(left: 8, bottom: 2),
+                child: Text(
+                  '• $rec',
+                  style: TextStyle(
+                    color: Colors.grey.shade700,
+                    fontSize: 13, // Increased font size
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Build classification metric
+  Widget _buildClassificationMetric(String label, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18, // Increased font size
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12, // Increased font size
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Get tier color
+  Color _getTierColor(performance_models.IntelligentPerformanceTier tier) {
+    switch (tier) {
+      case performance_models.IntelligentPerformanceTier.elite:
+        return Colors.purple;
+      case performance_models.IntelligentPerformanceTier.strong:
+        return Colors.green;
+      case performance_models.IntelligentPerformanceTier.developing:
+        return Colors.blue;
+      case performance_models.IntelligentPerformanceTier.concerning:
+        return Colors.orange;
+      case performance_models.IntelligentPerformanceTier.critical:
+        return Colors.red;
+      case performance_models.IntelligentPerformanceTier.unknown:
+        return Colors.grey;
+    }
+  }
+
+  /// Get classification score color
+  Color _getClassificationScoreColor(double score) {
+    if (score >= 90) return Colors.purple;
+    if (score >= 80) return Colors.green;
+    if (score >= 60) return Colors.blue;
+    if (score >= 40) return Colors.orange;
+    return Colors.red;
+  }
+
+  /// Get confidence color
+  Color _getConfidenceColor(double confidence) {
+    if (confidence >= 80) return Colors.green;
+    if (confidence >= 60) return Colors.blue;
+    if (confidence >= 40) return Colors.orange;
+    return Colors.red;
+  }
+
+  /// Build advanced trend analysis section
+  Widget _buildAdvancedTrendAnalysis() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.trending_up, color: Colors.indigo.shade600),
+                const SizedBox(width: 8),
+                Text(
+                  'Advanced Trend Analysis',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.indigo.shade800,
+                    fontSize: 24, // Increased font size
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.indigo.shade100,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.indigo.shade300),
+                  ),
+                  child: Text(
+                    'Phase 3',
+                    style: TextStyle(
+                      color: Colors.indigo.shade700,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Sophisticated trend analysis with velocity tracking, strength measurement, and predictive insights.',
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: Colors.grey.shade600,
+                fontSize: 16, // Increased font size
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (_serverTrendAnalyses.isEmpty)
+              _buildNoTrendAnalysisMessage()
+            else
+              Column(
+                children: [
+                  _buildTrendAnalysisSummary(),
+                  const SizedBox(height: 16),
+                  _buildDetailedTrendAnalyses(),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Build message when no trend analyses are available
+  Widget _buildNoTrendAnalysisMessage() {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(32),
+        child: Column(
+          children: [
+            Icon(Icons.trending_up, size: 64, color: Colors.grey),
+            SizedBox(height: 16),
+            Text(
+              'No Trend Analysis Available',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Enter monthly NPS data to enable advanced trend analysis',
+              style: TextStyle(color: Colors.grey),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Build trend analysis summary
+  Widget _buildTrendAnalysisSummary() {
+    final trendCounts = <trend_analysis.TrendDirection, int>{};
+    final momentumCounts = <trend_analysis.MomentumType, int>{};
+    
+    for (final analysis in _serverTrendAnalyses.values) {
+      trendCounts[analysis.trendDirection] = (trendCounts[analysis.trendDirection] ?? 0) + 1;
+      momentumCounts[analysis.momentum] = (momentumCounts[analysis.momentum] ?? 0) + 1;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Trend Distribution',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+              fontSize: 18, // Increased font size
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildTrendSummaryItem(
+                  trend_analysis.TrendDirection.stronglyImproving,
+                  trendCounts[trend_analysis.TrendDirection.stronglyImproving] ?? 0,
+                  _serverTrendAnalyses.length,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildTrendSummaryItem(
+                  trend_analysis.TrendDirection.improving,
+                  trendCounts[trend_analysis.TrendDirection.improving] ?? 0,
+                  _serverTrendAnalyses.length,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _buildTrendSummaryItem(
+                  trend_analysis.TrendDirection.stable,
+                  trendCounts[trend_analysis.TrendDirection.stable] ?? 0,
+                  _serverTrendAnalyses.length,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildTrendSummaryItem(
+                  trend_analysis.TrendDirection.declining,
+                  trendCounts[trend_analysis.TrendDirection.declining] ?? 0,
+                  _serverTrendAnalyses.length,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _buildTrendSummaryItem(
+                  trend_analysis.TrendDirection.stronglyDeclining,
+                  trendCounts[trend_analysis.TrendDirection.stronglyDeclining] ?? 0,
+                  _serverTrendAnalyses.length,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildTrendSummaryItem(
+                  trend_analysis.TrendDirection.unknown,
+                  trendCounts[trend_analysis.TrendDirection.unknown] ?? 0,
+                  _serverTrendAnalyses.length,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build trend summary item
+  Widget _buildTrendSummaryItem(trend_analysis.TrendDirection trend, int count, int total) {
+    final percentage = total > 0 ? (count / total * 100).round() : 0;
+    
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: _getAdvancedTrendColor(trend).withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: _getAdvancedTrendColor(trend).withOpacity(0.3)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                trend.emoji,
+                style: const TextStyle(fontSize: 20),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                trend.displayName,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: _getAdvancedTrendColor(trend),
+                  fontSize: 14, // Increased font size
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '$count ($percentage%)',
+            style: TextStyle(
+              fontSize: 16, // Increased font size
+              fontWeight: FontWeight.bold,
+              color: _getAdvancedTrendColor(trend),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build detailed trend analyses
+  Widget _buildDetailedTrendAnalyses() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Detailed Trend Analysis',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+            fontSize: 18, // Increased font size
+          ),
+        ),
+        const SizedBox(height: 12),
+        ..._serverTrendAnalyses.entries.map((entry) => 
+          _buildTrendAnalysisCard(entry.key, entry.value)
+        ),
+      ],
+    );
+  }
+
+  /// Build individual trend analysis card
+  Widget _buildTrendAnalysisCard(String serverId, trend_analysis.AdvancedTrendAnalysis analysis) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _getAdvancedTrendColor(analysis.trendDirection).withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _getAdvancedTrendColor(analysis.trendDirection).withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                analysis.trendDirection.emoji,
+                style: const TextStyle(fontSize: 24),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  analysis.serverName,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18, // Increased font size
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _getAdvancedTrendColor(analysis.trendDirection).withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  analysis.trendDirection.displayName,
+                  style: TextStyle(
+                    color: _getAdvancedTrendColor(analysis.trendDirection),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14, // Increased font size
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildTrendMetric(
+                  'Strength',
+                  '${analysis.trendStrength.toStringAsFixed(1)}%',
+                  _getTrendStrengthColor(analysis.trendStrength),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildTrendMetric(
+                  'Velocity',
+                  '${analysis.trendVelocity.toStringAsFixed(1)}/mo',
+                  _getVelocityColor(analysis.trendVelocity),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildTrendMetric(
+                  'Confidence',
+                  '${analysis.trendConfidence.toStringAsFixed(1)}%',
+                  _getConfidenceColor(analysis.trendConfidence),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildTrendMetric(
+                  'Momentum',
+                  analysis.momentum.displayName,
+                  _getMomentumColor(analysis.momentum),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildTrendMetric(
+                  'Persistence',
+                  '${analysis.trendPersistence}mo',
+                  _getPersistenceColor(analysis.trendPersistence),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildTrendMetric(
+                  'Volatility',
+                  '${analysis.volatility.toStringAsFixed(1)}',
+                  _getAdvancedVolatilityColor(analysis.volatility),
+                ),
+              ),
+            ],
+          ),
+          if (analysis.projectedPerformance != null) ...[
+            const SizedBox(height: 12),
+            _buildProjectedPerformance(analysis.projectedPerformance!),
+          ],
+          const SizedBox(height: 12),
+          Text(
+            'Key Insights:',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+              fontSize: 14, // Increased font size
+            ),
+          ),
+          const SizedBox(height: 4),
+          ...analysis.trendInsights.take(2).map((insight) => 
+            Padding(
+              padding: const EdgeInsets.only(left: 8, bottom: 2),
+              child: Text(
+                '• $insight',
+                style: TextStyle(
+                  color: Colors.grey.shade700,
+                  fontSize: 13, // Increased font size
+                ),
+              ),
+            ),
+          ),
+          if (analysis.trendRecommendations.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Recommendations:',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                fontSize: 14, // Increased font size
+              ),
+            ),
+            const SizedBox(height: 4),
+            ...analysis.trendRecommendations.take(2).map((rec) => 
+              Padding(
+                padding: const EdgeInsets.only(left: 8, bottom: 2),
+                child: Text(
+                  '• $rec',
+                  style: TextStyle(
+                    color: Colors.grey.shade700,
+                    fontSize: 13, // Increased font size
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Build trend metric
+  Widget _buildTrendMetric(String label, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 16, // Increased font size
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12, // Increased font size
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build projected performance
+  Widget _buildProjectedPerformance(trend_analysis.ProjectedPerformance projection) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blue.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Projected Performance',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+              fontSize: 14, // Increased font size
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '3 months: ${projection.projected3Month.toStringAsFixed(1)}%',
+                  style: const TextStyle(fontSize: 14), // Increased font size
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  '6 months: ${projection.projected6Month.toStringAsFixed(1)}%',
+                  style: const TextStyle(fontSize: 14), // Increased font size
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Confidence: ${projection.confidence.toStringAsFixed(1)}%',
+            style: TextStyle(
+              fontSize: 12, // Increased font size
+              color: Colors.grey.shade600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Get advanced trend color
+  Color _getAdvancedTrendColor(trend_analysis.TrendDirection trend) {
+    switch (trend) {
+      case trend_analysis.TrendDirection.stronglyImproving:
+        return Colors.green;
+      case trend_analysis.TrendDirection.improving:
+        return Colors.lightGreen;
+      case trend_analysis.TrendDirection.stable:
+        return Colors.blue;
+      case trend_analysis.TrendDirection.declining:
+        return Colors.orange;
+      case trend_analysis.TrendDirection.stronglyDeclining:
+        return Colors.red;
+      case trend_analysis.TrendDirection.unknown:
+        return Colors.grey;
+    }
+  }
+
+  /// Get trend strength color
+  Color _getTrendStrengthColor(double strength) {
+    if (strength >= 80) return Colors.green;
+    if (strength >= 60) return Colors.lightGreen;
+    if (strength >= 40) return Colors.orange;
+    return Colors.red;
+  }
+
+  /// Get velocity color
+  Color _getVelocityColor(double velocity) {
+    if (velocity > 1.0) return Colors.green;
+    if (velocity > 0.1) return Colors.lightGreen;
+    if (velocity > -0.1) return Colors.blue;
+    if (velocity > -1.0) return Colors.orange;
+    return Colors.red;
+  }
+
+  /// Get momentum color
+  Color _getMomentumColor(trend_analysis.MomentumType momentum) {
+    switch (momentum) {
+      case trend_analysis.MomentumType.strongPositive:
+        return Colors.green;
+      case trend_analysis.MomentumType.positive:
+        return Colors.lightGreen;
+      case trend_analysis.MomentumType.weakPositive:
+        return Colors.blue;
+      case trend_analysis.MomentumType.neutral:
+        return Colors.grey;
+      case trend_analysis.MomentumType.weakNegative:
+        return Colors.orange;
+      case trend_analysis.MomentumType.negative:
+        return Colors.deepOrange;
+      case trend_analysis.MomentumType.strongNegative:
+        return Colors.red;
+    }
+  }
+
+  /// Get persistence color
+  Color _getPersistenceColor(int persistence) {
+    if (persistence >= 6) return Colors.green;
+    if (persistence >= 3) return Colors.blue;
+    return Colors.orange;
+  }
+
+  /// Get advanced volatility color
+  Color _getAdvancedVolatilityColor(double volatility) {
+    if (volatility <= 1.0) return Colors.green;
+    if (volatility <= 3.0) return Colors.blue;
+    if (volatility <= 5.0) return Colors.orange;
+    return Colors.red;
+  }
+
+  /// Convert historical TrendDirection to advanced TrendDirection
+  trend_analysis.TrendDirection _convertToAdvancedTrendDirection(TrendDirection direction) {
+    switch (direction) {
+      case TrendDirection.improving:
+        return trend_analysis.TrendDirection.improving;
+      case TrendDirection.declining:
+        return trend_analysis.TrendDirection.declining;
+      case TrendDirection.stable:
+        return trend_analysis.TrendDirection.stable;
+      case TrendDirection.volatile:
+        return trend_analysis.TrendDirection.unknown; // Map volatile to unknown
+    }
+  }
+
   /// Build key metrics from monthly reports
   Widget _buildKeyMetricsFromReports(List<NPSMonthlyReport> reports) {
+    // Debug: Log what we're actually displaying
+    d('[EnhancedNPSAnalyticsWidget] Displaying metrics for ${reports.length} total reports, ${_getUniqueMonthsCount(reports)} unique months');
+    
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -307,7 +1448,7 @@ class _EnhancedNPSAnalyticsWidgetState
                   ),
             ),
             const SizedBox(height: 12),
-            Text('Based on ${reports.length} monthly reports'),
+            Text('Based on ${_getUniqueMonthsCount(reports)} unique months of data'),
           ],
         ),
       ),
@@ -1913,5 +3054,488 @@ class _EnhancedNPSAnalyticsWidgetState
     } else {
       return 'Down';
     }
+  }
+
+  /// Build the historical analytics section
+  Widget _buildHistoricalAnalyticsSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.history, color: Colors.orange.shade600),
+                const SizedBox(width: 8),
+                Text(
+                  'Historical NPS Analytics',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange.shade800,
+                    fontSize: 24,
+                  ),
+                ),
+                const Spacer(),
+                if (_isLoadingHistorical)
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else
+                  IconButton(
+                    icon: const Icon(Icons.refresh),
+                    onPressed: _loadHistoricalData,
+                    tooltip: 'Refresh Historical Data',
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (_isLoadingHistorical)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(32),
+                  child: Column(
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text('Loading historical analytics...'),
+                    ],
+                  ),
+                ),
+              )
+            else if (_historicalData.isEmpty)
+              _buildNoHistoricalDataMessage()
+            else
+              Column(
+                children: [
+                  _buildHistoricalServerSelector(),
+                  if (_selectedServerId.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    _buildSelectedServerDetails(),
+                  ],
+                            const SizedBox(height: 16),
+                            _buildAllServersOverview(),
+                            const SizedBox(height: 16),
+                            _buildIntelligentClassifications(),
+                            const SizedBox(height: 16),
+                            _buildAdvancedTrendAnalysis(),
+                          ],
+                        ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoHistoricalDataMessage() {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(32),
+        child: Column(
+          children: [
+            Icon(Icons.history, size: 64, color: Colors.grey),
+            SizedBox(height: 16),
+            Text(
+              'No Historical Data Available',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Enter monthly NPS data to see historical analytics',
+              style: TextStyle(color: Colors.grey),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+
+
+  Widget _buildHistoricalServerSelector() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Select Server for Detailed Analysis',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+            ),
+          ),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            value: _selectedServerId.isEmpty ? null : _selectedServerId,
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              labelText: 'Server',
+              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+            style: const TextStyle(fontSize: 16),
+            items: _historicalData.map((data) {
+              return DropdownMenuItem<String>(
+                value: data.serverId,
+                child: Text(
+                  data.serverName,
+                  style: const TextStyle(fontSize: 16),
+                ),
+              );
+            }).toList(),
+            onChanged: (value) {
+              setState(() {
+                _selectedServerId = value ?? '';
+              });
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSelectedServerDetails() {
+    final historicalData = _historicalData.firstWhere(
+      (data) => data.serverId == _selectedServerId,
+      orElse: () => _historicalData.first,
+    );
+
+    final timeline = _timelines.firstWhere(
+      (t) => t.serverId == _selectedServerId,
+      orElse: () => _timelines.first,
+    );
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blue.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.person,
+                color: _getClassificationColor(historicalData.classification),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                historicalData.serverName,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _getClassificationColor(historicalData.classification).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: _getClassificationColor(historicalData.classification).withOpacity(0.3),
+                  ),
+                ),
+                child: Text(
+                  '${historicalData.classification.emoji} ${historicalData.classification.displayName}',
+                  style: TextStyle(
+                    color: _getClassificationColor(historicalData.classification),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildMetricItem(
+                  'Overall Score',
+                  '${historicalData.overallPerformanceScore.toStringAsFixed(1)}%',
+                  _getHistoricalScoreColor(historicalData.overallPerformanceScore),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildMetricItem(
+                  'Trend',
+                  _getHistoricalTrendText(_convertToAdvancedTrendDirection(timeline.trend.direction)),
+                  _getHistoricalTrendColor(_convertToAdvancedTrendDirection(timeline.trend.direction)),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildMetricItem(
+                  'Volatility',
+                  '${timeline.volatility.toStringAsFixed(1)}',
+                  _getVolatilityColor(timeline.volatility),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Monthly Performance History',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(height: 8),
+          ...historicalData.monthlyData.take(3).map((monthly) => _buildMonthlyPerformanceItem(monthly)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetricItem(String label, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMonthlyPerformanceItem(MonthlyPerformance monthly) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              '${monthly.month.month}/${monthly.month.year}',
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              '1M: ${monthly.oneMonthNPS.toStringAsFixed(1)}%',
+              style: TextStyle(
+                color: _getHistoricalScoreColor(monthly.oneMonthNPS),
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              '3M: ${monthly.threeMonthNPS.toStringAsFixed(1)}%',
+              style: TextStyle(
+                color: _getHistoricalScoreColor(monthly.threeMonthNPS),
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              'All: ${monthly.allTimeNPS.toStringAsFixed(1)}%',
+              style: TextStyle(
+                color: _getHistoricalScoreColor(monthly.allTimeNPS),
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAllServersOverview() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'All Servers Overview',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
+        ),
+        const SizedBox(height: 8),
+        ..._historicalData.map((data) => _buildServerOverviewItem(data)),
+      ],
+    );
+  }
+
+  Widget _buildServerOverviewItem(HistoricalNPSData data) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 2,
+            child: Text(
+              data.serverName,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              '${data.overallPerformanceScore.toStringAsFixed(1)}%',
+              style: TextStyle(
+                color: _getHistoricalScoreColor(data.overallPerformanceScore),
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              data.classification.displayName,
+              style: TextStyle(
+                color: _getClassificationColor(data.classification),
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              '${data.totalMonthsReported} months',
+              style: const TextStyle(
+                color: Colors.grey,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper methods for colors and styling
+  Color _getClassificationColor(dynamic classification) {
+    // Handle both IntelligentPerformanceTier and PerformanceClassification
+    if (classification is performance_models.IntelligentPerformanceTier) {
+      switch (classification) {
+        case performance_models.IntelligentPerformanceTier.elite:
+          return Colors.purple;
+        case performance_models.IntelligentPerformanceTier.strong:
+          return Colors.green;
+        case performance_models.IntelligentPerformanceTier.developing:
+          return Colors.blue;
+        case performance_models.IntelligentPerformanceTier.concerning:
+          return Colors.orange;
+        case performance_models.IntelligentPerformanceTier.critical:
+          return Colors.red;
+        case performance_models.IntelligentPerformanceTier.unknown:
+          return Colors.grey;
+      }
+    } else if (classification is PerformanceClassification) {
+      // Handle PerformanceClassification from historical_nps_data.dart
+      switch (classification) {
+        case PerformanceClassification.elite:
+          return Colors.purple;
+        case PerformanceClassification.strong:
+          return Colors.green;
+        case PerformanceClassification.developing:
+          return Colors.blue;
+        case PerformanceClassification.concerning:
+          return Colors.orange;
+        case PerformanceClassification.critical:
+          return Colors.red;
+        case PerformanceClassification.unknown:
+          return Colors.grey;
+      }
+    }
+    return Colors.grey; // Default fallback
+  }
+
+  Color _getHistoricalScoreColor(double score) {
+    if (score >= 80) return Colors.green;
+    if (score >= 60) return Colors.orange;
+    return Colors.red;
+  }
+
+  String _getHistoricalTrendText(trend_analysis.TrendDirection direction) {
+    switch (direction) {
+      case trend_analysis.TrendDirection.improving:
+        return '↗ Improving';
+      case trend_analysis.TrendDirection.declining:
+        return '↘ Declining';
+      case trend_analysis.TrendDirection.stable:
+        return '→ Stable';
+      case trend_analysis.TrendDirection.stronglyImproving:
+        return '🚀 Strongly Improving';
+      case trend_analysis.TrendDirection.stronglyDeclining:
+        return '📉 Strongly Declining';
+      case trend_analysis.TrendDirection.unknown:
+        return '❓ Unknown';
+    }
+  }
+
+  Color _getHistoricalTrendColor(trend_analysis.TrendDirection direction) {
+    switch (direction) {
+      case trend_analysis.TrendDirection.improving:
+        return Colors.green;
+      case trend_analysis.TrendDirection.declining:
+        return Colors.red;
+      case trend_analysis.TrendDirection.stable:
+        return Colors.blue;
+      case trend_analysis.TrendDirection.stronglyImproving:
+        return Colors.green;
+      case trend_analysis.TrendDirection.stronglyDeclining:
+        return Colors.red;
+      case trend_analysis.TrendDirection.unknown:
+        return Colors.grey;
+    }
+  }
+
+  Color _getVolatilityColor(double volatility) {
+    if (volatility < 10) return Colors.green;
+    if (volatility < 20) return Colors.orange;
+    return Colors.red;
   }
 }

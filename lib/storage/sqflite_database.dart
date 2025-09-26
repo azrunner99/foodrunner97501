@@ -20,7 +20,7 @@ class SqfliteNPSDatabase implements DatabaseInterface {
 
       _database = await sqflite.openDatabase(
         _databasePath!,
-        version: 5, // Increment to force schema recreation with new indexes
+        version: 6, // Increment to add performance trends and insights tables
         onCreate: _createDatabase,
         onUpgrade: _upgradeDatabase,
       );
@@ -104,10 +104,57 @@ class SqfliteNPSDatabase implements DatabaseInterface {
       )
     ''');
 
+    // Performance trends table for historical analysis
+    await db.execute('''
+      CREATE TABLE performance_trends (
+        id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+        server_id INTEGER NOT NULL,
+        trend_direction TEXT NOT NULL,
+        trend_slope REAL NOT NULL,
+        trend_strength REAL NOT NULL,
+        volatility REAL NOT NULL,
+        classification TEXT NOT NULL,
+        overall_score REAL NOT NULL,
+        seasonal_pattern TEXT,
+        last_updated TEXT NOT NULL,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (server_id) REFERENCES servers (id) ON DELETE CASCADE
+      )
+    ''');
+
+    // Performance insights table for actionable recommendations
+    await db.execute('''
+      CREATE TABLE performance_insights (
+        id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+        server_id INTEGER NOT NULL,
+        insight_type TEXT NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL,
+        priority TEXT NOT NULL,
+        action_items TEXT NOT NULL,
+        generated_date TEXT NOT NULL,
+        is_resolved INTEGER DEFAULT 0,
+        resolved_date TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (server_id) REFERENCES servers (id) ON DELETE CASCADE
+      )
+    ''');
+
     // Create comprehensive indexes for performance optimization
     await db.execute('CREATE INDEX idx_servers_active ON servers (active)');
     await db.execute('CREATE INDEX idx_servers_name ON servers (name)');
     await db.execute('CREATE INDEX idx_servers_hire_date ON servers (hire_date)');
+    
+    // Performance trends indexes
+    await db.execute('CREATE INDEX idx_performance_trends_server_id ON performance_trends (server_id)');
+    await db.execute('CREATE INDEX idx_performance_trends_classification ON performance_trends (classification)');
+    await db.execute('CREATE INDEX idx_performance_trends_last_updated ON performance_trends (last_updated)');
+    
+    // Performance insights indexes
+    await db.execute('CREATE INDEX idx_performance_insights_server_id ON performance_insights (server_id)');
+    await db.execute('CREATE INDEX idx_performance_insights_type ON performance_insights (insight_type)');
+    await db.execute('CREATE INDEX idx_performance_insights_priority ON performance_insights (priority)');
+    await db.execute('CREATE INDEX idx_performance_insights_resolved ON performance_insights (is_resolved)');
     
     // NPS Feedback indexes - optimized for frequent queries
     await db.execute('CREATE INDEX idx_nps_feedback_server_id ON nps_feedback (server_id)');
@@ -172,6 +219,61 @@ class SqfliteNPSDatabase implements DatabaseInterface {
         d('[SqfliteNPSDatabase] Successfully migrated nps_monthly_reports table to new schema');
       } catch (e) {
         d('[SqfliteNPSDatabase] Error during migration: $e');
+        rethrow;
+      }
+    }
+    
+    if (oldVersion < 6) {
+      // Add performance trends and insights tables
+      try {
+        // Performance trends table
+        await db.execute('''
+          CREATE TABLE performance_trends (
+            id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            server_id INTEGER NOT NULL,
+            trend_direction TEXT NOT NULL,
+            trend_slope REAL NOT NULL,
+            trend_strength REAL NOT NULL,
+            volatility REAL NOT NULL,
+            classification TEXT NOT NULL,
+            overall_score REAL NOT NULL,
+            seasonal_pattern TEXT,
+            last_updated TEXT NOT NULL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (server_id) REFERENCES servers (id) ON DELETE CASCADE
+          )
+        ''');
+
+        // Performance insights table
+        await db.execute('''
+          CREATE TABLE performance_insights (
+            id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            server_id INTEGER NOT NULL,
+            insight_type TEXT NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT NOT NULL,
+            priority TEXT NOT NULL,
+            action_items TEXT NOT NULL,
+            generated_date TEXT NOT NULL,
+            is_resolved INTEGER DEFAULT 0,
+            resolved_date TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (server_id) REFERENCES servers (id) ON DELETE CASCADE
+          )
+        ''');
+
+        // Create indexes for new tables
+        await db.execute('CREATE INDEX idx_performance_trends_server_id ON performance_trends (server_id)');
+        await db.execute('CREATE INDEX idx_performance_trends_classification ON performance_trends (classification)');
+        await db.execute('CREATE INDEX idx_performance_trends_last_updated ON performance_trends (last_updated)');
+        await db.execute('CREATE INDEX idx_performance_insights_server_id ON performance_insights (server_id)');
+        await db.execute('CREATE INDEX idx_performance_insights_type ON performance_insights (insight_type)');
+        await db.execute('CREATE INDEX idx_performance_insights_priority ON performance_insights (priority)');
+        await db.execute('CREATE INDEX idx_performance_insights_resolved ON performance_insights (is_resolved)');
+        
+        d('[SqfliteNPSDatabase] Successfully added performance trends and insights tables');
+      } catch (e) {
+        d('[SqfliteNPSDatabase] Error adding performance tables: $e');
         rethrow;
       }
     }

@@ -27,6 +27,85 @@ enum PerformanceTier {
   needsImprovement // Bottom 20% - below average performance
 }
 
+/// Intelligent Performance Tier Classification (Phase 2)
+/// Smart performance tiers with multi-dimensional scoring
+enum IntelligentPerformanceTier {
+  elite,           // 90%+ - Exceptional performance with consistency
+  strong,          // 80-89% - Reliable performance with good scores
+  developing,      // 60-79% - Shows potential with room for improvement
+  concerning,      // 40-59% - Performance issues that need attention
+  critical,        // <40% - Requires immediate attention
+  unknown;         // Insufficient data for classification
+
+  String get displayName {
+    switch (this) {
+      case IntelligentPerformanceTier.elite:
+        return 'Elite';
+      case IntelligentPerformanceTier.strong:
+        return 'Strong';
+      case IntelligentPerformanceTier.developing:
+        return 'Developing';
+      case IntelligentPerformanceTier.concerning:
+        return 'Concerning';
+      case IntelligentPerformanceTier.critical:
+        return 'Critical';
+      case IntelligentPerformanceTier.unknown:
+        return 'Unknown';
+    }
+  }
+
+  String get emoji {
+    switch (this) {
+      case IntelligentPerformanceTier.elite:
+        return '👑';
+      case IntelligentPerformanceTier.strong:
+        return '💪';
+      case IntelligentPerformanceTier.developing:
+        return '📈';
+      case IntelligentPerformanceTier.concerning:
+        return '⚠️';
+      case IntelligentPerformanceTier.critical:
+        return '🚨';
+      case IntelligentPerformanceTier.unknown:
+        return '❓';
+    }
+  }
+
+  String get description {
+    switch (this) {
+      case IntelligentPerformanceTier.elite:
+        return 'Exceptional performance with consistently high NPS scores';
+      case IntelligentPerformanceTier.strong:
+        return 'Reliable performance with good NPS scores';
+      case IntelligentPerformanceTier.developing:
+        return 'Shows potential with room for improvement';
+      case IntelligentPerformanceTier.concerning:
+        return 'Performance issues that need attention';
+      case IntelligentPerformanceTier.critical:
+        return 'Requires immediate attention due to low performance';
+      case IntelligentPerformanceTier.unknown:
+        return 'Insufficient data for classification';
+    }
+  }
+}
+
+/// Performance classification result (Phase 2)
+class PerformanceClassification {
+  final IntelligentPerformanceTier tier;
+  final double score;
+  final double confidence;
+  final String reasoning;
+  final List<String> recommendations;
+
+  PerformanceClassification({
+    required this.tier,
+    required this.score,
+    required this.confidence,
+    required this.reasoning,
+    required this.recommendations,
+  });
+}
+
 /// Performance trend direction for temporal analysis
 /// Phase 4: Temporal Derivation Layer
 enum PerformanceTrendDirection {

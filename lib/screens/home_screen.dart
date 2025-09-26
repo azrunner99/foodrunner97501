@@ -2093,6 +2093,17 @@ class _Body extends StatelessWidget {
                       );
                     },
                   ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.analytics),
+                    label: const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 10),
+                      child: Text('Historical NPS Analytics'),
+                    ),
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/historical_analytics');
+                    },
+                  ),
                 ],
               ),
             ),

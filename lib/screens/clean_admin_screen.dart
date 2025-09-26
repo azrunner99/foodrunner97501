@@ -13,7 +13,7 @@ import 'server_performance_screen.dart';
 import 'server_nps_screen.dart';
 import 'station_analytics_screen.dart';
 import 'smart_scheduling_screen.dart';
-import 'comprehensive_analytics_dashboard.dart';
+// import 'comprehensive_analytics_dashboard.dart'; // Commented out - file removed
 import '../utils/log.dart';
 
 class CleanAdminScreen extends StatefulWidget {
@@ -367,7 +367,8 @@ class _CleanAdminScreenState extends State<CleanAdminScreen> {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const ComprehensiveAnalyticsDashboard()),
+                        // MaterialPageRoute(builder: (_) => const ComprehensiveAnalyticsDashboard()), // Commented out - file removed
+                        MaterialPageRoute(builder: (_) => const Text('Analytics Dashboard temporarily disabled')),
                       );
                     },
                   ),
