@@ -553,3 +553,4 @@ class _HistoricalNPSAnalyticsScreenState extends State<HistoricalNPSAnalyticsScr
     return Colors.red;
   }
 }
+

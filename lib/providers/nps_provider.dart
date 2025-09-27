@@ -224,7 +224,7 @@ class NPSProvider with ChangeNotifier {
       // Get the first server as example for monthly report
       if (_servers.isNotEmpty) {
         _currentReport = await _calculator.generateMonthlyReport(
-          _servers.first.id!,
+          int.parse(_servers.first.id),
           reportMonth,
         );
       }
@@ -258,7 +258,7 @@ class NPSProvider with ChangeNotifier {
 
       // Add to database
       final serverId = await _database.insertServer(server.toMap());
-      final newServer = server.copyWith(id: serverId);
+      final newServer = server.copyWith(id: serverId.toString());
       _servers.add(newServer);
       _servers.sort((a, b) => a.name.compareTo(b.name));
 
@@ -287,7 +287,7 @@ class NPSProvider with ChangeNotifier {
       }
 
       // Update in database
-      await _database.updateServer(server.id!, server.toMap());
+      await _database.updateServer(int.parse(server.id!), server.toMap());
 
       // Update in local state
       final index = _servers.indexWhere((s) => s.id == server.id);
@@ -575,7 +575,7 @@ class NPSProvider with ChangeNotifier {
         final reportMonth = monthDate.month;
 
         final reportData =
-            await _database.getMonthlyReport(npsServer.id!, reportMonth);
+            await _database.getMonthlyReport(int.parse(npsServer.id), reportMonth);
         if (reportData != null && reportData.isNotEmpty) {
           reportsFound++;
           // Use all_time data from the most recent report found

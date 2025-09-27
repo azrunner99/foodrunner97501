@@ -29,8 +29,11 @@ class UnifiedDataService {
       d('[UnifiedDataService] Loading servers from all sources...');
       
       // Get servers from NPS Database (primary source)
-      final npsServers = await _npsAdapter.getAllServers(activeOnly: true);
-      d('[UnifiedDataService] Found ${npsServers.length} servers in NPS Database');
+      final serversData = await _npsAdapter.getAllServers(activeOnly: true);
+      final servers = serversData.map((data) => NPSServer.fromMap(data)).toList();
+      // Convert all IDs to non-nullable strings during initialization
+      final unifiedServers = servers.map((server) => server.copyWith(id: server.id ?? 'unknown')).toList();
+      d('[UnifiedDataService] Found ${unifiedServers.length} servers in NPS Database');
       
       // Get servers from AppState (secondary source)
       final appState = AppState();
@@ -38,11 +41,14 @@ class UnifiedDataService {
       d('[UnifiedDataService] Found ${appStateServers.length} servers in AppState');
       
       // Create unified server data
-      final unifiedServers = <UnifiedServerData>[];
+      final unifiedServersList = <UnifiedServerData>[];
       
-      for (final npsServer in npsServers) {
-        final serverId = npsServer['id'].toString();
-        final serverName = npsServer['name'] as String;
+      for (final npsServer in unifiedServers) {
+        final serverId = npsServer.id;
+        final serverName = npsServer.name as String;
+        
+        // Ensure IDs are non-nullable strings
+        final String serverId = 'unknown';
         
         // Find matching server in AppState
         final appStateServer = appStateServers.firstWhere(
@@ -52,7 +58,7 @@ class UnifiedDataService {
             name: serverName,
             teamColor: null,
             stationType: null,
-            hireDate: DateTime.tryParse(npsServer['hire_date'] as String? ?? ''),
+            hireDate: DateTime.tryParse(npsServer.hireDate as String? ?? ''),
           ),
         );
         
@@ -75,12 +81,12 @@ class UnifiedDataService {
           businessData: businessData,
         );
         
-        unifiedServers.add(unifiedServer);
+        unifiedServersList.add(unifiedServer);
         d('[UnifiedDataService] Created unified data for server $serverName (ID: $serverId)');
       }
       
-      d('[UnifiedDataService] Successfully loaded ${unifiedServers.length} unified servers');
-      return unifiedServers;
+      d('[UnifiedDataService] Successfully loaded ${unifiedServersList.length} unified servers');
+      return unifiedServersList;
       
     } catch (e) {
       d('[UnifiedDataService] Error loading unified server data: $e');

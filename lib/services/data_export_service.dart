@@ -30,8 +30,8 @@ class DataExportService {
     // Create server lookup map
     final serverMap = <int, NPSServer>{};
     for (final server in servers) {
-      if (server.id != null) {
-        serverMap[server.id!] = server;
+      if (server.id.isNotEmpty) {
+        serverMap[int.parse(server.id)] = server;
       }
     }
 

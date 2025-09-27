@@ -51,13 +51,12 @@ class NPSDatabase {
       // Create servers table
       await db.execute('''
         CREATE TABLE servers (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          id TEXT PRIMARY KEY,
           name TEXT NOT NULL,
-          original_id TEXT, 
           hire_date DATE NOT NULL,
-          active INTEGER DEFAULT 1,
-          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-          updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+          active BOOLEAN DEFAULT 1,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       ''');
 

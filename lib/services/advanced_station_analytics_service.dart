@@ -567,3 +567,4 @@ class TrendAnalysis {
     required this.velocity,
   });
 }
+

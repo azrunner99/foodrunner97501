@@ -6,7 +6,7 @@ library;
 
 /// Represents a server in the NPS system
 class NPSServer {
-  final int? id;
+  final String id; // Standardized to non-nullable String
   final String name;
   final String? originalId; // Original server ID from main app
   final DateTime hireDate;
@@ -15,7 +15,7 @@ class NPSServer {
   final DateTime? updatedAt;
 
   NPSServer({
-    this.id,
+    required this.id,
     required this.name,
     this.originalId,
     required this.hireDate,
@@ -27,7 +27,7 @@ class NPSServer {
   /// Create an NPSServer from a database map
   factory NPSServer.fromMap(Map<String, dynamic> map) {
     return NPSServer(
-      id: map['id'] as int?,
+      id: map['id']?.toString() ?? '',
       name: map['name'] as String,
       originalId: map['original_id'] as String?,
       hireDate: DateTime.parse(map['hire_date'] as String),
@@ -44,7 +44,7 @@ class NPSServer {
   /// Convert NPSServer to a database map
   Map<String, dynamic> toMap() {
     return {
-      if (id != null) 'id': id,
+      'id': id,
       'name': name,
       if (originalId != null) 'original_id': originalId,
       'hire_date':
@@ -57,7 +57,7 @@ class NPSServer {
 
   /// Create a copy of this server with updated fields
   NPSServer copyWith({
-    int? id,
+    String? id,
     String? name,
     DateTime? hireDate,
     bool? active,

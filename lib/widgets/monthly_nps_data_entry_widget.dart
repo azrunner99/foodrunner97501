@@ -125,8 +125,8 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
 
     // Initialize data for all active servers
     for (final server in npsProvider.servers.where((s) => s.active)) {
-      _serverData[server.id!] = ServerMetricsData(
-        serverId: server.id!,
+      _serverData[int.parse(server.id!)] = ServerMetricsData(
+        serverId: int.parse(server.id!),
         serverName: server.name,
       );
     }
@@ -437,9 +437,9 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
                     itemBuilder: (context, index) {
                       final server =
                           npsProvider.servers.where((s) => s.active).toList()[index];
-                      final serverData = _serverData[server.id] ??
+                      final serverData = _serverData[int.tryParse(server.id ?? '') ?? 0] ??
                           ServerMetricsData(
-                            serverId: server.id ?? 0,
+                            serverId: int.tryParse(server.id ?? '') ?? 0,
                             serverName: server.name,
                           );
 
@@ -678,7 +678,7 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
           final monthKey = _selectedMonth.year * 100 + _selectedMonth.month;
 
           final report = NPSMonthlyReport(
-            serverId: server.id ?? 0,
+            serverId: int.tryParse(server.id ?? '') ?? 0,
             reportMonth: monthKey,
             reportYear: _selectedMonth.year,
             allTimeNpsPercentage:
