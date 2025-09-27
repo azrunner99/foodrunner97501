@@ -181,8 +181,8 @@ class WeeklyHours {
     }; // All days open at 11:00 AM
     final close = <int, int>{
       1: 23 * 60, 2: 23 * 60, 3: 23 * 60, 4: 23 * 60, // Mon-Thu: 11 PM
-      5: 24 * 60, 6: 1455,
-      7: 22 * 60, // Fri: 12 AM, Sat: 12:15 AM next day, Sun: 10 PM
+      5: 24 * 60, 6: 24 * 60,
+      7: 22 * 60, // Fri: 12 AM, Sat: 12 AM next day, Sun: 10 PM
     };
     return WeeklyHours(openMinutes: open, closeMinutes: close);
   }

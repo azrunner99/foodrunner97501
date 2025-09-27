@@ -15,7 +15,7 @@ class NPSCalculator {
   NPSCalculator(this._database);
 
   /// Calculate all-time NPS for a specific server
-  Future<double?> calculateAllTimeNPS(int serverId) async {
+  Future<double?> calculateAllTimeNPS(String serverId) async {
     try {
       final feedback = await _database.getFeedbackForServer(serverId);
       return _calculateNPSFromFeedback(feedback);
@@ -26,7 +26,7 @@ class NPSCalculator {
   }
 
   /// Calculate three-month NPS for a specific server
-  Future<double?> calculateThreeMonthNPS(int serverId,
+  Future<double?> calculateThreeMonthNPS(String serverId,
       [DateTime? endDate]) async {
     try {
       final end = endDate ?? DateTime.now();
@@ -46,7 +46,7 @@ class NPSCalculator {
   }
 
   /// Calculate one-month NPS for a specific server
-  Future<double?> calculateOneMonthNPS(int serverId, int monthKey) async {
+  Future<double?> calculateOneMonthNPS(String serverId, int monthKey) async {
     try {
       final year = monthKey ~/ 100;
       final month = monthKey % 100;
@@ -68,7 +68,7 @@ class NPSCalculator {
   }
 
   /// Generate trend analysis for a server
-  Future<NPSTrendAnalysis> generateTrendAnalysis(int serverId) async {
+  Future<NPSTrendAnalysis> generateTrendAnalysis(String serverId) async {
     try {
       final now = DateTime.now();
       final currentMonth = now.year * 100 + now.month;
@@ -98,7 +98,7 @@ class NPSCalculator {
 
   /// Generate complete monthly report for a server
   Future<NPSMonthlyReport> generateMonthlyReport(
-      int serverId, int reportMonth) async {
+      String serverId, int reportMonth) async {
     try {
       d('[NPSCalculator] Generating monthly report for server $serverId, month $reportMonth');
 
@@ -156,7 +156,7 @@ class NPSCalculator {
       final reports = <NPSMonthlyReport>[];
 
       for (final serverMap in servers) {
-        final serverId = serverMap['id'] as int;
+        final serverId = serverMap['id'] as String;
         try {
           final report = await generateMonthlyReport(serverId, reportMonth);
           reports.add(report);
@@ -243,7 +243,7 @@ class NPSCalculator {
 
   /// Get feedback counts for a server within a date range
   Future<FeedbackCounts> _getFeedbackCounts(
-    int serverId, [
+    String serverId, [
     DateTime? startDate,
     DateTime? endDate,
   ]) async {
@@ -281,7 +281,7 @@ class NPSCalculator {
   }
 
   /// Get cumulative metrics (sales and table count) for a server
-  Future<Map<String, dynamic>> _getCumulativeMetrics(int serverId) async {
+  Future<Map<String, dynamic>> _getCumulativeMetrics(String serverId) async {
     try {
       final feedback = await _database.getFeedbackForServer(serverId);
 
@@ -393,7 +393,7 @@ class NPSCalculator {
 
 /// Trend analysis result for a server
 class NPSTrendAnalysis {
-  final int serverId;
+  final String serverId;
   final double? oneMonthNPS;
   final double? threeMonthNPS;
   final double? allTimeNPS;

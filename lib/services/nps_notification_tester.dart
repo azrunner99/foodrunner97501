@@ -46,7 +46,7 @@ class NPSNotificationTester {
   /// Generate a critical notification
   static void generateCriticalNotification() {
     final server = NPSServer(
-      id: 999,
+      id: '999',
       name: 'Test Server',
       hireDate: DateTime.now().subtract(const Duration(days: 30)),
     );
@@ -57,7 +57,7 @@ class NPSNotificationTester {
   /// Generate trend alert
   static void generateTrendAlert() {
     final server = NPSServer(
-      id: 998,
+      id: '998',
       name: 'Performance Server',
       hireDate: DateTime.now().subtract(const Duration(days: 60)),
     );
@@ -69,7 +69,7 @@ class NPSNotificationTester {
   /// Generate high volume notification
   static void generateHighVolumeNotification() {
     final server = NPSServer(
-      id: 997,
+      id: '997',
       name: 'Popular Server',
       hireDate: DateTime.now().subtract(const Duration(days: 45)),
     );
@@ -85,17 +85,17 @@ class NPSNotificationTester {
   static List<NPSServer> _createSampleServers() {
     return [
       NPSServer(
-        id: 1,
+        id: '1',
         name: 'Alice Johnson',
         hireDate: DateTime.now().subtract(const Duration(days: 90)),
       ),
       NPSServer(
-        id: 2,
+        id: '2',
         name: 'Bob Wilson',
         hireDate: DateTime.now().subtract(const Duration(days: 120)),
       ),
       NPSServer(
-        id: 3,
+        id: '3',
         name: 'Carol Davis',
         hireDate: DateTime.now().subtract(const Duration(days: 60)),
       ),
@@ -106,21 +106,21 @@ class NPSNotificationTester {
     return [
       NPSScoreFeedback(
         id: 1,
-        serverId: 1,
+        serverId: '1',
         score: 3, // Detractor
         comment: 'Service was slow and food was cold',
         submissionDate: DateTime.now().subtract(const Duration(minutes: 15)),
       ),
       NPSScoreFeedback(
         id: 2,
-        serverId: 2,
+        serverId: '2',
         score: 9, // Promoter
         comment: 'Excellent service, very attentive!',
         submissionDate: DateTime.now().subtract(const Duration(hours: 2)),
       ),
       NPSScoreFeedback(
         id: 3,
-        serverId: 1,
+        serverId: '1',
         score: 7, // Passive
         comment: 'Good service, nothing special',
         submissionDate: DateTime.now().subtract(const Duration(hours: 4)),

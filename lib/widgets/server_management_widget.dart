@@ -77,6 +77,7 @@ class _ServerManagementDialogState extends State<ServerManagementDialog> {
       if (widget.server == null) {
         // Adding new server
         final newServer = NPSServer(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
           name: _nameController.text.trim(),
           hireDate: _selectedHireDate!,
           active: _isActive,

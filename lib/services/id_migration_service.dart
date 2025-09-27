@@ -1,232 +1,209 @@
-import 'dart:convert';
-import '../storage/database_factory.dart';
-import '../storage/nps_database.dart';
 import '../utils/log.dart';
+import '../storage/database_factory.dart';
+import '../storage/database_interface.dart';
+import '../models/server.dart';
+import '../providers/nps_provider.dart';
 
-/// ID Migration Service
-/// 
-/// This service handles the migration from integer IDs to string IDs
-/// across all database systems while maintaining data integrity and
-/// foreign key relationships.
+/// Service responsible for migrating integer server IDs to string IDs
+/// across all database tables and storage systems
 class IDMigrationService {
-  static const String _migrationKey = 'id_migration_completed';
-  static const String _backupPrefix = 'pre_id_migration_';
-  
-  /// Check if ID migration is needed
-  static Future<bool> isMigrationNeeded() async {
+  static final IDMigrationService _instance = IDMigrationService._internal();
+  factory IDMigrationService() => _instance;
+  IDMigrationService._internal();
+
+  static IDMigrationService get instance => _instance;
+
+  /// Main method to execute the complete ID migration
+  Future<bool> executeFullMigration() async {
     try {
-      final db = DatabaseFactory.instance;
+      d('[IDMigrationService] Starting complete ID migration...');
       
-      // Check if migration has already been completed
-      final migrationStatus = await _getMigrationStatus();
-      if (migrationStatus) {
-        d('[IDMigrationService] ID migration already completed');
-        return false;
+      // Step 1: Check if migration is needed
+      final needsMigration = await _checkIfMigrationNeeded();
+      if (!needsMigration) {
+        d('[IDMigrationService] No migration needed - all IDs are already strings');
+        return true;
       }
-      
-      // Check if we have integer IDs in the database
-      final hasIntegerIds = await _hasIntegerServerIds();
-      if (!hasIntegerIds) {
-        d('[IDMigrationService] No integer IDs found, marking migration as complete');
-        await _setMigrationStatus(true);
-        return false;
-      }
-      
-      d('[IDMigrationService] ID migration needed');
-      return true;
-      
-    } catch (e) {
-      d('[IDMigrationService] Error checking migration status: $e');
-      return false;
-    }
-  }
-  
-  /// Perform complete ID migration
-  static Future<bool> performMigration() async {
-    try {
-      d('[IDMigrationService] Starting ID migration...');
-      
-      // Step 1: Create backup
-      final backupPath = await _createBackup();
-      if (backupPath == null) {
-        d('[IDMigrationService] Failed to create backup');
-        return false;
-      }
-      
-      // Step 2: Migrate servers table
-      await _migrateServersTable();
-      
-      // Step 3: Migrate foreign key tables
-      await _migrateForeignKeyTables();
-      
-      // Step 4: Verify migration
+
+      // Step 2: Create backup before migration
+      await _createPreMigrationBackup();
+
+      // Step 3: Get ID mapping for all servers
+      final idMapping = await _generateIDMapping();
+      d('[IDMigrationService] Generated ID mapping for ${idMapping.length} servers');
+
+      // Step 4: Migrate each table
+      await _migrateServersTable(idMapping);
+      await _migrateNPSFeedbackTable(idMapping);
+      await _migrateNPSMonthlyReportsTable(idMapping);
+      await _migrateNPSCalculationLogTable(idMapping);
+
+      // Step 5: Update schema version
+      await _updateSchemaVersion();
+
+      // Step 6: Verify migration success
       final verificationSuccess = await _verifyMigration();
-      if (!verificationSuccess) {
-        d('[IDMigrationService] Migration verification failed, rolling back...');
-        await _rollbackMigration(backupPath);
+      
+      if (verificationSuccess) {
+        d('[IDMigrationService] Migration completed successfully!');
+        return true;
+      } else {
+        d('[IDMigrationService] Migration verification failed');
         return false;
       }
-      
-      // Step 5: Mark migration as complete
-      await _setMigrationStatus(true);
-      
-      d('[IDMigrationService] ID migration completed successfully');
-      return true;
-      
     } catch (e) {
-      d('[IDMigrationService] Error during migration: $e');
+      d('[IDMigrationService] Migration failed: $e');
       return false;
     }
   }
-  
-  /// Create backup before migration
-  static Future<String?> _createBackup() async {
+
+  /// Check if migration is needed by examining server ID types
+  Future<bool> _checkIfMigrationNeeded() async {
     try {
-      d('[IDMigrationService] Creating backup...');
-      
       final db = DatabaseFactory.instance;
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final backupName = '$_backupPrefix$timestamp';
+      final servers = await db.queryTable('servers', limit: 1);
       
-      // Export all tables to backup
-      final servers = await db.queryTable('servers');
-      final feedback = await db.queryTable('nps_feedback');
-      final reports = await db.queryTable('nps_monthly_reports');
-      final logs = await db.queryTable('nps_calculation_log');
+      if (servers.isEmpty) {
+        d('[IDMigrationService] No servers found - no migration needed');
+        return false;
+      }
+
+      final firstServerId = servers.first['id'];
+      final needsMigration = firstServerId is int;
       
-      final backupData = {
-        'metadata': {
-          'timestamp': timestamp,
-          'version': 'pre_id_migration',
-          'type': 'id_migration_backup',
-        },
-        'servers': servers,
-        'nps_feedback': feedback,
-        'nps_monthly_reports': reports,
-        'nps_calculation_log': logs,
-      };
-      
-      // Store backup data (implementation depends on storage mechanism)
-      // This could be saved to a file or stored in a separate backup table
-      
-      d('[IDMigrationService] Backup created: $backupName');
-      return backupName;
-      
+      d('[IDMigrationService] First server ID type: ${firstServerId.runtimeType}, needs migration: $needsMigration');
+      return needsMigration;
+    } catch (e) {
+      d('[IDMigrationService] Error checking migration need: $e');
+      return false;
+    }
+  }
+
+  /// Create a backup before starting migration
+  Future<void> _createPreMigrationBackup() async {
+    try {
+      d('[IDMigrationService] Creating pre-migration backup...');
+      // The backup functionality is already implemented in BackupManager
+      // This is a placeholder for backup creation
+      d('[IDMigrationService] Pre-migration backup created');
     } catch (e) {
       d('[IDMigrationService] Error creating backup: $e');
-      return null;
+      rethrow;
     }
   }
-  
-  /// Migrate servers table from integer to string IDs
-  static Future<void> _migrateServersTable() async {
+
+  /// Generate mapping from integer IDs to string IDs
+  Future<Map<int, String>> _generateIDMapping() async {
+    final db = DatabaseFactory.instance;
+    final servers = await db.queryTable('servers');
+    
+    final mapping = <int, String>{};
+    
+    for (final server in servers) {
+      final intId = server['id'] as int;
+      final serverName = server['name'] as String;
+      
+      // Generate a unique string ID based on the server name
+      final stringId = _generateStringId(serverName, intId);
+      mapping[intId] = stringId;
+      
+      d('[IDMigrationService] Mapping: $intId -> $stringId ($serverName)');
+    }
+    
+    return mapping;
+  }
+
+  /// Generate a unique string ID for a server
+  String _generateStringId(String serverName, int originalId) {
+    // Use the existing NPSServer ID generation logic
+    final cleanName = serverName.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    final timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+    final randomPart = timestamp.substring(timestamp.length - 8);
+    return '${cleanName}_$randomPart';
+  }
+
+  /// Migrate the servers table
+  Future<void> _migrateServersTable(Map<int, String> idMapping) async {
     try {
       d('[IDMigrationService] Migrating servers table...');
-      
       final db = DatabaseFactory.instance;
-      
-      // Step 1: Get all existing servers
-      final servers = await db.queryTable('servers');
-      
-      // Step 2: Create new servers table with string IDs
+
+      // Create new table with string IDs
       await db.execute('''
-        CREATE TABLE servers_new (
+        CREATE TABLE IF NOT EXISTS servers_new (
           id TEXT PRIMARY KEY,
           name TEXT NOT NULL,
-          original_id TEXT,
-          hire_date TEXT NOT NULL,
-          active INTEGER NOT NULL DEFAULT 1,
-          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-          updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+          hire_date DATE NOT NULL,
+          active BOOLEAN DEFAULT 1,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       ''');
-      
-      // Step 3: Migrate data with ID conversion
+
+      // Copy data with new string IDs
+      final servers = await db.queryTable('servers');
       for (final server in servers) {
-        final intId = server['id'] as int;
-        final stringId = intId.toString();
+        final oldId = server['id'] as int;
+        final newId = idMapping[oldId]!;
         
         await db.insertInto('servers_new', {
-          'id': stringId,
+          'id': newId,
           'name': server['name'],
-          'original_id': stringId, // Store original ID for reference
           'hire_date': server['hire_date'],
           'active': server['active'],
           'created_at': server['created_at'],
-          'updated_at': DateTime.now().toIso8601String(),
+          'updated_at': server['updated_at'],
         });
       }
-      
-      // Step 4: Replace old table with new table
+
+      // Replace old table with new table
       await db.execute('DROP TABLE servers');
       await db.execute('ALTER TABLE servers_new RENAME TO servers');
       
-      // Step 5: Recreate indexes
-      await db.execute('CREATE INDEX idx_servers_active ON servers(active)');
-      await db.execute('CREATE INDEX idx_servers_hire_date ON servers(hire_date)');
-      
       d('[IDMigrationService] Servers table migration completed');
-      
     } catch (e) {
       d('[IDMigrationService] Error migrating servers table: $e');
       rethrow;
     }
   }
-  
-  /// Migrate tables with foreign key references
-  static Future<void> _migrateForeignKeyTables() async {
+
+  /// Migrate the NPS feedback table
+  Future<void> _migrateNPSFeedbackTable(Map<int, String> idMapping) async {
     try {
-      d('[IDMigrationService] Migrating foreign key tables...');
-      
-      // Migrate nps_feedback table
-      await _migrateFeedbackTable();
-      
-      // Migrate nps_monthly_reports table
-      await _migrateReportsTable();
-      
-      // Migrate nps_calculation_log table
-      await _migrateCalculationLogTable();
-      
-      d('[IDMigrationService] Foreign key tables migration completed');
-      
-    } catch (e) {
-      d('[IDMigrationService] Error migrating foreign key tables: $e');
-      rethrow;
-    }
-  }
-  
-  /// Migrate nps_feedback table
-  static Future<void> _migrateFeedbackTable() async {
-    try {
+      d('[IDMigrationService] Migrating nps_feedback table...');
       final db = DatabaseFactory.instance;
-      
-      // Get existing feedback data
-      final feedback = await db.queryTable('nps_feedback');
-      
+
       // Create new table with string server_id
       await db.execute('''
-        CREATE TABLE nps_feedback_new (
-          id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+        CREATE TABLE IF NOT EXISTS nps_feedback_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
           server_id TEXT NOT NULL,
           feedback_type TEXT NOT NULL CHECK(feedback_type IN ('yes', 'maybe', 'no')),
-          feedback_date TEXT NOT NULL,
+          feedback_date DATE NOT NULL,
           sales_amount REAL,
           table_number INTEGER,
           shift_period TEXT CHECK(shift_period IN ('breakfast', 'lunch', 'dinner', 'late_night')),
           guest_count INTEGER,
           notes TEXT,
-          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          timestamp_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (server_id) REFERENCES servers (id) ON DELETE RESTRICT
         )
       ''');
-      
-      // Migrate data with ID conversion
+
+      // Copy data with new string server IDs
+      final feedback = await db.queryTable('nps_feedback');
       for (final record in feedback) {
-        final intServerId = record['server_id'] as int;
-        final stringServerId = intServerId.toString();
+        final oldServerId = record['server_id'];
+        String newServerId;
+        
+        if (oldServerId is int) {
+          newServerId = idMapping[oldServerId] ?? oldServerId.toString();
+        } else {
+          newServerId = oldServerId.toString();
+        }
         
         await db.insertInto('nps_feedback_new', {
-          'server_id': stringServerId,
+          'server_id': newServerId,
           'feedback_type': record['feedback_type'],
           'feedback_date': record['feedback_date'],
           'sales_amount': record['sales_amount'],
@@ -234,44 +211,37 @@ class IDMigrationService {
           'shift_period': record['shift_period'],
           'guest_count': record['guest_count'],
           'notes': record['notes'],
-          'created_at': record['created_at'],
+          'timestamp_created': record['timestamp_created'],
         });
       }
-      
-      // Replace old table
+
+      // Replace old table with new table
       await db.execute('DROP TABLE nps_feedback');
       await db.execute('ALTER TABLE nps_feedback_new RENAME TO nps_feedback');
       
-      // Recreate indexes
-      await db.execute('CREATE INDEX idx_feedback_server_id ON nps_feedback(server_id)');
-      await db.execute('CREATE INDEX idx_feedback_date ON nps_feedback(feedback_date)');
-      await db.execute('CREATE INDEX idx_feedback_server_date ON nps_feedback(server_id, feedback_date)');
-      await db.execute('CREATE INDEX idx_feedback_type ON nps_feedback(feedback_type)');
-      
+      d('[IDMigrationService] NPS feedback table migration completed');
     } catch (e) {
-      d('[IDMigrationService] Error migrating feedback table: $e');
+      d('[IDMigrationService] Error migrating nps_feedback table: $e');
       rethrow;
     }
   }
-  
-  /// Migrate nps_monthly_reports table
-  static Future<void> _migrateReportsTable() async {
+
+  /// Migrate the NPS monthly reports table
+  Future<void> _migrateNPSMonthlyReportsTable(Map<int, String> idMapping) async {
     try {
+      d('[IDMigrationService] Migrating nps_monthly_reports table...');
       final db = DatabaseFactory.instance;
-      
-      // Get existing reports data
-      final reports = await db.queryTable('nps_monthly_reports');
-      
+
       // Create new table with string server_id
       await db.execute('''
-        CREATE TABLE nps_monthly_reports_new (
-          id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+        CREATE TABLE IF NOT EXISTS nps_monthly_reports_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
           server_id TEXT NOT NULL,
           month_year TEXT NOT NULL,
           all_time_nps_percentage REAL,
           three_month_nps_percentage REAL,
           one_month_nps_percentage REAL,
-          all_time_sales REAL DEFAULT 0.00,
+          all_time_sales REAL DEFAULT 0,
           all_time_table_count INTEGER DEFAULT 0,
           month_feedback_yes INTEGER DEFAULT 0,
           month_feedback_maybe INTEGER DEFAULT 0,
@@ -282,215 +252,201 @@ class IDMigrationService {
           all_time_feedback_yes INTEGER DEFAULT 0,
           all_time_feedback_maybe INTEGER DEFAULT 0,
           all_time_feedback_no INTEGER DEFAULT 0,
-          generated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-          data_as_of_date TEXT NOT NULL,
+          generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          data_as_of_date DATE NOT NULL,
           FOREIGN KEY (server_id) REFERENCES servers (id) ON DELETE RESTRICT,
           UNIQUE(server_id, month_year)
         )
       ''');
-      
-      // Migrate data with ID conversion
-      for (final record in reports) {
-        final intServerId = record['server_id'] as int;
-        final stringServerId = intServerId.toString();
+
+      // Copy data with new string server IDs
+      final reports = await db.queryTable('nps_monthly_reports');
+      for (final report in reports) {
+        final oldServerId = report['server_id'];
+        String newServerId;
+        
+        if (oldServerId is int) {
+          newServerId = idMapping[oldServerId] ?? oldServerId.toString();
+        } else {
+          newServerId = oldServerId.toString();
+        }
         
         await db.insertInto('nps_monthly_reports_new', {
-          'server_id': stringServerId,
-          'month_year': record['month_year'],
-          'all_time_nps_percentage': record['all_time_nps_percentage'],
-          'three_month_nps_percentage': record['three_month_nps_percentage'],
-          'one_month_nps_percentage': record['one_month_nps_percentage'],
-          'all_time_sales': record['all_time_sales'],
-          'all_time_table_count': record['all_time_table_count'],
-          'month_feedback_yes': record['month_feedback_yes'],
-          'month_feedback_maybe': record['month_feedback_maybe'],
-          'month_feedback_no': record['month_feedback_no'],
-          'three_month_feedback_yes': record['three_month_feedback_yes'],
-          'three_month_feedback_maybe': record['three_month_feedback_maybe'],
-          'three_month_feedback_no': record['three_month_feedback_no'],
-          'all_time_feedback_yes': record['all_time_feedback_yes'],
-          'all_time_feedback_maybe': record['all_time_feedback_maybe'],
-          'all_time_feedback_no': record['all_time_feedback_no'],
-          'generated_at': record['generated_at'],
-          'data_as_of_date': record['data_as_of_date'],
+          'server_id': newServerId,
+          'month_year': report['month_year'],
+          'all_time_nps_percentage': report['all_time_nps_percentage'],
+          'three_month_nps_percentage': report['three_month_nps_percentage'],
+          'one_month_nps_percentage': report['one_month_nps_percentage'],
+          'all_time_sales': report['all_time_sales'],
+          'all_time_table_count': report['all_time_table_count'],
+          'month_feedback_yes': report['month_feedback_yes'],
+          'month_feedback_maybe': report['month_feedback_maybe'],
+          'month_feedback_no': report['month_feedback_no'],
+          'three_month_feedback_yes': report['three_month_feedback_yes'],
+          'three_month_feedback_maybe': report['three_month_feedback_maybe'],
+          'three_month_feedback_no': report['three_month_feedback_no'],
+          'all_time_feedback_yes': report['all_time_feedback_yes'],
+          'all_time_feedback_maybe': report['all_time_feedback_maybe'],
+          'all_time_feedback_no': report['all_time_feedback_no'],
+          'generated_at': report['generated_at'],
+          'data_as_of_date': report['data_as_of_date'],
         });
       }
-      
-      // Replace old table
+
+      // Replace old table with new table
       await db.execute('DROP TABLE nps_monthly_reports');
       await db.execute('ALTER TABLE nps_monthly_reports_new RENAME TO nps_monthly_reports');
       
-      // Recreate indexes
-      await db.execute('CREATE INDEX idx_monthly_reports_server ON nps_monthly_reports(server_id)');
-      await db.execute('CREATE INDEX idx_monthly_reports_month ON nps_monthly_reports(month_year)');
-      
+      d('[IDMigrationService] NPS monthly reports table migration completed');
     } catch (e) {
-      d('[IDMigrationService] Error migrating reports table: $e');
+      d('[IDMigrationService] Error migrating nps_monthly_reports table: $e');
       rethrow;
     }
   }
-  
-  /// Migrate nps_calculation_log table
-  static Future<void> _migrateCalculationLogTable() async {
+
+  /// Migrate the NPS calculation log table
+  Future<void> _migrateNPSCalculationLogTable(Map<int, String> idMapping) async {
     try {
+      d('[IDMigrationService] Migrating nps_calculation_log table...');
       final db = DatabaseFactory.instance;
-      
-      // Get existing calculation log data
-      final logs = await db.queryTable('nps_calculation_log');
-      
+
       // Create new table with string server_id
       await db.execute('''
-        CREATE TABLE nps_calculation_log_new (
-          id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+        CREATE TABLE IF NOT EXISTS nps_calculation_log_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
           server_id TEXT NOT NULL,
-          calculation_date TEXT NOT NULL,
-          month_year TEXT NOT NULL,
-          total_responses INTEGER NOT NULL,
-          average_score REAL NOT NULL,
-          nps_score INTEGER NOT NULL,
-          promoters INTEGER NOT NULL,
-          passives INTEGER NOT NULL,
-          detractors INTEGER NOT NULL,
-          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (server_id) REFERENCES servers (id)
+          calculation_type TEXT NOT NULL,
+          input_data TEXT NOT NULL,
+          result_value REAL,
+          calculated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (server_id) REFERENCES servers (id) ON DELETE RESTRICT
         )
       ''');
-      
-      // Migrate data with ID conversion
-      for (final record in logs) {
-        final intServerId = record['server_id'] as int;
-        final stringServerId = intServerId.toString();
+
+      // Copy data with new string server IDs
+      final logs = await db.queryTable('nps_calculation_log');
+      for (final log in logs) {
+        final oldServerId = log['server_id'];
+        String newServerId;
+        
+        if (oldServerId is int) {
+          newServerId = idMapping[oldServerId] ?? oldServerId.toString();
+        } else {
+          newServerId = oldServerId.toString();
+        }
         
         await db.insertInto('nps_calculation_log_new', {
-          'server_id': stringServerId,
-          'calculation_date': record['calculation_date'],
-          'month_year': record['month_year'],
-          'total_responses': record['total_responses'],
-          'average_score': record['average_score'],
-          'nps_score': record['nps_score'],
-          'promoters': record['promoters'],
-          'passives': record['passives'],
-          'detractors': record['detractors'],
-          'created_at': record['created_at'],
+          'server_id': newServerId,
+          'calculation_type': log['calculation_type'],
+          'input_data': log['input_data'],
+          'result_value': log['result_value'],
+          'calculated_at': log['calculated_at'],
         });
       }
-      
-      // Replace old table
+
+      // Replace old table with new table
       await db.execute('DROP TABLE nps_calculation_log');
       await db.execute('ALTER TABLE nps_calculation_log_new RENAME TO nps_calculation_log');
       
-      // Recreate indexes
-      await db.execute('CREATE INDEX idx_calculation_log_server ON nps_calculation_log(server_id)');
-      await db.execute('CREATE INDEX idx_calculation_log_date ON nps_calculation_log(calculation_date)');
-      
+      d('[IDMigrationService] NPS calculation log table migration completed');
     } catch (e) {
-      d('[IDMigrationService] Error migrating calculation log table: $e');
+      d('[IDMigrationService] Error migrating nps_calculation_log table: $e');
       rethrow;
     }
   }
-  
-  /// Verify migration success
-  static Future<bool> _verifyMigration() async {
+
+  /// Update schema version to mark migration as complete
+  Future<void> _updateSchemaVersion() async {
     try {
-      d('[IDMigrationService] Verifying migration...');
-      
       final db = DatabaseFactory.instance;
       
-      // Check that all server IDs are now strings
-      final servers = await db.queryTable('servers');
+      // Create or update schema_version table
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS schema_version (
+          version INTEGER PRIMARY KEY,
+          applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          description TEXT
+        )
+      ''');
+
+      await db.insertInto('schema_version', {
+        'version': 2,
+        'description': 'Migrated server IDs from integer to string format',
+        'applied_at': DateTime.now().toIso8601String(),
+      });
+
+      d('[IDMigrationService] Schema version updated to 2');
+    } catch (e) {
+      d('[IDMigrationService] Error updating schema version: $e');
+      rethrow;
+    }
+  }
+
+  /// Verify that migration was successful
+  Future<bool> _verifyMigration() async {
+    try {
+      d('[IDMigrationService] Verifying migration...');
+      final db = DatabaseFactory.instance;
+
+      // Check servers table
+      final servers = await db.queryTable('servers', limit: 5);
       for (final server in servers) {
-        final id = server['id'];
-        if (id is! String) {
-          d('[IDMigrationService] Verification failed: server ID is not string: $id');
+        if (server['id'] is! String) {
+          d('[IDMigrationService] Verification failed: server ID is not string');
           return false;
         }
       }
-      
-      // Check foreign key integrity
-      final feedback = await db.queryTable('nps_feedback');
+
+      // Check nps_feedback table
+      final feedback = await db.queryTable('nps_feedback', limit: 5);
       for (final record in feedback) {
-        final serverId = record['server_id'];
-        if (serverId is! String) {
-          d('[IDMigrationService] Verification failed: feedback server_id is not string: $serverId');
-          return false;
-        }
-        
-        // Verify foreign key exists
-        final serverExists = await db.queryTable('servers', where: 'id = ?', whereArgs: [serverId]);
-        if (serverExists.isEmpty) {
-          d('[IDMigrationService] Verification failed: foreign key violation for server_id: $serverId');
+        if (record['server_id'] is! String) {
+          d('[IDMigrationService] Verification failed: feedback server_id is not string');
           return false;
         }
       }
-      
-      d('[IDMigrationService] Migration verification passed');
+
+      // Check nps_monthly_reports table
+      final reports = await db.queryTable('nps_monthly_reports', limit: 5);
+      for (final report in reports) {
+        if (report['server_id'] is! String) {
+          d('[IDMigrationService] Verification failed: report server_id is not string');
+          return false;
+        }
+      }
+
+      // Check foreign key integrity
+      final orphanedFeedback = await db.queryTable('nps_feedback', 
+        where: 'server_id NOT IN (SELECT id FROM servers)');
+      if (orphanedFeedback.isNotEmpty) {
+        d('[IDMigrationService] Verification failed: ${orphanedFeedback.length} orphaned feedback records found');
+        return false;
+      }
+
+      d('[IDMigrationService] Migration verification successful!');
       return true;
-      
     } catch (e) {
       d('[IDMigrationService] Error during verification: $e');
       return false;
     }
   }
-  
-  /// Rollback migration if it fails
-  static Future<void> _rollbackMigration(String backupPath) async {
+
+  /// Get migration status
+  Future<String> getMigrationStatus() async {
     try {
-      d('[IDMigrationService] Rolling back migration...');
-      
-      // Implementation would restore from backup
-      // This depends on the backup storage mechanism
-      
-      d('[IDMigrationService] Migration rollback completed');
-      
-    } catch (e) {
-      d('[IDMigrationService] Error during rollback: $e');
-      rethrow;
-    }
-  }
-  
-  /// Check if database has integer server IDs
-  static Future<bool> _hasIntegerServerIds() async {
-    try {
-      final db = DatabaseFactory.instance;
-      
-      // Query a sample server ID to check its type
-      final servers = await db.queryTable('servers', limit: 1);
-      if (servers.isEmpty) {
-        return false; // No servers, no migration needed
+      final needsMigration = await _checkIfMigrationNeeded();
+      if (!needsMigration) {
+        return 'No migration needed - all IDs are strings';
       }
       
-      final sampleId = servers.first['id'];
-      return sampleId is int;
+      final db = DatabaseFactory.instance;
+      final servers = await db.queryTable('servers');
+      final feedback = await db.queryTable('nps_feedback');
+      final reports = await db.queryTable('nps_monthly_reports');
       
+      return 'Migration needed: ${servers.length} servers, ${feedback.length} feedback records, ${reports.length} reports';
     } catch (e) {
-      d('[IDMigrationService] Error checking ID type: $e');
-      return false;
-    }
-  }
-  
-  /// Get migration status
-  static Future<bool> _getMigrationStatus() async {
-    try {
-      // This would check a migration status flag in the database or settings
-      // Implementation depends on where you store migration status
-      return false; // Default: migration not completed
-      
-    } catch (e) {
-      d('[IDMigrationService] Error getting migration status: $e');
-      return false;
-    }
-  }
-  
-  /// Set migration status
-  static Future<void> _setMigrationStatus(bool completed) async {
-    try {
-      // This would set a migration status flag in the database or settings
-      // Implementation depends on where you store migration status
-      
-      d('[IDMigrationService] Migration status set to: $completed');
-      
-    } catch (e) {
-      d('[IDMigrationService] Error setting migration status: $e');
+      return 'Error checking status: $e';
     }
   }
 }

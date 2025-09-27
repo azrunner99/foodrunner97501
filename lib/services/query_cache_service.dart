@@ -122,12 +122,12 @@ class _CacheEntry {
 /// Cache key generators for common queries
 class CacheKeys {
   static String serverList() => 'servers:list:active';
-  static String serverById(int id) => 'servers:by_id:$id';
-  static String monthlyReport(int serverId, int monthKey) => 'monthly_report:$serverId:$monthKey';
+  static String serverById(String id) => 'servers:by_id:$id';
+  static String monthlyReport(String serverId, int monthKey) => 'monthly_report:$serverId:$monthKey';
   static String monthlyReportsForMonth(int monthKey) => 'monthly_reports:month:$monthKey';
-  static String feedbackForServer(int serverId) => 'feedback:server:$serverId';
-  static String feedbackForServerInRange(int serverId, DateTime start, DateTime end) => 
+  static String feedbackForServer(String serverId) => 'feedback:server:$serverId';
+  static String feedbackForServerInRange(String serverId, DateTime start, DateTime end) => 
     'feedback:server:$serverId:range:${start.millisecondsSinceEpoch}:${end.millisecondsSinceEpoch}';
-  static String npsCalculation(int serverId, String type) => 'nps_calculation:$serverId:$type';
+  static String npsCalculation(String serverId, String type) => 'nps_calculation:$serverId:$type';
 }
 

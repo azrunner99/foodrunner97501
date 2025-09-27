@@ -779,7 +779,7 @@ class _NPSBenchmarkingWidgetState extends State<NPSBenchmarkingWidget> {
       final date = now.subtract(Duration(days: i % 30));
       sampleData.add(NPSScoreFeedback(
         id: i,
-        serverId: (i % 3) + 1,
+        serverId: 'server_${(i % 3) + 1}',
         score: 3 + (i % 8), // Scores from 3-10
         comment: 'Sample feedback $i',
         submissionDate: date,

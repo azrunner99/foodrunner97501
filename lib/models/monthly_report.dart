@@ -55,7 +55,7 @@ class FeedbackCounts {
 /// Represents a complete monthly NPS report for a server
 class NPSMonthlyReport {
   final int? id;
-  final int serverId;
+  final String serverId;
   final int reportMonth; // YYYYMM format
   final int reportYear;
   final double? allTimeNpsPercentage;
@@ -86,6 +86,15 @@ class NPSMonthlyReport {
     required this.dataAsOfDate,
   });
 
+  /// Safely convert server ID from database to String format
+  /// Handles both legacy int IDs and new String IDs
+  static String _convertToStringId(dynamic serverId) {
+    if (serverId == null) return '';
+    if (serverId is String) return serverId;
+    if (serverId is int) return serverId.toString();
+    return serverId.toString();
+  }
+
   /// Create NPSMonthlyReport from a database map (handles both Drift and Sqflite formats)
   factory NPSMonthlyReport.fromMap(Map<String, dynamic> map) {
     // Handle both Drift format (report_month, report_year) and Sqflite format (month_year)
@@ -107,7 +116,7 @@ class NPSMonthlyReport {
     
     return NPSMonthlyReport(
       id: map['id'] as int?,
-      serverId: map['server_id'] as int,
+      serverId: _convertToStringId(map['server_id']),
       reportMonth: reportMonth,
       reportYear: reportYear,
       allTimeNpsPercentage: map['all_time_nps_percentage'] != null
@@ -171,7 +180,7 @@ class NPSMonthlyReport {
   /// Create a copy of this report with updated fields
   NPSMonthlyReport copyWith({
     int? id,
-    int? serverId,
+    String? serverId,
     int? reportMonth,
     int? reportYear,
     double? allTimeNpsPercentage,

@@ -105,7 +105,7 @@ class FallbackMechanismsService {
       final threeMonthsAgo = DateTime(now.year, now.month - 3, 1);
       
       final npsFeedback = await _npsAdapter.getFeedbackForServerInRange(
-        int.parse(serverId),
+        serverId,
         startDate: threeMonthsAgo,
         endDate: now,
       );

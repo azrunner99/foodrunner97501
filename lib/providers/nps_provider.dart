@@ -126,7 +126,7 @@ class NPSProvider with ChangeNotifier {
               norm(existingServer['original_id'] as String?).isEmpty;
           if (needsOriginalId && mainServer.id.trim().isNotEmpty) {
             try {
-              await _database.updateServer(existingServer['id'] as int,
+              await _database.updateServer(existingServer['id'] as String,
                   {'original_id': mainServer.id.trim()});
               existingServer['original_id'] = mainServer.id.trim();
               byOriginalId[mainIdNorm] = existingServer;
@@ -224,7 +224,7 @@ class NPSProvider with ChangeNotifier {
       // Get the first server as example for monthly report
       if (_servers.isNotEmpty) {
         _currentReport = await _calculator.generateMonthlyReport(
-          int.parse(_servers.first.id),
+          _servers.first.id,
           reportMonth,
         );
       }
@@ -258,7 +258,7 @@ class NPSProvider with ChangeNotifier {
 
       // Add to database
       final serverId = await _database.insertServer(server.toMap());
-      final newServer = server.copyWith(id: serverId.toString());
+      final newServer = server.copyWith(id: serverId);
       _servers.add(newServer);
       _servers.sort((a, b) => a.name.compareTo(b.name));
 
@@ -287,7 +287,7 @@ class NPSProvider with ChangeNotifier {
       }
 
       // Update in database
-      await _database.updateServer(int.parse(server.id!), server.toMap());
+      await _database.updateServer(server.id, server.toMap());
 
       // Update in local state
       final index = _servers.indexWhere((s) => s.id == server.id);
@@ -308,7 +308,7 @@ class NPSProvider with ChangeNotifier {
   }
 
   /// Delete a server from the system (soft delete)
-  Future<bool> deleteServer(int serverId) async {
+  Future<bool> deleteServer(String serverId) async {
     _setLoading(true);
     try {
       // Check if server has feedback
@@ -340,7 +340,7 @@ class NPSProvider with ChangeNotifier {
   }
 
   /// Archive a server (set as inactive)
-  Future<bool> archiveServer(int serverId) async {
+  Future<bool> archiveServer(String serverId) async {
     try {
       final server = _servers.firstWhere((s) => s.id == serverId);
       final archivedServer = server.copyWith(active: false);
@@ -353,7 +353,7 @@ class NPSProvider with ChangeNotifier {
   }
 
   /// Get server by ID
-  NPSServer? getServerById(int serverId) {
+  NPSServer? getServerById(String serverId) {
     try {
       return _servers.firstWhere((s) => s.id == serverId);
     } catch (e) {
@@ -417,7 +417,7 @@ class NPSProvider with ChangeNotifier {
   }
 
   /// Get feedback for a specific server
-  Future<List<NPSFeedback>> getServerFeedback(int serverId) async {
+  Future<List<NPSFeedback>> getServerFeedback(String serverId) async {
     try {
       final feedbackMaps = await _database.getFeedbackForServer(serverId);
       return feedbackMaps.map((map) => NPSFeedback.fromMap(map)).toList();
@@ -446,7 +446,7 @@ class NPSProvider with ChangeNotifier {
 
   /// Calculate NPS for a specific server
   Future<Map<String, dynamic>> calculateServerNPS(
-    int serverId, {
+    String serverId, {
     DateTime? startDate,
     DateTime? endDate,
   }) async {
@@ -575,7 +575,7 @@ class NPSProvider with ChangeNotifier {
         final reportMonth = monthDate.month;
 
         final reportData =
-            await _database.getMonthlyReport(int.parse(npsServer.id), reportMonth);
+            await _database.getMonthlyReport(npsServer.id, reportMonth);
         if (reportData != null && reportData.isNotEmpty) {
           reportsFound++;
           // Use all_time data from the most recent report found

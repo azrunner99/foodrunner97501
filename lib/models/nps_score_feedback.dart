@@ -6,7 +6,7 @@ library;
 /// Represents an individual NPS feedback entry with numerical score
 class NPSScoreFeedback {
   final int? id;
-  final int serverId;
+  final String serverId;
   final int score; // 0-10 scale
   final String? comment;
   final DateTime submissionDate;
@@ -31,7 +31,7 @@ class NPSScoreFeedback {
   factory NPSScoreFeedback.fromMap(Map<String, dynamic> map) {
     return NPSScoreFeedback(
       id: map['id'] as int?,
-      serverId: map['server_id'] as int,
+      serverId: map['server_id'] as String,
       score: map['score'] as int,
       comment: map['comment'] as String?,
       submissionDate: DateTime.parse(map['submission_date'] as String),
@@ -62,7 +62,7 @@ class NPSScoreFeedback {
   /// Create a copy with some fields replaced
   NPSScoreFeedback copyWith({
     int? id,
-    int? serverId,
+    String? serverId,
     int? score,
     String? comment,
     DateTime? submissionDate,

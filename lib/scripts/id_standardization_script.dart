@@ -16,8 +16,11 @@ class IDStandardizationScript {
     try {
       // Step 1: Check if migration is needed
       print('🔍 Step 1: Checking if migration is needed...');
-      final migrationNeeded = await IDMigrationService.isMigrationNeeded();
-      if (!migrationNeeded) {
+      final migrationService = IDMigrationService.instance;
+      final migrationStatus = await migrationService.getMigrationStatus();
+      print('📋 Migration status: $migrationStatus');
+      
+      if (migrationStatus.contains('No migration needed')) {
         print('✅ No migration needed. IDs are already standardized.');
         return true;
       }
@@ -30,7 +33,7 @@ class IDStandardizationScript {
       
       // Step 3: Run migration
       print('🔄 Step 3: Running ID migration...');
-      final migrationSuccess = await IDMigrationService.performMigration();
+      final migrationSuccess = await migrationService.executeFullMigration();
       if (!migrationSuccess) {
         print('❌ Migration failed. Please check logs for details.');
         return false;
@@ -194,8 +197,8 @@ class IDStandardizationScript {
       print('✅ Foreign key relationship working correctly');
       
       // Cleanup test data
-      await db.execute('DELETE FROM nps_feedback WHERE server_id = ?', [testServerId]);
-      await db.execute('DELETE FROM servers WHERE id = ?', [testServerId]);
+      await db.deleteFrom('nps_feedback', where: 'server_id = ?', whereArgs: [testServerId]);
+      await db.deleteFrom('servers', where: 'id = ?', whereArgs: [testServerId]);
       print('🧹 Test data cleaned up');
       
       print('\n✅ All standardization tests passed!');

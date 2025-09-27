@@ -231,7 +231,7 @@ class DataConsistencyService {
       
       // Check for NPS feedback with missing server references
       final missingServerFeedback = npsFeedback.where((feedback) {
-        final serverId = feedback['server_id'] as int?;
+        final serverId = feedback['server_id'] as String?;
         return serverId == null;
       }).toList();
       

@@ -172,7 +172,7 @@ class _ServerPerformanceProfileScreenState
       }
 
       if (npsServer.isNotEmpty) {
-        final npsServerId = npsServer['id'] as int;
+        final npsServerId = npsServer['id'] as String;
 
         List<String> adminNpsData = ['📊 ADMIN-ENTERED NPS DATA:'];
 

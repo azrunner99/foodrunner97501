@@ -10,6 +10,7 @@ import 'server_avatar_settings_screen.dart';
 import 'server_dashboard_screen.dart';
 import 'unified_backup_screen.dart';
 import 'server_performance_screen.dart';
+import 'id_migration_screen.dart';
 import 'server_nps_screen.dart';
 import 'station_analytics_screen.dart';
 import 'smart_scheduling_screen.dart';
@@ -312,6 +313,19 @@ class _CleanAdminScreenState extends State<CleanAdminScreen> {
                         context,
                         MaterialPageRoute(
                             builder: (_) => const UnifiedBackupScreen()),
+                      );
+                    },
+                  ),
+                  _buildAdminTile(
+                    icon: Icons.transform,
+                    title: 'ID Migration',
+                    subtitle: 'Migrate server IDs from integer to string format',
+                    enabled: true,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const IDMigrationScreen()),
                       );
                     },
                   ),

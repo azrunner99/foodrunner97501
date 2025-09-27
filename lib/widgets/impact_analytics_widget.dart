@@ -100,7 +100,7 @@ class _ImpactAnalyticsWidgetState extends State<ImpactAnalyticsWidget> {
   Widget _buildServerRankings(
       List<NPSMonthlyReport> monthlyReports, List<dynamic> servers) {
     // Group reports by server ID and aggregate their performance
-    final Map<int, List<NPSMonthlyReport>> reportsByServer = {};
+    final Map<String, List<NPSMonthlyReport>> reportsByServer = {};
     for (final report in monthlyReports) {
       reportsByServer.putIfAbsent(report.serverId, () => []).add(report);
     }
@@ -165,7 +165,7 @@ class _ImpactAnalyticsWidgetState extends State<ImpactAnalyticsWidget> {
               ...serverScores.take(5).toList().asMap().entries.map((entry) {
                 final index = entry.key;
                 final scoreData = entry.value;
-                final serverId = scoreData['serverId'] as int;
+                final serverId = scoreData['serverId'] as String;
                 final performanceScore = scoreData['score'] as double;
                 final recentPerformance =
                     scoreData['recentPerformance'] as double;
@@ -453,7 +453,7 @@ class _ImpactAnalyticsWidgetState extends State<ImpactAnalyticsWidget> {
   }
 
   /// Calculate aggregated performance for a server across all their monthly reports
-  Map<String, dynamic> _calculateAggregatedServerPerformance(int serverId,
+  Map<String, dynamic> _calculateAggregatedServerPerformance(String serverId,
       List<NPSMonthlyReport> serverReports, List<NPSMonthlyReport> allReports) {
     if (serverReports.isEmpty) {
       return {

@@ -263,7 +263,7 @@ class _EnhancedNPSAnalyticsWidgetState
 
     // Calculate aggregate metrics
     // Group reports by server to get unique servers
-    final serverReports = <int, List<NPSMonthlyReport>>{};
+    final serverReports = <String, List<NPSMonthlyReport>>{};
     for (final report in reports) {
       serverReports.putIfAbsent(report.serverId, () => []).add(report);
     }

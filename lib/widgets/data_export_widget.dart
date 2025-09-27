@@ -367,7 +367,7 @@ class _DataExportWidgetState extends State<DataExportWidget> {
       for (int j = 0; j < numResponses; j++) {
         sampleData.add(NPSScoreFeedback(
           id: (i * 10) + j,
-          serverId: (j % 3) + 1, // Distribute across servers
+          serverId: 'server_${(j % 3) + 1}', // Distribute across servers
           score: 5 + (i % 6), // Scores from 5-10
           comment: 'Sample feedback for day $i, response $j',
           submissionDate: date,

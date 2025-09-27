@@ -77,7 +77,7 @@ class _IndividualServerNPSTrendWidgetState extends State<IndividualServerNPSTren
           final trendAnalysis = trend_analysis.AdvancedTrendAnalysisService().analyzeServerTrends(
             monthlyReports: serverReports,
             serverName: serverName,
-            serverId: report.serverId,
+            serverId: int.parse(report.serverId),
           );
           
           trendAnalyses[serverId] = trendAnalysis;

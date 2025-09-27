@@ -44,11 +44,8 @@ class UnifiedDataService {
       final unifiedServersList = <UnifiedServerData>[];
       
       for (final npsServer in unifiedServers) {
-        final serverId = npsServer.id;
-        final serverName = npsServer.name as String;
-        
-        // Ensure IDs are non-nullable strings
-        final String serverId = 'unknown';
+        final String serverId = npsServer.id;
+        final String serverName = npsServer.name;
         
         // Find matching server in AppState
         final appStateServer = appStateServers.firstWhere(

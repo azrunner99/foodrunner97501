@@ -6,7 +6,7 @@ import '../services/error_handling_service.dart';
 
 /// Data class for holding server metrics input data
 class ServerMetricsData {
-  final int serverId;
+  final String serverId;
   final String serverName;
   final TextEditingController allTimeNpsController;
   final TextEditingController threeMonthNpsController;
@@ -111,7 +111,7 @@ class MonthlyNPSDataEntryWidget extends StatefulWidget {
 
 class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
   DateTime _selectedMonth = DateTime.now();
-  final Map<int, ServerMetricsData> _serverData = {};
+  final Map<String, ServerMetricsData> _serverData = {};
   bool _isLoading = false;
 
   @override
@@ -125,8 +125,8 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
 
     // Initialize data for all active servers
     for (final server in npsProvider.servers.where((s) => s.active)) {
-      _serverData[int.parse(server.id!)] = ServerMetricsData(
-        serverId: int.parse(server.id!),
+      _serverData[server.id] = ServerMetricsData(
+        serverId: server.id,
         serverName: server.name,
       );
     }
@@ -437,9 +437,9 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
                     itemBuilder: (context, index) {
                       final server =
                           npsProvider.servers.where((s) => s.active).toList()[index];
-                      final serverData = _serverData[int.tryParse(server.id ?? '') ?? 0] ??
+                      final serverData = _serverData[server.id] ??
                           ServerMetricsData(
-                            serverId: int.tryParse(server.id ?? '') ?? 0,
+                            serverId: server.id,
                             serverName: server.name,
                           );
 
@@ -678,7 +678,7 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
           final monthKey = _selectedMonth.year * 100 + _selectedMonth.month;
 
           final report = NPSMonthlyReport(
-            serverId: int.tryParse(server.id ?? '') ?? 0,
+            serverId: server.id,
             reportMonth: monthKey,
             reportYear: _selectedMonth.year,
             allTimeNpsPercentage:

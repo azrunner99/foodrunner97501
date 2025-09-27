@@ -770,7 +770,7 @@ class PerformanceCalculator {
           try {
             // Use database.getMonthlyReport to access saved admin-entered data
             final reportData = await npsProvider.database
-                .getMonthlyReport(int.parse(server.id), monthKey);
+                .getMonthlyReport(server.id, monthKey);
 
             if (reportData != null && reportData.isNotEmpty) {
               // Preferred month-level granular fields (if schema evolved)

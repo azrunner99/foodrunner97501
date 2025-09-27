@@ -96,7 +96,7 @@ enum ShiftPeriod {
 /// Represents an individual guest feedback entry
 class NPSFeedback {
   final int? id;
-  final int serverId;
+  final String serverId;
   final FeedbackType feedbackType;
   final DateTime feedbackDate;
   final double? salesAmount;
@@ -123,7 +123,7 @@ class NPSFeedback {
   factory NPSFeedback.fromMap(Map<String, dynamic> map) {
     return NPSFeedback(
       id: map['id'] as int?,
-      serverId: map['server_id'] as int,
+      serverId: map['server_id'] as String,
       feedbackType: FeedbackType.fromString(map['feedback_type'] as String),
       feedbackDate: DateTime.parse(map['feedback_date'] as String),
       salesAmount: map['sales_amount'] != null
@@ -159,7 +159,7 @@ class NPSFeedback {
   /// Create a copy of this feedback with updated fields
   NPSFeedback copyWith({
     int? id,
-    int? serverId,
+    String? serverId,
     FeedbackType? feedbackType,
     DateTime? feedbackDate,
     double? salesAmount,
@@ -207,7 +207,7 @@ class NPSFeedback {
 
   /// Check if the feedback data is valid
   bool isValid() {
-    return serverId > 0 &&
+    return serverId.isNotEmpty &&
         feedbackDate.isBefore(DateTime.now().add(const Duration(days: 1))) &&
         (salesAmount == null || salesAmount! >= 0) &&
         (tableNumber == null || tableNumber! > 0) &&
@@ -218,8 +218,8 @@ class NPSFeedback {
   List<String> getValidationErrors() {
     final errors = <String>[];
 
-    if (serverId <= 0) {
-      errors.add('Server ID must be positive');
+    if (serverId.isEmpty) {
+      errors.add('Server ID must not be empty');
     }
 
     if (feedbackDate.isAfter(DateTime.now().add(const Duration(days: 1)))) {

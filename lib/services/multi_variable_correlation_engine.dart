@@ -375,7 +375,7 @@ class MultiVariableCorrelationEngine {
       final serverPerformanceMetrics = <String, Map<String, double>>{};
       
       for (final perf in performances) {
-        final feedback = await npsProvider.getServerFeedback(int.parse(perf.serverId));
+        final feedback = await npsProvider.getServerFeedback(perf.serverId);
         if (feedback.isNotEmpty) {
           final avgImpact = feedback.map((f) => f.feedbackType.npsImpact).reduce((a, b) => a + b) / feedback.length;
           serverNPSScores[perf.serverId] = avgImpact;

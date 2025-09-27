@@ -16,6 +16,15 @@ class NPSDatabaseAdapter {
 
   NPSDatabaseAdapter(this._db);
 
+  /// Safely convert server ID from database to String format
+  /// Handles both legacy int IDs and new String IDs
+  String _convertToStringId(dynamic serverId) {
+    if (serverId == null) return '';
+    if (serverId is String) return serverId;
+    if (serverId is int) return serverId.toString();
+    return serverId.toString();
+  }
+
   /// Check if this adapter is using Sqflite database
   bool get isSqfliteDatabase => DatabaseFactory.implementationType.contains('Sqflite');
   
@@ -45,9 +54,10 @@ class NPSDatabaseAdapter {
   }
 
   /// Insert a new server
-  Future<int> insertServer(Map<String, dynamic> serverData) async {
+  Future<String> insertServer(Map<String, dynamic> serverData) async {
     try {
-      return await _db.insertInto('servers', serverData);
+      await _db.insertInto('servers', serverData);
+      return serverData['id'] as String; // Return the provided string ID
     } catch (e) {
       d('[NPSDatabaseAdapter] Error inserting server: $e');
       rethrow;
@@ -55,7 +65,7 @@ class NPSDatabaseAdapter {
   }
 
   /// Update an existing server
-  Future<int> updateServer(int id, Map<String, dynamic> serverData) async {
+  Future<int> updateServer(String id, Map<String, dynamic> serverData) async {
     try {
       return await _db.updateTable('servers', serverData, 'id = ?', [id]);
     } catch (e) {
@@ -65,7 +75,7 @@ class NPSDatabaseAdapter {
   }
 
   /// Delete a server
-  Future<int> deleteServer(int id) async {
+  Future<int> deleteServer(String id) async {
     try {
       return await _db.deleteFrom('servers', 'id = ?', [id]);
     } catch (e) {
@@ -75,7 +85,7 @@ class NPSDatabaseAdapter {
   }
 
   /// Get feedback for a specific server
-  Future<List<Map<String, dynamic>>> getFeedbackForServer(int serverId) async {
+  Future<List<Map<String, dynamic>>> getFeedbackForServer(String serverId) async {
     try {
       return await _db.queryTable(
         'nps_feedback',
@@ -91,7 +101,7 @@ class NPSDatabaseAdapter {
 
   /// Get feedback for a specific server within a date range
   Future<List<Map<String, dynamic>>> getFeedbackForServerInRange(
-      int serverId, {DateTime? startDate, DateTime? endDate}) async {
+      String serverId, {DateTime? startDate, DateTime? endDate}) async {
     try {
       String whereClause = 'server_id = ?';
       List<dynamic> whereArgs = [serverId];
@@ -186,7 +196,7 @@ class NPSDatabaseAdapter {
       // Get server names for each report and combine the data
       final serverData = <Map<String, dynamic>>[];
       for (final report in monthlyReports) {
-        final serverId = report['server_id'] as int;
+        final serverId = _convertToStringId(report['server_id']);
         print('[NPSDatabaseAdapter] Looking up server with ID: $serverId');
         
         final servers = await _db.queryTable(
@@ -235,7 +245,7 @@ class NPSDatabaseAdapter {
   }
 
   /// Get monthly report for a server (with caching)
-  Future<Map<String, dynamic>?> getMonthlyReport(int serverId, int reportMonth) async {
+  Future<Map<String, dynamic>?> getMonthlyReport(String serverId, int reportMonth) async {
     try {
       final cacheKey = CacheKeys.monthlyReport(serverId, reportMonth);
       
@@ -278,12 +288,12 @@ class NPSDatabaseAdapter {
       );
 
       if (monthlyReports.isNotEmpty) {
-        final Map<String, Set<int>> monthToServers = {};
+        final Map<String, Set<String>> monthToServers = {};
         for (final row in monthlyReports) {
           final monthYear = (row['month_year'] as String?)?.trim();
           if (monthYear == null || monthYear.isEmpty) continue;
-          final serverId = (row['server_id'] as int?) ?? -1;
-          monthToServers.putIfAbsent(monthYear, () => <int>{}).add(serverId);
+          final serverId = _convertToStringId(row['server_id']);
+          monthToServers.putIfAbsent(monthYear, () => <String>{}).add(serverId);
         }
 
         final List<Map<String, dynamic>> result = [];
@@ -329,7 +339,7 @@ class NPSDatabaseAdapter {
         orderBy: 'timestamp_created DESC',
       );
 
-      final Map<String, Set<int>> monthToServersFromFeedback = {};
+      final Map<String, Set<String>> monthToServersFromFeedback = {};
       for (final row in feedbackRows) {
         final ts = row['timestamp_created'] as String?;
         if (ts == null || ts.isEmpty) continue;
@@ -337,8 +347,8 @@ class NPSDatabaseAdapter {
         try { dt = DateTime.tryParse(ts); } catch (_) {}
         if (dt == null) continue;
         final key = '${dt.year}-${dt.month.toString().padLeft(2,'0')}';
-        final serverId = (row['server_id'] as int?) ?? -1;
-        monthToServersFromFeedback.putIfAbsent(key, () => <int>{}).add(serverId);
+        final serverId = _convertToStringId(row['server_id']);
+        monthToServersFromFeedback.putIfAbsent(key, () => <String>{}).add(serverId);
       }
 
       final List<Map<String, dynamic>> derived = [];

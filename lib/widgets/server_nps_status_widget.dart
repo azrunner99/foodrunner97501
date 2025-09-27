@@ -55,7 +55,7 @@ class _ServerNPSStatusWidgetState extends State<ServerNPSStatusWidget> {
       
       // Load historical data
       final historicalData = <HistoricalNPSData>[];
-      final Map<int, List<NPSMonthlyReport>> reportsByServer = {};
+      final Map<String, List<NPSMonthlyReport>> reportsByServer = {};
       
       for (final report in reports) {
         reportsByServer.putIfAbsent(report.serverId, () => []).add(report);
