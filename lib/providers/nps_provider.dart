@@ -126,12 +126,15 @@ class NPSProvider with ChangeNotifier {
               norm(existingServer['original_id'] as String?).isEmpty;
           if (needsOriginalId && mainServer.id.trim().isNotEmpty) {
             try {
-              await _database.updateServer(existingServer['id'] as String,
-                  {'original_id': mainServer.id.trim()});
-              existingServer['original_id'] = mainServer.id.trim();
-              byOriginalId[mainIdNorm] = existingServer;
-              debugPrint(
-                  '🔥 [NPSProvider] ✅ Updated original_id for existing server: ${mainServer.name}');
+              final serverId = existingServer['id']?.toString();
+              if (serverId != null) {
+                await _database.updateServer(serverId,
+                    {'original_id': mainServer.id.trim()});
+                existingServer['original_id'] = mainServer.id.trim();
+                byOriginalId[mainIdNorm] = existingServer;
+                debugPrint(
+                    '🔥 [NPSProvider] ✅ Updated original_id for existing server: ${mainServer.name}');
+              }
             } catch (e) {
               debugPrint(
                   '🔥 [NPSProvider] ⚠️ Could not update original_id for ${mainServer.name}: $e');
@@ -282,7 +285,7 @@ class NPSProvider with ChangeNotifier {
         throw Exception('Server data is invalid');
       }
 
-      if (server.id == null) {
+      if (server.id.isEmpty) {
         throw Exception('Cannot update server without ID');
       }
 
@@ -550,6 +553,37 @@ class NPSProvider with ChangeNotifier {
       print('[NPSProvider] Error in getServerNPSDataForMonth: $e');
       _setError('Failed to load server NPS data for month: $e');
       return [];
+    }
+  }
+
+  /// Generate monthly reports for a specific month
+  Future<void> generateMonthlyReports(int reportMonth, int reportYear) async {
+    try {
+      _setLoading(true);
+      
+      // Convert to YYYYMM format
+      final monthKey = reportYear * 100 + reportMonth;
+      
+      debugPrint('[NPSProvider] Generating monthly reports for $reportMonth/$reportYear (monthKey: $monthKey)');
+      
+      // Generate reports for all servers
+      final reports = await _calculator.generateMonthlyReportsForAllServers(monthKey);
+      
+      debugPrint('[NPSProvider] Generated ${reports.length} monthly reports');
+      
+      // Save each report to the database
+      for (final report in reports) {
+        await _calculator.saveMonthlyReport(report);
+      }
+      
+      debugPrint('[NPSProvider] Successfully saved all monthly reports for $reportMonth/$reportYear');
+      
+    } catch (e) {
+      debugPrint('[NPSProvider] Error generating monthly reports: $e');
+      _setError('Failed to generate monthly reports: $e');
+      rethrow;
+    } finally {
+      _setLoading(false);
     }
   }
 

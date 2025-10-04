@@ -12,13 +12,13 @@ void main() {
   group('NPSServer Model Tests', () {
     test('should create NPSServer with valid data', () {
       final server = NPSServer(
-        id: 1,
+        id: '1',
         name: 'John Doe',
         hireDate: DateTime(2024, 1, 15),
         active: true,
       );
 
-      expect(server.id, equals(1));
+      expect(server.id, equals('1'));
       expect(server.name, equals('John Doe'));
       expect(server.hireDate, equals(DateTime(2024, 1, 15)));
       expect(server.active, isTrue);
@@ -28,6 +28,7 @@ void main() {
     test('should validate server data correctly', () {
       // Valid server
       final validServer = NPSServer(
+        id: 'valid1',
         name: 'Jane Smith',
         hireDate: DateTime(2024, 1, 1),
       );
@@ -36,6 +37,7 @@ void main() {
 
       // Invalid server - empty name
       final invalidServer1 = NPSServer(
+        id: 'invalid1',
         name: '',
         hireDate: DateTime(2024, 1, 1),
       );
@@ -45,6 +47,7 @@ void main() {
 
       // Invalid server - future hire date
       final invalidServer2 = NPSServer(
+        id: 'invalid2',
         name: 'Future Employee',
         hireDate: DateTime.now().add(const Duration(days: 30)),
       );
@@ -55,6 +58,7 @@ void main() {
 
     test('should calculate tenure correctly', () {
       final server = NPSServer(
+        id: 'tenure1',
         name: 'Test Server',
         hireDate: DateTime(2024, 1, 1),
       );
@@ -69,7 +73,7 @@ void main() {
 
     test('should convert to/from map correctly', () {
       final originalServer = NPSServer(
-        id: 1,
+        id: '1',
         name: 'Test Server',
         hireDate: DateTime(2024, 1, 15),
         active: true,
@@ -90,7 +94,7 @@ void main() {
     test('should create NPSFeedback with valid data', () {
       final feedback = NPSFeedback(
         id: 1,
-        serverId: 1,
+        serverId: '1',
         feedbackType: FeedbackType.yes,
         feedbackDate: DateTime(2024, 6, 1),
         salesAmount: 25.50,
@@ -100,8 +104,8 @@ void main() {
         notes: 'Great service!',
       );
 
-      expect(feedback.id, equals(1));
-      expect(feedback.serverId, equals(1));
+    expect(feedback.id, equals(1));
+    expect(feedback.serverId, equals('1'));
       expect(feedback.feedbackType, equals(FeedbackType.yes));
       expect(feedback.salesAmount, equals(25.50));
       expect(feedback.isValid(), isTrue);
@@ -110,7 +114,7 @@ void main() {
     test('should validate feedback data correctly', () {
       // Valid feedback
       final validFeedback = NPSFeedback(
-        serverId: 1,
+        serverId: '1',
         feedbackType: FeedbackType.yes,
         feedbackDate: DateTime.now().subtract(const Duration(days: 1)),
         salesAmount: 25.00,
@@ -122,7 +126,7 @@ void main() {
 
       // Invalid feedback - negative sales
       final invalidFeedback1 = NPSFeedback(
-        serverId: 1,
+        serverId: '1',
         feedbackType: FeedbackType.yes,
         feedbackDate: DateTime.now(),
         salesAmount: -10.00,
@@ -133,7 +137,7 @@ void main() {
 
       // Invalid feedback - future date
       final invalidFeedback2 = NPSFeedback(
-        serverId: 1,
+        serverId: '1',
         feedbackType: FeedbackType.yes,
         feedbackDate: DateTime.now().add(const Duration(days: 2)),
       );
@@ -151,7 +155,7 @@ void main() {
     test('should convert to/from map correctly', () {
       final originalFeedback = NPSFeedback(
         id: 1,
-        serverId: 1,
+        serverId: '1',
         feedbackType: FeedbackType.yes,
         feedbackDate: DateTime(2024, 6, 1),
         salesAmount: 25.50,
@@ -215,7 +219,7 @@ void main() {
   group('NPSMonthlyReport Tests', () {
     test('should create monthly report with valid data', () {
       final report = NPSMonthlyReport(
-        serverId: 1,
+        serverId: '1',
         reportMonth: 202406,
         reportYear: 2024,
         allTimeNpsPercentage: 45.5,
@@ -229,7 +233,7 @@ void main() {
         dataAsOfDate: DateTime(2024, 6, 30),
       );
 
-      expect(report.serverId, equals(1));
+  expect(report.serverId, equals('1'));
       expect(report.reportMonth, equals(202406));
       expect(report.monthName, equals('June'));
       expect(report.formattedMonth, equals('2024-06'));
@@ -238,7 +242,7 @@ void main() {
     test('should determine performance trend correctly', () {
       // Improving trend (1-month > 3-month)
       final improvingReport = NPSMonthlyReport(
-        serverId: 1,
+        serverId: '1',
         reportMonth: 202406,
         reportYear: 2024,
         threeMonthNpsPercentage: 40.0,
@@ -253,7 +257,7 @@ void main() {
 
       // Declining trend (1-month < 3-month)
       final decliningReport = NPSMonthlyReport(
-        serverId: 1,
+        serverId: '1',
         reportMonth: 202406,
         reportYear: 2024,
         threeMonthNpsPercentage: 50.0,
@@ -268,7 +272,7 @@ void main() {
 
       // Stable trend (small difference)
       final stableReport = NPSMonthlyReport(
-        serverId: 1,
+        serverId: '1',
         reportMonth: 202406,
         reportYear: 2024,
         threeMonthNpsPercentage: 50.0,
@@ -283,7 +287,7 @@ void main() {
 
     test('should calculate average sales per table', () {
       final report = NPSMonthlyReport(
-        serverId: 1,
+        serverId: '1',
         reportMonth: 202406,
         reportYear: 2024,
         allTimeSales: 1000.00,
@@ -346,7 +350,7 @@ void main() {
     test('should analyze trends correctly', () {
       // Improving trend
       final improvingAnalysis = NPSTrendAnalysis(
-        serverId: 1,
+        serverId: '1',
         oneMonthNPS: 60.0,
         threeMonthNPS: 50.0,
         allTimeNPS: 45.0,
@@ -358,7 +362,7 @@ void main() {
 
       // Declining trend
       final decliningAnalysis = NPSTrendAnalysis(
-        serverId: 1,
+        serverId: '1',
         oneMonthNPS: 40.0,
         threeMonthNPS: 55.0,
         allTimeNPS: 50.0,
@@ -370,7 +374,7 @@ void main() {
 
       // Stable trend
       final stableAnalysis = NPSTrendAnalysis(
-        serverId: 1,
+        serverId: '1',
         oneMonthNPS: 52.0,
         threeMonthNPS: 50.0,
         allTimeNPS: 48.0,

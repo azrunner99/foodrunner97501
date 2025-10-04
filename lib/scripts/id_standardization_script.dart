@@ -197,8 +197,8 @@ class IDStandardizationScript {
       print('✅ Foreign key relationship working correctly');
       
       // Cleanup test data
-      await db.deleteFrom('nps_feedback', where: 'server_id = ?', whereArgs: [testServerId]);
-      await db.deleteFrom('servers', where: 'id = ?', whereArgs: [testServerId]);
+  await db.deleteFrom('nps_feedback', 'server_id = ?', [testServerId]);
+  await db.deleteFrom('servers', 'id = ?', [testServerId]);
       print('🧹 Test data cleaned up');
       
       print('\n✅ All standardization tests passed!');

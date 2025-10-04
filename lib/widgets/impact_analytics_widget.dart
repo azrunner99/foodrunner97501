@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/nps_provider.dart';
-import '../models/monthly_report.dart';
+import '../models/monthly_report.dart' hide PerformanceTrend;
+import '../models/historical_nps_data.dart';
 import '../storage/database_factory.dart';
 import '../utils/log.dart';
+import '../app_state.dart';
+import '../services/application_update_service.dart';
+import '../services/server_id_resolver.dart';
+import '../storage/drift_database.dart';
 
 /// Impact Analytics Widget
 /// Displays Restaurant Impact Rankings and server performance impact analysis
@@ -57,12 +62,24 @@ class _ImpactAnalyticsWidgetState extends State<ImpactAnalyticsWidget> {
       d('[ImpactAnalyticsWidget] Retrieved ${reportMaps.length} monthly reports from database');
       
       // Convert to NPSMonthlyReport objects
-      final reports = reportMaps.map((map) => NPSMonthlyReport.fromMap(map)).toList();
+      final allReports = reportMaps.map((map) => NPSMonthlyReport.fromMap(map)).toList();
       
-      d('[ImpactAnalyticsWidget] Successfully loaded ${reports.length} monthly reports');
+      // Filter out old server ID format (numeric IDs like "1", "2") to avoid duplicates
+      // Keep only reports with complex server IDs (the new format)
+      final filteredReports = allReports.where((report) {
+        final serverId = report.serverId.toString();
+        final isOldFormat = RegExp(r'^\d+$').hasMatch(serverId) && serverId.length <= 2;
+        if (isOldFormat) {
+          d('[ImpactAnalyticsWidget] Filtering out old format server_id: $serverId');
+        }
+        return !isOldFormat; // Keep only non-old format IDs
+      }).toList();
+      
+      d('[ImpactAnalyticsWidget] After filtering: ${filteredReports.length} reports (removed ${allReports.length - filteredReports.length} old format reports)');
+      d('[ImpactAnalyticsWidget] Successfully loaded ${filteredReports.length} monthly reports');
       
       setState(() {
-        _monthlyReports = reports;
+        _monthlyReports = filteredReports;
         _isLoading = false;
       });
     } catch (e) {
@@ -90,7 +107,7 @@ class _ImpactAnalyticsWidgetState extends State<ImpactAnalyticsWidget> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Restaurant Impact Rankings
-            _buildServerRankings(_monthlyReports, context.read<NPSProvider>().servers),
+            _buildServerRankings(_monthlyReports, context.read<AppState>().servers),
           ],
         ),
       ),
@@ -102,8 +119,10 @@ class _ImpactAnalyticsWidgetState extends State<ImpactAnalyticsWidget> {
     // Group reports by server ID and aggregate their performance
     final Map<String, List<NPSMonthlyReport>> reportsByServer = {};
     for (final report in monthlyReports) {
-      reportsByServer.putIfAbsent(report.serverId, () => []).add(report);
+      reportsByServer.putIfAbsent(report.serverId.toString(), () => []).add(report);
     }
+
+    d('[ImpactAnalyticsWidget] Grouped reports for ${reportsByServer.length} servers: ${reportsByServer.keys.toList()}');
 
     // Calculate aggregated performance scores for each server
     final serverScores = reportsByServer.entries.map((entry) {
@@ -162,7 +181,7 @@ class _ImpactAnalyticsWidgetState extends State<ImpactAnalyticsWidget> {
                 ),
               )
             else
-              ...serverScores.take(5).toList().asMap().entries.map((entry) {
+              ...serverScores.toList().asMap().entries.map((entry) {
                 final index = entry.key;
                 final scoreData = entry.value;
                 final serverId = scoreData['serverId'] as String;
@@ -187,26 +206,16 @@ class _ImpactAnalyticsWidgetState extends State<ImpactAnalyticsWidget> {
                             ? '🥉'
                             : '${index + 1}';
 
-                // Find corresponding server name - extract just the name
-                final server = servers.cast<dynamic>().firstWhere(
-                      (server) => server.id == serverId,
-                      orElse: () => null,
-                    );
-
-                // Extract clean server name (just the name part)
+                // Get server name from AppState servers (simple approach)
+                final servers = context.read<AppState>().servers;
                 String serverName = 'Server $serverId';
-                if (server != null) {
-                  final serverStr = server.toString();
-                  // Extract name from pattern like "NPSServer(id: 2, name: b, hireDate: ...)"
-                  final nameMatch =
-                      RegExp(r'name:\s*([^,]+)').firstMatch(serverStr);
-                  if (nameMatch != null) {
-                    serverName =
-                        nameMatch.group(1)?.trim() ?? 'Server $serverId';
+                for (final server in servers) {
+                  if (server.id == serverId) {
+                    serverName = server.name;
+                    break;
                   }
                 }
-
-                return Padding(
+                d('[ImpactAnalyticsWidget] Resolved server name: $serverName for ID $serverId');                return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   child: Container(
                     padding: const EdgeInsets.all(16),

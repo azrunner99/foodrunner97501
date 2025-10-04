@@ -20,7 +20,7 @@ class AppStateSimpleUnified extends ChangeNotifier {
   final Map<String, Map<String, int>> _pizookieTotals = {};
   
   // Settings
-  WeeklyHours _hours = WeeklyHours(openMinutes: 0, closeMinutes: 0);
+  WeeklyHours _hours = WeeklyHours(openMinutes: {}, closeMinutes: {});
   String _currentShiftType = 'lunch';
   bool _isShiftActive = false;
   String? _currentShiftId;
@@ -337,7 +337,7 @@ class AppStateSimpleUnified extends ChangeNotifier {
       _profiles.clear();
       _totals.clear();
       _pizookieTotals.clear();
-      _hours = WeeklyHours(openMinutes: 0, closeMinutes: 0);
+      _hours = WeeklyHours(openMinutes: {}, closeMinutes: {});
       _currentShiftType = 'lunch';
       _isShiftActive = false;
       _currentShiftId = null;
@@ -370,3 +370,4 @@ class AppStateSimpleUnified extends ChangeNotifier {
     }
   }
 }
+

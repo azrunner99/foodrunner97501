@@ -5,6 +5,7 @@ import '../app_state.dart';
 import '../models.dart';
 import '../models/performance_models.dart';
 import '../providers/nps_provider.dart';
+import '../services/server_synchronization_service.dart';
 
 class ServerPerformanceProfileScreen extends StatefulWidget {
   final Server server;
@@ -126,8 +127,24 @@ class _ServerPerformanceProfileScreenState
 
   Future<void> _loadNPSData() async {
     final npsProvider = context.read<NPSProvider>();
+    final appState = context.read<AppState>();
 
     try {
+      // Use comprehensive synchronization service to ensure data consistency
+      d('[NPS Debug] Starting comprehensive server synchronization...');
+      
+      final syncService = ServerSynchronizationService.instance;
+      await syncService.initialize();
+      
+      final syncResult = await syncService.synchronizeServers(appState, npsProvider);
+      
+      if (!syncResult.success) {
+        d('[NPS Debug] ❌ Server synchronization failed: ${syncResult.errorMessage}');
+        throw Exception('Server synchronization failed: ${syncResult.errorMessage}');
+      }
+      
+      d('[NPS Debug] ✅ Server synchronization completed: $syncResult');
+
       final npsServers =
           await npsProvider.database.getAllServers(activeOnly: false);
   d('[NPS Debug] Looking for server name: "${widget.server.name}"');

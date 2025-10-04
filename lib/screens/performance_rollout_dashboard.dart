@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/performance_models.dart';
+import '../models/performance_rollout_models.dart';
 import '../services/performance_rollout_service.dart';
 import '../services/performance_flags.dart';
 
@@ -208,7 +209,7 @@ class _PerformanceRolloutDashboardState extends State<PerformanceRolloutDashboar
           const SizedBox(height: 8),
           Text('Status: ${rollout.status.name}'),
           Text('Phases: ${rollout.phases.join(', ')}'),
-          Text('Started: ${_formatDateTime(rollout.startedAt)}'),
+          Text('Started: ${rollout.startedAt != null ? _formatDateTime(rollout.startedAt!) : 'Not started'}'),
           if (rollout.duration != null)
             Text('Duration: ${_formatDuration(rollout.duration!)}'),
           const SizedBox(height: 8),
@@ -428,7 +429,7 @@ class _PerformanceRolloutDashboardState extends State<PerformanceRolloutDashboar
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Started: ${_formatDateTime(rollout.startedAt)}',
+                  'Started: ${rollout.startedAt != null ? _formatDateTime(rollout.startedAt!) : 'Not started'}',
                   style: TextStyle(
                     fontSize: 10,
                     color: Colors.grey.shade500,

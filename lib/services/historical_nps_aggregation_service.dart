@@ -3,6 +3,7 @@ import '../models/historical_nps_data.dart';
 import '../models/monthly_report.dart' hide PerformanceTrend;
 import '../storage/database_factory.dart';
 import '../utils/log.dart';
+import '../app_state.dart';
 
 /// Service for aggregating and analyzing historical NPS data
 class HistoricalNPSAggregationService {
@@ -72,25 +73,185 @@ class HistoricalNPSAggregationService {
     }
   }
 
+  /// Load historical NPS data for all servers with AppState server mapping
+  Future<List<HistoricalNPSData>> getAllHistoricalDataWithAppState(List<dynamic> appStateServers) async {
+    try {
+      d('[HistoricalNPSAggregationService] Loading historical data for all servers with AppState mapping');
+      print('🔍🔍🔍 [HistoricalNPSAggregationService] STARTING getAllHistoricalDataWithAppState() 🔍🔍🔍');
+      print('🔍 [HistoricalNPSAggregationService] Received ${appStateServers.length} AppState servers for mapping');
+      
+      // Instead of starting with servers table, start with monthly reports
+      // This mirrors the logic used in the summary calculation
+      final allReports = await _database.queryTable('nps_monthly_reports');
+      d('[HistoricalNPSAggregationService] Found ${allReports.length} total monthly reports');
+      print('🔍 [HistoricalNPSAggregationService] Found ${allReports.length} total monthly reports');
+      
+      // Filter out old server ID format (numeric IDs like "1", "2") to avoid duplicates
+      // Keep only reports with complex server IDs (the new format)
+      final filteredReports = allReports.where((report) {
+        final serverId = report['server_id'].toString();
+        final isOldFormat = RegExp(r'^\d+$').hasMatch(serverId) && serverId.length <= 2;
+        if (isOldFormat) {
+          print('🔍 [HistoricalNPSAggregationService] Filtering out old format server_id: $serverId');
+        }
+        return !isOldFormat; // Keep only non-old format IDs
+      }).toList();
+      
+      print('🔍 [HistoricalNPSAggregationService] After filtering: ${filteredReports.length} reports (removed ${allReports.length - filteredReports.length} old format reports)');
+      
+      if (filteredReports.isEmpty) {
+        d('[HistoricalNPSAggregationService] No monthly reports found after filtering - returning empty list');
+        return [];
+      }
+      
+      // Group reports by server ID
+      final serverReports = <String, List<Map<String, dynamic>>>{};
+      for (final report in filteredReports) {
+        final serverId = report['server_id'].toString();
+        serverReports.putIfAbsent(serverId, () => []).add(report);
+      }
+      
+      d('[HistoricalNPSAggregationService] Found reports for ${serverReports.length} unique servers: ${serverReports.keys.toList()}');
+      
+      final List<HistoricalNPSData> allHistoricalData = [];
+      
+      // Process each server that has reports
+      for (final entry in serverReports.entries) {
+        final serverId = entry.key;
+        final reports = entry.value;
+        
+        d('[HistoricalNPSAggregationService] Processing server: $serverId with ${reports.length} reports');
+        
+        try {
+          // Get server name with comprehensive lookup using provided AppState servers
+          print('🔍 [HistoricalNPSAggregationService] Getting server name for ID: $serverId');
+          final serverName = await _getServerNameComprehensive(serverId, appStateServers: appStateServers);
+          print('🔍 [HistoricalNPSAggregationService] Got server name: $serverName for ID: $serverId');
+          
+          // Convert monthly reports to MonthlyPerformance objects
+          final monthlyData = reports.map((report) => _convertToMonthlyPerformance(report)).toList();
+          
+          // Sort by month (most recent first)
+          monthlyData.sort((a, b) => b.month.compareTo(a.month));
+          
+          // Calculate trend analysis
+          final trend = _calculatePerformanceTrend(monthlyData);
+          
+          // Calculate volatility
+          final volatility = _calculateVolatility(monthlyData);
+          
+          // Detect seasonal patterns
+          final seasonalPattern = _detectSeasonalPattern(monthlyData);
+          
+          // Classify performance
+          final classification = _classifyPerformance(monthlyData, trend, volatility);
+          
+          final historicalData = HistoricalNPSData(
+            serverId: serverId,
+            serverName: serverName,
+            monthlyData: monthlyData,
+            trend: trend,
+            volatility: volatility,
+            seasonalPattern: seasonalPattern,
+            classification: classification,
+            lastUpdated: DateTime.now(),
+            totalMonthsReported: monthlyData.length,
+          );
+          
+          allHistoricalData.add(historicalData);
+          d('[HistoricalNPSAggregationService] ✅ Added historical data for server: $serverId ($serverName) with ${monthlyData.length} months');
+        } catch (e) {
+          d('[HistoricalNPSAggregationService] ❌ Error processing server $serverId: $e');
+        }
+      }
+      
+      d('[HistoricalNPSAggregationService] Successfully loaded historical data for ${allHistoricalData.length} servers');
+      return allHistoricalData;
+    } catch (e) {
+      d('[HistoricalNPSAggregationService] Error loading all historical data: $e');
+      return [];
+    }
+  }
+
   /// Load historical NPS data for all servers
   Future<List<HistoricalNPSData>> getAllHistoricalData() async {
     try {
       d('[HistoricalNPSAggregationService] Loading historical data for all servers');
+      print('🔍🔍🔍 [HistoricalNPSAggregationService] STARTING getAllHistoricalData() 🔍🔍🔍');
       
-      // Get all servers
-      final servers = await _database.queryTable('servers', where: 'active = ?', whereArgs: [1]);
+      // Instead of starting with servers table, start with monthly reports
+      // This mirrors the logic used in the summary calculation
+      final allReports = await _database.queryTable('nps_monthly_reports');
+      d('[HistoricalNPSAggregationService] Found ${allReports.length} total monthly reports');
+      print('🔍 [HistoricalNPSAggregationService] Found ${allReports.length} total monthly reports');
+      
+      if (allReports.isEmpty) {
+        d('[HistoricalNPSAggregationService] No monthly reports found - returning empty list');
+        return [];
+      }
+      
+      // Group reports by server ID
+      final serverReports = <String, List<Map<String, dynamic>>>{};
+      for (final report in allReports) {
+        final serverId = report['server_id'].toString();
+        serverReports.putIfAbsent(serverId, () => []).add(report);
+      }
+      
+      d('[HistoricalNPSAggregationService] Found reports for ${serverReports.length} unique servers: ${serverReports.keys.toList()}');
       
       final List<HistoricalNPSData> allHistoricalData = [];
       
-      for (final server in servers) {
-        final serverId = server['id'].toString();
-        final historicalData = await getHistoricalDataForServer(serverId);
-        if (historicalData != null) {
+      // Process each server that has reports
+      for (final entry in serverReports.entries) {
+        final serverId = entry.key;
+        final reports = entry.value;
+        
+        d('[HistoricalNPSAggregationService] Processing server: $serverId with ${reports.length} reports');
+        
+        try {
+          // Get server name with comprehensive lookup
+          print('🔍 [HistoricalNPSAggregationService] Getting server name for ID: $serverId');
+          final serverName = await _getServerNameComprehensive(serverId);
+          print('🔍 [HistoricalNPSAggregationService] Got server name: $serverName for ID: $serverId');
+          
+          // Convert monthly reports to MonthlyPerformance objects
+          final monthlyData = reports.map((report) => _convertToMonthlyPerformance(report)).toList();
+          
+          // Sort by month (most recent first)
+          monthlyData.sort((a, b) => b.month.compareTo(a.month));
+          
+          // Calculate trend analysis
+          final trend = _calculatePerformanceTrend(monthlyData);
+          
+          // Calculate volatility
+          final volatility = _calculateVolatility(monthlyData);
+          
+          // Detect seasonal patterns
+          final seasonalPattern = _detectSeasonalPattern(monthlyData);
+          
+          // Classify performance
+          final classification = _classifyPerformance(monthlyData, trend, volatility);
+          
+          final historicalData = HistoricalNPSData(
+            serverId: serverId,
+            serverName: serverName,
+            monthlyData: monthlyData,
+            trend: trend,
+            volatility: volatility,
+            seasonalPattern: seasonalPattern,
+            classification: classification,
+            lastUpdated: DateTime.now(),
+            totalMonthsReported: monthlyData.length,
+          );
+          
           allHistoricalData.add(historicalData);
+          d('[HistoricalNPSAggregationService] ✅ Added historical data for server: $serverId ($serverName) with ${monthlyData.length} months');
+        } catch (e) {
+          d('[HistoricalNPSAggregationService] ❌ Error processing server $serverId: $e');
         }
       }
       
-      d('[HistoricalNPSAggregationService] Loaded historical data for ${allHistoricalData.length} servers');
+      d('[HistoricalNPSAggregationService] Successfully loaded historical data for ${allHistoricalData.length} servers');
       return allHistoricalData;
     } catch (e) {
       d('[HistoricalNPSAggregationService] Error loading all historical data: $e');
@@ -101,48 +262,192 @@ class HistoricalNPSAggregationService {
   /// Get monthly reports for a specific server
   Future<List<Map<String, dynamic>>> _getMonthlyReportsForServer(String serverId) async {
     try {
+      d('[HistoricalNPSAggregationService] Getting monthly reports for server: $serverId');
+      
       // Handle different database schemas
+      List<Map<String, dynamic>> results;
       if (DatabaseFactory.implementationType.contains('Sqflite')) {
         // Sqflite uses month_year column
-        return await _database.queryTable(
+        results = await _database.queryTable(
           'nps_monthly_reports',
           where: 'server_id = ?',
-          whereArgs: [int.parse(serverId)],
+          whereArgs: [serverId], // Use string serverId directly
           orderBy: 'month_year DESC',
         );
       } else {
         // Drift uses separate report_month and report_year columns
-        return await _database.queryTable(
+        results = await _database.queryTable(
           'nps_monthly_reports',
           where: 'server_id = ?',
-          whereArgs: [int.parse(serverId)],
+          whereArgs: [serverId], // Use string serverId directly
           orderBy: 'report_year DESC, report_month DESC',
         );
       }
+      
+      d('[HistoricalNPSAggregationService] Found ${results.length} monthly reports for server $serverId');
+      if (results.isEmpty) {
+        // Debug: Let's also try querying without the where clause to see all data
+        final allReports = await _database.queryTable('nps_monthly_reports');
+        final matchingReports = allReports.where((r) => r['server_id'].toString() == serverId).toList();
+        d('[HistoricalNPSAggregationService] Alternative search found ${matchingReports.length} reports for server $serverId');
+        if (allReports.isNotEmpty) {
+          d('[HistoricalNPSAggregationService] Sample report data: ${allReports.first}');
+        }
+      }
+      
+      return results;
     } catch (e) {
       d('[HistoricalNPSAggregationService] Error getting monthly reports for server $serverId: $e');
       return [];
     }
   }
 
+  /// Get server name with comprehensive lookup strategy
+  Future<String> _getServerNameComprehensive(String serverId, {List<dynamic>? appStateServers}) async {
+    try {
+      d('[HistoricalNPSAggregationService] Comprehensive server name lookup for ID: $serverId');
+      
+      // Strategy 1: Try the basic lookup first (NPS database)
+      final basicLookup = await _getServerName(serverId);
+      if (!basicLookup.startsWith('Server ')) {
+        return basicLookup; // Found a real name
+      }
+      
+        // Strategy 2: Try to get server names from AppState (passed as parameter)
+        if (appStateServers != null && appStateServers.isNotEmpty) {
+          d('[HistoricalNPSAggregationService] Using provided AppState servers for lookup...');
+        
+          d('[HistoricalNPSAggregationService] Found ${appStateServers.length} servers in AppState');
+          
+          // Debug: Show available servers first
+          print('🔍 [HistoricalNPSAggregationService] Found ${appStateServers.length} servers in AppState');
+          for (int i = 0; i < appStateServers.length && i < 5; i++) {
+            final server = appStateServers[i];
+            d('[HistoricalNPSAggregationService] AppState server ${i + 1}: id=${server.id}, name=${server.name}');
+            print('🔍 [HistoricalNPSAggregationService] AppState server ${i + 1}: id=${server.id}, name=${server.name}');
+          }
+        
+        // Try direct ID match first
+        for (final server in appStateServers) {
+          if (server.id == serverId) {
+            d('[HistoricalNPSAggregationService] Found exact match in AppState: ${server.name} for ID $serverId');
+            return server.name;
+          }
+        }
+        
+        // Strategy 2b: If serverId looks like a number, map it to AppState servers by index
+        if (RegExp(r'^\d+$').hasMatch(serverId)) {
+          final serverIndex = int.tryParse(serverId);
+          if (serverIndex != null && serverIndex > 0 && serverIndex <= appStateServers.length) {
+            final server = appStateServers[serverIndex - 1]; // Convert 1-based to 0-based index
+            d('[HistoricalNPSAggregationService] Found server by index ${serverIndex}: ${server.name}');
+            return server.name;
+          }
+        }
+        
+        // Strategy 2c: If we have servers and serverId is numeric, map them by index
+        if (appStateServers.isNotEmpty && RegExp(r'^\d+$').hasMatch(serverId)) {
+          final index = int.tryParse(serverId);
+          if (index != null && index >= 1 && index <= appStateServers.length) {
+            final mappedServer = appStateServers[index - 1]; // Convert 1-based to 0-based
+            d('[HistoricalNPSAggregationService] Mapping serverId "$serverId" to server at index ${index - 1}: ${mappedServer.name}');
+            return mappedServer.name;
+          }
+        }
+        
+        // Strategy 2d: Alphabetical fallback mapping for known IDs
+        if (appStateServers.length >= 3) {
+          // Sort servers alphabetically to get consistent mapping
+          final sortedServers = [...appStateServers]..sort((a, b) => a.name.compareTo(b.name));
+          
+          if (serverId == '1' && sortedServers.isNotEmpty) {
+            d('[HistoricalNPSAggregationService] Alphabetical mapping serverId "1" to: ${sortedServers[0].name}');
+            return sortedServers[0].name;
+          } else if (serverId == '2' && sortedServers.length > 1) {
+            d('[HistoricalNPSAggregationService] Alphabetical mapping serverId "2" to: ${sortedServers[1].name}');
+            return sortedServers[1].name;
+          } else if (serverId == '3' && sortedServers.length > 2) {
+            d('[HistoricalNPSAggregationService] Alphabetical mapping serverId "3" to: ${sortedServers[2].name}');
+            return sortedServers[2].name;
+          }
+        }
+      }
+      
+      // Strategy 3: Use a more descriptive fallback
+      return 'Server $serverId (Name not found)';
+    } catch (e) {
+      d('[HistoricalNPSAggregationService] Comprehensive lookup error: $e');
+      return 'Server $serverId';
+    }
+  }
+
   /// Get server name by ID
   Future<String> _getServerName(String serverId) async {
     try {
+      d('[HistoricalNPSAggregationService] Looking up server name for ID: $serverId');
+      
+      // First try exact match
       final server = await _database.queryTable(
         'servers',
         where: 'id = ?',
-        whereArgs: [int.parse(serverId)],
+        whereArgs: [serverId],
         limit: 1,
       );
       
       if (server.isNotEmpty) {
-        return server.first['name'] as String;
+        final name = server.first['name'] as String;
+        d('[HistoricalNPSAggregationService] Found server name: $name for ID $serverId');
+        return name;
       }
       
-      return 'Unknown Server';
+      // Try looking up by original_id (in case this is a main app server ID)
+      try {
+        final serverByOriginalId = await _database.queryTable(
+          'servers',
+          where: 'original_id = ?',
+          whereArgs: [serverId],
+          limit: 1,
+        );
+      
+        if (serverByOriginalId.isNotEmpty) {
+          final name = serverByOriginalId.first['name'] as String;
+          d('[HistoricalNPSAggregationService] Found server by original_id: $name for ID $serverId');
+          return name;
+        }
+      } catch (e) {
+        d('[HistoricalNPSAggregationService] original_id column lookup failed (expected): $e');
+        // This is expected if the database doesn't have the original_id column
+      }
+      
+      // Try numeric conversion if serverId is numeric
+      if (RegExp(r'^\d+$').hasMatch(serverId)) {
+        final numericServer = await _database.queryTable(
+          'servers',
+          where: 'CAST(id AS TEXT) = ?',
+          whereArgs: [serverId],
+          limit: 1,
+        );
+        
+        if (numericServer.isNotEmpty) {
+          final name = numericServer.first['name'] as String;
+          d('[HistoricalNPSAggregationService] Found server by numeric cast: $name for ID $serverId');
+          return name;
+        }
+      }
+      
+      // Debug: Show all servers to understand the structure
+      d('[HistoricalNPSAggregationService] No server found for ID $serverId. Debug: checking all servers...');
+      final allServers = await _database.queryTable('servers');
+      for (final s in allServers.take(5)) { // Show first 5 for debugging
+        d('[HistoricalNPSAggregationService] Server: id=${s['id']}, original_id=${s['original_id']}, name=${s['name']}');
+      }
+      
+      // Fallback to a descriptive name with the server ID
+      d('[HistoricalNPSAggregationService] Using fallback name for server ID: $serverId');
+      return 'Server $serverId';
     } catch (e) {
       d('[HistoricalNPSAggregationService] Error getting server name for ID $serverId: $e');
-      return 'Unknown Server';
+      return 'Server $serverId';
     }
   }
 

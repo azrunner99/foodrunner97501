@@ -12,19 +12,47 @@ class PerformanceTimelineService {
   static PerformanceTimelineService get instance => _instance;
 
   late HistoricalNPSAggregationService _aggregationService;
+  bool _initialized = false;
+  Future<void>? _initFuture; // Prevent duplicate concurrent init
   final Map<String, HistoricalNPSData> _timelineCache = {};
   DateTime? _lastCacheUpdate;
 
   Future<void> initialize() async {
-    _aggregationService = HistoricalNPSAggregationService.instance;
-    await _aggregationService.initialize();
-    d('[PerformanceTimelineService] Initialized');
+    // Fast path if already initialized
+    if (_initialized) return;
+    // If an initialization is already in-flight, await it
+    if (_initFuture != null) {
+      await _initFuture;
+      return;
+    }
+    _initFuture = _doInitialize();
+    await _initFuture;
+  }
+
+  Future<void> _doInitialize() async {
+    try {
+      _aggregationService = HistoricalNPSAggregationService.instance;
+      await _aggregationService.initialize();
+      _initialized = true;
+      d('[PerformanceTimelineService] Initialized');
+    } catch (e) {
+      d('[PerformanceTimelineService] Initialization error: $e');
+    } finally {
+      _initFuture = null; // allow re-attempt if failed
+    }
+  }
+
+  Future<void> _ensureInitialized() async {
+    if (!_initialized) {
+      await initialize();
+    }
   }
 
   /// Get performance timeline for a specific server
   Future<PerformanceTimeline?> getTimelineForServer(String serverId) async {
     try {
-      d('[PerformanceTimelineService] Getting timeline for server: $serverId');
+  await _ensureInitialized();
+  d('[PerformanceTimelineService] Getting timeline for server: $serverId');
       
       // Check cache first
       if (_timelineCache.containsKey(serverId) && _isCacheValid()) {
@@ -53,7 +81,8 @@ class PerformanceTimelineService {
   /// Get performance timelines for all servers
   Future<List<PerformanceTimeline>> getAllTimelines() async {
     try {
-      d('[PerformanceTimelineService] Getting timelines for all servers');
+  await _ensureInitialized();
+  d('[PerformanceTimelineService] Getting timelines for all servers');
       
       // Check if we need to refresh cache
       if (!_isCacheValid()) {
@@ -70,7 +99,8 @@ class PerformanceTimelineService {
   /// Get performance comparison between servers
   Future<PerformanceComparison?> getPerformanceComparison(List<String> serverIds) async {
     try {
-      d('[PerformanceTimelineService] Getting performance comparison for ${serverIds.length} servers');
+  await _ensureInitialized();
+  d('[PerformanceTimelineService] Getting performance comparison for ${serverIds.length} servers');
       
       final timelines = <PerformanceTimeline>[];
       for (final serverId in serverIds) {
@@ -95,7 +125,8 @@ class PerformanceTimelineService {
   /// Get performance insights for a specific server
   Future<List<PerformanceInsight>> getPerformanceInsights(String serverId) async {
     try {
-      d('[PerformanceTimelineService] Getting performance insights for server: $serverId');
+  await _ensureInitialized();
+  d('[PerformanceTimelineService] Getting performance insights for server: $serverId');
       
       final timeline = await getTimelineForServer(serverId);
       if (timeline == null) return [];
@@ -217,7 +248,8 @@ class PerformanceTimelineService {
   /// Refresh all timeline data
   Future<void> _refreshAllTimelines() async {
     try {
-      d('[PerformanceTimelineService] Refreshing all timeline data');
+  await _ensureInitialized();
+  d('[PerformanceTimelineService] Refreshing all timeline data');
       
       final allHistoricalData = await _aggregationService.getAllHistoricalData();
       _timelineCache.clear();

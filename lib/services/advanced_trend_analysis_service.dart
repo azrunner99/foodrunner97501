@@ -13,7 +13,7 @@ class AdvancedTrendAnalysisService {
   AdvancedTrendAnalysis analyzeServerTrends({
     required List<NPSMonthlyReport> monthlyReports,
     required String serverName,
-    required int serverId,
+    required String serverId,
   }) {
     try {
       d('[AdvancedTrendAnalysisService] Analyzing trends for server: $serverName');
@@ -649,7 +649,7 @@ class AdvancedTrendAnalysisService {
 
 /// Advanced trend analysis result
 class AdvancedTrendAnalysis {
-  final int serverId;
+  final String serverId;
   final String serverName;
   final TrendDirection trendDirection;
   final double trendStrength;

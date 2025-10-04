@@ -16,6 +16,11 @@ import 'station_analytics_screen.dart';
 import 'smart_scheduling_screen.dart';
 // import 'comprehensive_analytics_dashboard.dart'; // Commented out - file removed
 import '../utils/log.dart';
+import 'phase4_runner.dart';
+import 'phase5_runner.dart';
+import 'phase6_runner.dart';
+import '../debug/nps_database_inspector.dart';
+import '../debug/nps_database_schema_repair.dart';
 
 class CleanAdminScreen extends StatefulWidget {
   const CleanAdminScreen({super.key});
@@ -327,6 +332,138 @@ class _CleanAdminScreenState extends State<CleanAdminScreen> {
                         MaterialPageRoute(
                             builder: (_) => const IDMigrationScreen()),
                       );
+                    },
+                  ),
+                  _buildAdminTile(
+                    icon: Icons.check_circle_outline,
+                    title: 'Phase 4: System Validation',
+                    subtitle: 'Comprehensive testing and validation of server ID standardization',
+                    enabled: true,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const Phase4Runner()),
+                      );
+                    },
+                  ),
+                  _buildAdminTile(
+                    icon: Icons.sync_alt,
+                    title: 'Phase 5: NPS Migration',
+                    subtitle: 'Convert NPS database integer IDs to string format',
+                    enabled: true,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const Phase5Runner()),
+                      );
+                    },
+                  ),
+                  _buildAdminTile(
+                    icon: Icons.analytics,
+                    title: 'Phase 6: Widget Analysis',
+                    subtitle: 'Audit NPS widget calculations and data integrity',
+                    enabled: true,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const Phase6Runner()),
+                      );
+                    },
+                  ),
+                  _buildAdminTile(
+                    icon: Icons.search,
+                    title: 'Emergency: Check NPS Database',
+                    subtitle: 'Inspect NPS database content and structure',
+                    enabled: true,
+                    onTap: () async {
+                      // Show loading dialog
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (context) => const AlertDialog(
+                          content: Row(
+                            children: [
+                              CircularProgressIndicator(),
+                              SizedBox(width: 20),
+                              Text('Inspecting NPS database...'),
+                            ],
+                          ),
+                        ),
+                      );
+                      
+                      // Run inspection
+                      await NPSDatabaseInspector.inspectDatabase();
+                      
+                      // Close loading dialog
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        
+                        // Show completion message
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Database inspection complete - check debug logs'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  _buildAdminTile(
+                    icon: Icons.build,
+                    title: 'EMERGENCY: Fix NPS Database Schema',
+                    subtitle: 'REPAIR DATABASE SO NPS DATA CAN SAVE - RUN THIS NOW!',
+                    enabled: true,
+                    onTap: () async {
+                      // Show loading dialog
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (context) => const AlertDialog(
+                          content: Row(
+                            children: [
+                              CircularProgressIndicator(),
+                              SizedBox(width: 20),
+                              Text('Repairing database schema...'),
+                            ],
+                          ),
+                        ),
+                      );
+                      
+                      try {
+                        // Run schema repair
+                        await NPSDatabaseSchemaRepair.repairDatabase();
+                        
+                        // Close loading dialog
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                          
+                          // Show success message
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('DATABASE REPAIRED! Restart app to sync servers, then NPS data will save properly!'),
+                              backgroundColor: Colors.green,
+                              duration: Duration(seconds: 5),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        // Close loading dialog
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                          
+                          // Show error message
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Database repair failed: $e'),
+                              backgroundColor: Colors.red,
+                              duration: const Duration(seconds: 5),
+                            ),
+                          );
+                        }
+                      }
                     },
                   ),
                   _buildAdminTile(

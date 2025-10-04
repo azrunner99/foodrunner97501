@@ -11,12 +11,6 @@ import 'services/nps_security_service.dart';
 import 'services/nps_encryption_service.dart';
 import 'services/nps_audit_service.dart';
 import 'services/nps_gdpr_compliance_service.dart';
-import 'services/performance_flags.dart';
-import 'services/performance_monitoring_service.dart';
-import 'services/performance_rollout_service.dart';
-import 'services/historical_nps_aggregation_service.dart';
-import 'services/performance_timeline_service.dart';
-import 'services/historical_data_validation_service.dart';
 import 'screens/home_screen.dart';
 import 'screens/assign_servers_screen.dart';
 import 'screens/settings_screen.dart';
@@ -27,13 +21,9 @@ import 'screens/clean_admin_screen.dart';
 import 'screens/manage_servers_screen.dart';
 import 'screens/station_types_screen.dart';
 import 'screens/gamification_options_screen.dart';
-import 'screens/server_performance_screen_working.dart';
+import 'screens/server_performance_screen.dart';
 import 'screens/business_data_entry_screen.dart';
 import 'screens/server_nps_screen.dart';
-import 'screens/historical_nps_analytics_screen.dart';
-import 'package:food_runs_counter/services/enhanced_error_handling_service.dart';
-import 'package:food_runs_counter/services/data_consistency_service.dart';
-import 'package:food_runs_counter/services/fallback_mechanisms_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,9 +32,6 @@ void main() async {
   
   // Initialize database factory for cross-platform database support
   await DatabaseFactory.initialize();
-  
-  // Temporarily disable complex service initializations for debugging
-  print('Skipping complex service initializations for debugging...');
   
   final appState = AppState();
   await appState.load();
@@ -115,10 +102,9 @@ class FoodRunsApp extends StatelessWidget {
         '/manage': (_) => const ManageServersScreen(),
         '/stations': (_) => const StationTypesScreen(),
         '/gamification_options': (_) => const GamificationOptionsScreen(),
-        '/performance': (_) => ServerPerformanceScreenWorking(),
+        '/performance': (_) => const ServerPerformanceScreen(),
         '/business_data_entry': (_) => const BusinessDataEntryScreen(),
         '/server_nps': (_) => const ServerNPSScreen(),
-        '/historical_analytics': (_) => HistoricalNPSAnalyticsScreen(),
       },
     );
   }

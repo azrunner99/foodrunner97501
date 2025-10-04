@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import '../models.dart';
 import '../models/performance_models.dart';
+import 'trend_analyzer.dart' as ta;
 
 /// Advanced analytics engine for sophisticated performance analysis
 class PerformanceAnalyzer {
@@ -517,6 +518,24 @@ class PerformanceAnalyzer {
     } else {
       return WorkloadSustainability.poor;
     }
+  }
+
+  /// Lightweight single-server performance trend analysis wrapper expected by rich screen.
+  /// The rich screen calls PerformanceAnalyzer.analyzePerformanceTrend instead of
+  /// TrendAnalyzer.analyzePerformanceTrends (plural). Provide a compatibility layer
+  /// to avoid large refactors. We condense the plural API to a simpler summary.
+  static ta.PerformanceTrendAnalysis analyzePerformanceTrend({
+    required String serverId,
+    required List<ShiftRecord> shifts,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) {
+    final windowDays = endDate.difference(startDate).inDays.abs().clamp(7, 120);
+    return ta.TrendAnalyzer.analyzePerformanceTrends(
+      serverId: serverId,
+      shifts: shifts,
+      analysisWindowDays: windowDays,
+    );
   }
 }
 

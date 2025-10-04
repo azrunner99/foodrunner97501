@@ -28,6 +28,9 @@ import 'settings_screen.dart';
 import 'mvp_screen.dart';
 import 'history_screen.dart';
 import '_shift_start_notice.dart';
+import 'phase1_runner.dart';
+import 'phase2_runner.dart';
+import 'phase3_runner.dart';
 
 // Helper for roster popup: display a server row
 Widget _rosterServerRow(AppState app, String id) {
@@ -231,6 +234,39 @@ class _HomeScreenState extends State<HomeScreen> {
                 context,
                 MaterialPageRoute(
                     builder: (_) => const ServerNPSScorecardScreen()),
+              );
+            },
+          ),
+          // Phase 1 Demo Button (temporary for testing)
+          IconButton(
+            tooltip: 'Phase 1 Demo',
+            icon: const Icon(Icons.engineering, color: Colors.blue),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const Phase1Runner()),
+              );
+            },
+          ),
+          // Phase 2 Migration Button (temporary for testing)
+          IconButton(
+            tooltip: 'Phase 2 Migration',
+            icon: const Icon(Icons.storage, color: Colors.green),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const Phase2Runner()),
+              );
+            },
+          ),
+          // Phase 3 Updates Button (temporary for testing)
+          IconButton(
+            tooltip: 'Phase 3 Updates',
+            icon: const Icon(Icons.widgets, color: Colors.purple),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const Phase3Runner()),
               );
             },
           ),
@@ -2091,17 +2127,6 @@ class _Body extends StatelessWidget {
                         context,
                         MaterialPageRoute(builder: (_) => UpdateRosterScreen()),
                       );
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    icon: const Icon(Icons.analytics),
-                    label: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 10),
-                      child: Text('Historical NPS Analytics'),
-                    ),
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/historical_analytics');
                     },
                   ),
                 ],

@@ -56,8 +56,23 @@ class NPSDatabaseAdapter {
   /// Insert a new server
   Future<String> insertServer(Map<String, dynamic> serverData) async {
     try {
-      await _db.insertInto('servers', serverData);
-      return serverData['id'] as String; // Return the provided string ID
+      // For Sqflite (Android), IDs are auto-generated integers
+      // For Drift (Desktop), IDs are manually provided strings
+      if (isSqfliteDatabase) {
+        // Remove any existing ID for auto-generation
+        final dataWithoutId = Map<String, dynamic>.from(serverData);
+        dataWithoutId.remove('id');
+        final generatedId = await _db.insertInto('servers', dataWithoutId);
+        return generatedId.toString();
+      } else {
+        // For Drift, ensure we have a string ID
+        if (!serverData.containsKey('id') || serverData['id'] == null) {
+          // Generate a unique string ID if not provided
+          serverData['id'] = DateTime.now().millisecondsSinceEpoch.toString();
+        }
+        await _db.insertInto('servers', serverData);
+        return serverData['id'] as String;
+      }
     } catch (e) {
       d('[NPSDatabaseAdapter] Error inserting server: $e');
       rethrow;
@@ -199,11 +214,21 @@ class NPSDatabaseAdapter {
         final serverId = _convertToStringId(report['server_id']);
         print('[NPSDatabaseAdapter] Looking up server with ID: $serverId');
         
-        final servers = await _db.queryTable(
+        // Try to find server by original_id first (matches admin-entered data), then by id
+        var servers = await _db.queryTable(
           'servers',
-          where: 'id = ?',
+          where: 'original_id = ?',
           whereArgs: [serverId],
         );
+        
+        // If not found by original_id, try by id (for backward compatibility)
+        if (servers.isEmpty) {
+          servers = await _db.queryTable(
+            'servers',
+            where: 'id = ?',
+            whereArgs: [serverId],
+          );
+        }
         
         print('[NPSDatabaseAdapter] Found ${servers.length} servers for ID $serverId');
         if (servers.isNotEmpty) {

@@ -119,10 +119,16 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
         seasonalAnalyses[server.id] = seasonalAnalysis;
       }
 
-      // Sort by performance score (highest first) and keep a copy for consistent analytics
-      final sortedByScore =
-          List<ServerPerformanceData>.from(performanceDataList)
-            ..sort((a, b) => b.performanceScore.compareTo(a.performanceScore));
+      // Deterministic ranking: score desc, then experienceFactor desc, then serverId asc
+      final sortedByScore = List<ServerPerformanceData>.from(performanceDataList)
+        ..sort((a, b) {
+          final scoreCmp = b.performanceScore.compareTo(a.performanceScore);
+          if (scoreCmp != 0) return scoreCmp;
+          final expCmp = (b.metrics.experienceFactor)
+              .compareTo(a.metrics.experienceFactor);
+          if (expCmp != 0) return expCmp;
+          return a.serverId.compareTo(b.serverId);
+        });
 
       // Generate team analytics using sorted data for top/bottom performers
       TeamAnalytics? teamAnalytics;
@@ -181,22 +187,14 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
         );
       }
 
-      // Generate peer analyses using sorted rankings
-      for (final server in app.servers) {
-        final serverPerformance = sortedByScore.firstWhere(
-          (p) => p.serverId == server.id,
-          orElse: () => sortedByScore.first,
-        );
-        final rankIndex =
-            sortedByScore.indexWhere((p) => p.serverId == server.id);
-        final ranking = rankIndex >= 0 ? rankIndex + 1 : sortedByScore.length;
-        final percentile = rankIndex >= 0
-            ? ((sortedByScore.length - rankIndex) / sortedByScore.length) * 100
-            : 0.0;
-
-        final peerAnalysis = PeerAnalysis(
-          serverPerformance: serverPerformance,
-          tenureBracket: 'regular', // Simplified
+      // Generate peer analyses using deterministic ranking
+      for (int i = 0; i < sortedByScore.length; i++) {
+        final perf = sortedByScore[i];
+        final ranking = i + 1;
+        final percentile = ((sortedByScore.length - i) / sortedByScore.length) * 100;
+        peerAnalyses[perf.serverId] = PeerAnalysis(
+          serverPerformance: perf,
+          tenureBracket: 'regular', // TODO: integrate actual tenure bracket logic
           totalPeers: sortedByScore.length,
           peerRanking: ranking,
           peerPercentile: percentile,
@@ -206,7 +204,6 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
           comparativeMetrics: ComparativeMetrics.empty(),
           insights: ['Performance analysis available'],
         );
-        peerAnalyses[server.id] = peerAnalysis;
       }
 
       setState(() {
@@ -309,22 +306,40 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
         border: Border.all(color: Colors.orange.shade300),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.info_outline_rounded, color: Colors.orange.shade700),
+          Icon(Icons.insights_outlined, color: Colors.orange.shade700),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Performance Analysis Notice',
+                  'How These Scores Are Built',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Colors.orange.shade700,
                   ),
                 ),
-                const Text(
-                    'NPS data and check counts are required for accurate performance analysis. Enter this data through the Admin panel for complete metrics.'),
+                const SizedBox(height: 4),
+                Text(
+                  'Only months inside the selected timeframe contribute to NPS and timeframe-aligned sales/guest counts when month-level fields are available. Missing month fields fall back to broader historical data so scores still compute. NPS weight auto-adjusts when recent feedback is limited. Extremely high per-shift averages are capped for readability.',
+                  style: TextStyle(fontSize: 12, height: 1.25),
+                ),
+                const SizedBox(height: 6),
+                GestureDetector(
+                  onTap: () {
+                    // Optional: navigate to a deeper explanation screen or docs (placeholder)
+                  },
+                  child: Text(
+                    'Learn more in Performance Scoring Docs',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.orange.shade800,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -556,17 +571,26 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
                   _buildMetricChip('Runs', '${performance.totalFoodRuns}',
                       Icons.local_dining),
                   const SizedBox(width: 8),
-                  _buildMetricChip(
-                      'Shifts', '${performance.shiftsWorked}', Icons.schedule),
+          _buildMetricChip(
+            'Active Shifts', '${performance.shiftsWorked}', Icons.schedule),
                   const SizedBox(width: 8),
-                  _buildMetricChip(
-                    'Avg/Shift',
-                    performance.shiftsWorked > 0
-                        ? (performance.totalFoodRuns / performance.shiftsWorked)
-                            .toStringAsFixed(1)
-                        : '—',
-                    Icons.trending_up,
-                  ),
+                  () {
+                    if (performance.shiftsWorked <= 0) {
+                      return _buildMetricChip('Avg/Shift', '—', Icons.trending_up);
+                    }
+                    final raw = performance.totalFoodRuns / performance.shiftsWorked;
+                    const cap = 200.0; // display safeguard
+                    final isCapped = raw > cap;
+                    final shown = raw > cap ? cap : raw;
+                    return _buildMetricChipWithTooltip(
+                      'Avg/Shift',
+                      _fmt1(shown),
+                      Icons.trending_up,
+                      isCapped
+                          ? 'Actual value ${raw.toStringAsFixed(1)} capped at ${cap.toStringAsFixed(0)} for readability.'
+                          : null,
+                    );
+                  }(),
                 ],
               ),
               if (performance.shiftsWorked == 0) ...[
@@ -600,7 +624,17 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
   }
 
   Widget _buildMetricChip(String label, String value, IconData icon) {
-    return Container(
+    return _buildMetricChipWithTooltip(label, value, icon, null);
+  }
+
+  // Extended version allowing optional tooltip (for capped values etc.)
+  Widget _buildMetricChipWithTooltip(
+    String label,
+    String value,
+    IconData icon,
+    String? tooltip,
+  ) {
+    final chip = Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: Colors.green.shade50,
@@ -620,9 +654,25 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
               color: Colors.green.shade700,
             ),
           ),
+          if (tooltip != null) ...[
+            const SizedBox(width: 2),
+            Icon(Icons.info_outline, size: 14, color: Colors.green.shade700),
+          ]
         ],
       ),
     );
+
+    if (tooltip != null) {
+      return Tooltip(message: tooltip, child: chip);
+    }
+    return chip;
+  }
+
+  // Helper to format a double with at most one decimal and strip trailing .0
+  String _fmt1(double v) {
+    final s = v.toStringAsFixed(1);
+    if (s.endsWith('.0')) return s.substring(0, s.length - 2);
+    return s;
   }
 
   Color _getRankColor(int rank) {

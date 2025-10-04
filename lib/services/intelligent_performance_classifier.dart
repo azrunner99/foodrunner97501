@@ -1,6 +1,7 @@
 import '../models/monthly_report.dart';
 import '../models/historical_nps_data.dart' hide PerformanceClassification;
 import '../models/performance_models.dart';
+import '../models/performance_system_models.dart';
 import '../utils/log.dart';
 import 'dart:math' as math;
 
@@ -45,7 +46,9 @@ class IntelligentPerformanceClassifier {
           score: 0.0,
           confidence: 0.0,
           reasoning: 'No data available for classification',
-          recommendations: ['Enter monthly NPS data to enable performance classification'],
+          strengths: [],
+          improvements: ['Enter monthly NPS data to enable performance classification'],
+          classifiedAt: DateTime.now(),
         );
       }
 
@@ -81,6 +84,13 @@ class IntelligentPerformanceClassifier {
         reports: monthlyReports,
       );
 
+      final strengths = _generateStrengths(
+        tier: tier,
+        allTimeNPS: allTimeNPS,
+        multiDimensionalScore: multiDimensionalScore,
+        reports: monthlyReports,
+      );
+
       d('[IntelligentPerformanceClassifier] Classification result: $tier (${multiDimensionalScore.toStringAsFixed(1)}%)');
 
       return PerformanceClassification(
@@ -88,7 +98,9 @@ class IntelligentPerformanceClassifier {
         score: multiDimensionalScore,
         confidence: confidence,
         reasoning: reasoning,
-        recommendations: recommendations,
+        strengths: strengths,
+        improvements: recommendations,
+        classifiedAt: DateTime.now(),
       );
     } catch (e) {
       d('[IntelligentPerformanceClassifier] Error classifying performance: $e');
@@ -97,7 +109,9 @@ class IntelligentPerformanceClassifier {
         score: 0.0,
         confidence: 0.0,
         reasoning: 'Error occurred during classification',
-        recommendations: ['Contact support if this issue persists'],
+        strengths: [],
+        improvements: ['Contact support if this issue persists'],
+        classifiedAt: DateTime.now(),
       );
     }
   }
@@ -439,6 +453,95 @@ class IntelligentPerformanceClassifier {
     }
 
     return recommendations;
+  }
+
+  /// Generate strengths based on classification
+  List<String> _generateStrengths({
+    required IntelligentPerformanceTier tier,
+    required double allTimeNPS,
+    required double multiDimensionalScore,
+    required List<NPSMonthlyReport> reports,
+  }) {
+    final strengths = <String>[];
+
+    // Check for general performance strengths
+    if (allTimeNPS >= 85.0) {
+      strengths.add('Excellent overall customer satisfaction (${allTimeNPS.toStringAsFixed(1)}% NPS)');
+    } else if (allTimeNPS >= 75.0) {
+      strengths.add('Good customer satisfaction rating (${allTimeNPS.toStringAsFixed(1)}% NPS)');
+    }
+
+    // Check for consistency
+    if (reports.length >= 3) {
+      final recentScores = reports.take(3)
+          .map((r) => r.allTimeNpsPercentage ?? 0.0)
+          .toList();
+      final variance = _calculateVariance(recentScores);
+      if (variance < 25.0) { // Low variance = high consistency
+        strengths.add('Consistent performance across recent periods');
+      }
+    }
+
+    // Check for improvement trend
+    if (reports.length >= 2) {
+      final recent = reports.first.allTimeNpsPercentage ?? 0.0;
+      final previous = reports.skip(1).first.allTimeNpsPercentage ?? 0.0;
+      if (recent > previous + 5.0) {
+        strengths.add('Showing positive improvement trend');
+      }
+    }
+
+    // Tier-specific strengths
+    switch (tier) {
+      case IntelligentPerformanceTier.elite:
+        strengths.addAll([
+          'Top-tier performance in all categories',
+          'Strong leadership potential',
+          'Excellent role model for team',
+        ]);
+        break;
+      case IntelligentPerformanceTier.strong:
+        strengths.addAll([
+          'Solid reliable performance',
+          'Meets and exceeds expectations',
+          'Good team contributor',
+        ]);
+        break;
+      case IntelligentPerformanceTier.developing:
+        strengths.addAll([
+          'Shows potential for growth',
+          'Positive learning attitude',
+        ]);
+        break;
+      case IntelligentPerformanceTier.concerning:
+        if (multiDimensionalScore > 50.0) {
+          strengths.add('Has shown capability in some areas');
+        }
+        break;
+      case IntelligentPerformanceTier.critical:
+        if (reports.isNotEmpty && (reports.first.allTimeNpsPercentage ?? 0.0) > 40.0) {
+          strengths.add('Recent efforts show some improvement');
+        }
+        break;
+      case IntelligentPerformanceTier.unknown:
+        strengths.add('New team member with potential to grow');
+        break;
+    }
+
+    // If no strengths found, add a generic positive note
+    if (strengths.isEmpty) {
+      strengths.add('Part of the team with room for development');
+    }
+
+    return strengths;
+  }
+
+  /// Calculate variance for consistency analysis
+  double _calculateVariance(List<double> values) {
+    if (values.isEmpty) return 0.0;
+    final mean = values.reduce((a, b) => a + b) / values.length;
+    final variance = values.map((v) => math.pow(v - mean, 2)).reduce((a, b) => a + b) / values.length;
+    return variance;
   }
 
   /// Get the most recent report from a list

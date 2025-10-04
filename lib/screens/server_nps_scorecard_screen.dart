@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/nps_provider.dart';
@@ -11,404 +12,68 @@ class ServerNPSScorecardScreen extends StatefulWidget {
 }
 
 class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
-  List<Map<String, dynamic>> _availableMonths = [];
-  String? _selectedMonthKey;
+  int _selectedMonth = 7; // July
+  int _selectedYear = 2025;
   List<Map<String, dynamic>> _serverNPSData = [];
-  bool _isLoading = true;
   bool _isLoadingServerData = false;
-  String? _errorMessage;
-  String _sortBy = 'name'; // Default sort by name
+  int? _selectedMonthKey;
+  String _sortBy = 'all_time_nps'; // Default sort by all-time NPS
+  bool _sortDescending = true; // Default to highest first
+  List<Map<String, dynamic>> _availableMonths = []; // Available months with data
+  bool _isLoadingMonths = false;
 
   @override
   void initState() {
     super.initState();
+    _selectedMonthKey = _selectedYear * 100 + _selectedMonth;
     _loadAvailableMonths();
   }
 
-  Future<void> _loadAvailableMonths() async {
-    try {
-      setState(() {
-        _isLoading = true;
-        _errorMessage = null;
-      });
-
-      final npsProvider = context.read<NPSProvider>();
-      await npsProvider.initialize();
-
-  // Adapter now returns legacy-compatible List<Map<String,dynamic>> with
-  // keys: report_month, report_year, server_count
-  final months = await npsProvider.database.getAvailableReportMonths();
-
-      setState(() {
-        _availableMonths = months;
-        // Set the first month as selected, using a unique key
-        if (months.isNotEmpty && _selectedMonthKey == null) {
-          final firstMonth = months.first;
-          _selectedMonthKey = _getMonthKey(firstMonth);
-        }
-        _isLoading = false;
-      });
-
-      // Auto-load data for the first month if available
-      if (_selectedMonthKey != null && months.isNotEmpty) {
-        await _loadServerNPSData();
-      }
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'Failed to load available months: $e';
-        _isLoading = false;
-      });
-    }
-  }
-
-  String _getMonthKey(Map<String, dynamic> monthData) {
-    return '${monthData['report_month']}_${monthData['report_year']}';
-  }
-
-  Map<String, dynamic>? _getSelectedMonthData() {
-    if (_selectedMonthKey == null) return null;
-    try {
-      return _availableMonths.firstWhere(
-        (month) => _getMonthKey(month) == _selectedMonthKey,
-      );
-    } catch (e) {
-      return null;
-    }
-  }
-
-  List<Map<String, dynamic>> _getSortedServerData() {
-    final sortedData = List<Map<String, dynamic>>.from(_serverNPSData);
-
-    switch (_sortBy) {
-      case 'name':
-        sortedData.sort((a, b) => (a['server_name'] ?? '')
-            .toString()
-            .toLowerCase()
-            .compareTo((b['server_name'] ?? '').toString().toLowerCase()));
-        break;
-      case 'all_time_nps':
-        sortedData.sort((a, b) {
-          final aValue = a['all_time_nps_percentage'] as double?;
-          final bValue = b['all_time_nps_percentage'] as double?;
-          if (aValue == null && bValue == null) return 0;
-          if (aValue == null) return 1;
-          if (bValue == null) return -1;
-          return bValue.compareTo(aValue); // Descending order
-        });
-        break;
-      case 'three_month_nps':
-        sortedData.sort((a, b) {
-          final aValue = a['three_month_nps_percentage'] as double?;
-          final bValue = b['three_month_nps_percentage'] as double?;
-          if (aValue == null && bValue == null) return 0;
-          if (aValue == null) return 1;
-          if (bValue == null) return -1;
-          return bValue.compareTo(aValue); // Descending order
-        });
-        break;
-      case 'one_month_nps':
-        sortedData.sort((a, b) {
-          final aValue = a['one_month_nps_percentage'] as double?;
-          final bValue = b['one_month_nps_percentage'] as double?;
-          if (aValue == null && bValue == null) return 0;
-          if (aValue == null) return 1;
-          if (bValue == null) return -1;
-          return bValue.compareTo(aValue); // Descending order
-        });
-        break;
-      case 'check_average':
-        sortedData.sort((a, b) {
-          final aSales = a['all_time_sales'] as double? ?? 0.0;
-          final aTables = a['all_time_table_count'] as int? ?? 0;
-          final bSales = b['all_time_sales'] as double? ?? 0.0;
-          final bTables = b['all_time_table_count'] as int? ?? 0;
-          
-          final aAverage = aTables > 0 ? aSales / aTables : 0.0;
-          final bAverage = bTables > 0 ? bSales / bTables : 0.0;
-          
-          return bAverage.compareTo(aAverage); // Descending order
-        });
-        break;
-    }
-
-    return sortedData;
-  }
-
   Future<void> _loadServerNPSData() async {
-    if (_selectedMonthKey == null) {
-      print('[NPS Scorecard] No selected month key');
-      return;
-    }
-
-    try {
       setState(() {
         _isLoadingServerData = true;
-        _errorMessage = null;
       });
 
-      final selectedMonth = _getSelectedMonthData();
-      if (selectedMonth == null) {
-        print('[NPS Scorecard] No selected month data found');
-        return;
-      }
-
-      print('[NPS Scorecard] Selected month data: $selectedMonth');
-
+    try {
       final npsProvider = context.read<NPSProvider>();
-      final reportMonth = selectedMonth['report_month'] as int;
-      final reportYear = selectedMonth['report_year'] as int;
 
-      print('[NPS Scorecard] Loading data for month: $reportMonth, year: $reportYear');
-
-      final serverData =
-          await npsProvider.getServerNPSDataForMonth(reportMonth, reportYear);
-
-      print('[NPS Scorecard] Retrieved ${serverData.length} server records');
-      for (int i = 0; i < serverData.length; i++) {
-        print('[NPS Scorecard] Server $i: ${serverData[i]}');
+      // Ensure provider is initialized
+      if (!npsProvider.isInitialized) {
+        await npsProvider.initialize();
       }
 
+      // Get the data directly using the method we know works
+      final serverData = await _getServerNPSDataForMonth(npsProvider.database, _selectedMonth, _selectedYear);
+
+      print('[NPS Scorecard] Loaded ${serverData.length} servers for $_selectedMonth/$_selectedYear');
+
+      // Remove duplicates based on server name (keep the one with best data)
+      final deduplicatedData = _deduplicateServerData(serverData);
+      
       setState(() {
-        _serverNPSData = serverData;
+        _serverNPSData = deduplicatedData;
         _isLoadingServerData = false;
       });
+      
+      // Sort the data after loading
+      _sortServerData();
     } catch (e) {
       print('[NPS Scorecard] Error loading server data: $e');
       setState(() {
-        _errorMessage = 'Failed to load server NPS data: $e';
+        _serverNPSData = [];
         _isLoadingServerData = false;
       });
     }
-  }
-
-  String _formatMonthYear(Map<String, dynamic> monthData) {
-    final reportMonth = monthData['report_month'] as int;
-    final reportYear = monthData['report_year'] as int;
-
-    // Extract month and year from YYYYMM format if needed
-    int month, year;
-    if (reportMonth > 12) {
-      // Format is YYYYMM
-      year = reportMonth ~/ 100;
-      month = reportMonth % 100;
-    } else {
-      // Format is just month (1-12)
-      month = reportMonth;
-      year = reportYear;
-    }
-
-    final monthNames = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December'
-    ];
-
-    // Ensure month is in valid range (1-12)
-    if (month < 1 || month > 12) {
-      return 'Invalid Date';
-    }
-
-    return '${monthNames[month - 1]} $year';
-  }
-
-  String _formatNPSPercentage(dynamic value) {
-    if (value == null) return 'N/A';
-    final percentage = value as double;
-    return '${percentage.toStringAsFixed(1)}%';
-  }
-
-  Color _getNPSColor(dynamic value) {
-    if (value == null) return Colors.grey;
-    final percentage = value as double;
-
-    // Enhanced 8-tier color system with distinct visual differences
-    if (percentage >= 95.0) {
-      return const Color(0xFF0F7B0F); // Rich emerald green - Outstanding (95-100%)
-    }
-    if (percentage >= 90.0) {
-      return const Color(0xFF228B22); // Forest green - Excellent (90-94.9%)
-    }
-    if (percentage >= 85.0) {
-      return const Color(0xFF32CD32); // Lime green - Very Good (85-89.9%)
-    }
-    if (percentage >= 80.0) {
-      return const Color(0xFF7CFC00); // Lawn green - Good (80-84.9%)
-    }
-    if (percentage >= 75.0) {
-      return const Color(0xFFFFA500); // Orange - Developing (75-79.9%)
-    }
-    if (percentage >= 70.0) {
-      return const Color(0xFFFF4500); // Orange red - Growing (70-74.9%)
-    }
-    if (percentage >= 60.0) {
-      return const Color(0xFFDC143C); // Crimson - Learning (60-69.9%)
-    }
-    return const Color(0xFF8B0000); // Dark red - Building (below 60%)
-  }
-
-  bool _isTopPerformer(dynamic value) {
-    if (value == null) {
-      return false;
-    }
-    final percentage = value as double;
-    return percentage >= 95.0;
-  }
-
-  Widget _buildColorLegendItem(Color color, String label,
-      {bool showTrophy = false}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color, width: 2),
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(0.3),
-            blurRadius: 2,
-            offset: const Offset(0, 1),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          Center(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w900,
-                color: Colors.white,
-                shadows: [
-                  Shadow(
-                    offset: const Offset(1.0, 1.0),
-                    blurRadius: 2.0,
-                    color: color.withOpacity(0.9),
-                  ),
-                  Shadow(
-                    offset: const Offset(-0.5, -0.5),
-                    blurRadius: 1.0,
-                    color: Colors.black.withOpacity(0.5),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (showTrophy)
-            Positioned(
-              top: 4,
-              left: 4,
-              child: Icon(
-                Icons.emoji_events,
-                size: 16,
-                color: Colors.amber.shade400,
-              ),
-            ),
-        ],
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Server NPS Scorecard'),
-        backgroundColor: Colors.blue.shade700,
-        foregroundColor: Colors.white,
+        title: const Text('Server NPS Scorecard 😊'),
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
-      body: _isLoading
-          ? const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Loading available NPS reports...'),
-                ],
-              ),
-            )
-          : _errorMessage != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.error_outline,
-                        size: 60,
-                        color: Colors.red.shade300,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Error',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.red.shade700,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 40),
-                        child: Text(
-                          _errorMessage!,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      ElevatedButton(
-                        onPressed: _loadAvailableMonths,
-                        child: const Text('Retry'),
-                      ),
-                    ],
-                  ),
-                )
-              : _availableMonths.isEmpty
-                  ? const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.analytics_outlined,
-                            size: 80,
-                            color: Colors.grey,
-                          ),
-                          SizedBox(height: 20),
-                          Text(
-                            'No NPS Reports Available',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.grey,
-                            ),
-                          ),
-                          SizedBox(height: 10),
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 40),
-                            child: Text(
-                              'No monthly NPS reports have been saved by administrators yet. '
-                              'Check back after admin reports have been generated.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : Padding(
+      body: Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -420,264 +85,253 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    'Select Report Month',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                    Text(
+                      'Select Reporting Period',
+                      style: Theme.of(context).textTheme.titleMedium,
                                   ),
                                   const SizedBox(height: 12),
-                                  DropdownButtonFormField<String>(
-                                    initialValue: _selectedMonthKey,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _isLoadingMonths
+                              ? const Center(
+                                  child: SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  ),
+                                )
+                              : DropdownButtonFormField<String>(
+                                  value: '${_selectedYear}_$_selectedMonth',
                                     decoration: const InputDecoration(
                                       labelText: 'Month',
                                       border: OutlineInputBorder(),
-                                      prefixIcon: Icon(Icons.calendar_month),
-                                      contentPadding: EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 16),
-                                    ),
-                                    isDense: false,
-                                    items: _availableMonths.isNotEmpty
-                                        ? _availableMonths.map((month) {
-                                            final key = _getMonthKey(month);
+                                  ),
+                                  items: _availableMonths.map((monthData) {
+                                    final monthKey = monthData['month_key'] as String;
+                                    final monthName = monthData['display_name'] as String;
+                                    final serverCount = monthData['server_count'] as int;
                                             return DropdownMenuItem<String>(
-                                              value: key,
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        vertical: 4),
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    Text(
-                                                      _formatMonthYear(month),
-                                                      style: const TextStyle(
-                                                          fontWeight:
-                                                              FontWeight.bold),
-                                                    ),
-                                                    Text(
-                                                      '${month['server_count']} servers reported',
-                                                      style: TextStyle(
-                                                        fontSize: 12,
-                                                        color: Colors
-                                                            .grey.shade600,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            );
-                                          }).toList()
-                                        : [
-                                            const DropdownMenuItem<String>(
-                                              value: null,
-                                              child:
-                                                  Text('No months available'),
-                                            ),
-                                          ],
-                                    onChanged: _availableMonths.isNotEmpty
-                                        ? (monthKey) {
+                                      value: monthKey,
+                                      child: Text('$monthName ($serverCount servers)'),
+                                    );
+                                  }).toList(),
+                                  onChanged: (value) {
+                                    if (value != null) {
+                                      final parts = value.split('_');
+                                      final year = int.parse(parts[0]);
+                                      final month = int.parse(parts[1]);
                                             setState(() {
-                                              _selectedMonthKey = monthKey;
+                                        _selectedYear = year;
+                                        _selectedMonth = month;
+                                        _selectedMonthKey = year * 100 + month;
                                             });
-                                            if (monthKey != null) {
                                               _loadServerNPSData();
                                             }
-                                          }
-                                        : null,
+                                  },
+                                ),
                                   ),
                                 ],
                               ),
+                            const SizedBox(height: 12),
+                    Text(
+                      'Showing NPS data for ${_serverNPSData.length} servers',
+                      style: Theme.of(context).textTheme.bodyMedium,
                             ),
+                  ],
                           ),
-                          const SizedBox(height: 20),
+              ),
+            ),
+            const SizedBox(height: 16),
 
-                          // Sort Options
-                          if (_selectedMonthKey != null) ...[
+            // NPS Color Reference Key
                             Card(
                               child: Padding(
                                 padding: const EdgeInsets.all(16.0),
-                                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text(
-                                      'Sort by:',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 16),
+                    Text(
+                      'NPS Performance Key',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    // Sort Dropdown
+                    Row(
+                      children: [
+                        const Text(
+                          'Sort by: ',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                                     Expanded(
                                       child: DropdownButtonFormField<String>(
-                                        initialValue: _sortBy,
+                            value: _sortBy,
                                         decoration: const InputDecoration(
                                           border: OutlineInputBorder(),
-                                          contentPadding: EdgeInsets.symmetric(
-                                              horizontal: 12, vertical: 8),
-                                          isDense: true,
+                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                         ),
                                         items: const [
-                                          DropdownMenuItem(
-                                            value: 'name',
-                                            child: Text('Server Name'),
-                                          ),
-                                          DropdownMenuItem(
-                                            value: 'all_time_nps',
-                                            child: Text('All Time NPS'),
-                                          ),
-                                          DropdownMenuItem(
-                                            value: 'three_month_nps',
-                                            child: Text('3 Month NPS'),
-                                          ),
-                                          DropdownMenuItem(
-                                            value: 'one_month_nps',
-                                            child: Text('1 Month NPS'),
-                                          ),
-                                          DropdownMenuItem(
-                                            value: 'check_average',
-                                            child: Text('Check Average'),
-                                          ),
+                              DropdownMenuItem(value: 'all_time_nps', child: Text('All-Time NPS')),
+                              DropdownMenuItem(value: 'three_month_nps', child: Text('3-Month NPS')),
+                              DropdownMenuItem(value: 'one_month_nps', child: Text('1-Month NPS')),
+                              DropdownMenuItem(value: 'check_average', child: Text('Check Average')),
                                         ],
                                         onChanged: (value) {
                                           if (value != null) {
                                             setState(() {
                                               _sortBy = value;
                                             });
+                                _sortServerData();
                                           }
                                         },
                                       ),
                                     ),
-                                  ],
-                                ),
-                              ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          onPressed: () {
+                            setState(() {
+                              _sortDescending = !_sortDescending;
+                            });
+                            _sortServerData();
+                          },
+                          icon: Icon(
+                            _sortDescending ? Icons.arrow_downward : Icons.arrow_upward,
+                            color: Colors.blue,
+                          ),
+                          tooltip: _sortDescending ? 'Highest First' : 'Lowest First',
+                        ),
+                      ],
                             ),
                             const SizedBox(height: 16),
-                          ],
-
-                          // Server NPS Data Table
-                          if (_selectedMonthKey != null) ...[
-                            Builder(
-                              builder: (context) {
-                                final selectedMonth = _getSelectedMonthData();
-                                return Text(
-                                  selectedMonth != null
-                                      ? 'Server NPS Results - ${_formatMonthYear(selectedMonth)}'
-                                      : 'Server NPS Results',
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                );
-                              },
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                                    Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(0.1),
+                              border: Border.all(color: Colors.green, width: 2),
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                            const SizedBox(height: 12),
-
-                            // Color Coding Legend
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 8),
+                            child: const Column(
+                              children: [
+                                Text(
+                                  'EXCELLENT',
+                                  style: TextStyle(
+                                    color: Colors.green,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                Text(
+                                  '90%+',
+                                  style: TextStyle(
+                                    color: Colors.green,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                               decoration: BoxDecoration(
-                                color: Colors.grey.shade50,
+                              color: Colors.orange.withOpacity(0.1),
+                              border: Border.all(color: Colors.orange, width: 2),
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.grey.shade200),
                               ),
-                              child: Column(
+                            child: const Column(
                                 children: [
-                                  // Green tiers (positive performance)
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      _buildColorLegendItem(
-                                          const Color(0xFF0F7B0F),
-                                          '95%+ Outstanding'),
-                                      const SizedBox(width: 4),
-                                      _buildColorLegendItem(
-                                          const Color(0xFF228B22),
-                                          '90%+ Excellent'),
-                                      const SizedBox(width: 4),
-                                      _buildColorLegendItem(
-                                          const Color(0xFF32CD32),
-                                          '85%+ Very Good'),
-                                      const SizedBox(width: 4),
-                                      _buildColorLegendItem(
-                                          const Color(0xFF7CFC00), '80%+ Good'),
-                                    ],
+                                Text(
+                                  'GOOD',
+                                  style: TextStyle(
+                                    color: Colors.orange,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
                                   ),
-                                  const SizedBox(height: 4),
-                                  // Orange tiers (developmental)
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      _buildColorLegendItem(
-                                          const Color(0xFFFFA500),
-                                          '75%+ Developing'),
-                                      const SizedBox(width: 4),
-                                      _buildColorLegendItem(
-                                          const Color(0xFFFF4500),
-                                          '70%+ Growing'),
-                                    ],
+                                ),
+                                Text(
+                                  '80-89%',
+                                  style: TextStyle(
+                                    color: Colors.orange,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
                                   ),
-                                  const SizedBox(height: 4),
-                                  // Red tiers (building phase)
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                              decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.1),
+                              border: Border.all(color: Colors.red, width: 2),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            child: const Column(
                                     children: [
-                                      _buildColorLegendItem(
-                                          const Color(0xFFDC143C),
-                                          '60%+ Learning'),
-                                      const SizedBox(width: 4),
-                                      _buildColorLegendItem(
-                                          const Color(0xFF8B0000),
-                                          '<60% Building'),
+                                Text(
+                                  'NEEDS IMPROVEMENT',
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                                Text(
+                                  'Below 80%',
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                                     ],
                                   ),
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 12),
-
-                            if (_isLoadingServerData)
-                              const Center(
-                                child: Padding(
-                                  padding: EdgeInsets.all(32.0),
-                                  child: CircularProgressIndicator(),
-                                ),
-                              )
-                            else if (_serverNPSData.isEmpty)
-                              const Center(
-                                child: Padding(
-                                  padding: EdgeInsets.all(32.0),
+            ),
+            const SizedBox(height: 16),
+            
+            // Server List
+            Expanded(
+              child: _isLoadingServerData
+                  ? const Center(child: CircularProgressIndicator())
+                  : _serverNPSData.isEmpty
+                      ? const Center(
                                   child: Text(
                                     'No server data available for this month',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                ),
-                              )
-                            else
-                              Expanded(
-                                child: Card(
+                            style: TextStyle(fontSize: 16, color: Colors.grey),
+                          ),
+                        )
+                      : Card(
                                   child: Column(
                                     children: [
-                                      // Fixed Header Row (this stays visible)
+                              // Header
                                       Container(
+                                padding: const EdgeInsets.all(16),
                                         decoration: BoxDecoration(
                                           color: Colors.grey.shade100,
                                           borderRadius: const BorderRadius.only(
                                             topLeft: Radius.circular(12),
                                             topRight: Radius.circular(12),
                                           ),
-                                          border: Border.all(
-                                              color: Colors.grey.shade300,
-                                              width: 2),
                                         ),
-                                        padding: const EdgeInsets.all(12),
                                         child: const Row(
                                           children: [
                                             Expanded(
@@ -686,473 +340,358 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
                                                 'Server Name',
                                                 style: TextStyle(
                                                   fontWeight: FontWeight.bold,
-                                                  fontSize: 14,
+                                          fontSize: 12,
                                                 ),
                                               ),
                                             ),
                                             Expanded(
                                               flex: 2,
+                                      child: Center(
                                               child: Text(
-                                                'All Time NPS',
+                                          'All-Time NPS',
                                                 style: TextStyle(
                                                   fontWeight: FontWeight.bold,
-                                                  fontSize: 14,
-                                                ),
-                                                textAlign: TextAlign.center,
+                                            fontSize: 12,
+                                          ),
+                                        ),
                                               ),
                                             ),
                                             Expanded(
                                               flex: 2,
+                                      child: Center(
                                               child: Text(
-                                                '3 Month NPS',
+                                          '3-Month NPS',
                                                 style: TextStyle(
                                                   fontWeight: FontWeight.bold,
-                                                  fontSize: 14,
+                                            fontSize: 12,
                                                 ),
-                                                textAlign: TextAlign.center,
+                                        ),
                                               ),
                                             ),
                                             Expanded(
                                               flex: 2,
+                                      child: Center(
                                               child: Text(
-                                                '1 Month NPS',
+                                          '1-Month NPS',
                                                 style: TextStyle(
                                                   fontWeight: FontWeight.bold,
-                                                  fontSize: 14,
+                                            fontSize: 12,
                                                 ),
-                                                textAlign: TextAlign.center,
+                                        ),
                                               ),
                                             ),
                                             Expanded(
                                               flex: 2,
+                                      child: Center(
                                               child: Text(
-                                                'Check Average',
+                                          'Check Avg',
                                                 style: TextStyle(
                                                   fontWeight: FontWeight.bold,
-                                                  fontSize: 14,
+                                            fontSize: 12,
                                                 ),
-                                                textAlign: TextAlign.center,
+                                        ),
                                               ),
                                             ),
                                           ],
                                         ),
                                       ),
-                                      // Scrollable Content Area
+                              // Server List
                                       Expanded(
-                                        child: Container(
+                                child: ListView.builder(
+                                  itemCount: _serverNPSData.length,
+                                  itemBuilder: (context, index) {
+                                    final server = _serverNPSData[index];
+                                    final allTimeNPS = server['all_time_nps_percentage'] as double? ?? 0.0;
+                                    final threeMonthNPS = server['three_month_nps_percentage'] as double? ?? 0.0;
+                                    final oneMonthNPS = server['one_month_nps_percentage'] as double? ?? 0.0;
+                                    final sales = server['all_time_sales'] as double? ?? 0.0;
+                                    final tableCount = server['all_time_table_count'] as int? ?? 0;
+                                    
+                                    // Calculate check average (sales ÷ table count)
+                                    final checkAverage = tableCount > 0 ? sales / tableCount : 0.0;
+                                    
+                                    return Container(
+                                      padding: const EdgeInsets.all(12),
                                           decoration: BoxDecoration(
-                                            border: Border.all(
-                                                color: Colors.grey.shade300,
-                                                width: 2),
-                                            borderRadius:
-                                                const BorderRadius.only(
-                                              bottomLeft: Radius.circular(12),
-                                              bottomRight: Radius.circular(12),
-                                            ),
+                                        border: Border(
+                                          bottom: BorderSide(
+                                            color: Colors.grey.shade200,
                                           ),
-                                          child: SingleChildScrollView(
-                                            padding: const EdgeInsets.all(8),
-                                            child: Column(
-                                              children: _getSortedServerData()
-                                                  .map((serverData) {
-                                                return Container(
-                                                  margin: const EdgeInsets.only(
-                                                      bottom: 12),
-                                                  decoration: BoxDecoration(
-                                                    border: Border.all(
-                                                        color: Colors
-                                                            .grey.shade200),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            8),
-                                                  ),
-                                                  padding:
-                                                      const EdgeInsets.all(16),
+                                        ),
+                                      ),
                                                   child: Row(
                                                     children: [
                                                       Expanded(
                                                         flex: 3,
                                                         child: Text(
-                                                          serverData[
-                                                                  'server_name'] ??
-                                                              'Unknown',
-                                                          style:
-                                                              const TextStyle(
-                                                            fontWeight:
-                                                                FontWeight.w800,
-                                                            fontSize: 18,
-                                                            color: Color(
-                                                                0xFF2C3E50),
-                                                            letterSpacing: 0.5,
-                                                          ),
+                                              server['server_name'] ?? 'Unknown',
+                                              style: const TextStyle(fontSize: 12),
                                                         ),
                                                       ),
                                                       Expanded(
                                                         flex: 2,
-                                                        child: Container(
-                                                          padding:
-                                                              const EdgeInsets
-                                                                  .symmetric(
-                                                            horizontal: 10,
-                                                            vertical: 8,
-                                                          ),
-                                                          decoration:
-                                                              BoxDecoration(
-                                                            color: _getNPSColor(
-                                                                    serverData[
-                                                                        'all_time_nps_percentage'])
-                                                                .withOpacity(
-                                                                    0.15),
-                                                            borderRadius:
-                                                                BorderRadius
-                                                                    .circular(
-                                                                        12),
-                                                            border: Border.all(
-                                                              color: _getNPSColor(
-                                                                  serverData[
-                                                                      'all_time_nps_percentage']),
-                                                              width: 2,
-                                                            ),
-                                                            boxShadow: [
-                                                              BoxShadow(
-                                                                color: _getNPSColor(
-                                                                        serverData[
-                                                                            'all_time_nps_percentage'])
-                                                                    .withOpacity(
-                                                                        0.3),
-                                                                blurRadius: 2,
-                                                                offset:
-                                                                    const Offset(
-                                                                        0, 1),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                          child: Stack(
-                                                            children: [
-                                                              Center(
+                                            child: Center(
                                                                 child: Text(
-                                                                  _formatNPSPercentage(
-                                                                      serverData[
-                                                                          'all_time_nps_percentage']),
-                                                                  style:
-                                                                      TextStyle(
-                                                                    color: Colors
-                                                                        .white,
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .w900,
-                                                                    fontSize:
-                                                                        16,
-                                                                    shadows: [
-                                                                      Shadow(
-                                                                        offset: const Offset(
-                                                                            1.0,
-                                                                            1.0),
-                                                                        blurRadius:
-                                                                            2.0,
-                                                                        color: _getNPSColor(serverData['all_time_nps_percentage'])
-                                                                            .withOpacity(0.9),
-                                                                      ),
-                                                                      Shadow(
-                                                                        offset: const Offset(
-                                                                            -0.5,
-                                                                            -0.5),
-                                                                        blurRadius:
-                                                                            1.0,
-                                                                        color: Colors
-                                                                            .black
-                                                                            .withOpacity(0.5),
-                                                                      ),
-                                                                    ],
-                                                                  ),
-                                                                  textAlign:
-                                                                      TextAlign
-                                                                          .center,
-                                                                ),
-                                                              ),
-                                                              if (_isTopPerformer(
-                                                                  serverData[
-                                                                      'all_time_nps_percentage']))
-                                                                Positioned(
-                                                                  top: 2,
-                                                                  left: 2,
-                                                                  child: Icon(
-                                                                    Icons
-                                                                        .emoji_events,
-                                                                    size: 14,
-                                                                    color: Colors
-                                                                        .amber
-                                                                        .shade400,
-                                                                  ),
-                                                                ),
-                                                            ],
-                                                          ),
+                                                '${allTimeNPS.toStringAsFixed(1)}%',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: _getNPSColor(allTimeNPS),
+                                                ),
+                                              ),
                                                         ),
                                                       ),
                                                       Expanded(
                                                         flex: 2,
-                                                        child: Container(
-                                                          padding:
-                                                              const EdgeInsets
-                                                                  .symmetric(
-                                                            horizontal: 10,
-                                                            vertical: 8,
-                                                          ),
-                                                          decoration:
-                                                              BoxDecoration(
-                                                            color: _getNPSColor(
-                                                                    serverData[
-                                                                        'three_month_nps_percentage'])
-                                                                .withOpacity(
-                                                                    0.15),
-                                                            borderRadius:
-                                                                BorderRadius
-                                                                    .circular(
-                                                                        12),
-                                                            border: Border.all(
-                                                              color: _getNPSColor(
-                                                                  serverData[
-                                                                      'three_month_nps_percentage']),
-                                                              width: 2,
-                                                            ),
-                                                            boxShadow: [
-                                                              BoxShadow(
-                                                                color: _getNPSColor(
-                                                                        serverData[
-                                                                            'three_month_nps_percentage'])
-                                                                    .withOpacity(
-                                                                        0.3),
-                                                                blurRadius: 2,
-                                                                offset:
-                                                                    const Offset(
-                                                                        0, 1),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                          child: Stack(
-                                                            children: [
-                                                              Center(
+                                            child: Center(
                                                                 child: Text(
-                                                                  _formatNPSPercentage(
-                                                                      serverData[
-                                                                          'three_month_nps_percentage']),
-                                                                  style:
-                                                                      TextStyle(
-                                                                    color: Colors
-                                                                        .white,
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .w900,
-                                                                    fontSize:
-                                                                        16,
-                                                                    shadows: [
-                                                                      Shadow(
-                                                                        offset: const Offset(
-                                                                            1.0,
-                                                                            1.0),
-                                                                        blurRadius:
-                                                                            2.0,
-                                                                        color: _getNPSColor(serverData['three_month_nps_percentage'])
-                                                                            .withOpacity(0.9),
-                                                                      ),
-                                                                      Shadow(
-                                                                        offset: const Offset(
-                                                                            -0.5,
-                                                                            -0.5),
-                                                                        blurRadius:
-                                                                            1.0,
-                                                                        color: Colors
-                                                                            .black
-                                                                            .withOpacity(0.5),
-                                                                      ),
-                                                                    ],
-                                                                  ),
-                                                                  textAlign:
-                                                                      TextAlign
-                                                                          .center,
-                                                                ),
-                                                              ),
-                                                              if (_isTopPerformer(
-                                                                  serverData[
-                                                                      'three_month_nps_percentage']))
-                                                                Positioned(
-                                                                  top: 2,
-                                                                  left: 2,
-                                                                  child: Icon(
-                                                                    Icons
-                                                                        .emoji_events,
-                                                                    size: 14,
-                                                                    color: Colors
-                                                                        .amber
-                                                                        .shade400,
-                                                                  ),
-                                                                ),
-                                                            ],
-                                                          ),
+                                                '${threeMonthNPS.toStringAsFixed(1)}%',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: _getNPSColor(threeMonthNPS),
+                                                ),
+                                              ),
                                                         ),
                                                       ),
                                                       Expanded(
                                                         flex: 2,
-                                                        child: Container(
-                                                          padding:
-                                                              const EdgeInsets
-                                                                  .symmetric(
-                                                            horizontal: 10,
-                                                            vertical: 8,
-                                                          ),
-                                                          decoration:
-                                                              BoxDecoration(
-                                                            color: _getNPSColor(
-                                                                    serverData[
-                                                                        'one_month_nps_percentage'])
-                                                                .withOpacity(
-                                                                    0.15),
-                                                            borderRadius:
-                                                                BorderRadius
-                                                                    .circular(
-                                                                        12),
-                                                            border: Border.all(
-                                                              color: _getNPSColor(
-                                                                  serverData[
-                                                                      'one_month_nps_percentage']),
-                                                              width: 2,
-                                                            ),
-                                                            boxShadow: [
-                                                              BoxShadow(
-                                                                color: _getNPSColor(
-                                                                        serverData[
-                                                                            'one_month_nps_percentage'])
-                                                                    .withOpacity(
-                                                                        0.3),
-                                                                blurRadius: 2,
-                                                                offset:
-                                                                    const Offset(
-                                                                        0, 1),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                          child: Stack(
-                                                            children: [
-                                                              Center(
+                                            child: Center(
                                                                 child: Text(
-                                                                  _formatNPSPercentage(
-                                                                      serverData[
-                                                                          'one_month_nps_percentage']),
-                                                                  style:
-                                                                      TextStyle(
-                                                                    color: Colors
-                                                                        .white,
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .w900,
-                                                                    fontSize:
-                                                                        16,
-                                                                    shadows: [
-                                                                      Shadow(
-                                                                        offset: const Offset(
-                                                                            1.0,
-                                                                            1.0),
-                                                                        blurRadius:
-                                                                            2.0,
-                                                                        color: _getNPSColor(serverData['one_month_nps_percentage'])
-                                                                            .withOpacity(0.9),
-                                                                      ),
-                                                                      Shadow(
-                                                                        offset: const Offset(
-                                                                            -0.5,
-                                                                            -0.5),
-                                                                        blurRadius:
-                                                                            1.0,
-                                                                        color: Colors
-                                                                            .black
-                                                                            .withOpacity(0.5),
-                                                                      ),
-                                                                    ],
-                                                                  ),
-                                                                  textAlign:
-                                                                      TextAlign
-                                                                          .center,
-                                                                ),
-                                                              ),
-                                                              if (_isTopPerformer(
-                                                                  serverData[
-                                                                      'one_month_nps_percentage']))
-                                                                Positioned(
-                                                                  top: 2,
-                                                                  left: 2,
-                                                                  child: Icon(
-                                                                    Icons
-                                                                        .emoji_events,
-                                                                    size: 14,
-                                                                    color: Colors
-                                                                        .amber
-                                                                        .shade400,
-                                                                  ),
-                                                                ),
-                                                            ],
-                                                          ),
+                                                oneMonthNPS > 0 ? '${oneMonthNPS.toStringAsFixed(1)}%' : 'N/A',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: oneMonthNPS > 0 ? _getNPSColor(oneMonthNPS) : Colors.grey,
+                                                ),
+                                              ),
                                                         ),
                                                       ),
                                                       Expanded(
                                                         flex: 2,
                                                         child: Center(
                                                           child: Text(
-                                                            _formatCheckAverage(
-                                                                _calculateCheckAverage(serverData)),
-                                                            style: TextStyle(
-                                                              color: _getCheckAverageColor(
-                                                                  _calculateCheckAverage(serverData)),
-                                                              fontWeight: FontWeight.w800,
-                                                              fontSize: 16,
-                                                            ),
-                                                            textAlign: TextAlign.center,
+                                                '\$${checkAverage.toStringAsFixed(2)}',
+                                                            style: const TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                                           ),
                                                         ),
                                                       ),
                                                     ],
                                                   ),
                                                 );
-                                              }).toList(),
-                                            ),
-                                          ),
+                                  },
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
                               ),
-                          ],
                         ],
                       ),
                     ),
     );
   }
 
-  /// Calculate check average from sales and table count
-  double _calculateCheckAverage(Map<String, dynamic> serverData) {
-    final sales = serverData['all_time_sales'] as double? ?? 0.0;
-    final tableCount = serverData['all_time_table_count'] as int? ?? 0;
+  Color _getNPSColor(double npsScore) {
+    if (npsScore >= 90) return Colors.green;
+    if (npsScore >= 80) return Colors.orange;
+    return Colors.red;
+  }
+
+  /// Load available months that have NPS report data
+  Future<void> _loadAvailableMonths() async {
+    setState(() {
+      _isLoadingMonths = true;
+    });
+
+    try {
+      final npsProvider = context.read<NPSProvider>();
+      
+      // Ensure provider is initialized
+      if (!npsProvider.isInitialized) {
+        await npsProvider.initialize();
+      }
+
+      // Get available months with data
+      final availableMonths = await _getAvailableMonthsWithData(npsProvider.database);
+      
+      print('[NPS Scorecard] Found ${availableMonths.length} months with data');
+      
+      setState(() {
+        _availableMonths = availableMonths;
+        _isLoadingMonths = false;
+      });
+      
+      // Load data for the selected month if it exists
+      if (availableMonths.isNotEmpty) {
+        // Check if current selection exists, otherwise use first available
+        final currentKey = '${_selectedYear}_$_selectedMonth';
+        final hasCurrentMonth = availableMonths.any((m) => m['month_key'] == currentKey);
+        
+        if (!hasCurrentMonth) {
+          // Use first available month
+          final firstMonth = availableMonths.first;
+          final parts = (firstMonth['month_key'] as String).split('_');
+          setState(() {
+            _selectedYear = int.parse(parts[0]);
+            _selectedMonth = int.parse(parts[1]);
+            _selectedMonthKey = _selectedYear * 100 + _selectedMonth;
+          });
+        }
+        
+        _loadServerNPSData();
+        }
+      } catch (e) {
+      print('[NPS Scorecard] Error loading available months: $e');
+      setState(() {
+        _availableMonths = [];
+        _isLoadingMonths = false;
+      });
+    }
+  }
+
+  /// Remove duplicate servers based on server name, keeping the best data
+  List<Map<String, dynamic>> _deduplicateServerData(List<Map<String, dynamic>> serverData) {
+    final Map<String, Map<String, dynamic>> uniqueServers = {};
     
-    if (tableCount == 0) return 0.0;
-    return sales / tableCount;
+    for (final server in serverData) {
+      final serverName = server['server_name'] as String? ?? 'Unknown';
+      
+      if (!uniqueServers.containsKey(serverName)) {
+        // First occurrence of this server name
+        uniqueServers[serverName] = server;
+      } else {
+        // Duplicate found - keep the one with better data (higher all-time NPS or more recent data)
+        final existing = uniqueServers[serverName]!;
+        final existingNPS = existing['all_time_nps_percentage'] as double? ?? 0.0;
+        final currentNPS = server['all_time_nps_percentage'] as double? ?? 0.0;
+        
+        // Keep the server with higher all-time NPS, or if equal, keep the one with more sales data
+        if (currentNPS > existingNPS) {
+          uniqueServers[serverName] = server;
+        } else if (currentNPS == existingNPS) {
+          final existingSales = existing['all_time_sales'] as double? ?? 0.0;
+          final currentSales = server['all_time_sales'] as double? ?? 0.0;
+          if (currentSales > existingSales) {
+            uniqueServers[serverName] = server;
+          }
+        }
+      }
+    }
+    
+    final deduplicated = uniqueServers.values.toList();
+    print('[NPS Scorecard] Deduplicated ${serverData.length} records to ${deduplicated.length} unique servers');
+    
+    return deduplicated;
   }
 
-  /// Format check average as currency
-  String _formatCheckAverage(double average) {
-    if (average == 0.0) return 'N/A';
-    return '\$${average.toStringAsFixed(2)}';
+  /// Sort server data based on selected criteria
+  void _sortServerData() {
+    setState(() {
+      _serverNPSData.sort((a, b) {
+        double valueA = 0.0;
+        double valueB = 0.0;
+        
+        switch (_sortBy) {
+          case 'all_time_nps':
+            valueA = a['all_time_nps_percentage'] as double? ?? 0.0;
+            valueB = b['all_time_nps_percentage'] as double? ?? 0.0;
+            break;
+          case 'three_month_nps':
+            valueA = a['three_month_nps_percentage'] as double? ?? 0.0;
+            valueB = b['three_month_nps_percentage'] as double? ?? 0.0;
+            break;
+          case 'one_month_nps':
+            valueA = a['one_month_nps_percentage'] as double? ?? 0.0;
+            valueB = b['one_month_nps_percentage'] as double? ?? 0.0;
+            break;
+          case 'check_average':
+            final salesA = a['all_time_sales'] as double? ?? 0.0;
+            final tableCountA = a['all_time_table_count'] as int? ?? 0;
+            valueA = tableCountA > 0 ? salesA / tableCountA : 0.0;
+            
+            final salesB = b['all_time_sales'] as double? ?? 0.0;
+            final tableCountB = b['all_time_table_count'] as int? ?? 0;
+            valueB = tableCountB > 0 ? salesB / tableCountB : 0.0;
+            break;
+        }
+        
+        if (_sortDescending) {
+          return valueB.compareTo(valueA); // Highest first
+        } else {
+          return valueA.compareTo(valueB); // Lowest first
+        }
+      });
+    });
   }
 
-  /// Get color for check average based on performance tiers (matching NPS progression)
-  Color _getCheckAverageColor(double average) {
-    if (average == 0.0) return Colors.grey;
-    if (average >= 100.0) return const Color(0xFF0F7B0F); // Outstanding - Dark Green
-    if (average >= 80.0) return const Color(0xFF228B22);  // Excellent - Green
-    if (average >= 60.0) return const Color(0xFF32CD32);  // Very Good - Light Green
-    if (average >= 40.0) return const Color(0xFF90EE90);  // Good - Very Light Green
-    if (average >= 30.0) return const Color(0xFFFF8C00);  // Developing - Orange
-    if (average >= 20.0) return const Color(0xFFFF6347);  // Growing - Light Orange/Red
-    if (average >= 15.0) return const Color(0xFFDC143C);  // Learning - Red
-    return const Color(0xFF8B0000); // Building - Dark Red
+  /// Get available months that have NPS report data
+  Future<List<Map<String, dynamic>>> _getAvailableMonthsWithData(dynamic database) async {
+    try {
+      // Query the database to find months with actual data
+      final monthsWithData = <Map<String, dynamic>>[];
+      
+      // Check months from 2024-2026 (you can adjust this range)
+      for (int year = 2024; year <= 2026; year++) {
+        for (int month = 1; month <= 12; month++) {
+          final serverData = await database.getServerNPSDataForMonth(month, year);
+          if (serverData.isNotEmpty) {
+            // Deduplicate to get accurate count
+            final deduplicatedData = _deduplicateServerData(serverData);
+            final monthNames = [
+              'January', 'February', 'March', 'April', 'May', 'June',
+              'July', 'August', 'September', 'October', 'November', 'December'
+            ];
+            
+            monthsWithData.add({
+              'month_key': '${year}_$month',
+              'display_name': '${monthNames[month - 1]} $year',
+              'server_count': deduplicatedData.length,
+              'year': year,
+              'month': month,
+            });
+          }
+        }
+      }
+      
+      // Sort by year and month (most recent first)
+      monthsWithData.sort((a, b) {
+        final aYear = a['year'] as int;
+        final aMonth = a['month'] as int;
+        final bYear = b['year'] as int;
+        final bMonth = b['month'] as int;
+        
+        if (aYear != bYear) {
+          return bYear.compareTo(aYear); // Most recent year first
+        }
+        return bMonth.compareTo(aMonth); // Most recent month first
+      });
+      
+      return monthsWithData;
+      } catch (e) {
+      print('[NPS Scorecard] Error getting available months: $e');
+        return [];
+      }
+  }
+
+  /// Get server NPS data for a specific month
+  Future<List<Map<String, dynamic>>> _getServerNPSDataForMonth(
+      dynamic database, int reportMonth, int reportYear) async {
+    try {
+      print('[NPS Scorecard] Querying for month=$reportMonth, year=$reportYear');
+      
+      // Use the adapter method that we know works
+      final serverData = await database.getServerNPSDataForMonth(reportMonth, reportYear);
+      
+      print('[NPS Scorecard] Retrieved ${serverData.length} server records');
+      
+      return serverData;
+    } catch (e) {
+      print('[NPS Scorecard] Error getting server data: $e');
+      return [];
+    }
   }
 }

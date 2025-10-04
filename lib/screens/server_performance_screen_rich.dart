@@ -6,8 +6,8 @@ import '../models.dart';
 import '../models/performance_models.dart';
 import '../providers/nps_provider.dart';
 import '../utils/performance_calculator.dart';
-import '../utils/performance_analyzer.dart';
-import '../utils/trend_analyzer.dart';
+import '../utils/performance_analyzer.dart' as pa;
+import '../utils/trend_analyzer.dart' as ta;
 import '../widgets/performance_charts.dart';
 import '../storage.dart';
 import 'bulk_data_entry_screen.dart';
@@ -29,10 +29,10 @@ class _ServerPerformanceScreenRichState extends State<ServerPerformanceScreenRic
   bool _showDataEntryPrompt = false;
 
   // Advanced analytics data
-  Map<String, PerformanceTrendAnalysis> _trendAnalyses = {};
-  TeamAnalytics? _teamAnalytics;
-  Map<String, PeerAnalysis> _peerAnalyses = {};
-  Map<String, SeasonalAnalysis> _seasonalAnalyses = {};
+  Map<String, ta.PerformanceTrendAnalysis> _trendAnalyses = {};
+  pa.TeamAnalytics? _teamAnalytics;
+  Map<String, pa.PeerAnalysis> _peerAnalyses = {};
+  Map<String, ta.SeasonalAnalysis> _seasonalAnalyses = {};
 
   final Map<String, String> _timeframeOptions = {
     '7_days': 'Last 7 Days',
@@ -73,9 +73,9 @@ class _ServerPerformanceScreenRichState extends State<ServerPerformanceScreenRic
 
       // Calculate performance for each server
       final performanceDataList = <ServerPerformanceData>[];
-      final trendAnalyses = <String, PerformanceTrendAnalysis>{};
-      final peerAnalyses = <String, PeerAnalysis>{};
-      final seasonalAnalyses = <String, SeasonalAnalysis>{};
+  final trendAnalyses = <String, ta.PerformanceTrendAnalysis>{};
+  final peerAnalyses = <String, pa.PeerAnalysis>{};
+  final seasonalAnalyses = <String, ta.SeasonalAnalysis>{};
 
       // Load NPS history for performance calculations with NPSProvider
       final npsHistory = await PerformanceCalculator.loadNPSHistory(
@@ -103,7 +103,7 @@ class _ServerPerformanceScreenRichState extends State<ServerPerformanceScreenRic
         performanceDataList.add(performance);
 
         // Calculate trend analysis
-        final trendAnalysis = PerformanceAnalyzer.analyzePerformanceTrend(
+        final trendAnalysis = pa.PerformanceAnalyzer.analyzePerformanceTrend(
           serverId: server.id,
           shifts: shifts,
           startDate: startDate,
@@ -112,11 +112,10 @@ class _ServerPerformanceScreenRichState extends State<ServerPerformanceScreenRic
         trendAnalyses[server.id] = trendAnalysis;
 
         // Calculate seasonal analysis
-        final seasonalAnalysis = TrendAnalyzer.analyzeSeasonalPatterns(
+        final seasonalAnalysis = ta.TrendAnalyzer.analyzeSeasonalPatterns(
           serverId: server.id,
           shifts: shifts,
-          startDate: startDate,
-          endDate: endDate,
+          monthsToAnalyze: 6,
         );
         seasonalAnalyses[server.id] = seasonalAnalysis;
       }
@@ -126,11 +125,8 @@ class _ServerPerformanceScreenRichState extends State<ServerPerformanceScreenRic
         ..sort((a, b) => b.performanceScore.compareTo(a.performanceScore));
 
       // Calculate team analytics
-      final teamAnalytics = PerformanceAnalyzer.calculateTeamAnalytics(
+      final teamAnalytics = pa.PerformanceAnalyzer.calculateTeamAnalytics(
         performanceDataList,
-        shifts,
-        startDate,
-        endDate,
       );
 
       // Calculate peer analyses
@@ -138,17 +134,23 @@ class _ServerPerformanceScreenRichState extends State<ServerPerformanceScreenRic
         final performance = sortedByScore[i];
         final ranking = i + 1;
         final percentile = (ranking / sortedByScore.length * 100).round();
-        
-        final peerAnalysis = PeerAnalysis(
-          serverId: performance.serverId,
+        String _bracket(int days) {
+          if (days <= 30) return 'new';
+          if (days <= 90) return 'junior';
+          if (days <= 180) return 'regular';
+          return 'senior';
+        }
+        final peerAnalysis = pa.PeerAnalysis(
+          serverPerformance: performance,
+          tenureBracket: _bracket(performance.daysEmployed),
           totalPeers: sortedByScore.length,
           peerRanking: ranking,
-          peerPercentile: percentile,
-          averageScore: teamAnalytics?.averageScore ?? 0.0,
-          topPerformerScore: teamAnalytics?.highestScore ?? 0.0,
-          bottomPerformerScore: teamAnalytics?.lowestScore ?? 0.0,
-          comparativeMetrics: ComparativeMetrics.empty(),
-          insights: ['Performance analysis available'],
+            peerPercentile: percentile.toDouble(),
+          averageScore: teamAnalytics.averageScore,
+          topPerformerScore: teamAnalytics.highestScore,
+          bottomPerformerScore: teamAnalytics.lowestScore,
+          comparativeMetrics: pa.ComparativeMetrics.empty(),
+          insights: const ['Peer comparison available'],
         );
         peerAnalyses[performance.serverId] = peerAnalysis;
       }
@@ -315,7 +317,7 @@ class _ServerPerformanceScreenRichState extends State<ServerPerformanceScreenRic
       Server server, ServerPerformanceData performance, int rank) {
     final rankColor = _getRankColor(rank);
     final trendAnalysis = _trendAnalyses[server.id];
-    final peerAnalysis = _peerAnalyses[server.id];
+  final peerAnalysis = _peerAnalyses[server.id];
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -472,9 +474,9 @@ class _ServerPerformanceScreenRichState extends State<ServerPerformanceScreenRic
               ],
 
               // NPS Score if available
-              if (performance.metrics.npsScore != null && performance.metrics.npsScore! > 0) ...[
+              if (performance.metrics.npsScore > 0) ...[
                 const SizedBox(height: 12),
-                _buildNPSIndicator(performance.metrics.npsScore!),
+                _buildNPSIndicator(performance.metrics.npsScore),
               ],
 
               // Action Items
@@ -562,7 +564,7 @@ class _ServerPerformanceScreenRichState extends State<ServerPerformanceScreenRic
     );
   }
 
-  Widget _buildTrendIndicator(PerformanceTrendAnalysis trend) {
+  Widget _buildTrendIndicator(ta.PerformanceTrendAnalysis trend) {
     final trendColor = _getTrendColor(trend.trendDirection);
     final trendIcon = _getTrendIcon(trend.trendDirection);
     
@@ -733,43 +735,40 @@ class _ServerPerformanceScreenRichState extends State<ServerPerformanceScreenRic
     }
   }
 
-  Color _getTrendColor(PerformanceTrendDirection direction) {
+  Color _getTrendColor(ta.TrendDirection direction) {
     switch (direction) {
-      case PerformanceTrendDirection.improving:
+      case ta.TrendDirection.improving:
         return Colors.green;
-      case PerformanceTrendDirection.stable:
+      case ta.TrendDirection.stable:
         return Colors.blue;
-      case PerformanceTrendDirection.declining:
+      case ta.TrendDirection.declining:
         return Colors.orange;
-      case PerformanceTrendDirection.volatile:
-        return Colors.purple;
     }
+    return Colors.grey;
   }
 
-  IconData _getTrendIcon(PerformanceTrendDirection direction) {
+  IconData _getTrendIcon(ta.TrendDirection direction) {
     switch (direction) {
-      case PerformanceTrendDirection.improving:
+      case ta.TrendDirection.improving:
         return Icons.trending_up;
-      case PerformanceTrendDirection.stable:
+      case ta.TrendDirection.stable:
         return Icons.trending_flat;
-      case PerformanceTrendDirection.declining:
+      case ta.TrendDirection.declining:
         return Icons.trending_down;
-      case PerformanceTrendDirection.volatile:
-        return Icons.waves;
     }
+    return Icons.help_outline;
   }
 
-  String _getTrendText(PerformanceTrendDirection direction) {
+  String _getTrendText(ta.TrendDirection direction) {
     switch (direction) {
-      case PerformanceTrendDirection.improving:
+      case ta.TrendDirection.improving:
         return 'Improving';
-      case PerformanceTrendDirection.stable:
+      case ta.TrendDirection.stable:
         return 'Stable';
-      case PerformanceTrendDirection.declining:
+      case ta.TrendDirection.declining:
         return 'Declining';
-      case PerformanceTrendDirection.volatile:
-        return 'Volatile';
     }
+    return 'Unknown';
   }
 
   Color _getNPSColor(double score) {
@@ -833,5 +832,6 @@ class _ServerPerformanceScreenRichState extends State<ServerPerformanceScreenRic
     });
   }
 }
+
 
 

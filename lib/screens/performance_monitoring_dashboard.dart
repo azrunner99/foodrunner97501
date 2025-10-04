@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../models/performance_models.dart' hide PerformanceAlert;
+import '../models/performance_models.dart';
+import '../models/performance_system_models.dart' as sys;
 import '../services/performance_monitoring_service.dart';
 import '../services/performance_flags.dart';
 
@@ -14,7 +15,7 @@ class PerformanceMonitoringDashboard extends StatefulWidget {
 
 class _PerformanceMonitoringDashboardState extends State<PerformanceMonitoringDashboard> {
   final PerformanceMonitoringService _monitoringService = PerformanceMonitoringService.instance;
-  PerformanceAnalyticsSummary? _analyticsSummary;
+  sys.PerformanceAnalyticsSummary? _analyticsSummary;
   List<PerformanceAlert> _alerts = [];
   bool _isLoading = true;
 
@@ -435,27 +436,21 @@ class _PerformanceMonitoringDashboardState extends State<PerformanceMonitoringDa
   Widget _buildAlertItem(PerformanceAlert alert) {
     Color severityColor;
     IconData severityIcon;
-    
-    switch (alert.severity) {
-      case AlertSeverity.info:
-        severityColor = Colors.blue;
-        severityIcon = Icons.info;
-        break;
-      case AlertSeverity.warning:
-        severityColor = Colors.orange;
-        severityIcon = Icons.warning;
-        break;
-      case AlertSeverity.critical:
-        severityColor = Colors.red;
-        severityIcon = Icons.error;
-        break;
-      case AlertSeverity.emergency:
-        severityColor = Colors.red.shade900;
-        severityIcon = Icons.dangerous;
-        break;
-    }
 
-    return Container(
+    switch (alert.severity) {
+      case PerformanceAlertSeverity.info:
+        severityColor = Colors.blue;
+        severityIcon = Icons.info_outline;
+        break;
+      case PerformanceAlertSeverity.warning:
+        severityColor = Colors.orange;
+        severityIcon = Icons.warning_outlined;
+        break;
+      case PerformanceAlertSeverity.critical:
+        severityColor = Colors.red;
+        severityIcon = Icons.error_outline;
+        break;
+    }    return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -472,7 +467,7 @@ class _PerformanceMonitoringDashboardState extends State<PerformanceMonitoringDa
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  alert.title,
+                  alert.message,
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 14,
@@ -480,7 +475,7 @@ class _PerformanceMonitoringDashboardState extends State<PerformanceMonitoringDa
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  alert.description,
+                  alert.category,
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey.shade600,
@@ -488,7 +483,7 @@ class _PerformanceMonitoringDashboardState extends State<PerformanceMonitoringDa
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Server: ${alert.serverId} • ${alert.ageInMinutes}m ago',
+                  'Alert ID: ${alert.id} • ${DateTime.now().difference(alert.timestamp).inMinutes}m ago',
                   style: TextStyle(
                     fontSize: 10,
                     color: Colors.grey.shade500,

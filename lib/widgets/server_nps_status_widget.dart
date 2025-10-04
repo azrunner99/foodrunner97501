@@ -7,6 +7,8 @@ import '../services/intelligent_performance_classifier.dart';
 import '../storage/database_factory.dart';
 import '../utils/log.dart';
 import '../models/performance_models.dart' as performance_models;
+import '../app_state.dart';
+import '../services/application_update_service.dart';
 
 /// Server NPS Status Widget
 /// Displays Intelligent Performance Classification and server status
@@ -51,36 +53,35 @@ class _ServerNPSStatusWidgetState extends State<ServerNPSStatusWidget> {
         );
       }
       
-      final reports = reportMaps.map((map) => NPSMonthlyReport.fromMap(map)).toList();
+      final allReports = reportMaps.map((map) => NPSMonthlyReport.fromMap(map)).toList();
+      
+      // Filter out old server ID format (numeric IDs like "1", "2") to avoid duplicates
+      final reports = allReports.where((report) {
+        final serverId = report.serverId.toString();
+        final isOldFormat = RegExp(r'^\d+$').hasMatch(serverId) && serverId.length <= 2;
+        if (isOldFormat) {
+          d('[ServerNPSStatusWidget] Filtering out old format server_id: $serverId');
+        }
+        return !isOldFormat; // Keep only non-old format IDs
+      }).toList();
+      
+      d('[ServerNPSStatusWidget] After filtering: ${reports.length} reports (removed ${allReports.length - reports.length} old format reports)');
       
       // Load historical data
       final historicalData = <HistoricalNPSData>[];
       final Map<String, List<NPSMonthlyReport>> reportsByServer = {};
       
       for (final report in reports) {
-        reportsByServer.putIfAbsent(report.serverId, () => []).add(report);
+        reportsByServer.putIfAbsent(report.serverId.toString(), () => []).add(report);
       }
       
       for (final entry in reportsByServer.entries) {
         final serverId = entry.key;
         final serverReports = entry.value;
         
-        // Get server name
-        final npsProvider = context.read<NPSProvider>();
-        final servers = npsProvider.servers;
-        String serverName = 'Server $serverId';
-        final server = servers.cast<dynamic>().firstWhere(
-          (server) => server.id == serverId,
-          orElse: () => null,
-        );
-        
-        if (server != null) {
-          final serverStr = server.toString();
-          final nameMatch = RegExp(r'name:\s*([^,]+)').firstMatch(serverStr);
-          if (nameMatch != null) {
-            serverName = nameMatch.group(1)?.trim() ?? 'Server $serverId';
-          }
-        }
+        // Get server name using ApplicationUpdateService
+        final serverName = await ApplicationUpdateService.resolveServerName(serverId);
+        d('[ServerNPSStatusWidget] Resolved server name: $serverName for ID $serverId');
         
         historicalData.add(HistoricalNPSData(
           serverId: serverId.toString(),
@@ -125,7 +126,7 @@ class _ServerNPSStatusWidgetState extends State<ServerNPSStatusWidget> {
         final classification = classifier.classifyServerPerformance(
           monthlyReports: monthlyReports,
           serverName: data.serverName,
-          serverId: int.parse(data.serverId),
+          serverId: int.tryParse(data.serverId) ?? 0,
         );
         classifications[data.serverId] = classification;
       }
@@ -153,7 +154,7 @@ class _ServerNPSStatusWidgetState extends State<ServerNPSStatusWidget> {
       final results = await database.queryTable(
         'nps_monthly_reports',
         where: 'server_id = ?',
-        whereArgs: [int.parse(serverId)],
+        whereArgs: [serverId],
         orderBy: isSqflite ? 'month_year DESC' : 'report_year DESC, report_month DESC',
       );
 
@@ -605,8 +606,8 @@ class _ServerNPSStatusWidgetState extends State<ServerNPSStatusWidget> {
                     Expanded(
                       child: _buildClassificationMetric(
                         'Confidence',
-                        '${classification.confidence.toStringAsFixed(1)}%',
-                        _getConfidenceColor(classification.confidence),
+                        '${(classification.confidence * 100).toStringAsFixed(1)}%',
+                        _getConfidenceColor(classification.confidence * 100),
                       ),
                     ),
                   ],
@@ -631,7 +632,7 @@ class _ServerNPSStatusWidgetState extends State<ServerNPSStatusWidget> {
                 ),
                 
                 // Recommendations Section
-                if (classification.recommendations.isNotEmpty) ...[
+                if (classification.improvements.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   Text(
                     'Recommendations:',
@@ -641,7 +642,7 @@ class _ServerNPSStatusWidgetState extends State<ServerNPSStatusWidget> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  ...classification.recommendations.map((rec) => 
+                  ...classification.improvements.map((rec) => 
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4),
                       child: Row(

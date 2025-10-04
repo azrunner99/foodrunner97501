@@ -3,6 +3,7 @@ import '../utils/log.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../providers/nps_provider.dart';
+import '../app_state.dart';
 import '../services/advanced_analytics_service.dart';
 import '../services/nps_filter_service.dart';
 import '../services/nps_benchmarking_service.dart';
@@ -14,7 +15,7 @@ import 'secured_nps_widgets.dart';
 import '../screens/nps_benchmarking_screen.dart';
 import '../services/historical_nps_aggregation_service.dart';
 import '../services/performance_timeline_service.dart';
-import '../services/intelligent_performance_classifier.dart';
+// import '../services/intelligent_performance_classifier.dart';
 import '../models/historical_nps_data.dart';
 import '../models/performance_models.dart' as performance_models;
 
@@ -45,6 +46,15 @@ class _EnhancedNPSAnalyticsWidgetState
     _loadHistoricalData();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Force reload historical data whenever the widget becomes visible
+    // This ensures we always have fresh data when navigating to Analytics tab
+    print('🔄 [EnhancedNPSAnalyticsWidget] didChangeDependencies() - forcing historical data reload');
+    _loadHistoricalData();
+  }
+
   Future<void> _loadHistoricalData() async {
     setState(() {
       _isLoadingHistorical = true;
@@ -52,9 +62,23 @@ class _EnhancedNPSAnalyticsWidgetState
 
     try {
       d('[EnhancedNPSAnalyticsWidget] Loading historical data...');
+      print('🚨🚨🚨 [EnhancedNPSAnalyticsWidget] _loadHistoricalData() CALLED! 🚨🚨🚨');
 
-      // Load historical data for all servers
-      final historicalData = await HistoricalNPSAggregationService.instance.getAllHistoricalData();
+      // First, verify the service is initialized
+      await HistoricalNPSAggregationService.instance.initialize();
+      print('🔍 [EnhancedNPSAnalyticsWidget] Service initialized, calling getAllHistoricalData()');
+
+      // Get AppState servers for name mapping
+      final appState = Provider.of<AppState>(context, listen: false);
+      final appStateServers = appState.servers;
+      print('🔍 [EnhancedNPSAnalyticsWidget] Found ${appStateServers.length} servers in AppState for name mapping');
+      for (int i = 0; i < appStateServers.length && i < 5; i++) {
+        final server = appStateServers[i];
+        print('🔍 [EnhancedNPSAnalyticsWidget] AppState server ${i + 1}: id=${server.id}, name=${server.name}');
+      }
+
+      // Load historical data for all servers with AppState server mapping
+      final historicalData = await HistoricalNPSAggregationService.instance.getAllHistoricalDataWithAppState(appStateServers);
 
       // Load performance timelines
       final timelines = await PerformanceTimelineService.instance.getAllTimelines();
@@ -66,14 +90,13 @@ class _EnhancedNPSAnalyticsWidgetState
         // Get monthly reports for this server
         final monthlyReports = await _getMonthlyReportsForServer(data.serverId);
         
-        // Classify performance
-        final classification = IntelligentPerformanceClassifier().classifyServerPerformance(
-          monthlyReports: monthlyReports,
-          serverName: data.serverName,
-          serverId: int.parse(data.serverId),
-        );
+        // Classify performance - temporarily disabled
+        // final classification = IntelligentPerformanceClassifier.classifyPerformance(
+        //   npsScore: data.overallPerformanceScore,
+        //   monthlyReports: monthlyReports,
+        // );
         
-        classifications[data.serverId] = classification;
+        // classifications[data.serverId] = classification;
       }
 
       setState(() {
@@ -187,7 +210,7 @@ class _EnhancedNPSAnalyticsWidgetState
                         _buildKeyMetricsFromReports(monthlyReports),
                         const SizedBox(height: 20),
                         // Historical Analytics Section
-                        _buildHistoricalAnalyticsSection(),
+                        _buildHistoricalAnalyticsSection(monthlyReports),
                         const SizedBox(height: 20),
                       ],
                     ),
@@ -409,7 +432,7 @@ class _EnhancedNPSAnalyticsWidgetState
       final results = await database.queryTable(
         'nps_monthly_reports',
         where: 'server_id = ?',
-        whereArgs: [int.parse(serverId)],
+        whereArgs: [serverId],
         orderBy: isSqflite ? 'month_year DESC' : 'report_year DESC, report_month DESC',
       );
       
@@ -1312,7 +1335,15 @@ class _EnhancedNPSAnalyticsWidgetState
 
 
   /// Build the historical analytics section
-  Widget _buildHistoricalAnalyticsSection() {
+  Widget _buildHistoricalAnalyticsSection(List<NPSMonthlyReport> monthlyReports) {
+    // If we have monthly reports but no historical data, try to load it
+    if (monthlyReports.isNotEmpty && _historicalData.isEmpty && !_isLoadingHistorical) {
+      // Trigger historical data loading on next frame
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _loadHistoricalData();
+      });
+    }
+    
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1361,7 +1392,7 @@ class _EnhancedNPSAnalyticsWidgetState
                 ),
               )
             else if (_historicalData.isEmpty)
-              _buildNoHistoricalDataMessage()
+              _buildNoHistoricalDataMessage(monthlyReports)
             else
               Column(
                 children: [
@@ -1380,24 +1411,43 @@ class _EnhancedNPSAnalyticsWidgetState
     );
   }
 
-  Widget _buildNoHistoricalDataMessage() {
-    return const Center(
+  Widget _buildNoHistoricalDataMessage(List<NPSMonthlyReport> monthlyReports) {
+    // Provide more specific messaging based on available data
+    String message;
+    String subMessage;
+    
+    if (monthlyReports.isEmpty) {
+      message = 'No Historical Data Available';
+      subMessage = 'Enter monthly NPS data to see historical analytics';
+    } else {
+      message = 'Processing Historical Data...';
+      subMessage = 'Found ${monthlyReports.length} monthly reports from ${monthlyReports.map((r) => r.serverId).toSet().length} servers. Loading analytics...';
+    }
+    
+    return Center(
       child: Padding(
-        padding: EdgeInsets.all(32),
+        padding: const EdgeInsets.all(32),
         child: Column(
           children: [
             Icon(Icons.history, size: 64, color: Colors.grey),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Text(
-              'No Historical Data Available',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              message,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Text(
-              'Enter monthly NPS data to see historical analytics',
-              style: TextStyle(color: Colors.grey),
+              subMessage,
+              style: const TextStyle(color: Colors.grey),
               textAlign: TextAlign.center,
             ),
+            if (monthlyReports.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _loadHistoricalData,
+                child: const Text('Retry Loading'),
+              ),
+            ],
           ],
         ),
       ),

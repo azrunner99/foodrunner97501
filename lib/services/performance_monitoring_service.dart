@@ -70,11 +70,9 @@ class PerformanceMonitoringService {
   }
 
   /// Get performance statistics
-  PerformanceStatistics getPerformanceStatistics() {
-    final now = DateTime.now();
-    final last24Hours = now.subtract(Duration(hours: 24));
-    
-    final recentMetrics = _metrics.where((m) => m.timestamp.isAfter(last24Hours)).toList();
+  PerformanceStatistics getStatistics() {
+    final recentMetrics = _metrics.where((m) => 
+      DateTime.now().difference(m.timestamp).inDays <= 1).toList();
     
     return PerformanceStatistics(
       totalMetrics: _metrics.length,
@@ -82,6 +80,11 @@ class PerformanceMonitoringService {
       activeAlerts: _alerts.where((a) => !a.acknowledged).length,
       totalAlerts: _alerts.length,
     );
+  }
+
+  /// Get active alerts
+  List<PerformanceAlert> getActiveAlerts() {
+    return _alerts.where((a) => !a.acknowledged).toList();
   }
 
   /// Clear old data

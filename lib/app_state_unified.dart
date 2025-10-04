@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 import 'models.dart';
+import 'app_state.dart' show ServerProfile;
 import 'services/unified_storage_service.dart';
 import 'utils/log.dart';
 
@@ -20,7 +21,7 @@ class AppStateUnified extends ChangeNotifier {
   final Map<String, Map<String, int>> _pizookieTotals = {};
   
   // Settings
-  WeeklyHours _hours = WeeklyHours();
+  WeeklyHours _hours = WeeklyHours(openMinutes: {}, closeMinutes: {});
   String _currentShiftType = 'lunch';
   bool _isShiftActive = false;
   String? _currentShiftId;
@@ -337,7 +338,7 @@ class AppStateUnified extends ChangeNotifier {
       _profiles.clear();
       _totals.clear();
       _pizookieTotals.clear();
-      _hours = WeeklyHours();
+      _hours = WeeklyHours(openMinutes: {}, closeMinutes: {});
       _currentShiftType = 'lunch';
       _isShiftActive = false;
       _currentShiftId = null;
@@ -370,3 +371,4 @@ class AppStateUnified extends ChangeNotifier {
     }
   }
 }
+

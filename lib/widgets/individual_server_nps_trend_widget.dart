@@ -3,10 +3,12 @@ import 'package:provider/provider.dart';
 import '../providers/nps_provider.dart';
 import '../models/monthly_report.dart' hide PerformanceTrend;
 import '../models/historical_nps_data.dart';
-import '../services/intelligent_performance_classifier.dart';
+// import '../services/intelligent_performance_classifier.dart';
 import '../services/advanced_trend_analysis_service.dart' as trend_analysis;
 import '../storage/database_factory.dart';
 import '../utils/log.dart';
+import '../app_state.dart';
+import '../services/application_update_service.dart';
 
 /// Individual Server NPS Trend Widget
 /// Contains the Advanced Trend Analysis section
@@ -46,38 +48,44 @@ class _IndividualServerNPSTrendWidgetState extends State<IndividualServerNPSTren
         orderBy: isSqflite ? 'month_year DESC' : 'report_year DESC, report_month DESC',
       );
       
-      final reports = results.map((row) => NPSMonthlyReport.fromMap(row)).toList();
+      final allReports = results.map((row) => NPSMonthlyReport.fromMap(row)).toList();
       
+      // Filter out old server ID format (numeric IDs like "1", "2") to avoid duplicates
+      final reports = allReports.where((report) {
+        final serverId = report.serverId.toString();
+        final isOldFormat = RegExp(r'^\d+$').hasMatch(serverId) && serverId.length <= 2;
+        if (isOldFormat) {
+          d('[IndividualServerNPSTrendWidget] Filtering out old format server_id: $serverId');
+        }
+        return !isOldFormat; // Keep only non-old format IDs
+      }).toList();
+      
+      d('[IndividualServerNPSTrendWidget] After filtering: ${reports.length} reports (removed ${allReports.length - reports.length} old format reports)');
       d('[IndividualServerNPSTrendWidget] Loaded ${reports.length} monthly reports');
       
       // Load trend analyses
       final trendAnalyses = <String, trend_analysis.AdvancedTrendAnalysis>{};
       
-      // Get server names from the servers table
-      final serverNames = <int, String>{};
-      try {
-        final serverResults = await database.queryTable('servers');
-        for (final serverRow in serverResults) {
-          serverNames[serverRow['id']] = serverRow['name'] ?? 'Unknown Server';
-        }
-      } catch (e) {
-        d('[IndividualServerNPSTrendWidget] Error loading server names: $e');
-      }
+      // Get server names from AppState
+      final appState = context.read<AppState>();
+      final appStateServers = appState.servers;
+      d('[IndividualServerNPSTrendWidget] Found ${appStateServers.length} servers in AppState for name mapping');
       
       for (final report in reports) {
         final serverId = report.serverId.toString();
         if (!trendAnalyses.containsKey(serverId)) {
           // Get all reports for this server
-          final serverReports = reports.where((r) => r.serverId == report.serverId).toList();
+          final serverReports = reports.where((r) => r.serverId.toString() == serverId).toList();
           
-          // Get the actual server name
-          final serverName = serverNames[report.serverId] ?? 'Server $serverId';
+          // Get the actual server name using ApplicationUpdateService
+          final serverName = await ApplicationUpdateService.resolveServerName(serverId);
+          d('[IndividualServerNPSTrendWidget] Resolved server name: $serverName for ID $serverId');
           
           // Analyze trends
           final trendAnalysis = trend_analysis.AdvancedTrendAnalysisService().analyzeServerTrends(
             monthlyReports: serverReports,
             serverName: serverName,
-            serverId: int.parse(report.serverId),
+            serverId: serverId,
           );
           
           trendAnalyses[serverId] = trendAnalysis;

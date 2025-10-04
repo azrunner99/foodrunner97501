@@ -27,7 +27,7 @@ class _MonthlyDataEntryScreenState extends State<MonthlyDataEntryScreen> {
   Future<void> _submitData() async {
     if (_formKey.currentState!.validate()) {
       final data = {
-        'server_id': int.parse(_serverIdController.text),
+        'server_id': _serverIdController.text,
         'month': _monthController.text,
         'nps_score': double.parse(_npsScoreController.text),
         'feedback_count': int.parse(_feedbackCountController.text),

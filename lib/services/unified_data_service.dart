@@ -135,7 +135,7 @@ class UnifiedDataService {
       final threeMonthsAgo = DateTime(now.year, now.month - 3, 1);
       
       final npsHistory = await _npsAdapter.getFeedbackForServerInRange(
-        int.parse(serverId),
+        serverId,
         startDate: threeMonthsAgo,
         endDate: now,
       );

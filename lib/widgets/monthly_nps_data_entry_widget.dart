@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/nps_provider.dart';
 import '../models/monthly_report.dart';
 import '../services/error_handling_service.dart';
+import '../app_state.dart';
 
 /// Data class for holding server metrics input data
 class ServerMetricsData {
@@ -122,15 +123,51 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
 
   Future<void> _loadServerData() async {
     final npsProvider = Provider.of<NPSProvider>(context, listen: false);
-
-    // Initialize data for all active servers
-    for (final server in npsProvider.servers.where((s) => s.active)) {
-      _serverData[server.id] = ServerMetricsData(
-        serverId: server.id,
-        serverName: server.name,
-      );
+    final appState = Provider.of<AppState>(context, listen: false);
+    
+    debugPrint('[MonthlyNPSDataEntry] Starting server data loading...');
+    debugPrint('[MonthlyNPSDataEntry] AppState servers: ${appState.servers.length}');
+    
+    // Show AppState servers for debugging
+    for (int i = 0; i < appState.servers.length; i++) {
+      final server = appState.servers[i];
+      debugPrint('[MonthlyNPSDataEntry] AppState Server ${i + 1}: id=${server.id}, name=${server.name}');
+    }
+    
+    // Ensure NPSProvider is properly initialized with AppState
+    if (!npsProvider.isInitialized) {
+      debugPrint('[MonthlyNPSDataEntry] NPSProvider not initialized, initializing with AppState...');
+      await npsProvider.initialize(appState: appState);
+      debugPrint('[MonthlyNPSDataEntry] NPSProvider initialization completed');
     }
 
+    debugPrint('[MonthlyNPSDataEntry] NPSProvider servers: ${npsProvider.servers.length}');
+    for (final server in npsProvider.servers) {
+      debugPrint('[MonthlyNPSDataEntry] NPSProvider Server: id=${server.id}, name=${server.name}, active=${server.active}');
+    }
+
+    // If NPSProvider has no servers, use AppState servers directly
+    if (npsProvider.servers.isEmpty && appState.servers.isNotEmpty) {
+      debugPrint('[MonthlyNPSDataEntry] NPSProvider has no servers, using AppState servers directly');
+      
+      for (final appServer in appState.servers) {
+        _serverData[appServer.id] = ServerMetricsData(
+          serverId: appServer.id,
+          serverName: appServer.name,
+        );
+        debugPrint('[MonthlyNPSDataEntry] Added AppState server: ${appServer.name} (${appServer.id})');
+      }
+    } else {
+      // Use NPSProvider servers as originally intended
+      for (final server in npsProvider.servers.where((s) => s.active)) {
+        _serverData[server.id] = ServerMetricsData(
+          serverId: server.id,
+          serverName: server.name,
+        );
+      }
+    }
+
+    debugPrint('[MonthlyNPSDataEntry] Final server data count: ${_serverData.length}');
     await _loadExistingData();
   }
 
@@ -152,9 +189,48 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
       for (final entry in _serverData.entries) {
         final serverId = entry.key;
         try {
-          // First try to load saved data from database
-          final existingReportMap = await npsProvider.database
+          debugPrint('🔍 [MonthlyNPSDataEntry] Loading data for server: $serverId');
+          
+          // Try to load saved data from database using current server ID
+          var existingReportMap = await npsProvider.database
               .getMonthlyReport(serverId, reportMonth);
+
+          // If no data found, try alternative ID formats
+          if (existingReportMap == null) {
+            debugPrint('🔍 [MonthlyNPSDataEntry] No data found for $serverId, trying alternative formats...');
+            final appState = Provider.of<AppState>(context, listen: false);
+            
+            // Try to find server by name if ID doesn't work
+            final matchingAppServer = appState.servers.firstWhere(
+              (s) => s.id == serverId || s.name == _serverData[serverId]?.serverName,
+              orElse: () => appState.servers.first, // fallback
+            );
+            
+            if (matchingAppServer.id != serverId) {
+              debugPrint('🔍 [MonthlyNPSDataEntry] Trying server name match: ${matchingAppServer.name}');
+              existingReportMap = await npsProvider.database
+                  .getMonthlyReport(matchingAppServer.id, reportMonth);
+                  
+              if (existingReportMap != null) {
+                debugPrint('✅ [MonthlyNPSDataEntry] Found data using name-matched ID ${matchingAppServer.id} for server $serverId');
+              }
+            }
+            
+            // Last resort: try numeric index-based IDs
+            if (existingReportMap == null) {
+              final serverIndex = appState.servers.indexWhere((s) => s.id == serverId);
+              if (serverIndex >= 0) {
+                final mappedId = (serverIndex + 1).toString(); // Convert to String
+                debugPrint('🔍 [MonthlyNPSDataEntry] Trying mapped ID: $mappedId for server $serverId');
+                existingReportMap = await npsProvider.database
+                    .getMonthlyReport(mappedId, reportMonth);
+                    
+                if (existingReportMap != null) {
+                  debugPrint('✅ [MonthlyNPSDataEntry] Found data using mapped ID $mappedId for server $serverId');
+                }
+              }
+            }
+          }
 
           debugPrint('🔍 Server $serverId - existingReportMap: $existingReportMap');
 
@@ -191,6 +267,21 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
       data.dispose();
     }
     super.dispose();
+  }
+
+  int _getAvailableServerCount(NPSProvider npsProvider) {
+    // If NPSProvider has servers, use those
+    if (npsProvider.servers.isNotEmpty) {
+      return npsProvider.servers.where((s) => s.active).length;
+    }
+    
+    // Otherwise, use AppState servers
+    try {
+      final appState = Provider.of<AppState>(context, listen: false);
+      return appState.servers.length;
+    } catch (e) {
+      return _serverData.length; // Fallback to current loaded data
+    }
   }
 
   @override
@@ -280,7 +371,7 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '${npsProvider.servers.where((s) => s.active).length} servers available',
+                  '${_getAvailableServerCount(npsProvider)} servers available',
                   style: TextStyle(
                     color: Colors.orange.shade700,
                     fontSize: 12,
@@ -433,15 +524,11 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
                     ),
                   )
                 : ListView.builder(
-                    itemCount: npsProvider.servers.where((s) => s.active).length,
+                    itemCount: _serverData.length,
                     itemBuilder: (context, index) {
-                      final server =
-                          npsProvider.servers.where((s) => s.active).toList()[index];
-                      final serverData = _serverData[server.id] ??
-                          ServerMetricsData(
-                            serverId: server.id,
-                            serverName: server.name,
-                          );
+                      final serverDataEntry = _serverData.entries.toList()[index];
+                      final serverId = serverDataEntry.key;
+                      final serverData = serverDataEntry.value;
 
                 return Card(
                   margin: const EdgeInsets.only(bottom: 16),
@@ -451,7 +538,7 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          server.name,
+                          serverData.serverName,
                           style:
                               Theme.of(context).textTheme.titleMedium?.copyWith(
                                     fontWeight: FontWeight.bold,
@@ -662,10 +749,24 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
 
     try {
       final npsProvider = Provider.of<NPSProvider>(context, listen: false);
-      final activeServers = npsProvider.servers.where((s) => s.active).toList();
+      final appState = Provider.of<AppState>(context, listen: false);
+      
+      // Use same server loading logic as _loadServerData
+      List<dynamic> activeServers;
+      if (npsProvider.servers.isNotEmpty) {
+        activeServers = npsProvider.servers.where((s) => s.active).toList();
+        debugPrint('💾 Using NPSProvider servers: ${activeServers.length}');
+      } else {
+        activeServers = appState.servers;
+        debugPrint('💾 Using AppState servers: ${activeServers.length}');
+      }
 
       debugPrint('💾 Starting save for month: ${_selectedMonth.year}-${_selectedMonth.month}');
       debugPrint('💾 Active servers: ${activeServers.length}');
+      print('🔍 [MonthlyNPSDataEntry] SAVE: Active servers count: ${activeServers.length}');
+      for (final server in activeServers) {
+        print('🔍 [MonthlyNPSDataEntry] SAVE: Server ${server.name} (${server.id})');
+      }
 
       int savedCount = 0;
 
@@ -678,7 +779,7 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
           final monthKey = _selectedMonth.year * 100 + _selectedMonth.month;
 
           final report = NPSMonthlyReport(
-            serverId: server.id,
+            serverId: server.id.toString(), // Ensure consistent String format
             reportMonth: monthKey,
             reportYear: _selectedMonth.year,
             allTimeNpsPercentage:

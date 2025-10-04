@@ -113,7 +113,12 @@ void main() {
       );
       // Only the insideMonth should count toward npsDataMonths, so we expect at least 1 month effect and not 2.
       // We cannot directly read npsDataMonths, but weight redistribution for limited months (1) sets NPS weight to 40% (instead of 50).
-      expect(perf.npsWeight, anyOf(40.0, 35.0, 50.0), reason: 'Weight should reflect limited months; ensure outside month excluded.');
+      // npsWeight is a fraction (e.g. 0.40) not a percentage integer.
+      expect(
+        perf.npsWeight,
+        anyOf(0.40, 0.35, 0.50),
+        reason: 'Weight should reflect limited months; ensure outside month excluded.',
+      );
     });
 
     test('Month aggregation uses summed month_sales/checks when present', () {
