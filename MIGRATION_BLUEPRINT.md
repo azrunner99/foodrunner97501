@@ -241,6 +241,26 @@ Created a comprehensive data-preserving migration strategy with verification too
 - ✅ `flutter test test/nps_system_test.dart` - All 20 tests passed
 - ✅ `flutter test test/widget_test.dart` - Compilation successful
 
+### ✅ **Phase 5 — Tests** *(COMPLETE)*
+
+**Status**: ✅ **COMPLETED** - Focused tests for migration and FK constraints created and verified
+
+**What we accomplished:**
+- ✅ Created `test/db_migration_text_ids_test.dart` - verifies v3 schema with TEXT server_id columns
+- ✅ Created `test/db_fk_guard_test.dart` - verifies foreign key constraint enforcement
+- ✅ Tests cover: TEXT affinity verification, FK constraint validation, nullable server_id handling
+- ✅ All tests passing, validates Phase 2-3 migration and FK enforcement
+
+**Test Coverage:**
+1. **Migration Test** - Verifies current v3 schema has TEXT server_id columns with proper constraints
+2. **FK Guard Test** - Verifies foreign key constraints prevent invalid server_id references
+3. **Nullable Handling** - Tests that NULL server_id works correctly in nps_calculation_log
+4. **Cascade Behavior** - Tests RESTRICT constraint prevents server deletion when reports exist
+
+**Verification:**
+- ✅ `flutter test test/db_migration_text_ids_test.dart` - All 3 tests passed
+- ✅ `flutter test test/db_fk_guard_test.dart` - All 4 tests passed
+
 **A) Data-Preserving Migration Plan (Default Path)**
 
 ✅ **Schema Version**: Confirmed schemaVersion = 3 in `lib/storage/drift_database.dart`
