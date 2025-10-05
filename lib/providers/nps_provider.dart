@@ -5,6 +5,7 @@ import '../models/nps_feedback.dart';
 import '../models/monthly_report.dart';
 import '../storage/database_factory.dart';
 import '../storage/nps_database_adapter.dart';
+import '../services/server_id_resolver.dart';
 import '../utils/nps_calculator.dart';
 import '../app_state.dart';
 
@@ -76,12 +77,19 @@ class NPSProvider with ChangeNotifier {
       debugPrint('🔥 [NPSProvider] Starting server sync from AppState...');
       debugPrint(
           '🔥 [NPSProvider] Main app has ${appState.servers.length} servers');
+      
       // Build lookup indexes once for efficient and robust matching
+      debugPrint('🔥 [NPSProvider] About to call _database.getAllServers()...');
       final existingServerMaps = await _database.getAllServers();
+      debugPrint('🔥 [NPSProvider] Successfully got ${existingServerMaps.length} servers from database');
       debugPrint(
           '🔥 [NPSProvider] NPS system has ${existingServerMaps.length} servers');
 
       String norm(String? s) => (s ?? '').trim().toLowerCase();
+
+      // Create sets of AppState server IDs for cleanup
+      final appStateServerIds = appState.servers.map((s) => s.id).toSet();
+      final appStateServerNames = appState.servers.map((s) => norm(s.name)).toSet();
 
       final byOriginalId = <String, Map<String, dynamic>>{};
       final byName = <String, Map<String, dynamic>>{};
@@ -90,6 +98,9 @@ class NPSProvider with ChangeNotifier {
         if (oid.isNotEmpty) byOriginalId[oid] = m;
         byName[norm(m['name'] as String?)] = m;
       }
+
+      // TEMPORARY FIX: Skip complex cleanup and just ensure servers exist
+      debugPrint('🔥 [NPSProvider] Skipping cleanup for now - focusing on data loading fix');
 
       for (final mainServer in appState.servers) {
         final mainIdNorm = norm(mainServer.id);
@@ -102,7 +113,9 @@ class NPSProvider with ChangeNotifier {
 
         if (existingServer == null) {
           // Server doesn't exist in NPS system, add it
+          // Use the main server ID as the NPS server ID (convert to TEXT)
           final serverMap = {
+            'id': mainServer.id.trim(), // Use main app server ID as TEXT primary key
             'name': mainServer.name.trim(),
             'original_id':
                 mainServer.id.trim(), // Store the original main app server ID
@@ -113,9 +126,9 @@ class NPSProvider with ChangeNotifier {
             'updated_at': DateTime.now().toIso8601String(),
           };
 
-          final newId = await _database.insertServer(serverMap);
+          await _database.insertServer(serverMap);
           // Update indexes
-          serverMap['id'] = newId;
+          serverMap['id'] = mainServer.id.trim();
           byOriginalId[mainIdNorm] = serverMap;
           byName[mainNameNorm] = serverMap;
           debugPrint(
@@ -144,6 +157,9 @@ class NPSProvider with ChangeNotifier {
               '[NPSProvider] ⏭️ Server already exists: ${mainServer.name}');
         }
       }
+      // Refresh the ServerIdResolver with the cleaned-up server data
+      await ServerIdResolver.instance.initialize(appState, _database);
+      
       debugPrint('[NPSProvider] Server sync completed!');
     } catch (e) {
       debugPrint('[NPSProvider] ❌ Error syncing servers: $e');

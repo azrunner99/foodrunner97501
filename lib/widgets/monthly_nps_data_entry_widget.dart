@@ -4,6 +4,8 @@ import '../providers/nps_provider.dart';
 import '../models/monthly_report.dart';
 import '../services/error_handling_service.dart';
 import '../app_state.dart';
+import '../screens/saved_nps_reports_screen.dart';
+import '../services/server_id_resolver.dart';
 
 /// Data class for holding server metrics input data
 class ServerMetricsData {
@@ -134,6 +136,9 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
       debugPrint('[MonthlyNPSDataEntry] AppState Server ${i + 1}: id=${server.id}, name=${server.name}');
     }
     
+    // Initialize server ID resolver
+    await ServerIdResolver.instance.initialize(appState, npsProvider.database);
+    
     // Ensure NPSProvider is properly initialized with AppState
     if (!npsProvider.isInitialized) {
       debugPrint('[MonthlyNPSDataEntry] NPSProvider not initialized, initializing with AppState...');
@@ -146,25 +151,17 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
       debugPrint('[MonthlyNPSDataEntry] NPSProvider Server: id=${server.id}, name=${server.name}, active=${server.active}');
     }
 
-    // If NPSProvider has no servers, use AppState servers directly
-    if (npsProvider.servers.isEmpty && appState.servers.isNotEmpty) {
-      debugPrint('[MonthlyNPSDataEntry] NPSProvider has no servers, using AppState servers directly');
-      
-      for (final appServer in appState.servers) {
-        _serverData[appServer.id] = ServerMetricsData(
-          serverId: appServer.id,
-          serverName: appServer.name,
-        );
-        debugPrint('[MonthlyNPSDataEntry] Added AppState server: ${appServer.name} (${appServer.id})');
-      }
-    } else {
-      // Use NPSProvider servers as originally intended
-      for (final server in npsProvider.servers.where((s) => s.active)) {
-        _serverData[server.id] = ServerMetricsData(
-          serverId: server.id,
-          serverName: server.name,
-        );
-      }
+    // Always use AppState servers as the canonical source, but resolve IDs properly
+    debugPrint('[MonthlyNPSDataEntry] Using AppState servers as canonical source with ID resolution');
+    
+    for (final appServer in appState.servers) {
+      // Use canonical server ID from resolver
+      final canonicalId = ServerIdResolver.instance.getCanonicalId(appServer.id);
+      _serverData[canonicalId] = ServerMetricsData(
+        serverId: canonicalId,
+        serverName: appServer.name,
+      );
+      debugPrint('[MonthlyNPSDataEntry] Added canonical server: ${appServer.name} (canonical: $canonicalId, original: ${appServer.id})');
     }
 
     debugPrint('[MonthlyNPSDataEntry] Final server data count: ${_serverData.length}');
@@ -191,42 +188,24 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
         try {
           debugPrint('🔍 [MonthlyNPSDataEntry] Loading data for server: $serverId');
           
-          // Try to load saved data from database using current server ID
+          // Use server ID resolver to find existing data with any known ID format
           var existingReportMap = await npsProvider.database
               .getMonthlyReport(serverId, reportMonth);
 
-          // If no data found, try alternative ID formats
+          // If no data found with canonical ID, try all known ID formats
           if (existingReportMap == null) {
-            debugPrint('🔍 [MonthlyNPSDataEntry] No data found for $serverId, trying alternative formats...');
-            final appState = Provider.of<AppState>(context, listen: false);
+            debugPrint('🔍 [MonthlyNPSDataEntry] No data found for canonical ID $serverId, trying all known ID formats...');
             
-            // Try to find server by name if ID doesn't work
-            final matchingAppServer = appState.servers.firstWhere(
-              (s) => s.id == serverId || s.name == _serverData[serverId]?.serverName,
-              orElse: () => appState.servers.first, // fallback
-            );
-            
-            if (matchingAppServer.id != serverId) {
-              debugPrint('🔍 [MonthlyNPSDataEntry] Trying server name match: ${matchingAppServer.name}');
-              existingReportMap = await npsProvider.database
-                  .getMonthlyReport(matchingAppServer.id, reportMonth);
-                  
-              if (existingReportMap != null) {
-                debugPrint('✅ [MonthlyNPSDataEntry] Found data using name-matched ID ${matchingAppServer.id} for server $serverId');
-              }
-            }
-            
-            // Last resort: try numeric index-based IDs
-            if (existingReportMap == null) {
-              final serverIndex = appState.servers.indexWhere((s) => s.id == serverId);
-              if (serverIndex >= 0) {
-                final mappedId = (serverIndex + 1).toString(); // Convert to String
-                debugPrint('🔍 [MonthlyNPSDataEntry] Trying mapped ID: $mappedId for server $serverId');
+            final allKnownIds = ServerIdResolver.instance.getAllKnownIds(serverId);
+            for (final knownId in allKnownIds) {
+              if (knownId != serverId) { // Skip the canonical ID we already tried
+                debugPrint('🔍 [MonthlyNPSDataEntry] Trying known ID: $knownId for server $serverId');
                 existingReportMap = await npsProvider.database
-                    .getMonthlyReport(mappedId, reportMonth);
+                    .getMonthlyReport(knownId, reportMonth);
                     
                 if (existingReportMap != null) {
-                  debugPrint('✅ [MonthlyNPSDataEntry] Found data using mapped ID $mappedId for server $serverId');
+                  debugPrint('✅ [MonthlyNPSDataEntry] Found data using known ID $knownId for server $serverId');
+                  break;
                 }
               }
             }
@@ -635,27 +614,54 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
   }
 
   Widget _buildActionButtons() {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: _isLoading ? null : _saveData,
-        icon: _isLoading 
-            ? const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+    return Column(
+      children: [
+        // View Saved Reports Button
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SavedNPSReportsScreen(),
                 ),
-              )
-            : const Icon(Icons.save),
-        label: Text(_isLoading ? 'Saving...' : 'Save All Data'),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.orange.shade600,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
+              );
+            },
+            icon: const Icon(Icons.folder_open),
+            label: const Text('View Saved Reports'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.orange.shade700,
+              side: BorderSide(color: Colors.orange.shade300),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+          ),
         ),
-      ),
+        const SizedBox(height: 12),
+        // Save All Data Button
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: _isLoading ? null : _saveData,
+            icon: _isLoading 
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : const Icon(Icons.save),
+            label: Text(_isLoading ? 'Saving...' : 'Save All Data'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange.shade600,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -751,35 +757,24 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
       final npsProvider = Provider.of<NPSProvider>(context, listen: false);
       final appState = Provider.of<AppState>(context, listen: false);
       
-      // Use same server loading logic as _loadServerData
-      List<dynamic> activeServers;
-      if (npsProvider.servers.isNotEmpty) {
-        activeServers = npsProvider.servers.where((s) => s.active).toList();
-        debugPrint('💾 Using NPSProvider servers: ${activeServers.length}');
-      } else {
-        activeServers = appState.servers;
-        debugPrint('💾 Using AppState servers: ${activeServers.length}');
-      }
-
+      // Use canonical server data from _serverData (which uses AppState servers with resolved IDs)
       debugPrint('💾 Starting save for month: ${_selectedMonth.year}-${_selectedMonth.month}');
-      debugPrint('💾 Active servers: ${activeServers.length}');
-      print('🔍 [MonthlyNPSDataEntry] SAVE: Active servers count: ${activeServers.length}');
-      for (final server in activeServers) {
-        print('🔍 [MonthlyNPSDataEntry] SAVE: Server ${server.name} (${server.id})');
-      }
+      debugPrint('💾 Using canonical server data: ${_serverData.length} servers');
 
       int savedCount = 0;
 
-      for (final server in activeServers) {
-        final serverData = _serverData[server.id];
-        debugPrint('💾 Server ${server.name} (ID: ${server.id}) - hasData: ${serverData?.hasData()}');
+      // Save data for each server in _serverData (which uses canonical IDs)
+      for (final entry in _serverData.entries) {
+        final canonicalServerId = entry.key;
+        final serverData = entry.value;
+        debugPrint('💾 Server ${serverData.serverName} (canonical ID: $canonicalServerId) - hasData: ${serverData.hasData()}');
         
-        if (serverData != null && serverData.hasData()) {
+        if (serverData.hasData()) {
           // Create NPSMonthlyReport from the server data
           final monthKey = _selectedMonth.year * 100 + _selectedMonth.month;
 
           final report = NPSMonthlyReport(
-            serverId: server.id.toString(), // Ensure consistent String format
+            serverId: canonicalServerId, // Use canonical server ID
             reportMonth: monthKey,
             reportYear: _selectedMonth.year,
             allTimeNpsPercentage:
@@ -799,12 +794,12 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
             dataAsOfDate: DateTime.now(),
           );
 
-          debugPrint('💾 Saving report for server ${server.name}: NPS=${report.allTimeNpsPercentage}, Sales=${report.allTimeSales}, MonthKey=$monthKey');
+          debugPrint('💾 Saving report for server ${serverData.serverName}: NPS=${report.allTimeNpsPercentage}, Sales=${report.allTimeSales}, MonthKey=$monthKey');
 
           // Save the report using the calculator
           await npsProvider.calculator.saveMonthlyReport(report);
           savedCount++;
-          debugPrint('✅ Saved NPS data for server ${server.name}');
+          debugPrint('✅ Saved NPS data for server ${serverData.serverName}');
         }
       }
 

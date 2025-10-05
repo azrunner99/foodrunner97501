@@ -153,12 +153,13 @@ class NPSMonthlyReport {
     );
   }
 
-  /// Convert NPSMonthlyReport to a database map (Android Sqflite format)
+  /// Convert NPSMonthlyReport to a database map (Drift format)
   Map<String, dynamic> toMap() {
     return {
       if (id != null) 'id': id,
       'server_id': serverId,
-      'month_year': reportMonth.toString(), // Android Sqflite format
+      'report_month': reportMonth, // Drift format
+      'report_year': reportYear, // Drift format
       'all_time_nps_percentage': allTimeNpsPercentage,
       'three_month_nps_percentage': threeMonthNpsPercentage,
       'one_month_nps_percentage': oneMonthNpsPercentage,
