@@ -71,7 +71,6 @@ class NPSDatabase {
       await db.execute('''
         CREATE TABLE nps_feedback (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
-          -- server_id INTEGER NOT NULL, -- DELETED: Raw SQLite schema - Drift is source of truth
           feedback_type TEXT NOT NULL CHECK(feedback_type IN ('yes', 'maybe', 'no')),
           feedback_date DATE NOT NULL,
           sales_amount REAL,
@@ -98,7 +97,6 @@ class NPSDatabase {
       await db.execute('''
         CREATE TABLE nps_monthly_reports (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
-          -- server_id INTEGER NOT NULL, -- DELETED: Raw SQLite schema - Drift is source of truth
           report_month INTEGER NOT NULL,
           report_year INTEGER NOT NULL,
           all_time_nps_percentage REAL,
@@ -137,7 +135,6 @@ class NPSDatabase {
         CREATE TABLE nps_calculation_log (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           calculation_type TEXT NOT NULL,
-          -- server_id INTEGER, -- DELETED: Raw SQLite schema - Drift is source of truth
           report_month INTEGER,
           calculation_start TEXT NOT NULL,
           calculation_end TEXT NOT NULL,

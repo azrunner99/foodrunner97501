@@ -49,7 +49,6 @@ class SqfliteNPSDatabase implements DatabaseInterface {
     await db.execute('''
       CREATE TABLE nps_feedback (
         id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-        -- server_id INTEGER NOT NULL, -- DELETED: Unused sqflite schema - Drift is source of truth
         score INTEGER NOT NULL,
         comment TEXT,
         customer_name TEXT,
@@ -64,7 +63,6 @@ class SqfliteNPSDatabase implements DatabaseInterface {
     await db.execute('''
       CREATE TABLE nps_monthly_reports (
         id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-        -- server_id INTEGER NOT NULL, -- DELETED: Unused sqflite schema - Drift is source of truth
         month_year TEXT NOT NULL,
         all_time_nps_percentage REAL,
         three_month_nps_percentage REAL,
@@ -90,7 +88,6 @@ class SqfliteNPSDatabase implements DatabaseInterface {
     await db.execute('''
       CREATE TABLE nps_calculation_log (
         id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-        -- server_id INTEGER NOT NULL, -- DELETED: Unused sqflite schema - Drift is source of truth
         calculation_date TEXT NOT NULL,
         month_year TEXT NOT NULL,
         total_responses INTEGER NOT NULL,
@@ -108,7 +105,6 @@ class SqfliteNPSDatabase implements DatabaseInterface {
     await db.execute('''
       CREATE TABLE performance_trends (
         id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-        -- server_id INTEGER NOT NULL, -- DELETED: Unused sqflite schema - Drift is source of truth
         trend_direction TEXT NOT NULL,
         trend_slope REAL NOT NULL,
         trend_strength REAL NOT NULL,
@@ -126,7 +122,6 @@ class SqfliteNPSDatabase implements DatabaseInterface {
     await db.execute('''
       CREATE TABLE performance_insights (
         id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-        -- server_id INTEGER NOT NULL, -- DELETED: Unused sqflite schema - Drift is source of truth
         insight_type TEXT NOT NULL,
         title TEXT NOT NULL,
         description TEXT NOT NULL,
@@ -188,7 +183,6 @@ class SqfliteNPSDatabase implements DatabaseInterface {
         await db.execute('''
           CREATE TABLE nps_monthly_reports (
             id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-            -- server_id INTEGER NOT NULL, -- DELETED: Unused sqflite schema - Drift is source of truth
             month_year TEXT NOT NULL,
             all_time_nps_percentage REAL,
             three_month_nps_percentage REAL,
@@ -230,7 +224,6 @@ class SqfliteNPSDatabase implements DatabaseInterface {
         await db.execute('''
           CREATE TABLE performance_trends (
             id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-            -- server_id INTEGER NOT NULL, -- DELETED: Unused sqflite schema - Drift is source of truth
             trend_direction TEXT NOT NULL,
             trend_slope REAL NOT NULL,
             trend_strength REAL NOT NULL,
@@ -248,7 +241,6 @@ class SqfliteNPSDatabase implements DatabaseInterface {
         await db.execute('''
           CREATE TABLE performance_insights (
             id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-            -- server_id INTEGER NOT NULL, -- DELETED: Unused sqflite schema - Drift is source of truth
             insight_type TEXT NOT NULL,
             title TEXT NOT NULL,
             description TEXT NOT NULL,
