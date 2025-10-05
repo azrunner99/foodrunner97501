@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import '../app_state.dart';
 import 'milestone_detection_service.dart';
+import '../core/types.dart';
 
 /// Behavioral pattern analysis for deep server personalization
 enum BehaviorPattern {
@@ -39,7 +40,7 @@ class ServerPersonality {
   final double socialLevel; // 0.0-1.0
   final double achievementDrive; // 0.0-1.0
   final List<String> preferredShifts; // ['lunch', 'dinner', 'late']
-  final Map<String, int> rivalryLevels; // serverId -> intensity (1-10)
+  final Map<ServerId, int> rivalryLevels; // serverId -> intensity (1-10)
   final DateTime lastAnalysis;
   final int analysisVersion;
 

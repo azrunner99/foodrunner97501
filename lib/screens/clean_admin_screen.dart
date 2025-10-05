@@ -17,7 +17,6 @@ import 'smart_scheduling_screen.dart';
 // import 'comprehensive_analytics_dashboard.dart'; // Commented out - file removed
 import '../utils/log.dart';
 import 'phase4_runner.dart';
-import 'phase5_runner.dart';
 import 'phase6_runner.dart';
 import '../debug/nps_database_inspector.dart';
 import '../debug/nps_database_schema_repair.dart';
@@ -322,6 +321,46 @@ class _CleanAdminScreenState extends State<CleanAdminScreen> {
                     },
                   ),
                   _buildAdminTile(
+                    icon: Icons.lock,
+                    title: 'Change Admin PIN',
+                    subtitle: 'Update the administrator PIN',
+                    enabled: true,
+                    onTap: () => _showChangePinDialog(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              _buildExpandableSectionCard(
+                'Developer Tools',
+                Icons.developer_mode,
+                [
+                  _buildAdminTile(
+                    icon: Icons.check_circle_outline,
+                    title: 'System Validation',
+                    subtitle: 'Comprehensive testing and validation of server ID systems',
+                    enabled: true,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const Phase4Runner()),
+                      );
+                    },
+                  ),
+                  _buildAdminTile(
+                    icon: Icons.analytics,
+                    title: 'Widget Analysis',
+                    subtitle: 'Audit NPS widget calculations and data integrity',
+                    enabled: true,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const Phase6Runner()),
+                      );
+                    },
+                  ),
+                  _buildAdminTile(
                     icon: Icons.transform,
                     title: 'ID Migration',
                     subtitle: 'Migrate server IDs from integer to string format',
@@ -335,47 +374,8 @@ class _CleanAdminScreenState extends State<CleanAdminScreen> {
                     },
                   ),
                   _buildAdminTile(
-                    icon: Icons.check_circle_outline,
-                    title: 'Phase 4: System Validation',
-                    subtitle: 'Comprehensive testing and validation of server ID standardization',
-                    enabled: true,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const Phase4Runner()),
-                      );
-                    },
-                  ),
-                  _buildAdminTile(
-                    icon: Icons.sync_alt,
-                    title: 'Phase 5: NPS Migration',
-                    subtitle: 'Convert NPS database integer IDs to string format',
-                    enabled: true,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const Phase5Runner()),
-                      );
-                    },
-                  ),
-                  _buildAdminTile(
-                    icon: Icons.analytics,
-                    title: 'Phase 6: Widget Analysis',
-                    subtitle: 'Audit NPS widget calculations and data integrity',
-                    enabled: true,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const Phase6Runner()),
-                      );
-                    },
-                  ),
-                  _buildAdminTile(
                     icon: Icons.search,
-                    title: 'Emergency: Check NPS Database',
+                    title: 'Check NPS Database',
                     subtitle: 'Inspect NPS database content and structure',
                     enabled: true,
                     onTap: () async {
@@ -413,8 +413,8 @@ class _CleanAdminScreenState extends State<CleanAdminScreen> {
                   ),
                   _buildAdminTile(
                     icon: Icons.build,
-                    title: 'EMERGENCY: Fix NPS Database Schema',
-                    subtitle: 'REPAIR DATABASE SO NPS DATA CAN SAVE - RUN THIS NOW!',
+                    title: 'Fix NPS Database Schema',
+                    subtitle: 'Repair database schema if NPS data cannot save',
                     enabled: true,
                     onTap: () async {
                       // Show loading dialog
@@ -465,13 +465,6 @@ class _CleanAdminScreenState extends State<CleanAdminScreen> {
                         }
                       }
                     },
-                  ),
-                  _buildAdminTile(
-                    icon: Icons.lock,
-                    title: 'Change Admin PIN',
-                    subtitle: 'Update the administrator PIN',
-                    enabled: true,
-                    onTap: () => _showChangePinDialog(),
                   ),
                 ],
               ),

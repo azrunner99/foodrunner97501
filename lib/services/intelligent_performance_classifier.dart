@@ -4,6 +4,7 @@ import '../models/performance_models.dart';
 import '../models/performance_system_models.dart';
 import '../utils/log.dart';
 import 'dart:math' as math;
+import '../core/types.dart';
 
 /// Intelligent Performance Classification Service
 /// Phase 2: Smart performance tiers and multi-dimensional scoring
@@ -34,7 +35,7 @@ class IntelligentPerformanceClassifier {
   PerformanceClassification classifyServerPerformance({
     required List<NPSMonthlyReport> monthlyReports,
     required String serverName,
-    required int serverId,
+    required ServerId serverId,
     int? tenureMonths,
   }) {
     try {

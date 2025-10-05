@@ -17,8 +17,8 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
   List<Map<String, dynamic>> _serverNPSData = [];
   bool _isLoadingServerData = false;
   int? _selectedMonthKey;
-  String _sortBy = 'all_time_nps'; // Default sort by all-time NPS
-  bool _sortDescending = true; // Default to highest first
+  String _sortBy = 'server_name'; // Default sort by all-time NPS
+  bool _sortDescending = false; // Default to A-Z for names
   List<Map<String, dynamic>> _availableMonths = []; // Available months with data
   bool _isLoadingMonths = false;
 
@@ -173,10 +173,11 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
                               contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                         ),
                                         items: const [
-                              DropdownMenuItem(value: 'all_time_nps', child: Text('All-Time NPS')),
-                              DropdownMenuItem(value: 'three_month_nps', child: Text('3-Month NPS')),
-                              DropdownMenuItem(value: 'one_month_nps', child: Text('1-Month NPS')),
-                              DropdownMenuItem(value: 'check_average', child: Text('Check Average')),
+                      DropdownMenuItem(value: 'server_name', child: Text('Server Name')),
+                      DropdownMenuItem(value: 'all_time_nps', child: Text('All-Time NPS')),
+                      DropdownMenuItem(value: 'three_month_nps', child: Text('3-Month NPS')),
+                      DropdownMenuItem(value: 'one_month_nps', child: Text('1-Month NPS')),
+                      DropdownMenuItem(value: 'check_average', child: Text('All-Time Check Avg')),
                                         ],
                                         onChanged: (value) {
                                           if (value != null) {
@@ -384,7 +385,7 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
                                               flex: 2,
                                       child: Center(
                                               child: Text(
-                                          'Check Avg',
+                                          'All-Time Check Avg',
                                                 style: TextStyle(
                                                   fontWeight: FontWeight.bold,
                                             fontSize: 12,
@@ -592,6 +593,14 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
   void _sortServerData() {
     setState(() {
       _serverNPSData.sort((a, b) {
+        if (_sortBy == 'server_name') {
+          // String comparison for server names
+          final nameA = (a['server_name'] as String? ?? '').toLowerCase();
+          final nameB = (b['server_name'] as String? ?? '').toLowerCase();
+          return _sortDescending ? nameB.compareTo(nameA) : nameA.compareTo(nameB);
+        }
+        
+        // Numeric comparison for other fields
         double valueA = 0.0;
         double valueB = 0.0;
         

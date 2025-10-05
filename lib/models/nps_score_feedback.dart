@@ -2,11 +2,12 @@
 ///
 /// This model represents individual guest NPS responses with numerical scores (0-10).
 library;
+import '../core/types.dart';
 
 /// Represents an individual NPS feedback entry with numerical score
 class NPSScoreFeedback {
   final int? id;
-  final String serverId;
+  final ServerId serverId;
   final int score; // 0-10 scale
   final String? comment;
   final DateTime submissionDate;

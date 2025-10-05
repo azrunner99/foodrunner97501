@@ -4,6 +4,7 @@ import '../models/server.dart';
 import '../models/nps_feedback.dart';
 import '../utils/log.dart';
 import '../services/query_cache_service.dart';
+import '../core/types.dart';
 
 /// Adapter class that provides NPSDatabase-compatible methods
 /// using the platform-agnostic DatabaseInterface
@@ -80,7 +81,7 @@ class NPSDatabaseAdapter {
   }
 
   /// Update an existing server
-  Future<int> updateServer(String id, Map<String, dynamic> serverData) async {
+  Future<int> updateServer(ServerId id, Map<String, dynamic> serverData) async {
     try {
       return await _db.updateTable('servers', serverData, 'id = ?', [id]);
     } catch (e) {
@@ -90,7 +91,7 @@ class NPSDatabaseAdapter {
   }
 
   /// Delete a server
-  Future<int> deleteServer(String id) async {
+  Future<int> deleteServer(ServerId id) async {
     try {
       return await _db.deleteFrom('servers', 'id = ?', [id]);
     } catch (e) {
@@ -100,7 +101,7 @@ class NPSDatabaseAdapter {
   }
 
   /// Get feedback for a specific server
-  Future<List<Map<String, dynamic>>> getFeedbackForServer(String serverId) async {
+  Future<List<Map<String, dynamic>>> getFeedbackForServer(ServerId serverId) async {
     try {
       return await _db.queryTable(
         'nps_feedback',
@@ -116,7 +117,7 @@ class NPSDatabaseAdapter {
 
   /// Get feedback for a specific server within a date range
   Future<List<Map<String, dynamic>>> getFeedbackForServerInRange(
-      String serverId, {DateTime? startDate, DateTime? endDate}) async {
+      ServerId serverId, {DateTime? startDate, DateTime? endDate}) async {
     try {
       String whereClause = 'server_id = ?';
       List<dynamic> whereArgs = [serverId];
@@ -270,7 +271,7 @@ class NPSDatabaseAdapter {
   }
 
   /// Get monthly report for a server (with caching)
-  Future<Map<String, dynamic>?> getMonthlyReport(String serverId, int reportMonth) async {
+  Future<Map<String, dynamic>?> getMonthlyReport(ServerId serverId, int reportMonth) async {
     try {
       final cacheKey = CacheKeys.monthlyReport(serverId, reportMonth);
       

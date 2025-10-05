@@ -86,15 +86,16 @@ class HistoricalNPSAggregationService {
       d('[HistoricalNPSAggregationService] Found ${allReports.length} total monthly reports');
       print('🔍 [HistoricalNPSAggregationService] Found ${allReports.length} total monthly reports');
       
-      // Filter out old server ID format (numeric IDs like "1", "2") to avoid duplicates
-      // Keep only reports with complex server IDs (the new format)
+      // Filter out ALL integer server IDs to avoid orphaned records without proper names
+      // Keep only string format IDs that have proper server name mappings
       final filteredReports = allReports.where((report) {
         final serverId = report['server_id'].toString();
-        final isOldFormat = RegExp(r'^\d+$').hasMatch(serverId) && serverId.length <= 2;
-        if (isOldFormat) {
-          print('🔍 [HistoricalNPSAggregationService] Filtering out old format server_id: $serverId');
+        // Filter out ALL numeric IDs (both single and multi-digit)
+        final isNumericId = RegExp(r'^\d+$').hasMatch(serverId);
+        if (isNumericId) {
+          print('🔍 [HistoricalNPSAggregationService] Filtering out numeric server_id: $serverId');
         }
-        return !isOldFormat; // Keep only non-old format IDs
+        return !isNumericId; // Keep only string IDs with proper name mappings
       }).toList();
       
       print('🔍 [HistoricalNPSAggregationService] After filtering: ${filteredReports.length} reports (removed ${allReports.length - filteredReports.length} old format reports)');
@@ -373,7 +374,34 @@ class HistoricalNPSAggregationService {
         }
       }
       
-      // Strategy 3: Use a more descriptive fallback
+      // Strategy 3: Try database lookup using NPSDatabaseAdapter approach
+      try {
+        // Try to find server by original_id first (matches admin-entered data), then by id
+        var servers = await _database.queryTable(
+          'servers',
+          where: 'original_id = ?',
+          whereArgs: [serverId],
+        );
+
+        // If not found by original_id, try by id (for backward compatibility)
+        if (servers.isEmpty) {
+          servers = await _database.queryTable(
+            'servers',
+            where: 'id = ?',
+            whereArgs: [serverId],
+          );
+        }
+        
+        if (servers.isNotEmpty) {
+          final name = servers.first['name'] as String;
+          d('[HistoricalNPSAggregationService] Found server name via database lookup: $name for ID $serverId');
+          return name;
+        }
+      } catch (e) {
+        d('[HistoricalNPSAggregationService] Database lookup failed: $e');
+      }
+      
+      // Strategy 4: Use a more descriptive fallback
       return 'Server $serverId (Name not found)';
     } catch (e) {
       d('[HistoricalNPSAggregationService] Comprehensive lookup error: $e');

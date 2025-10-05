@@ -3,6 +3,7 @@
 /// This model represents pre-calculated monthly NPS reports that aggregate
 /// feedback data and provide performance metrics for each server.
 library;
+import '../core/types.dart';
 
 /// Represents feedback counts for different time periods
 class FeedbackCounts {
@@ -55,7 +56,7 @@ class FeedbackCounts {
 /// Represents a complete monthly NPS report for a server
 class NPSMonthlyReport {
   final int? id;
-  final String serverId;
+  final ServerId serverId;
   final int reportMonth; // YYYYMM format
   final int reportYear;
   final double? allTimeNpsPercentage;

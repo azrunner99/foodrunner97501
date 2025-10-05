@@ -949,9 +949,9 @@ class NpsMonthlyReports extends Table
       $customConstraints: 'NOT NULL PRIMARY KEY AUTOINCREMENT');
   static const VerificationMeta _serverIdMeta =
       const VerificationMeta('serverId');
-  late final GeneratedColumn<int> serverId = GeneratedColumn<int>(
+  late final GeneratedColumn<String> serverId = GeneratedColumn<String>(
       'server_id', aliasedName, false,
-      type: DriftSqlType.int,
+      type: DriftSqlType.string,
       requiredDuringInsert: true,
       $customConstraints: 'NOT NULL');
   static const VerificationMeta _reportMonthMeta =
@@ -1266,7 +1266,7 @@ class NpsMonthlyReports extends Table
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
       serverId: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}server_id'])!,
+          .read(DriftSqlType.string, data['${effectivePrefix}server_id'])!,
       reportMonth: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}report_month'])!,
       reportYear: attachedDatabase.typeMapping
@@ -1327,7 +1327,7 @@ class NpsMonthlyReports extends Table
 class NpsMonthlyReport extends DataClass
     implements Insertable<NpsMonthlyReport> {
   final int id;
-  final int serverId;
+  final String serverId;
   final int reportMonth;
   final int reportYear;
   final double? allTimeNpsPercentage;
@@ -1371,7 +1371,7 @@ class NpsMonthlyReport extends DataClass
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
-    map['server_id'] = Variable<int>(serverId);
+    map['server_id'] = Variable<String>(serverId);
     map['report_month'] = Variable<int>(reportMonth);
     map['report_year'] = Variable<int>(reportYear);
     if (!nullToAbsent || allTimeNpsPercentage != null) {
@@ -1485,7 +1485,7 @@ class NpsMonthlyReport extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return NpsMonthlyReport(
       id: serializer.fromJson<int>(json['id']),
-      serverId: serializer.fromJson<int>(json['server_id']),
+      serverId: serializer.fromJson<String>(json['server_id']),
       reportMonth: serializer.fromJson<int>(json['report_month']),
       reportYear: serializer.fromJson<int>(json['report_year']),
       allTimeNpsPercentage:
@@ -1522,7 +1522,7 @@ class NpsMonthlyReport extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
-      'server_id': serializer.toJson<int>(serverId),
+      'server_id': serializer.toJson<String>(serverId),
       'report_month': serializer.toJson<int>(reportMonth),
       'report_year': serializer.toJson<int>(reportYear),
       'all_time_nps_percentage':
@@ -1551,7 +1551,7 @@ class NpsMonthlyReport extends DataClass
 
   NpsMonthlyReport copyWith(
           {int? id,
-          int? serverId,
+          String? serverId,
           int? reportMonth,
           int? reportYear,
           Value<double?> allTimeNpsPercentage = const Value.absent(),
@@ -1754,7 +1754,7 @@ class NpsMonthlyReport extends DataClass
 
 class NpsMonthlyReportsCompanion extends UpdateCompanion<NpsMonthlyReport> {
   final Value<int> id;
-  final Value<int> serverId;
+  final Value<String> serverId;
   final Value<int> reportMonth;
   final Value<int> reportYear;
   final Value<double?> allTimeNpsPercentage;
@@ -1797,7 +1797,7 @@ class NpsMonthlyReportsCompanion extends UpdateCompanion<NpsMonthlyReport> {
   });
   NpsMonthlyReportsCompanion.insert({
     this.id = const Value.absent(),
-    required int serverId,
+    required String serverId,
     required int reportMonth,
     required int reportYear,
     this.allTimeNpsPercentage = const Value.absent(),
@@ -1822,7 +1822,7 @@ class NpsMonthlyReportsCompanion extends UpdateCompanion<NpsMonthlyReport> {
         dataAsOfDate = Value(dataAsOfDate);
   static Insertable<NpsMonthlyReport> custom({
     Expression<int>? id,
-    Expression<int>? serverId,
+    Expression<String>? serverId,
     Expression<int>? reportMonth,
     Expression<int>? reportYear,
     Expression<double>? allTimeNpsPercentage,
@@ -1877,7 +1877,7 @@ class NpsMonthlyReportsCompanion extends UpdateCompanion<NpsMonthlyReport> {
 
   NpsMonthlyReportsCompanion copyWith(
       {Value<int>? id,
-      Value<int>? serverId,
+      Value<String>? serverId,
       Value<int>? reportMonth,
       Value<int>? reportYear,
       Value<double?>? allTimeNpsPercentage,
@@ -1931,7 +1931,7 @@ class NpsMonthlyReportsCompanion extends UpdateCompanion<NpsMonthlyReport> {
       map['id'] = Variable<int>(id.value);
     }
     if (serverId.present) {
-      map['server_id'] = Variable<int>(serverId.value);
+      map['server_id'] = Variable<String>(serverId.value);
     }
     if (reportMonth.present) {
       map['report_month'] = Variable<int>(reportMonth.value);
@@ -2047,9 +2047,9 @@ class NpsCalculationLog extends Table
       $customConstraints: 'NOT NULL');
   static const VerificationMeta _serverIdMeta =
       const VerificationMeta('serverId');
-  late final GeneratedColumn<int> serverId = GeneratedColumn<int>(
+  late final GeneratedColumn<String> serverId = GeneratedColumn<String>(
       'server_id', aliasedName, true,
-      type: DriftSqlType.int,
+      type: DriftSqlType.string,
       requiredDuringInsert: false,
       $customConstraints: '');
   static const VerificationMeta _reportMonthMeta =
@@ -2200,7 +2200,7 @@ class NpsCalculationLog extends Table
       calculationType: attachedDatabase.typeMapping.read(
           DriftSqlType.string, data['${effectivePrefix}calculation_type'])!,
       serverId: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}server_id']),
+          .read(DriftSqlType.string, data['${effectivePrefix}server_id']),
       reportMonth: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}report_month']),
       calculationStart: attachedDatabase.typeMapping.read(
@@ -2234,7 +2234,7 @@ class NpsCalculationLogData extends DataClass
     implements Insertable<NpsCalculationLogData> {
   final int id;
   final String calculationType;
-  final int? serverId;
+  final String? serverId;
   final int? reportMonth;
   final String calculationStart;
   final String calculationEnd;
@@ -2259,7 +2259,7 @@ class NpsCalculationLogData extends DataClass
     map['id'] = Variable<int>(id);
     map['calculation_type'] = Variable<String>(calculationType);
     if (!nullToAbsent || serverId != null) {
-      map['server_id'] = Variable<int>(serverId);
+      map['server_id'] = Variable<String>(serverId);
     }
     if (!nullToAbsent || reportMonth != null) {
       map['report_month'] = Variable<int>(reportMonth);
@@ -2306,7 +2306,7 @@ class NpsCalculationLogData extends DataClass
     return NpsCalculationLogData(
       id: serializer.fromJson<int>(json['id']),
       calculationType: serializer.fromJson<String>(json['calculation_type']),
-      serverId: serializer.fromJson<int?>(json['server_id']),
+      serverId: serializer.fromJson<String?>(json['server_id']),
       reportMonth: serializer.fromJson<int?>(json['report_month']),
       calculationStart: serializer.fromJson<String>(json['calculation_start']),
       calculationEnd: serializer.fromJson<String>(json['calculation_end']),
@@ -2322,7 +2322,7 @@ class NpsCalculationLogData extends DataClass
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'calculation_type': serializer.toJson<String>(calculationType),
-      'server_id': serializer.toJson<int?>(serverId),
+      'server_id': serializer.toJson<String?>(serverId),
       'report_month': serializer.toJson<int?>(reportMonth),
       'calculation_start': serializer.toJson<String>(calculationStart),
       'calculation_end': serializer.toJson<String>(calculationEnd),
@@ -2336,7 +2336,7 @@ class NpsCalculationLogData extends DataClass
   NpsCalculationLogData copyWith(
           {int? id,
           String? calculationType,
-          Value<int?> serverId = const Value.absent(),
+          Value<String?> serverId = const Value.absent(),
           Value<int?> reportMonth = const Value.absent(),
           String? calculationStart,
           String? calculationEnd,
@@ -2432,7 +2432,7 @@ class NpsCalculationLogCompanion
     extends UpdateCompanion<NpsCalculationLogData> {
   final Value<int> id;
   final Value<String> calculationType;
-  final Value<int?> serverId;
+  final Value<String?> serverId;
   final Value<int?> reportMonth;
   final Value<String> calculationStart;
   final Value<String> calculationEnd;
@@ -2471,7 +2471,7 @@ class NpsCalculationLogCompanion
   static Insertable<NpsCalculationLogData> custom({
     Expression<int>? id,
     Expression<String>? calculationType,
-    Expression<int>? serverId,
+    Expression<String>? serverId,
     Expression<int>? reportMonth,
     Expression<String>? calculationStart,
     Expression<String>? calculationEnd,
@@ -2497,7 +2497,7 @@ class NpsCalculationLogCompanion
   NpsCalculationLogCompanion copyWith(
       {Value<int>? id,
       Value<String>? calculationType,
-      Value<int?>? serverId,
+      Value<String?>? serverId,
       Value<int?>? reportMonth,
       Value<String>? calculationStart,
       Value<String>? calculationEnd,
@@ -2529,7 +2529,7 @@ class NpsCalculationLogCompanion
       map['calculation_type'] = Variable<String>(calculationType.value);
     }
     if (serverId.present) {
-      map['server_id'] = Variable<int>(serverId.value);
+      map['server_id'] = Variable<String>(serverId.value);
     }
     if (reportMonth.present) {
       map['report_month'] = Variable<int>(reportMonth.value);
@@ -3079,7 +3079,7 @@ typedef $NpsFeedbackProcessedTableManager = ProcessedTableManager<
 typedef $NpsMonthlyReportsCreateCompanionBuilder = NpsMonthlyReportsCompanion
     Function({
   Value<int> id,
-  required int serverId,
+  required String serverId,
   required int reportMonth,
   required int reportYear,
   Value<double?> allTimeNpsPercentage,
@@ -3102,7 +3102,7 @@ typedef $NpsMonthlyReportsCreateCompanionBuilder = NpsMonthlyReportsCompanion
 typedef $NpsMonthlyReportsUpdateCompanionBuilder = NpsMonthlyReportsCompanion
     Function({
   Value<int> id,
-  Value<int> serverId,
+  Value<String> serverId,
   Value<int> reportMonth,
   Value<int> reportYear,
   Value<double?> allTimeNpsPercentage,
@@ -3135,7 +3135,7 @@ class $NpsMonthlyReportsFilterComposer
   ColumnFilters<int> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<int> get serverId => $composableBuilder(
+  ColumnFilters<String> get serverId => $composableBuilder(
       column: $table.serverId, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<int> get reportMonth => $composableBuilder(
@@ -3218,7 +3218,7 @@ class $NpsMonthlyReportsOrderingComposer
   ColumnOrderings<int> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<int> get serverId => $composableBuilder(
+  ColumnOrderings<String> get serverId => $composableBuilder(
       column: $table.serverId, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<int> get reportMonth => $composableBuilder(
@@ -3303,7 +3303,7 @@ class $NpsMonthlyReportsAnnotationComposer
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumn<int> get serverId =>
+  GeneratedColumn<String> get serverId =>
       $composableBuilder(column: $table.serverId, builder: (column) => column);
 
   GeneratedColumn<int> get reportMonth => $composableBuilder(
@@ -3388,7 +3388,7 @@ class $NpsMonthlyReportsTableManager extends RootTableManager<
               $NpsMonthlyReportsAnnotationComposer($db: db, $table: table),
           updateCompanionCallback: ({
             Value<int> id = const Value.absent(),
-            Value<int> serverId = const Value.absent(),
+            Value<String> serverId = const Value.absent(),
             Value<int> reportMonth = const Value.absent(),
             Value<int> reportYear = const Value.absent(),
             Value<double?> allTimeNpsPercentage = const Value.absent(),
@@ -3432,7 +3432,7 @@ class $NpsMonthlyReportsTableManager extends RootTableManager<
           ),
           createCompanionCallback: ({
             Value<int> id = const Value.absent(),
-            required int serverId,
+            required String serverId,
             required int reportMonth,
             required int reportYear,
             Value<double?> allTimeNpsPercentage = const Value.absent(),
@@ -3500,7 +3500,7 @@ typedef $NpsCalculationLogCreateCompanionBuilder = NpsCalculationLogCompanion
     Function({
   Value<int> id,
   required String calculationType,
-  Value<int?> serverId,
+  Value<String?> serverId,
   Value<int?> reportMonth,
   required String calculationStart,
   required String calculationEnd,
@@ -3513,7 +3513,7 @@ typedef $NpsCalculationLogUpdateCompanionBuilder = NpsCalculationLogCompanion
     Function({
   Value<int> id,
   Value<String> calculationType,
-  Value<int?> serverId,
+  Value<String?> serverId,
   Value<int?> reportMonth,
   Value<String> calculationStart,
   Value<String> calculationEnd,
@@ -3539,7 +3539,7 @@ class $NpsCalculationLogFilterComposer
       column: $table.calculationType,
       builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<int> get serverId => $composableBuilder(
+  ColumnFilters<String> get serverId => $composableBuilder(
       column: $table.serverId, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<int> get reportMonth => $composableBuilder(
@@ -3583,7 +3583,7 @@ class $NpsCalculationLogOrderingComposer
       column: $table.calculationType,
       builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<int> get serverId => $composableBuilder(
+  ColumnOrderings<String> get serverId => $composableBuilder(
       column: $table.serverId, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<int> get reportMonth => $composableBuilder(
@@ -3627,7 +3627,7 @@ class $NpsCalculationLogAnnotationComposer
   GeneratedColumn<String> get calculationType => $composableBuilder(
       column: $table.calculationType, builder: (column) => column);
 
-  GeneratedColumn<int> get serverId =>
+  GeneratedColumn<String> get serverId =>
       $composableBuilder(column: $table.serverId, builder: (column) => column);
 
   GeneratedColumn<int> get reportMonth => $composableBuilder(
@@ -3681,7 +3681,7 @@ class $NpsCalculationLogTableManager extends RootTableManager<
           updateCompanionCallback: ({
             Value<int> id = const Value.absent(),
             Value<String> calculationType = const Value.absent(),
-            Value<int?> serverId = const Value.absent(),
+            Value<String?> serverId = const Value.absent(),
             Value<int?> reportMonth = const Value.absent(),
             Value<String> calculationStart = const Value.absent(),
             Value<String> calculationEnd = const Value.absent(),
@@ -3705,7 +3705,7 @@ class $NpsCalculationLogTableManager extends RootTableManager<
           createCompanionCallback: ({
             Value<int> id = const Value.absent(),
             required String calculationType,
-            Value<int?> serverId = const Value.absent(),
+            Value<String?> serverId = const Value.absent(),
             Value<int?> reportMonth = const Value.absent(),
             required String calculationStart,
             required String calculationEnd,

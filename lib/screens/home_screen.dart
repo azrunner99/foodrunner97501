@@ -237,39 +237,6 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
           ),
-          // Phase 1 Demo Button (temporary for testing)
-          IconButton(
-            tooltip: 'Phase 1 Demo',
-            icon: const Icon(Icons.engineering, color: Colors.blue),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const Phase1Runner()),
-              );
-            },
-          ),
-          // Phase 2 Migration Button (temporary for testing)
-          IconButton(
-            tooltip: 'Phase 2 Migration',
-            icon: const Icon(Icons.storage, color: Colors.green),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const Phase2Runner()),
-              );
-            },
-          ),
-          // Phase 3 Updates Button (temporary for testing)
-          IconButton(
-            tooltip: 'Phase 3 Updates',
-            icon: const Icon(Icons.widgets, color: Colors.purple),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const Phase3Runner()),
-              );
-            },
-          ),
           // Boost Mode Icon Button (for managers)
           IconButton(
             tooltip: 'Boost Mode',

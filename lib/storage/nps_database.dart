@@ -3,6 +3,7 @@ import 'package:sqflite/sqflite.dart';
 import '../utils/log.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
+import '../core/types.dart';
 
 /// SQLite database manager for the Server NPS system
 ///
@@ -217,7 +218,7 @@ class NPSDatabase {
   }
 
   /// Get a specific server by ID
-  Future<Map<String, dynamic>?> getServerById(int serverId) async {
+  Future<Map<String, dynamic>?> getServerById(ServerId serverId) async {
     try {
       final db = await database;
       final servers =
@@ -230,7 +231,7 @@ class NPSDatabase {
   }
 
   /// Update a server in the database
-  Future<int> updateServer(int serverId, Map<String, dynamic> server) async {
+  Future<int> updateServer(ServerId serverId, Map<String, dynamic> server) async {
     try {
       final db = await database;
       server['updated_at'] = DateTime.now().toIso8601String();
@@ -246,7 +247,7 @@ class NPSDatabase {
   }
 
   /// Delete a server from the database (soft delete by setting active = 0)
-  Future<int> deleteServer(int serverId) async {
+  Future<int> deleteServer(ServerId serverId) async {
     try {
       final db = await database;
       final rowsAffected = await db.update(
@@ -281,7 +282,7 @@ class NPSDatabase {
 
   /// Get feedback for a specific server
   Future<List<Map<String, dynamic>>> getFeedbackForServer(
-    int serverId, {
+    ServerId serverId, {
     DateTime? startDate,
     DateTime? endDate,
   }) async {
@@ -378,7 +379,7 @@ class NPSDatabase {
 
   /// Get monthly report for a specific server and month
   Future<Map<String, dynamic>?> getMonthlyReport(
-      int serverId, int reportMonth) async {
+      ServerId serverId, int reportMonth) async {
     try {
       final db = await database;
       final reports = await db.query(

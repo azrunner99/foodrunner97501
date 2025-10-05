@@ -5,8 +5,10 @@ import '../models/monthly_report.dart' hide PerformanceTrend;
 import '../models/historical_nps_data.dart';
 import '../services/intelligent_performance_classifier.dart';
 import '../storage/database_factory.dart';
+import '../storage/nps_database_adapter.dart';
 import '../utils/log.dart';
 import '../models/performance_models.dart' as performance_models;
+import '../core/types.dart';
 import '../app_state.dart';
 import '../services/application_update_service.dart';
 
@@ -35,7 +37,7 @@ class _ServerNPSStatusWidgetState extends State<ServerNPSStatusWidget> {
     try {
       d('[ServerNPSStatusWidget] Starting to load data...');
       
-      // Load monthly reports
+      // Load ALL monthly reports from database (to get comprehensive server status)
       final db = DatabaseFactory.instance;
       final dbType = DatabaseFactory.implementationType;
       
@@ -55,14 +57,15 @@ class _ServerNPSStatusWidgetState extends State<ServerNPSStatusWidget> {
       
       final allReports = reportMaps.map((map) => NPSMonthlyReport.fromMap(map)).toList();
       
-      // Filter out old server ID format (numeric IDs like "1", "2") to avoid duplicates
+      // Filter out integer server IDs to avoid "Server #" entries (keep only string IDs with proper names)
       final reports = allReports.where((report) {
         final serverId = report.serverId.toString();
-        final isOldFormat = RegExp(r'^\d+$').hasMatch(serverId) && serverId.length <= 2;
-        if (isOldFormat) {
-          d('[ServerNPSStatusWidget] Filtering out old format server_id: $serverId');
+        // Filter out ALL numeric IDs (both single and multi-digit) - these show as "Server #"
+        final isNumericId = RegExp(r'^\d+$').hasMatch(serverId);
+        if (isNumericId) {
+          d('[ServerNPSStatusWidget] Filtering out numeric server_id: $serverId (would show as Server #)');
         }
-        return !isOldFormat; // Keep only non-old format IDs
+        return !isNumericId; // Keep only string IDs with proper name mappings
       }).toList();
       
       d('[ServerNPSStatusWidget] After filtering: ${reports.length} reports (removed ${allReports.length - reports.length} old format reports)');
@@ -126,7 +129,7 @@ class _ServerNPSStatusWidgetState extends State<ServerNPSStatusWidget> {
         final classification = classifier.classifyServerPerformance(
           monthlyReports: monthlyReports,
           serverName: data.serverName,
-          serverId: int.tryParse(data.serverId) ?? 0,
+          serverId: data.serverId, // Already a ServerId (String)
         );
         classifications[data.serverId] = classification;
       }

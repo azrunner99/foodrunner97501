@@ -11,6 +11,7 @@ import '../models/nps_score_feedback.dart';
 import '../models/monthly_report.dart';
 import '../storage/nps_database.dart';
 import '../storage/database_factory.dart';
+import '../storage/nps_database_adapter.dart';
 import 'secured_nps_widgets.dart';
 import '../screens/nps_benchmarking_screen.dart';
 import '../services/historical_nps_aggregation_service.dart';
@@ -229,44 +230,70 @@ class _EnhancedNPSAnalyticsWidgetState
     try {
       d('[EnhancedNPSAnalyticsWidget] Starting to load monthly reports...');
       
-      // Use the database factory to get the correct database instance
+      // Use the same data source as the working Server NPS Scorecard
       final db = DatabaseFactory.instance;
-      d('[EnhancedNPSAnalyticsWidget] Database factory type: ${DatabaseFactory.implementationType}');
+      final adapter = NPSDatabaseAdapter(db);
       
-      List<Map<String, dynamic>> reportMaps;
+      // Get current month data (like the scorecard does)
+      final now = DateTime.now();
+      final currentMonth = now.month;
+      final currentYear = now.year;
       
-      // Handle different database schemas
-      final dbType = DatabaseFactory.implementationType;
-      d('[EnhancedNPSAnalyticsWidget] Detected database type: $dbType');
+      d('[EnhancedNPSAnalyticsWidget] Loading data for current month: $currentMonth/$currentYear');
       
-      if (dbType.contains('Sqflite')) {
-        // Sqflite uses month_year column (YYYYMM format)
-        d('[EnhancedNPSAnalyticsWidget] Using Sqflite schema with month_year column');
-        reportMaps = await db.queryTable(
-          'nps_monthly_reports',
-          orderBy: 'month_year DESC',
-        );
-      } else {
-        // Drift uses separate report_month and report_year columns
-        d('[EnhancedNPSAnalyticsWidget] Using Drift schema with report_month and report_year columns');
-        reportMaps = await db.queryTable(
-        'nps_monthly_reports',
-        orderBy: 'report_year DESC, report_month DESC',
-      );
+      // Use the same method as the scorecard
+      final serverData = await adapter.getServerNPSDataForMonth(currentMonth, currentYear);
+      
+      d('[EnhancedNPSAnalyticsWidget] Retrieved ${serverData.length} server records from scorecard data source');
+      
+      // Convert server data to NPSMonthlyReport format for compatibility
+      final allReports = <NPSMonthlyReport>[];
+      for (final data in serverData) {
+        try {
+          final report = NPSMonthlyReport(
+            serverId: data['server_id']?.toString() ?? '',
+            reportMonth: currentMonth,
+            reportYear: currentYear,
+            allTimeNpsPercentage: (data['all_time_nps_percentage'] as num?)?.toDouble(),
+            threeMonthNpsPercentage: (data['three_month_nps_percentage'] as num?)?.toDouble(),
+            oneMonthNpsPercentage: (data['one_month_nps_percentage'] as num?)?.toDouble(),
+            allTimeSales: (data['all_time_sales'] as num?)?.toDouble() ?? 0.0,
+            allTimeTableCount: (data['all_time_table_count'] as num?)?.toInt() ?? 0,
+            monthFeedback: FeedbackCounts(
+              yes: (data['month_feedback_yes'] as num?)?.toInt() ?? 0,
+              maybe: (data['month_feedback_maybe'] as num?)?.toInt() ?? 0,
+              no: (data['month_feedback_no'] as num?)?.toInt() ?? 0,
+            ),
+            threeMonthFeedback: FeedbackCounts(
+              yes: (data['three_month_feedback_yes'] as num?)?.toInt() ?? 0,
+              maybe: (data['three_month_feedback_maybe'] as num?)?.toInt() ?? 0,
+              no: (data['three_month_feedback_no'] as num?)?.toInt() ?? 0,
+            ),
+            allTimeFeedback: FeedbackCounts(
+              yes: (data['all_time_feedback_yes'] as num?)?.toInt() ?? 0,
+              maybe: (data['all_time_feedback_maybe'] as num?)?.toInt() ?? 0,
+              no: (data['all_time_feedback_no'] as num?)?.toInt() ?? 0,
+            ),
+            generatedAt: DateTime.now(),
+            dataAsOfDate: DateTime.now(),
+          );
+          allReports.add(report);
+          d('[EnhancedNPSAnalyticsWidget] Added report for server: ${data['server_name']} (ID: ${data['server_id']})');
+        } catch (e) {
+          d('[EnhancedNPSAnalyticsWidget] Error converting server data to report format: $e');
+        }
       }
       
-      d('[EnhancedNPSAnalyticsWidget] Loaded ${reportMaps.length} monthly reports');
-      
-      if (reportMaps.isNotEmpty) {
-        d('[EnhancedNPSAnalyticsWidget] First report: ${reportMaps.first}');
-      }
-      
-      final reports = reportMaps.map((map) => NPSMonthlyReport.fromMap(map)).toList();
+      d('[EnhancedNPSAnalyticsWidget] Converted ${allReports.length} server records to NPSMonthlyReport format');
       
       // Debug: Log the actual reports to see what we're getting
-      d('[EnhancedNPSAnalyticsWidget] Loaded ${reports.length} total reports');
+      d('[EnhancedNPSAnalyticsWidget] Loaded ${allReports.length} total reports from scorecard data source');
       
-      return reports;
+      if (allReports.isNotEmpty) {
+        d('[EnhancedNPSAnalyticsWidget] First report: Server ${allReports.first.serverId}, NPS: ${allReports.first.allTimeNpsPercentage}%');
+      }
+      
+      return allReports;
     } catch (e) {
   d('[EnhancedNPSAnalyticsWidget] Error loading monthly reports: $e');
       rethrow;

@@ -3,10 +3,11 @@
 /// These models represent the structure of data used in the NPS tracking system,
 /// including servers, feedback, and monthly reports.
 library;
+import '../core/types.dart';
 
 /// Represents a server in the NPS system
 class NPSServer {
-  final String id; // Standardized to non-nullable String
+  final ServerId id; // Standardized to non-nullable String
   final String name;
   final String? originalId; // Original server ID from main app
   final DateTime hireDate;

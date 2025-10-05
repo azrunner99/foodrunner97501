@@ -4,6 +4,7 @@ import '../providers/nps_provider.dart';
 import '../models/monthly_report.dart' hide PerformanceTrend;
 import '../models/historical_nps_data.dart';
 import '../storage/database_factory.dart';
+import '../storage/nps_database_adapter.dart';
 import '../utils/log.dart';
 import '../app_state.dart';
 import '../services/application_update_service.dart';
@@ -33,9 +34,12 @@ class _ImpactAnalyticsWidgetState extends State<ImpactAnalyticsWidget> {
     try {
       d('[ImpactAnalyticsWidget] Starting to load monthly reports...');
       
-      // Use the database factory to get the correct database instance
+      // Use the same data source as the working Server NPS Scorecard
       final db = DatabaseFactory.instance;
-      d('[ImpactAnalyticsWidget] Database factory type: ${DatabaseFactory.implementationType}');
+      final adapter = NPSDatabaseAdapter(db);
+      
+      // Load ALL monthly reports from database (not just one month)
+      d('[ImpactAnalyticsWidget] Loading ALL monthly reports from database...');
       
       List<Map<String, dynamic>> reportMaps;
       
@@ -54,25 +58,39 @@ class _ImpactAnalyticsWidgetState extends State<ImpactAnalyticsWidget> {
         // Drift uses separate report_month and report_year columns
         d('[ImpactAnalyticsWidget] Using Drift schema with report_month and report_year columns');
         reportMaps = await db.queryTable(
-        'nps_monthly_reports',
-        orderBy: 'report_year DESC, report_month DESC',
-      );
+          'nps_monthly_reports',
+          orderBy: 'report_year DESC, report_month DESC',
+        );
       }
       
       d('[ImpactAnalyticsWidget] Retrieved ${reportMaps.length} monthly reports from database');
       
+      // Debug: Show what months we have data for
+      final monthsFound = <String>{};
+      for (final report in reportMaps) {
+        if (dbType.contains('Sqflite')) {
+          final monthYear = report['month_year']?.toString() ?? '';
+          monthsFound.add(monthYear);
+        } else {
+          final month = report['report_month']?.toString() ?? '';
+          final year = report['report_year']?.toString() ?? '';
+          monthsFound.add('$year-$month');
+        }
+      }
+      d('[ImpactAnalyticsWidget] Available months: ${monthsFound.toList()..sort()}');
+      
       // Convert to NPSMonthlyReport objects
       final allReports = reportMaps.map((map) => NPSMonthlyReport.fromMap(map)).toList();
       
-      // Filter out old server ID format (numeric IDs like "1", "2") to avoid duplicates
-      // Keep only reports with complex server IDs (the new format)
+      // Filter out integer server IDs to avoid "Server #" entries (keep only string IDs with proper names)
       final filteredReports = allReports.where((report) {
         final serverId = report.serverId.toString();
-        final isOldFormat = RegExp(r'^\d+$').hasMatch(serverId) && serverId.length <= 2;
-        if (isOldFormat) {
-          d('[ImpactAnalyticsWidget] Filtering out old format server_id: $serverId');
+        // Filter out ALL numeric IDs (both single and multi-digit) - these show as "Server #"
+        final isNumericId = RegExp(r'^\d+$').hasMatch(serverId);
+        if (isNumericId) {
+          d('[ImpactAnalyticsWidget] Filtering out numeric server_id: $serverId (would show as Server #)');
         }
-        return !isOldFormat; // Keep only non-old format IDs
+        return !isNumericId; // Keep only string IDs with proper name mappings
       }).toList();
       
       d('[ImpactAnalyticsWidget] After filtering: ${filteredReports.length} reports (removed ${allReports.length - filteredReports.length} old format reports)');

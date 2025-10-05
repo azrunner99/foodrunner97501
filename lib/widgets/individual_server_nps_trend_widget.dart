@@ -6,6 +6,7 @@ import '../models/historical_nps_data.dart';
 // import '../services/intelligent_performance_classifier.dart';
 import '../services/advanced_trend_analysis_service.dart' as trend_analysis;
 import '../storage/database_factory.dart';
+import '../storage/nps_database_adapter.dart';
 import '../utils/log.dart';
 import '../app_state.dart';
 import '../services/application_update_service.dart';
@@ -39,10 +40,10 @@ class _IndividualServerNPSTrendWidgetState extends State<IndividualServerNPSTren
     try {
       d('[IndividualServerNPSTrendWidget] Loading monthly reports...');
       
-      // Load monthly reports
+      // Load ALL monthly reports from database (for trend analysis)
       final database = DatabaseFactory.instance;
       final isSqflite = database.runtimeType.toString().contains('Sqflite');
-      
+
       final results = await database.queryTable(
         'nps_monthly_reports',
         orderBy: isSqflite ? 'month_year DESC' : 'report_year DESC, report_month DESC',
@@ -50,14 +51,15 @@ class _IndividualServerNPSTrendWidgetState extends State<IndividualServerNPSTren
       
       final allReports = results.map((row) => NPSMonthlyReport.fromMap(row)).toList();
       
-      // Filter out old server ID format (numeric IDs like "1", "2") to avoid duplicates
+      // Filter out integer server IDs to avoid "Server #" entries (keep only string IDs with proper names)
       final reports = allReports.where((report) {
         final serverId = report.serverId.toString();
-        final isOldFormat = RegExp(r'^\d+$').hasMatch(serverId) && serverId.length <= 2;
-        if (isOldFormat) {
-          d('[IndividualServerNPSTrendWidget] Filtering out old format server_id: $serverId');
+        // Filter out ALL numeric IDs (both single and multi-digit) - these show as "Server #"
+        final isNumericId = RegExp(r'^\d+$').hasMatch(serverId);
+        if (isNumericId) {
+          d('[IndividualServerNPSTrendWidget] Filtering out numeric server_id: $serverId (would show as Server #)');
         }
-        return !isOldFormat; // Keep only non-old format IDs
+        return !isNumericId; // Keep only string IDs with proper name mappings
       }).toList();
       
       d('[IndividualServerNPSTrendWidget] After filtering: ${reports.length} reports (removed ${allReports.length - reports.length} old format reports)');

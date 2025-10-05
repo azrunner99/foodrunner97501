@@ -99,3 +99,4 @@ class UnifiedStorageService {
   Future<void> clearAllData() async { await _ensureInit(); _servers.clear(); _shifts.clear(); _profiles.clear(); _npsFeedback.clear(); _monthlyReports.clear(); _settings.clear(); _performanceData.clear(); _businessData.clear(); _stationAssignments.clear(); _tapLogs.clear(); _dayPlans.clear(); _assets.clear(); }
 }
 
+
