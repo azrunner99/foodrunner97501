@@ -70,7 +70,7 @@ class Phase5DiagnosticService {
           WHERE server_id GLOB '[0-9]*'
           AND LENGTH(server_id) < 10
           GROUP BY server_id
-          ORDER BY CAST(server_id AS INTEGER)
+          ORDER BY server_id
           LIMIT 10
         ''');
         

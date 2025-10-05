@@ -43,7 +43,7 @@ class DatabaseService {
     await db.execute('''
       CREATE TABLE feedback (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        server_id INTEGER NOT NULL,
+        -- server_id INTEGER NOT NULL, -- DELETED: Unused raw SQLite schema - Drift is source of truth
         type TEXT NOT NULL,
         submission_date TEXT NOT NULL,
         FOREIGN KEY (server_id) REFERENCES servers (id)
@@ -53,7 +53,7 @@ class DatabaseService {
     await db.execute('''
       CREATE TABLE monthly_reports (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        server_id INTEGER NOT NULL,
+        -- server_id INTEGER NOT NULL, -- DELETED: Unused raw SQLite schema - Drift is source of truth
         month TEXT NOT NULL,
         nps_score REAL NOT NULL,
         feedback_count INTEGER NOT NULL,
