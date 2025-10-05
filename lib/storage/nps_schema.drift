@@ -40,7 +40,7 @@ CREATE INDEX idx_feedback_type ON nps_feedback(feedback_type);
 -- Monthly reports table
 CREATE TABLE nps_monthly_reports (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    server_id INTEGER NOT NULL,
+    server_id TEXT NOT NULL,
     report_month INTEGER NOT NULL,
     report_year INTEGER NOT NULL,
     all_time_nps_percentage REAL,
@@ -73,7 +73,7 @@ CREATE INDEX idx_monthly_reports_server_month ON nps_monthly_reports(server_id, 
 CREATE TABLE nps_calculation_log (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     calculation_type TEXT NOT NULL,
-    server_id INTEGER,
+    server_id TEXT,
     report_month INTEGER,
     calculation_start TEXT NOT NULL,
     calculation_end TEXT NOT NULL,

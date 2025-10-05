@@ -27,7 +27,111 @@ class DriftNPSDatabase extends _$DriftNPSDatabase implements DatabaseInterface {
       DriftNPSDatabase._internal(drift_native.NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (Migrator m) async {
+      await m.createAll();
+    },
+    onUpgrade: (Migrator m, int from, int to) async {
+      if (from < 3) {
+        // Enable foreign keys for migration
+        await customStatement('PRAGMA foreign_keys=OFF');
+        
+        // Rebuild nps_monthly_reports with server_id TEXT
+        await customStatement('''
+          CREATE TABLE nps_monthly_reports_new (
+            id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            server_id TEXT NOT NULL,
+            report_month INTEGER NOT NULL,
+            report_year INTEGER NOT NULL,
+            all_time_nps_percentage REAL,
+            three_month_nps_percentage REAL,
+            one_month_nps_percentage REAL,
+            all_time_sales REAL DEFAULT 0.00,
+            all_time_table_count INTEGER DEFAULT 0,
+            month_feedback_yes INTEGER DEFAULT 0,
+            month_feedback_maybe INTEGER DEFAULT 0,
+            month_feedback_no INTEGER DEFAULT 0,
+            three_month_feedback_yes INTEGER DEFAULT 0,
+            three_month_feedback_maybe INTEGER DEFAULT 0,
+            three_month_feedback_no INTEGER DEFAULT 0,
+            all_time_feedback_yes INTEGER DEFAULT 0,
+            all_time_feedback_maybe INTEGER DEFAULT 0,
+            all_time_feedback_no INTEGER DEFAULT 0,
+            generated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            data_as_of_date DATE NOT NULL,
+            FOREIGN KEY (server_id) REFERENCES servers (id) ON DELETE RESTRICT,
+            UNIQUE(server_id, report_month)
+          )
+        ''');
+        
+        // Copy data with INTEGER to TEXT conversion
+        await customStatement('''
+          INSERT INTO nps_monthly_reports_new 
+          SELECT id, CAST(server_id AS TEXT), report_month, report_year,
+                 all_time_nps_percentage, three_month_nps_percentage, one_month_nps_percentage,
+                 all_time_sales, all_time_table_count, month_feedback_yes, month_feedback_maybe,
+                 month_feedback_no, three_month_feedback_yes, three_month_feedback_maybe,
+                 three_month_feedback_no, all_time_feedback_yes, all_time_feedback_maybe,
+                 all_time_feedback_no, generated_at, COALESCE(data_as_of_date, DATE('now'))
+          FROM nps_monthly_reports
+        ''');
+        
+        // Drop old table and rename new one
+        await customStatement('DROP TABLE nps_monthly_reports');
+        await customStatement('ALTER TABLE nps_monthly_reports_new RENAME TO nps_monthly_reports');
+        
+        // Recreate indexes for nps_monthly_reports
+        await customStatement('CREATE INDEX idx_monthly_reports_server_id ON nps_monthly_reports(server_id)');
+        await customStatement('CREATE INDEX idx_monthly_reports_month ON nps_monthly_reports(report_month)');
+        await customStatement('CREATE INDEX idx_monthly_reports_year ON nps_monthly_reports(report_year)');
+        await customStatement('CREATE INDEX idx_monthly_reports_server_month ON nps_monthly_reports(server_id, report_month)');
+        
+        // Rebuild nps_calculation_log with server_id TEXT NULL
+        await customStatement('''
+          CREATE TABLE nps_calculation_log_new (
+            id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            calculation_type TEXT NOT NULL,
+            server_id TEXT,
+            report_month INTEGER,
+            calculation_start TEXT NOT NULL,
+            calculation_end TEXT NOT NULL,
+            records_processed INTEGER NOT NULL,
+            success INTEGER NOT NULL,
+            error_message TEXT,
+            created_by TEXT,
+            FOREIGN KEY (server_id) REFERENCES servers (id) ON DELETE SET NULL
+          )
+        ''');
+        
+        // Copy data with INTEGER to TEXT conversion (nullable)
+        await customStatement('''
+          INSERT INTO nps_calculation_log_new 
+          SELECT id, calculation_type, 
+                 CASE WHEN server_id IS NULL THEN NULL ELSE CAST(server_id AS TEXT) END,
+                 report_month, calculation_start, calculation_end, records_processed,
+                 success, error_message, created_by
+          FROM nps_calculation_log
+        ''');
+        
+        // Drop old table and rename new one
+        await customStatement('DROP TABLE nps_calculation_log');
+        await customStatement('ALTER TABLE nps_calculation_log_new RENAME TO nps_calculation_log');
+        
+        // Recreate indexes for nps_calculation_log
+        await customStatement('CREATE INDEX idx_calc_log_type ON nps_calculation_log(calculation_type)');
+        await customStatement('CREATE INDEX idx_calc_log_date ON nps_calculation_log(calculation_start)');
+        
+        // Re-enable foreign keys
+        await customStatement('PRAGMA foreign_keys=ON');
+      }
+    },
+    beforeOpen: (OpeningDetails details) async {
+      await customStatement('PRAGMA foreign_keys=ON;');
+    },
+  );
 
   /// Open database connection with platform-appropriate configuration
   static QueryExecutor _openConnection() {
