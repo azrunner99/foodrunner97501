@@ -37,52 +37,68 @@ class _ServerNPSStatusWidgetState extends State<ServerNPSStatusWidget> {
     try {
       d('[ServerNPSStatusWidget] Starting to load data...');
       
-      // Load ALL monthly reports from database (to get comprehensive server status)
+      // Use the same data loading approach as the working HistoricalNPSAggregationService
       final db = DatabaseFactory.instance;
-      final dbType = DatabaseFactory.implementationType;
       
-      List<Map<String, dynamic>> reportMaps;
+      // Load all monthly reports
+      final allReports = await db.queryTable('nps_monthly_reports');
+      d('[ServerNPSStatusWidget] Found ${allReports.length} total monthly reports');
       
-      reportMaps = await db.queryTable(
-        'nps_monthly_reports',
-        orderBy: 'report_year DESC, report_month DESC',
-      );
-      
-      final allReports = reportMaps.map((map) => NPSMonthlyReport.fromMap(map)).toList();
-      
-      // Filter out integer server IDs to avoid "Server #" entries (keep only string IDs with proper names)
-      final reports = allReports.where((report) {
-        final serverId = report.serverId.toString();
-        // Filter out ALL numeric IDs (both single and multi-digit) - these show as "Server #"
-        final isNumericId = RegExp(r'^\d+$').hasMatch(serverId);
-        if (isNumericId) {
-          d('[ServerNPSStatusWidget] Filtering out numeric server_id: $serverId (would show as Server #)');
-        }
-        return !isNumericId; // Keep only string IDs with proper name mappings
-      }).toList();
-      
-      d('[ServerNPSStatusWidget] After filtering: ${reports.length} reports (removed ${allReports.length - reports.length} old format reports)');
-      
-      // Load historical data
-      final historicalData = <HistoricalNPSData>[];
-      final Map<String, List<NPSMonthlyReport>> reportsByServer = {};
-      
-      for (final report in reports) {
-        reportsByServer.putIfAbsent(report.serverId.toString(), () => []).add(report);
+      if (allReports.isEmpty) {
+        d('[ServerNPSStatusWidget] No monthly reports found - returning empty list');
+        setState(() {
+          _historicalData = [];
+          _serverClassifications = {};
+          _isLoading = false;
+        });
+        return;
       }
       
+      // Filter out integer server IDs (EXACT same logic as HistoricalNPSAggregationService)
+      final filteredReports = allReports.where((report) {
+        final serverId = report['server_id'].toString();
+        final isNumericId = RegExp(r'^\d+$').hasMatch(serverId);
+        if (isNumericId) {
+          d('[ServerNPSStatusWidget] Filtering out numeric server_id: $serverId');
+        }
+        return !isNumericId;
+      }).toList();
+      
+      d('[ServerNPSStatusWidget] After filtering: ${filteredReports.length} reports (removed ${allReports.length - filteredReports.length} old format reports)');
+      
+      // Load historical data with proper server name resolution
+      final historicalData = <HistoricalNPSData>[];
+      final Map<String, List<Map<String, dynamic>>> reportsByServer = {};
+      
+      // Group reports by server ID
+      for (final report in filteredReports) {
+        final serverId = report['server_id'].toString();
+        reportsByServer.putIfAbsent(serverId, () => []).add(report);
+      }
+      
+      // Create HistoricalNPSData for each server with proper name resolution
       for (final entry in reportsByServer.entries) {
         final serverId = entry.key;
         final serverReports = entry.value;
         
-        // Get server name using ApplicationUpdateService
-        final serverName = await ApplicationUpdateService.resolveServerName(serverId);
-        d('[ServerNPSStatusWidget] Resolved server name: $serverName for ID $serverId');
+        // Get server name directly from AppState (same approach as working IMPACT tab)
+        final servers = context.read<AppState>().servers;
+        String serverName = 'Server $serverId';
+        for (final server in servers) {
+          if (server.id == serverId) {
+            serverName = server.name;
+            break;
+          }
+        }
+        d('[ServerNPSStatusWidget] Got server name: $serverName for ID: $serverId');
+        
+        // Convert raw reports to NPSMonthlyReport objects
+        final npsReports = serverReports.map((report) => NPSMonthlyReport.fromMap(report)).toList();
         
         historicalData.add(HistoricalNPSData(
-          serverId: serverId.toString(),
+          serverId: serverId,
           serverName: serverName,
-          monthlyData: serverReports.map((report) => MonthlyPerformance(
+          monthlyData: npsReports.map((report) => MonthlyPerformance(
             month: DateTime(report.reportYear, report.reportMonth),
             oneMonthNPS: report.oneMonthNpsPercentage ?? 0.0,
             threeMonthNPS: report.threeMonthNpsPercentage ?? 0.0,
@@ -109,7 +125,7 @@ class _ServerNPSStatusWidgetState extends State<ServerNPSStatusWidget> {
           volatility: 0.0,
           classification: PerformanceClassification.unknown,
           lastUpdated: DateTime.now(),
-          totalMonthsReported: serverReports.length,
+          totalMonthsReported: npsReports.length,
         ));
       }
       

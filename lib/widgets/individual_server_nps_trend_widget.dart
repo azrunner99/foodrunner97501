@@ -40,58 +40,73 @@ class _IndividualServerNPSTrendWidgetState extends State<IndividualServerNPSTren
     try {
       d('[IndividualServerNPSTrendWidget] Loading monthly reports...');
       
-      // Load ALL monthly reports from database (for trend analysis)
+      // Use the same data loading approach as the working HistoricalNPSAggregationService
       final database = DatabaseFactory.instance;
-      final isSqflite = database.runtimeType.toString().contains('Sqflite');
-
-      final results = await database.queryTable(
-        'nps_monthly_reports',
-        orderBy: 'report_year DESC, report_month DESC',
-      );
       
-      final allReports = results.map((row) => NPSMonthlyReport.fromMap(row)).toList();
+      // Load all monthly reports
+      final allReports = await database.queryTable('nps_monthly_reports');
+      d('[IndividualServerNPSTrendWidget] Found ${allReports.length} total monthly reports');
       
-      // Filter out integer server IDs to avoid "Server #" entries (keep only string IDs with proper names)
-      final reports = allReports.where((report) {
-        final serverId = report.serverId.toString();
-        // Filter out ALL numeric IDs (both single and multi-digit) - these show as "Server #"
+      if (allReports.isEmpty) {
+        d('[IndividualServerNPSTrendWidget] No monthly reports found - returning empty list');
+        setState(() {
+          _monthlyReports = [];
+          _serverTrendAnalyses = {};
+          _isLoading = false;
+        });
+        return;
+      }
+      
+      // Filter out integer server IDs (EXACT same logic as HistoricalNPSAggregationService)
+      final filteredReports = allReports.where((report) {
+        final serverId = report['server_id'].toString();
         final isNumericId = RegExp(r'^\d+$').hasMatch(serverId);
         if (isNumericId) {
-          d('[IndividualServerNPSTrendWidget] Filtering out numeric server_id: $serverId (would show as Server #)');
+          d('[IndividualServerNPSTrendWidget] Filtering out numeric server_id: $serverId');
         }
-        return !isNumericId; // Keep only string IDs with proper name mappings
+        return !isNumericId;
       }).toList();
       
-      d('[IndividualServerNPSTrendWidget] After filtering: ${reports.length} reports (removed ${allReports.length - reports.length} old format reports)');
+      d('[IndividualServerNPSTrendWidget] After filtering: ${filteredReports.length} reports (removed ${allReports.length - filteredReports.length} old format reports)');
+      
+      // Convert to NPSMonthlyReport objects
+      final reports = filteredReports.map((row) => NPSMonthlyReport.fromMap(row)).toList();
       d('[IndividualServerNPSTrendWidget] Loaded ${reports.length} monthly reports');
       
-      // Load trend analyses
+      // Load trend analyses with proper server name resolution
       final trendAnalyses = <String, trend_analysis.AdvancedTrendAnalysis>{};
       
-      // Get server names from AppState
-      final appState = context.read<AppState>();
-      final appStateServers = appState.servers;
-      d('[IndividualServerNPSTrendWidget] Found ${appStateServers.length} servers in AppState for name mapping');
-      
+      // Group reports by server ID
+      final Map<String, List<NPSMonthlyReport>> reportsByServer = {};
       for (final report in reports) {
         final serverId = report.serverId.toString();
-        if (!trendAnalyses.containsKey(serverId)) {
-          // Get all reports for this server
-          final serverReports = reports.where((r) => r.serverId.toString() == serverId).toList();
-          
-          // Get the actual server name using ApplicationUpdateService
-          final serverName = await ApplicationUpdateService.resolveServerName(serverId);
-          d('[IndividualServerNPSTrendWidget] Resolved server name: $serverName for ID $serverId');
-          
-          // Analyze trends
-          final trendAnalysis = trend_analysis.AdvancedTrendAnalysisService().analyzeServerTrends(
-            monthlyReports: serverReports,
-            serverName: serverName,
-            serverId: serverId,
-          );
-          
-          trendAnalyses[serverId] = trendAnalysis;
+        reportsByServer.putIfAbsent(serverId, () => []).add(report);
+      }
+      
+      // Analyze trends for each server with proper name resolution
+      for (final entry in reportsByServer.entries) {
+        final serverId = entry.key;
+        final serverReports = entry.value;
+        
+        // Get server name directly from AppState (same approach as working IMPACT tab)
+        final servers = context.read<AppState>().servers;
+        String serverName = 'Server $serverId';
+        for (final server in servers) {
+          if (server.id == serverId) {
+            serverName = server.name;
+            break;
+          }
         }
+        d('[IndividualServerNPSTrendWidget] Got server name: $serverName for ID: $serverId');
+        
+        // Analyze trends
+        final trendAnalysis = trend_analysis.AdvancedTrendAnalysisService().analyzeServerTrends(
+          monthlyReports: serverReports,
+          serverName: serverName,
+          serverId: serverId,
+        );
+        
+        trendAnalyses[serverId] = trendAnalysis;
       }
       
       setState(() {
