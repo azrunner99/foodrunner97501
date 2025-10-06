@@ -232,70 +232,81 @@ class _EnhancedNPSAnalyticsWidgetState
       
       // Use the same data source as the working Server NPS Scorecard
       final db = DatabaseFactory.instance;
-      final adapter = NPSDatabaseAdapter(db);
       
-      // Get current month data (like the scorecard does)
-      final now = DateTime.now();
-      final currentMonth = now.month;
-      final currentYear = now.year;
+      // Get ALL available months with data (like the scorecard does)
+      final availableMonths = await _getAvailableMonthsWithData(db);
       
-      d('[EnhancedNPSAnalyticsWidget] Loading data for current month: $currentMonth/$currentYear');
+      if (availableMonths.isEmpty) {
+        d('[EnhancedNPSAnalyticsWidget] No months with data found');
+        return [];
+      }
       
-      // Use the same method as the scorecard
-      final serverData = await adapter.getServerNPSDataForMonth(currentMonth, currentYear);
+      d('[EnhancedNPSAnalyticsWidget] Found ${availableMonths.length} months with data');
       
-      d('[EnhancedNPSAnalyticsWidget] Retrieved ${serverData.length} server records from scorecard data source');
-      
-      // Convert server data to NPSMonthlyReport format for compatibility
+      // Load data from ALL available months (not just current month)
       final allReports = <NPSMonthlyReport>[];
-      for (final data in serverData) {
-        try {
-          final report = NPSMonthlyReport(
-            serverId: data['server_id']?.toString() ?? '',
-            reportMonth: currentMonth,
-            reportYear: currentYear,
-            allTimeNpsPercentage: (data['all_time_nps_percentage'] as num?)?.toDouble(),
-            threeMonthNpsPercentage: (data['three_month_nps_percentage'] as num?)?.toDouble(),
-            oneMonthNpsPercentage: (data['one_month_nps_percentage'] as num?)?.toDouble(),
-            allTimeSales: (data['all_time_sales'] as num?)?.toDouble() ?? 0.0,
-            allTimeTableCount: (data['all_time_table_count'] as num?)?.toInt() ?? 0,
-            monthFeedback: FeedbackCounts(
-              yes: (data['month_feedback_yes'] as num?)?.toInt() ?? 0,
-              maybe: (data['month_feedback_maybe'] as num?)?.toInt() ?? 0,
-              no: (data['month_feedback_no'] as num?)?.toInt() ?? 0,
-            ),
-            threeMonthFeedback: FeedbackCounts(
-              yes: (data['three_month_feedback_yes'] as num?)?.toInt() ?? 0,
-              maybe: (data['three_month_feedback_maybe'] as num?)?.toInt() ?? 0,
-              no: (data['three_month_feedback_no'] as num?)?.toInt() ?? 0,
-            ),
-            allTimeFeedback: FeedbackCounts(
-              yes: (data['all_time_feedback_yes'] as num?)?.toInt() ?? 0,
-              maybe: (data['all_time_feedback_maybe'] as num?)?.toInt() ?? 0,
-              no: (data['all_time_feedback_no'] as num?)?.toInt() ?? 0,
-            ),
-            generatedAt: DateTime.now(),
-            dataAsOfDate: DateTime.now(),
-          );
-          allReports.add(report);
-          d('[EnhancedNPSAnalyticsWidget] Added report for server: ${data['server_name']} (ID: ${data['server_id']})');
-        } catch (e) {
-          d('[EnhancedNPSAnalyticsWidget] Error converting server data to report format: $e');
+      
+      for (final monthData in availableMonths) {
+        final year = monthData['year'] as int;
+        final month = monthData['month'] as int;
+        
+        d('[EnhancedNPSAnalyticsWidget] Loading data for month: $month/$year');
+        
+        // Use the same method as the scorecard
+        final serverData = await _getServerNPSDataForMonth(db, month, year);
+        
+        d('[EnhancedNPSAnalyticsWidget] Retrieved ${serverData.length} server records for $month/$year');
+        
+        // Convert server data to NPSMonthlyReport format for compatibility
+        for (final data in serverData) {
+          try {
+            final report = NPSMonthlyReport(
+              serverId: data['server_id']?.toString() ?? '',
+              reportMonth: month,
+              reportYear: year,
+              allTimeNpsPercentage: (data['all_time_nps_percentage'] as num?)?.toDouble(),
+              threeMonthNpsPercentage: (data['three_month_nps_percentage'] as num?)?.toDouble(),
+              oneMonthNpsPercentage: (data['one_month_nps_percentage'] as num?)?.toDouble(),
+              allTimeSales: (data['all_time_sales'] as num?)?.toDouble() ?? 0.0,
+              allTimeTableCount: (data['all_time_table_count'] as num?)?.toInt() ?? 0,
+              monthFeedback: FeedbackCounts(
+                yes: (data['month_feedback_yes'] as num?)?.toInt() ?? 0,
+                maybe: (data['month_feedback_maybe'] as num?)?.toInt() ?? 0,
+                no: (data['month_feedback_no'] as num?)?.toInt() ?? 0,
+              ),
+              threeMonthFeedback: FeedbackCounts(
+                yes: (data['three_month_feedback_yes'] as num?)?.toInt() ?? 0,
+                maybe: (data['three_month_feedback_maybe'] as num?)?.toInt() ?? 0,
+                no: (data['three_month_feedback_no'] as num?)?.toInt() ?? 0,
+              ),
+              allTimeFeedback: FeedbackCounts(
+                yes: (data['all_time_feedback_yes'] as num?)?.toInt() ?? 0,
+                maybe: (data['all_time_feedback_maybe'] as num?)?.toInt() ?? 0,
+                no: (data['all_time_feedback_no'] as num?)?.toInt() ?? 0,
+              ),
+              generatedAt: DateTime.now(),
+              dataAsOfDate: DateTime.now(),
+            );
+            allReports.add(report);
+            d('[EnhancedNPSAnalyticsWidget] Added report for server: ${data['server_name']} (ID: ${data['server_id']}) for $month/$year');
+          } catch (e) {
+            d('[EnhancedNPSAnalyticsWidget] Error converting server data to report format: $e');
+          }
         }
       }
       
-      d('[EnhancedNPSAnalyticsWidget] Converted ${allReports.length} server records to NPSMonthlyReport format');
+      d('[EnhancedNPSAnalyticsWidget] Converted ${allReports.length} total server records to NPSMonthlyReport format across ${availableMonths.length} months');
       
       // Debug: Log the actual reports to see what we're getting
-      d('[EnhancedNPSAnalyticsWidget] Loaded ${allReports.length} total reports from scorecard data source');
+      d('[EnhancedNPSAnalyticsWidget] Loaded ${allReports.length} total reports from all available months');
       
       if (allReports.isNotEmpty) {
-        d('[EnhancedNPSAnalyticsWidget] First report: Server ${allReports.first.serverId}, NPS: ${allReports.first.allTimeNpsPercentage}%');
+        d('[EnhancedNPSAnalyticsWidget] First report: Server ${allReports.first.serverId}, NPS: ${allReports.first.allTimeNpsPercentage}% for ${allReports.first.reportMonth}/${allReports.first.reportYear}');
       }
       
       return allReports;
     } catch (e) {
-  d('[EnhancedNPSAnalyticsWidget] Error loading monthly reports: $e');
+      d('[EnhancedNPSAnalyticsWidget] Error loading monthly reports: $e');
       rethrow;
     }
   }
@@ -1897,6 +1908,235 @@ class _EnhancedNPSAnalyticsWidgetState
       }
     }
     return Icons.help;
+  }
+
+  /// Get available months that have NPS report data (copied from Server NPS Scorecard)
+  Future<List<Map<String, dynamic>>> _getAvailableMonthsWithData(dynamic database) async {
+    try {
+      d('[EnhancedNPSAnalyticsWidget] Getting available months using HistoricalNPSAggregationService approach...');
+      
+      // Use the EXACT same approach as the working HistoricalNPSAggregationService
+      final allReports = await database.queryTable('nps_monthly_reports');
+      d('[EnhancedNPSAnalyticsWidget] Found ${allReports.length} total monthly reports');
+      
+      if (allReports.isEmpty) {
+        d('[EnhancedNPSAnalyticsWidget] No monthly reports found - returning empty list');
+        return [];
+      }
+      
+      // Filter out integer server IDs (EXACT same logic as HistoricalNPSAggregationService)
+      final filteredReports = allReports.where((report) {
+        final serverId = report['server_id'].toString();
+        // Filter out ALL numeric IDs (both single and multi-digit)
+        final isNumericId = RegExp(r'^\d+$').hasMatch(serverId);
+        if (isNumericId) {
+          d('[EnhancedNPSAnalyticsWidget] Filtering out numeric server_id: $serverId');
+        }
+        return !isNumericId; // Keep only string IDs with proper name mappings
+      }).toList();
+      
+      d('[EnhancedNPSAnalyticsWidget] After filtering: ${filteredReports.length} reports (removed ${allReports.length - filteredReports.length} old format reports)');
+      
+      // Group reports by month and year
+      final Map<String, List<Map<String, dynamic>>> monthToReports = {};
+      
+      for (final report in filteredReports) {
+        final reportMonthFromDb = report['report_month'] as int?;
+        final reportYearFromDb = report['report_year'] as int?;
+        
+        int year;
+        int month;
+        
+        // Handle YYYYMM format in report_month column (legacy format)
+        if (reportMonthFromDb != null && reportMonthFromDb > 10000) {
+          // This is YYYYMM format (e.g., 202509)
+          year = reportMonthFromDb ~/ 100;
+          month = reportMonthFromDb % 100;
+          d('[EnhancedNPSAnalyticsWidget] Found YYYYMM format: $reportMonthFromDb -> year=$year, month=$month');
+        }
+        // Handle separate report_month and report_year columns (new format)
+        else if (reportMonthFromDb != null && reportYearFromDb != null) {
+          year = reportYearFromDb;
+          month = reportMonthFromDb;
+        }
+        else {
+          d('[EnhancedNPSAnalyticsWidget] Skipping report with null month/year: $report');
+          continue;
+        }
+        
+        // Validate month is in valid range (1-12)
+        if (month < 1 || month > 12) {
+          d('[EnhancedNPSAnalyticsWidget] ⚠️ Invalid month number: $month, skipping this report');
+          continue;
+        }
+        
+        final monthKey = '${year}_$month';
+        monthToReports.putIfAbsent(monthKey, () => []).add(report);
+      }
+      
+      d('[EnhancedNPSAnalyticsWidget] Found data for ${monthToReports.length} unique months');
+      
+      // Convert to the expected format
+      final monthsWithData = <Map<String, dynamic>>[];
+      final monthNames = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+      ];
+      
+      for (final entry in monthToReports.entries) {
+        final monthKey = entry.key;
+        final reports = entry.value;
+        final parts = monthKey.split('_');
+        final year = int.parse(parts[0]);
+        final month = int.parse(parts[1]);
+        
+        // Count unique servers for this month
+        final uniqueServers = reports.map((r) => r['server_id'].toString()).toSet();
+        
+        monthsWithData.add({
+          'month_key': monthKey,
+          'display_name': '${monthNames[month - 1]} $year',
+          'server_count': uniqueServers.length,
+          'year': year,
+          'month': month,
+        });
+      }
+      
+      // Sort by year and month (most recent first)
+      monthsWithData.sort((a, b) {
+        final aYear = a['year'] as int;
+        final aMonth = a['month'] as int;
+        final bYear = b['year'] as int;
+        final bMonth = b['month'] as int;
+        
+        if (aYear != bYear) {
+          return bYear.compareTo(aYear); // Most recent year first
+        }
+        return bMonth.compareTo(aMonth); // Most recent month first
+      });
+      
+      d('[EnhancedNPSAnalyticsWidget] Returning ${monthsWithData.length} months with data');
+      return monthsWithData;
+    } catch (e) {
+      d('[EnhancedNPSAnalyticsWidget] Error getting available months: $e');
+      return [];
+    }
+  }
+
+  /// Get server NPS data for a specific month (copied from Server NPS Scorecard)
+  Future<List<Map<String, dynamic>>> _getServerNPSDataForMonth(
+      dynamic database, int reportMonth, int reportYear) async {
+    try {
+      d('[EnhancedNPSAnalyticsWidget] Querying for month=$reportMonth, year=$reportYear using HistoricalNPSAggregationService approach...');
+      
+      // Use the EXACT same approach as the working HistoricalNPSAggregationService
+      final allReports = await database.queryTable('nps_monthly_reports');
+      d('[EnhancedNPSAnalyticsWidget] Found ${allReports.length} total monthly reports');
+      
+      if (allReports.isEmpty) {
+        d('[EnhancedNPSAnalyticsWidget] No monthly reports found');
+        return [];
+      }
+      
+      // Filter out integer server IDs (EXACT same logic as HistoricalNPSAggregationService)
+      final filteredReports = allReports.where((report) {
+        final serverId = report['server_id'].toString();
+        // Filter out ALL numeric IDs (both single and multi-digit)
+        final isNumericId = RegExp(r'^\d+$').hasMatch(serverId);
+        if (isNumericId) {
+          d('[EnhancedNPSAnalyticsWidget] Filtering out numeric server_id: $serverId');
+        }
+        return !isNumericId; // Keep only string IDs with proper name mappings
+      }).toList();
+      
+      d('[EnhancedNPSAnalyticsWidget] After filtering: ${filteredReports.length} reports');
+      
+      // Filter for the specific month and year
+      final monthReports = filteredReports.where((report) {
+        final reportMonthFromDb = report['report_month'] as int?;
+        final reportYearFromDb = report['report_year'] as int?;
+        
+        // Handle YYYYMM format in report_month column (legacy format)
+        if (reportMonthFromDb != null && reportMonthFromDb > 10000) {
+          // This is YYYYMM format (e.g., 202509)
+          final year = reportMonthFromDb ~/ 100;
+          final month = reportMonthFromDb % 100;
+          d('[EnhancedNPSAnalyticsWidget] Found YYYYMM format: $reportMonthFromDb -> year=$year, month=$month');
+          
+          // Validate month is in valid range (1-12)
+          if (month < 1 || month > 12) {
+            d('[EnhancedNPSAnalyticsWidget] ⚠️ Invalid month number from YYYYMM: $month, skipping this report');
+            return false;
+          }
+          
+          return month == reportMonth && year == reportYear;
+        }
+        
+        // Handle separate report_month and report_year columns (new format)
+        if (reportMonthFromDb != null && reportYearFromDb != null) {
+          // Validate month is in valid range (1-12)
+          if (reportMonthFromDb < 1 || reportMonthFromDb > 12) {
+            d('[EnhancedNPSAnalyticsWidget] ⚠️ Invalid month number: $reportMonthFromDb, skipping this report');
+            return false;
+          }
+          
+          return reportMonthFromDb == reportMonth && reportYearFromDb == reportYear;
+        }
+        
+        return false;
+      }).toList();
+      
+      d('[EnhancedNPSAnalyticsWidget] Found ${monthReports.length} reports for $reportMonth/$reportYear');
+      
+      // Convert to the expected format with server names
+      final serverData = <Map<String, dynamic>>[];
+      
+      for (final report in monthReports) {
+        final serverId = report['server_id'].toString();
+        
+        // Get server name from the database
+        try {
+          final servers = await database.queryTable('servers', where: 'id = ?', whereArgs: [serverId]);
+          String serverName = 'Unknown Server';
+          
+          if (servers.isNotEmpty) {
+            serverName = servers.first['name'] as String? ?? 'Unknown Server';
+          }
+          
+          serverData.add({
+            'server_id': serverId,
+            'server_name': serverName,
+            'all_time_nps_percentage': report['all_time_nps_percentage'] as double? ?? 0.0,
+            'three_month_nps_percentage': report['three_month_nps_percentage'] as double? ?? 0.0,
+            'one_month_nps_percentage': report['one_month_nps_percentage'] as double? ?? 0.0,
+            'all_time_sales': report['all_time_sales'] as double? ?? 0.0,
+            'all_time_table_count': report['all_time_table_count'] as int? ?? 0,
+            'report_month': reportMonth,
+            'report_year': reportYear,
+          });
+        } catch (e) {
+          d('[EnhancedNPSAnalyticsWidget] Error getting server name for $serverId: $e');
+          // Add with unknown name if we can't get the server name
+          serverData.add({
+            'server_id': serverId,
+            'server_name': 'Unknown Server',
+            'all_time_nps_percentage': report['all_time_nps_percentage'] as double? ?? 0.0,
+            'three_month_nps_percentage': report['three_month_nps_percentage'] as double? ?? 0.0,
+            'one_month_nps_percentage': report['one_month_nps_percentage'] as double? ?? 0.0,
+            'all_time_sales': report['all_time_sales'] as double? ?? 0.0,
+            'all_time_table_count': report['all_time_table_count'] as int? ?? 0,
+            'report_month': reportMonth,
+            'report_year': reportYear,
+          });
+        }
+      }
+      
+      d('[EnhancedNPSAnalyticsWidget] Returning ${serverData.length} server records for $reportMonth/$reportYear');
+      return serverData;
+    } catch (e) {
+      d('[EnhancedNPSAnalyticsWidget] Error getting server data: $e');
+      return [];
+    }
   }
 
 }
