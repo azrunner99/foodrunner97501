@@ -46,7 +46,7 @@ class _IndividualServerNPSTrendWidgetState extends State<IndividualServerNPSTren
 
       final results = await database.queryTable(
         'nps_monthly_reports',
-        orderBy: isSqflite ? 'month_year DESC' : 'report_year DESC, report_month DESC',
+        orderBy: 'report_year DESC, report_month DESC',
       );
       
       final allReports = results.map((row) => NPSMonthlyReport.fromMap(row)).toList();

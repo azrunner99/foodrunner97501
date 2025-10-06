@@ -2,13 +2,13 @@ import '../services/platform_service.dart';
 import '../utils/log.dart';
 import 'database_interface.dart';
 import 'drift_database.dart';
-import 'sqflite_database.dart';
+// Legacy path retired: import kept commented for reference only.
+// import 'sqflite_database.dart';
 
 /// Factory class that provides the appropriate database implementation
 /// based on the current platform
 /// 
-/// - Android: Uses sqflite for optimal performance
-/// - Windows/Desktop: Uses Drift for cross-platform compatibility
+/// - All platforms: Uses Drift for cross-platform compatibility and TEXT IDs
 class DatabaseFactory {
   static DatabaseInterface? _instance;
   
@@ -29,8 +29,8 @@ class DatabaseFactory {
 
     try {
       if (PlatformService.isAndroid) {
-        d('[DatabaseFactory] Initializing sqflite database for Android');
-        _instance = SqfliteNPSDatabase();
+        d('[DatabaseFactory] Initializing Drift database for Android (TEXT IDs)');
+        _instance = DriftNPSDatabase();
       } else if (PlatformService.isWindows || PlatformService.isDesktop) {
         d('[DatabaseFactory] Initializing Drift database for Windows/Desktop');
         _instance = DriftNPSDatabase();
@@ -84,7 +84,6 @@ class DatabaseFactory {
   /// Get the current implementation type name for debugging
   static String get implementationType {
     if (_instance == null) return 'None';
-    if (_instance is SqfliteNPSDatabase) return 'Sqflite (Android)';
     if (_instance is DriftNPSDatabase) return 'Drift (Cross-platform)';
     return 'Unknown';
   }

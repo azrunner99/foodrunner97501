@@ -443,7 +443,7 @@ class _IdDiagnosticDashboardState extends State<IdDiagnosticDashboard> {
   }
 
   Future<void> _resetResolver() async {
-    ServerIdResolver.reset();
+    ServerIdResolver.resetResolver();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('ID Resolver cache cleared')),
     );

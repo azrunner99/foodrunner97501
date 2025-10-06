@@ -55,7 +55,7 @@ class UnifiedStorageService {
   Future<List<Map<String, dynamic>>> getAllNPSFeedback() async { await _ensureInit(); return _npsFeedback.map((f)=>Map<String,dynamic>.from(f)).toList(); }
 
   // Monthly reports
-  Future<void> saveMonthlyReport(Map<String, dynamic> report) async { await _ensureInit(); _monthlyReports.removeWhere((r)=>r['server_id']==report['server_id'] && r['month_year']==report['month_year']); _monthlyReports.add(Map<String,dynamic>.from(report)); }
+  Future<void> saveMonthlyReport(Map<String, dynamic> report) async { await _ensureInit(); _monthlyReports.removeWhere((r)=>r['server_id']==report['server_id'] && r['report_month']==report['report_month'] && r['report_year']==report['report_year']); _monthlyReports.add(Map<String,dynamic>.from(report)); }
   Future<List<Map<String, dynamic>>> getMonthlyReports(String serverId) async { await _ensureInit(); return _monthlyReports.where((r)=>r['server_id']==serverId).map((r)=>Map<String,dynamic>.from(r)).toList(); }
 
   // Performance data (generic keying by server + type)

@@ -265,25 +265,13 @@ class HistoricalNPSAggregationService {
     try {
       d('[HistoricalNPSAggregationService] Getting monthly reports for server: $serverId');
       
-      // Handle different database schemas
-      List<Map<String, dynamic>> results;
-      if (DatabaseFactory.implementationType.contains('Sqflite')) {
-        // Sqflite uses month_year column
-        results = await _database.queryTable(
-          'nps_monthly_reports',
-          where: 'server_id = ?',
-          whereArgs: [serverId], // Use string serverId directly
-          orderBy: 'month_year DESC',
-        );
-      } else {
-        // Drift uses separate report_month and report_year columns
-        results = await _database.queryTable(
-          'nps_monthly_reports',
-          where: 'server_id = ?',
-          whereArgs: [serverId], // Use string serverId directly
-          orderBy: 'report_year DESC, report_month DESC',
-        );
-      }
+      // Use Drift schema with report_month and report_year columns
+      final results = await _database.queryTable(
+        'nps_monthly_reports',
+        where: 'server_id = ?',
+        whereArgs: [serverId], // Use string serverId directly
+        orderBy: 'report_year DESC, report_month DESC',
+      );
       
       d('[HistoricalNPSAggregationService] Found ${results.length} monthly reports for server $serverId');
       if (results.isEmpty) {
@@ -481,20 +469,10 @@ class HistoricalNPSAggregationService {
 
   /// Convert monthly report to MonthlyPerformance
   MonthlyPerformance _convertToMonthlyPerformance(Map<String, dynamic> report) {
-    // Handle different database schemas for month extraction
-    DateTime month;
-    if (DatabaseFactory.implementationType.contains('Sqflite')) {
-      // Sqflite uses month_year in YYYYMM format
-      final monthYear = report['month_year'] as String;
-      final year = int.parse(monthYear.substring(0, 4));
-      final monthNum = int.parse(monthYear.substring(4, 6));
-      month = DateTime(year, monthNum, 1);
-    } else {
-      // Drift uses separate report_month and report_year
-      final year = report['report_year'] as int;
-      final monthNum = report['report_month'] as int;
-      month = DateTime(year, monthNum, 1);
-    }
+    // Use Drift format with report_month and report_year
+    final year = report['report_year'] as int;
+    final monthNum = report['report_month'] as int;
+    final month = DateTime(year, monthNum, 1);
 
     return MonthlyPerformance(
       month: month,

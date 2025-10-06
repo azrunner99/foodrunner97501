@@ -11,6 +11,12 @@ class SqfliteNPSDatabase implements DatabaseInterface {
   sqflite.Database? _database;
   String? _databasePath;
 
+  SqfliteNPSDatabase() {
+    // 🚫 This path is retired. Drift is the canonical database.
+    // If this constructor is hit, an outdated factory or call site is being used.
+    throw StateError('SqfliteNPSDatabase is retired. Use DriftNPSDatabase instead.');
+  }
+
   /// Initialize the database connection
   @override
   Future<void> init() async {
@@ -34,6 +40,8 @@ class SqfliteNPSDatabase implements DatabaseInterface {
 
   /// Create database schema
   Future<void> _createDatabase(sqflite.Database db, int version) async {
+    // 💤 Legacy schema creation removed — Drift now manages the schema.
+    /*
     await db.execute('''
       CREATE TABLE servers (
         id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
@@ -49,6 +57,7 @@ class SqfliteNPSDatabase implements DatabaseInterface {
     await db.execute('''
       CREATE TABLE nps_feedback (
         id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+        server_id INTEGER NOT NULL,
         score INTEGER NOT NULL,
         comment TEXT,
         customer_name TEXT,
@@ -63,6 +72,7 @@ class SqfliteNPSDatabase implements DatabaseInterface {
     await db.execute('''
       CREATE TABLE nps_monthly_reports (
         id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+        server_id INTEGER NOT NULL,
         month_year TEXT NOT NULL,
         all_time_nps_percentage REAL,
         three_month_nps_percentage REAL,
@@ -88,6 +98,7 @@ class SqfliteNPSDatabase implements DatabaseInterface {
     await db.execute('''
       CREATE TABLE nps_calculation_log (
         id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+        server_id INTEGER NOT NULL,
         calculation_date TEXT NOT NULL,
         month_year TEXT NOT NULL,
         total_responses INTEGER NOT NULL,
@@ -105,6 +116,7 @@ class SqfliteNPSDatabase implements DatabaseInterface {
     await db.execute('''
       CREATE TABLE performance_trends (
         id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+        server_id INTEGER NOT NULL,
         trend_direction TEXT NOT NULL,
         trend_slope REAL NOT NULL,
         trend_strength REAL NOT NULL,
@@ -122,6 +134,7 @@ class SqfliteNPSDatabase implements DatabaseInterface {
     await db.execute('''
       CREATE TABLE performance_insights (
         id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+        server_id INTEGER NOT NULL,
         insight_type TEXT NOT NULL,
         title TEXT NOT NULL,
         description TEXT NOT NULL,
@@ -167,10 +180,13 @@ class SqfliteNPSDatabase implements DatabaseInterface {
     // Calculation log indexes
     await db.execute('CREATE INDEX idx_nps_calculation_log_server_date ON nps_calculation_log (server_id, calculation_date)');
     await db.execute('CREATE INDEX idx_nps_calculation_log_date ON nps_calculation_log (calculation_date)');
+    */
   }
 
   /// Upgrade database schema
   Future<void> _upgradeDatabase(sqflite.Database db, int oldVersion, int newVersion) async {
+    // 💤 Legacy upgrade logic removed — Drift handles all migrations.
+    /*
     d('[SqfliteNPSDatabase] Upgrading database from version $oldVersion to $newVersion');
     
     if (oldVersion < 5) {
@@ -183,6 +199,7 @@ class SqfliteNPSDatabase implements DatabaseInterface {
         await db.execute('''
           CREATE TABLE nps_monthly_reports (
             id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            server_id INTEGER NOT NULL,
             month_year TEXT NOT NULL,
             all_time_nps_percentage REAL,
             three_month_nps_percentage REAL,
@@ -224,6 +241,7 @@ class SqfliteNPSDatabase implements DatabaseInterface {
         await db.execute('''
           CREATE TABLE performance_trends (
             id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            server_id INTEGER NOT NULL,
             trend_direction TEXT NOT NULL,
             trend_slope REAL NOT NULL,
             trend_strength REAL NOT NULL,
@@ -241,6 +259,7 @@ class SqfliteNPSDatabase implements DatabaseInterface {
         await db.execute('''
           CREATE TABLE performance_insights (
             id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            server_id INTEGER NOT NULL,
             insight_type TEXT NOT NULL,
             title TEXT NOT NULL,
             description TEXT NOT NULL,
@@ -287,6 +306,7 @@ class SqfliteNPSDatabase implements DatabaseInterface {
         rethrow;
       }
     }
+    */
   }
 
   @override

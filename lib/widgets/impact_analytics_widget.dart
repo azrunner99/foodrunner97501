@@ -47,35 +47,21 @@ class _ImpactAnalyticsWidgetState extends State<ImpactAnalyticsWidget> {
       final dbType = DatabaseFactory.implementationType;
       d('[ImpactAnalyticsWidget] Detected database type: $dbType');
       
-      if (dbType.contains('Sqflite')) {
-        // Sqflite uses month_year column (YYYYMM format)
-        d('[ImpactAnalyticsWidget] Using Sqflite schema with month_year column');
-        reportMaps = await db.queryTable(
-          'nps_monthly_reports',
-          orderBy: 'month_year DESC',
-        );
-      } else {
-        // Drift uses separate report_month and report_year columns
-        d('[ImpactAnalyticsWidget] Using Drift schema with report_month and report_year columns');
-        reportMaps = await db.queryTable(
-          'nps_monthly_reports',
-          orderBy: 'report_year DESC, report_month DESC',
-        );
-      }
+      // Use Drift schema (report_month and report_year columns)
+      d('[ImpactAnalyticsWidget] Using Drift schema with report_month and report_year columns');
+      reportMaps = await db.queryTable(
+        'nps_monthly_reports',
+        orderBy: 'report_year DESC, report_month DESC',
+      );
       
       d('[ImpactAnalyticsWidget] Retrieved ${reportMaps.length} monthly reports from database');
       
       // Debug: Show what months we have data for
       final monthsFound = <String>{};
       for (final report in reportMaps) {
-        if (dbType.contains('Sqflite')) {
-          final monthYear = report['month_year']?.toString() ?? '';
-          monthsFound.add(monthYear);
-        } else {
-          final month = report['report_month']?.toString() ?? '';
-          final year = report['report_year']?.toString() ?? '';
-          monthsFound.add('$year-$month');
-        }
+        final month = report['report_month']?.toString() ?? '';
+        final year = report['report_year']?.toString() ?? '';
+        monthsFound.add('$year-$month');
       }
       d('[ImpactAnalyticsWidget] Available months: ${monthsFound.toList()..sort()}');
       

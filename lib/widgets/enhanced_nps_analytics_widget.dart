@@ -460,7 +460,7 @@ class _EnhancedNPSAnalyticsWidgetState
         'nps_monthly_reports',
         where: 'server_id = ?',
         whereArgs: [serverId],
-        orderBy: isSqflite ? 'month_year DESC' : 'report_year DESC, report_month DESC',
+        orderBy: 'report_year DESC, report_month DESC',
       );
       
       return results.map((row) => NPSMonthlyReport.fromMap(row)).toList();

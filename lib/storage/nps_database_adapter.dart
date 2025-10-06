@@ -29,6 +29,22 @@ class NPSDatabaseAdapter {
   /// Check if this adapter is using Sqflite database
   bool get isSqfliteDatabase => DatabaseFactory.implementationType.contains('Sqflite');
   
+  /// Direct query access for debugging
+  Future<List<Map<String, dynamic>>> queryTable(String table, {
+    List<String>? columns,
+    String? where,
+    List<dynamic>? whereArgs,
+    String? orderBy,
+  }) async {
+    return await _db.queryTable(
+      table,
+      columns: columns,
+      where: where,
+      whereArgs: whereArgs,
+      orderBy: orderBy,
+    );
+  }
+  
   /// Get the correct timestamp column name based on database type
   String get timestampColumn => isSqfliteDatabase ? 'timestamp_created' : 'created_at';
 
@@ -286,16 +302,27 @@ class NPSDatabaseAdapter {
           
           d('[getMonthlyReport] Looking for server_id=$serverId, month=$month, year=$year, monthYearStr=$monthYearStr');
           
-          // Try Drift format first (new format with separate columns)
+          // Try YYYYMM format first (current data format)
           var reports = await _db.queryTable(
             'nps_monthly_reports',
-            where: 'server_id = ? AND report_month = ? AND report_year = ?',
-            whereArgs: [serverId, month, year],
+            where: 'server_id = ? AND report_month = ?',
+            whereArgs: [serverId, reportMonth],
           );
           
-          d('[getMonthlyReport] Drift format query returned ${reports.length} results');
+          d('[getMonthlyReport] YYYYMM format query returned ${reports.length} results');
           
-          // If no results, try old Sqflite format (month_year field)
+          // If no results, try separate columns format (new format)
+          if (reports.isEmpty) {
+            d('[getMonthlyReport] Trying separate columns format with month=$month, year=$year');
+            reports = await _db.queryTable(
+              'nps_monthly_reports',
+              where: 'server_id = ? AND report_month = ? AND report_year = ?',
+              whereArgs: [serverId, month, year],
+            );
+            d('[getMonthlyReport] Separate columns query returned ${reports.length} results');
+          }
+          
+          // If still no results, try old Sqflite format (month_year field)
           if (reports.isEmpty) {
             d('[getMonthlyReport] Trying old format with month_year=$monthYearStr');
             reports = await _db.queryTable(
@@ -327,6 +354,16 @@ class NPSDatabaseAdapter {
   /// are found, falls back to deriving distinct months from raw feedback.
   Future<List<Map<String, dynamic>>> getAvailableReportMonths() async {
     try {
+      d('[NPSDatabaseAdapter] getAvailableReportMonths() called');
+      
+      // First, let's see what's actually in the database
+      final allReports = await _db.queryTable('nps_monthly_reports');
+      d('[NPSDatabaseAdapter] Found ${allReports.length} total records in nps_monthly_reports table');
+      
+      for (int i = 0; i < allReports.length; i++) {
+        d('[NPSDatabaseAdapter] Record $i: ${allReports[i]}');
+      }
+      
       // Attempt to build from monthly reports table (preferred – structured summaries)
       // Use Drift format with separate report_month and report_year columns
       final monthlyReports = await _db.queryTable(
@@ -334,6 +371,8 @@ class NPSDatabaseAdapter {
         columns: ['report_month', 'report_year', 'server_id'],
         orderBy: 'report_year DESC, report_month DESC',
       );
+
+      d('[NPSDatabaseAdapter] Query returned ${monthlyReports.length} monthly reports');
 
       if (monthlyReports.isNotEmpty) {
         final Map<String, Set<String>> monthToServers = {};
@@ -350,17 +389,16 @@ class NPSDatabaseAdapter {
 
         final List<Map<String, dynamic>> result = [];
         for (final entry in monthToServers.entries) {
-          // Expect format YYYY-MM; parse defensively
-          final parts = entry.key.split('-');
-            int year = 0;
-            int month = 0;
-            if (parts.length == 2) {
-              year = int.tryParse(parts[0]) ?? 0;
-              month = int.tryParse(parts[1]) ?? 0;
-            } else if (entry.key.length == 6) { // e.g. YYYYMM
-              year = int.tryParse(entry.key.substring(0,4)) ?? 0;
-              month = int.tryParse(entry.key.substring(4,6)) ?? 0;
-            }
+          // Parse YYYYMM format (e.g. "202501" for January 2025)
+          final monthYear = entry.key;
+          int year = 0;
+          int month = 0;
+          
+          if (monthYear.length == 6) { // e.g. YYYYMM
+            year = int.tryParse(monthYear.substring(0,4)) ?? 0;
+            month = int.tryParse(monthYear.substring(4,6)) ?? 0;
+          }
+          
           if (year > 0 && month > 0) {
             result.add({
               'report_year': year,
@@ -379,8 +417,13 @@ class NPSDatabaseAdapter {
         });
 
         if (result.isNotEmpty) {
-          d('[NPSDatabaseAdapter] getAvailableReportMonths -> ${result.length} months from nps_monthly_reports');
+          d('[NPSDatabaseAdapter] ✅ getAvailableReportMonths -> ${result.length} months from nps_monthly_reports');
+          for (int i = 0; i < result.length; i++) {
+            d('[NPSDatabaseAdapter] Month $i: ${result[i]}');
+          }
           return result;
+        } else {
+          d('[NPSDatabaseAdapter] ❌ No months found in result, falling back to feedback data');
         }
       }
 
@@ -484,10 +527,13 @@ class NPSDatabaseAdapter {
         'data_as_of_date': report['data_as_of_date'] ?? DateTime.now().toIso8601String().split('T')[0],
       };
       
+      d('[NPSDatabaseAdapter] insertOrUpdateMonthlyReport called with serverId: $serverId, month: $reportMonth, year: $reportYear');
+      d('[NPSDatabaseAdapter] driftRow data: $driftRow');
+      
       // Try to insert first
       try {
         final id = await _db.insertInto('nps_monthly_reports', driftRow);
-        d('[NPSDatabaseAdapter] Inserted monthly report with ID: $id');
+        d('[NPSDatabaseAdapter] ✅ INSERTED monthly report with ID: $id for server $serverId, month $reportMonth, year $reportYear');
         
         // Invalidate related cache entries
         _cache.invalidate(CacheKeys.monthlyReport(serverId!, reportMonth));
@@ -495,6 +541,7 @@ class NPSDatabaseAdapter {
         
         return id;
       } catch (e) {
+        d('[NPSDatabaseAdapter] Insert failed: $e, attempting UPDATE...');
         // If insertion fails (likely due to unique constraint), update instead
         final rowsAffected = await _db.updateTable(
           'nps_monthly_reports',
@@ -502,7 +549,7 @@ class NPSDatabaseAdapter {
           'server_id = ? AND report_month = ? AND report_year = ?',
           [serverId, reportMonth, reportYear],
         );
-        d('[NPSDatabaseAdapter] Updated existing monthly report, rows affected: $rowsAffected');
+        d('[NPSDatabaseAdapter] ✅ UPDATED monthly report for server $serverId, month $reportMonth, year $reportYear. Rows affected: $rowsAffected');
         
         // Invalidate related cache entries
         _cache.invalidate(CacheKeys.monthlyReport(serverId!, reportMonth));

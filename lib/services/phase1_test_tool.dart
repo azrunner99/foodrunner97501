@@ -60,7 +60,7 @@ class Phase1TestTool {
     
     try {
       // Reset resolver for clean testing
-      ServerIdResolver.reset();
+      ServerIdResolver.resetResolver();
       
       // Test 1: Basic resolution
       await _testBasicResolution(test);
@@ -132,7 +132,7 @@ class Phase1TestTool {
 
   Future<void> _testCacheFunctionality(TestResult test) async {
     // Reset cache
-    ServerIdResolver.reset();
+    ServerIdResolver.resetResolver();
     
     // Make same request twice
     await ServerIdResolver.resolveToStandardId('test_cache');

@@ -43,17 +43,10 @@ class _ServerNPSStatusWidgetState extends State<ServerNPSStatusWidget> {
       
       List<Map<String, dynamic>> reportMaps;
       
-      if (dbType.contains('Sqflite')) {
-        reportMaps = await db.queryTable(
-          'nps_monthly_reports',
-          orderBy: 'month_year DESC',
-        );
-      } else {
-        reportMaps = await db.queryTable(
-          'nps_monthly_reports',
-          orderBy: 'report_year DESC, report_month DESC',
-        );
-      }
+      reportMaps = await db.queryTable(
+        'nps_monthly_reports',
+        orderBy: 'report_year DESC, report_month DESC',
+      );
       
       final allReports = reportMaps.map((map) => NPSMonthlyReport.fromMap(map)).toList();
       
@@ -158,7 +151,7 @@ class _ServerNPSStatusWidgetState extends State<ServerNPSStatusWidget> {
         'nps_monthly_reports',
         where: 'server_id = ?',
         whereArgs: [serverId],
-        orderBy: isSqflite ? 'month_year DESC' : 'report_year DESC, report_month DESC',
+        orderBy: 'report_year DESC, report_month DESC',
       );
 
       return results.map((row) => NPSMonthlyReport.fromMap(row)).toList();

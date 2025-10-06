@@ -640,30 +640,93 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
   /// Get available months that have NPS report data
   Future<List<Map<String, dynamic>>> _getAvailableMonthsWithData(dynamic database) async {
     try {
-      // Query the database to find months with actual data
-      final monthsWithData = <Map<String, dynamic>>[];
+      print('[NPS Scorecard] Getting available months using HistoricalNPSAggregationService approach...');
       
-      // Check months from 2024-2026 (you can adjust this range)
-      for (int year = 2024; year <= 2026; year++) {
-        for (int month = 1; month <= 12; month++) {
-          final serverData = await database.getServerNPSDataForMonth(month, year);
-          if (serverData.isNotEmpty) {
-            // Deduplicate to get accurate count
-            final deduplicatedData = _deduplicateServerData(serverData);
-            final monthNames = [
-              'January', 'February', 'March', 'April', 'May', 'June',
-              'July', 'August', 'September', 'October', 'November', 'December'
-            ];
-            
-            monthsWithData.add({
-              'month_key': '${year}_$month',
-              'display_name': '${monthNames[month - 1]} $year',
-              'server_count': deduplicatedData.length,
-              'year': year,
-              'month': month,
-            });
-          }
+      // Use the EXACT same approach as the working HistoricalNPSAggregationService
+      final allReports = await database.queryTable('nps_monthly_reports');
+      print('[NPS Scorecard] Found ${allReports.length} total monthly reports');
+      
+      if (allReports.isEmpty) {
+        print('[NPS Scorecard] No monthly reports found - returning empty list');
+        return [];
+      }
+      
+      // Filter out integer server IDs (EXACT same logic as HistoricalNPSAggregationService)
+      final filteredReports = allReports.where((report) {
+        final serverId = report['server_id'].toString();
+        // Filter out ALL numeric IDs (both single and multi-digit)
+        final isNumericId = RegExp(r'^\d+$').hasMatch(serverId);
+        if (isNumericId) {
+          print('[NPS Scorecard] Filtering out numeric server_id: $serverId');
         }
+        return !isNumericId; // Keep only string IDs with proper name mappings
+      }).toList();
+      
+      print('[NPS Scorecard] After filtering: ${filteredReports.length} reports (removed ${allReports.length - filteredReports.length} old format reports)');
+      
+      // Group reports by month and year
+      final Map<String, List<Map<String, dynamic>>> monthToReports = {};
+      
+      for (final report in filteredReports) {
+        final reportMonthFromDb = report['report_month'] as int?;
+        final reportYearFromDb = report['report_year'] as int?;
+        
+        int year;
+        int month;
+        
+        // Handle YYYYMM format in report_month column (legacy format)
+        if (reportMonthFromDb != null && reportMonthFromDb > 10000) {
+          // This is YYYYMM format (e.g., 202509)
+          year = reportMonthFromDb ~/ 100;
+          month = reportMonthFromDb % 100;
+          print('[NPS Scorecard] Found YYYYMM format: $reportMonthFromDb -> year=$year, month=$month');
+        }
+        // Handle separate report_month and report_year columns (new format)
+        else if (reportMonthFromDb != null && reportYearFromDb != null) {
+          year = reportYearFromDb;
+          month = reportMonthFromDb;
+        }
+        else {
+          print('[NPS Scorecard] Skipping report with null month/year: $report');
+          continue;
+        }
+        
+        // Validate month is in valid range (1-12)
+        if (month < 1 || month > 12) {
+          print('[NPS Scorecard] ⚠️ Invalid month number: $month, skipping this report');
+          continue;
+        }
+        
+        final monthKey = '${year}_$month';
+        monthToReports.putIfAbsent(monthKey, () => []).add(report);
+      }
+      
+      print('[NPS Scorecard] Found data for ${monthToReports.length} unique months');
+      
+      // Convert to the expected format
+      final monthsWithData = <Map<String, dynamic>>[];
+      final monthNames = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+      ];
+      
+      for (final entry in monthToReports.entries) {
+        final monthKey = entry.key;
+        final reports = entry.value;
+        final parts = monthKey.split('_');
+        final year = int.parse(parts[0]);
+        final month = int.parse(parts[1]);
+        
+        // Count unique servers for this month
+        final uniqueServers = reports.map((r) => r['server_id'].toString()).toSet();
+        
+        monthsWithData.add({
+          'month_key': monthKey,
+          'display_name': '${monthNames[month - 1]} $year',
+          'server_count': uniqueServers.length,
+          'year': year,
+          'month': month,
+        });
       }
       
       // Sort by year and month (most recent first)
@@ -679,24 +742,123 @@ class _ServerNPSScorecardScreenState extends State<ServerNPSScorecardScreen> {
         return bMonth.compareTo(aMonth); // Most recent month first
       });
       
+      print('[NPS Scorecard] Returning ${monthsWithData.length} months with data');
       return monthsWithData;
-      } catch (e) {
+    } catch (e) {
       print('[NPS Scorecard] Error getting available months: $e');
-        return [];
-      }
+      return [];
+    }
   }
 
   /// Get server NPS data for a specific month
   Future<List<Map<String, dynamic>>> _getServerNPSDataForMonth(
       dynamic database, int reportMonth, int reportYear) async {
     try {
-      print('[NPS Scorecard] Querying for month=$reportMonth, year=$reportYear');
+      print('[NPS Scorecard] Querying for month=$reportMonth, year=$reportYear using HistoricalNPSAggregationService approach...');
       
-      // Use the adapter method that we know works
-      final serverData = await database.getServerNPSDataForMonth(reportMonth, reportYear);
+      // Use the EXACT same approach as the working HistoricalNPSAggregationService
+      final allReports = await database.queryTable('nps_monthly_reports');
+      print('[NPS Scorecard] Found ${allReports.length} total monthly reports');
       
-      print('[NPS Scorecard] Retrieved ${serverData.length} server records');
+      if (allReports.isEmpty) {
+        print('[NPS Scorecard] No monthly reports found');
+        return [];
+      }
       
+      // Filter out integer server IDs (EXACT same logic as HistoricalNPSAggregationService)
+      final filteredReports = allReports.where((report) {
+        final serverId = report['server_id'].toString();
+        // Filter out ALL numeric IDs (both single and multi-digit)
+        final isNumericId = RegExp(r'^\d+$').hasMatch(serverId);
+        if (isNumericId) {
+          print('[NPS Scorecard] Filtering out numeric server_id: $serverId');
+        }
+        return !isNumericId; // Keep only string IDs with proper name mappings
+      }).toList();
+      
+      print('[NPS Scorecard] After filtering: ${filteredReports.length} reports');
+      
+      // Filter for the specific month and year
+      final monthReports = filteredReports.where((report) {
+        final reportMonthFromDb = report['report_month'] as int?;
+        final reportYearFromDb = report['report_year'] as int?;
+        
+        // Handle YYYYMM format in report_month column (legacy format)
+        if (reportMonthFromDb != null && reportMonthFromDb > 10000) {
+          // This is YYYYMM format (e.g., 202509)
+          final year = reportMonthFromDb ~/ 100;
+          final month = reportMonthFromDb % 100;
+          print('[NPS Scorecard] Found YYYYMM format: $reportMonthFromDb -> year=$year, month=$month');
+          
+          // Validate month is in valid range (1-12)
+          if (month < 1 || month > 12) {
+            print('[NPS Scorecard] ⚠️ Invalid month number from YYYYMM: $month, skipping this report');
+            return false;
+          }
+          
+          return month == reportMonth && year == reportYear;
+        }
+        
+        // Handle separate report_month and report_year columns (new format)
+        if (reportMonthFromDb != null && reportYearFromDb != null) {
+          // Validate month is in valid range (1-12)
+          if (reportMonthFromDb < 1 || reportMonthFromDb > 12) {
+            print('[NPS Scorecard] ⚠️ Invalid month number: $reportMonthFromDb, skipping this report');
+            return false;
+          }
+          
+          return reportMonthFromDb == reportMonth && reportYearFromDb == reportYear;
+        }
+        
+        return false;
+      }).toList();
+      
+      print('[NPS Scorecard] Found ${monthReports.length} reports for $reportMonth/$reportYear');
+      
+      // Convert to the expected format with server names
+      final serverData = <Map<String, dynamic>>[];
+      
+      for (final report in monthReports) {
+        final serverId = report['server_id'].toString();
+        
+        // Get server name from the database
+        try {
+          final servers = await database.queryTable('servers', where: 'id = ?', whereArgs: [serverId]);
+          String serverName = 'Unknown Server';
+          
+          if (servers.isNotEmpty) {
+            serverName = servers.first['name'] as String? ?? 'Unknown Server';
+          }
+          
+          serverData.add({
+            'server_id': serverId,
+            'server_name': serverName,
+            'all_time_nps_percentage': report['all_time_nps_percentage'] as double? ?? 0.0,
+            'three_month_nps_percentage': report['three_month_nps_percentage'] as double? ?? 0.0,
+            'one_month_nps_percentage': report['one_month_nps_percentage'] as double? ?? 0.0,
+            'all_time_sales': report['all_time_sales'] as double? ?? 0.0,
+            'all_time_table_count': report['all_time_table_count'] as int? ?? 0,
+            'report_month': reportMonth,
+            'report_year': reportYear,
+          });
+        } catch (e) {
+          print('[NPS Scorecard] Error getting server name for $serverId: $e');
+          // Add with unknown name if we can't get the server name
+          serverData.add({
+            'server_id': serverId,
+            'server_name': 'Unknown Server',
+            'all_time_nps_percentage': report['all_time_nps_percentage'] as double? ?? 0.0,
+            'three_month_nps_percentage': report['three_month_nps_percentage'] as double? ?? 0.0,
+            'one_month_nps_percentage': report['one_month_nps_percentage'] as double? ?? 0.0,
+            'all_time_sales': report['all_time_sales'] as double? ?? 0.0,
+            'all_time_table_count': report['all_time_table_count'] as int? ?? 0,
+            'report_month': reportMonth,
+            'report_year': reportYear,
+          });
+        }
+      }
+      
+      print('[NPS Scorecard] Returning ${serverData.length} server records for $reportMonth/$reportYear');
       return serverData;
     } catch (e) {
       print('[NPS Scorecard] Error getting server data: $e');
