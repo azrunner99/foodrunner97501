@@ -29,6 +29,7 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
   final Map<String, _ServerData> _serverData = {};
   bool _isLoading = false;
   bool _hasUnsavedChanges = false;
+  Map<String, bool> _monthsWithData = {}; // Track which months have data
 
   @override
   void initState() {
@@ -40,6 +41,47 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
     }
     
     _loadServerData();
+    _loadMonthsWithData();
+  }
+
+  /// Load which months have data to highlight them in the month selector
+  Future<void> _loadMonthsWithData() async {
+    try {
+      final npsProvider = Provider.of<NPSProvider>(context, listen: false);
+      final allReports = await npsProvider.database.queryTable('nps_monthly_reports');
+      
+      _monthsWithData.clear();
+      
+      for (final report in allReports) {
+        final reportMonth = report['report_month'] as int?;
+        final reportYear = report['report_year'] as int?;
+        
+        if (reportMonth != null && reportYear != null) {
+          // Handle both YYYYMM format and separate columns
+          int year, month;
+          
+          if (reportMonth > 1000) {
+            // YYYYMM format (e.g., 202509)
+            year = reportMonth ~/ 100;
+            month = reportMonth % 100;
+          } else {
+            // Separate columns
+            year = reportYear;
+            month = reportMonth;
+          }
+          
+          final monthKey = '${year}_$month';
+          _monthsWithData[monthKey] = true;
+        }
+      }
+      
+      if (mounted) {
+        setState(() {});
+      }
+      
+    } catch (e) {
+      d('[MonthlyNPSDataEntry] Error loading months with data: $e');
+    }
   }
 
 
@@ -200,6 +242,9 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
       
       setState(() => _hasUnsavedChanges = false);
       
+      // Refresh months with data after saving
+      await _loadMonthsWithData();
+      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Saved data for $savedCount servers')),
@@ -349,35 +394,278 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
   }
 
   Widget _buildMonthSelector() {
-    return Card(
+    return Container(
       margin: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Theme.of(context).primaryColor.withOpacity(0.1),
+            Theme.of(context).primaryColor.withOpacity(0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Theme.of(context).primaryColor.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.calendar_month),
-            const SizedBox(width: 16),
-            Text(
-              'Selected Month: ${_selectedMonth.year}-${_selectedMonth.month.toString().padLeft(2, '0')}',
-              style: Theme.of(context).textTheme.titleMedium,
+            // Header
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.calendar_month,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Select Month & Year',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).primaryColor,
+                  ),
+                ),
+                const Spacer(),
+                if (_hasUnsavedChanges)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.orange,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      'Unsaved Changes',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+              ],
             ),
-            const Spacer(),
-            ElevatedButton(
-              onPressed: () => _showMonthPicker(),
-              child: const Text('Change Month'),
-            ),
-            const SizedBox(width: 8),
-            ElevatedButton(
-              onPressed: _hasUnsavedChanges ? _clearAllData : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Clear All'),
+            const SizedBox(height: 20),
+            
+            // Year Selector
+            _buildYearSelector(),
+            const SizedBox(height: 20),
+            
+            // Month Grid
+            _buildMonthGrid(),
+            const SizedBox(height: 20),
+            
+            // Action Buttons
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _hasUnsavedChanges ? _clearAllData : null,
+                    icon: const Icon(Icons.clear_all, size: 18),
+                    label: const Text('Clear All Data'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _navigateToSavedReports,
+                    icon: const Icon(Icons.folder_open, size: 18),
+                    label: const Text('View Reports'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildYearSelector() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[300]!),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.calendar_today, color: Theme.of(context).primaryColor, size: 20),
+          const SizedBox(width: 12),
+          Text(
+            'Year:',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<int>(
+                value: _selectedMonth.year,
+                isExpanded: true,
+                icon: Icon(Icons.keyboard_arrow_down, color: Theme.of(context).primaryColor),
+                items: List.generate(5, (index) {
+                  final year = DateTime.now().year - 2 + index;
+                  return DropdownMenuItem<int>(
+                    value: year,
+                    child: Text(
+                      year.toString(),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  );
+                }),
+                onChanged: (newYear) {
+                  if (newYear != null) {
+                    setState(() {
+                      _selectedMonth = DateTime(newYear, _selectedMonth.month);
+                      _hasUnsavedChanges = false;
+                    });
+                    _loadExistingData();
+                  }
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMonthGrid() {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Select Month:',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 12),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 6,
+            childAspectRatio: 1.2,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 8,
+          ),
+          itemCount: months.length,
+          itemBuilder: (context, index) {
+            final monthIndex = index + 1;
+            final isSelected = monthIndex == _selectedMonth.month;
+            final monthKey = '${_selectedMonth.year}_$monthIndex';
+            final hasData = _monthsWithData[monthKey] ?? false;
+            
+            return GestureDetector(
+              onTap: () {
+                setState(() {
+                  _selectedMonth = DateTime(_selectedMonth.year, monthIndex);
+                  _hasUnsavedChanges = false;
+                });
+                _loadExistingData();
+              },
+              child: Container(
+                decoration: BoxDecoration(
+                  color: isSelected 
+                      ? Theme.of(context).primaryColor 
+                      : hasData 
+                          ? Colors.green[50] 
+                          : Colors.grey[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isSelected 
+                        ? Theme.of(context).primaryColor 
+                        : hasData 
+                            ? Colors.green[300]! 
+                            : Colors.grey[300]!,
+                    width: isSelected ? 2 : 1,
+                  ),
+                  boxShadow: [
+                    if (isSelected)
+                      BoxShadow(
+                        color: Theme.of(context).primaryColor.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      months[index],
+                      style: TextStyle(
+                        color: isSelected 
+                            ? Colors.white 
+                            : hasData 
+                                ? Colors.green[700] 
+                                : Colors.grey[600],
+                        fontWeight: isSelected || hasData 
+                            ? FontWeight.bold 
+                            : FontWeight.normal,
+                        fontSize: 12,
+                      ),
+                    ),
+                    if (hasData && !isSelected)
+                      Icon(
+                        Icons.check_circle,
+                        color: Colors.green[600],
+                        size: 12,
+                      ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 
@@ -398,89 +686,148 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
           final entry = _serverData.entries.elementAt(index);
           final serverData = entry.value;
 
-                return Card(
-            margin: const EdgeInsets.only(bottom: 8),
+                return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: serverData.hasData() 
+                    ? Colors.green[200]! 
+                    : Colors.grey[200]!,
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          serverData.serverName,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        // Server Header
+                        Row(
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: serverData.hasData() 
+                                    ? Colors.green 
+                                    : Colors.grey[400],
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                serverData.serverName,
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: serverData.hasData() 
+                                      ? Colors.green[700] 
+                                      : Colors.grey[700],
+                                ),
+                              ),
+                            ),
+                            if (serverData.hasData())
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.green[50],
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.green[200]!),
+                                ),
+                                child: Text(
+                                  'Has Data',
+                                  style: TextStyle(
+                                    color: Colors.green[700],
+                                    fontSize: 10,
                                     fontWeight: FontWeight.bold,
                                   ),
+                                ),
+                              ),
+                          ],
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 20),
+                        
+                        // NPS Scores Section
+                        Text(
+                          'NPS Scores',
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
                         Row(
                           children: [
                             Expanded(
-                        child: TextField(
+                              child: _buildStyledTextField(
                                 controller: serverData.allTimeNpsController,
-                                decoration: const InputDecoration(
-                                  labelText: 'All-Time NPS %',
-                            hintText: '0.0',
-                                  border: OutlineInputBorder(),
-                                ),
-                                keyboardType: TextInputType.number,
-                          onChanged: (_) => _onFieldChanged(),
+                                labelText: 'All-Time NPS %',
+                                hintText: '0.0',
+                                icon: Icons.trending_up,
+                                suffixText: '%',
                               ),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 12),
                             Expanded(
-                        child: TextField(
+                              child: _buildStyledTextField(
                                 controller: serverData.threeMonthNpsController,
-                                decoration: const InputDecoration(
-                                  labelText: '3-Month NPS %',
-                            hintText: '0.0',
-                                  border: OutlineInputBorder(),
-                                ),
-                                keyboardType: TextInputType.number,
-                          onChanged: (_) => _onFieldChanged(),
+                                labelText: '3-Month NPS %',
+                                hintText: '0.0',
+                                icon: Icons.trending_flat,
+                                suffixText: '%',
                               ),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 12),
                             Expanded(
-                        child: TextField(
+                              child: _buildStyledTextField(
                                 controller: serverData.oneMonthNpsController,
-                                decoration: const InputDecoration(
-                                  labelText: '1-Month NPS %',
-                            hintText: '0.0',
-                                  border: OutlineInputBorder(),
-                                ),
-                                keyboardType: TextInputType.number,
-                          onChanged: (_) => _onFieldChanged(),
+                                labelText: '1-Month NPS %',
+                                hintText: '0.0',
+                                icon: Icons.trending_down,
+                                suffixText: '%',
                               ),
                             ),
                           ],
                         ),
-                  const SizedBox(height: 8),
+                        const SizedBox(height: 20),
+                        
+                        // Sales & Tables Section
+                        Text(
+                          'Sales & Performance',
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
                         Row(
                           children: [
                             Expanded(
-                        child: TextField(
+                              child: _buildStyledTextField(
                                 controller: serverData.allTimeSalesController,
-                                decoration: const InputDecoration(
-                                  labelText: 'All-Time Sales',
-                            hintText: '0.00',
-                                  border: OutlineInputBorder(),
-                                  prefixText: '\$',
-                          ),
-                          keyboardType: TextInputType.number,
-                          onChanged: (_) => _onFieldChanged(),
+                                labelText: 'All-Time Sales',
+                                hintText: '0.00',
+                                icon: Icons.attach_money,
+                                prefixText: '\$',
                               ),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 12),
                             Expanded(
-                        child: TextField(
-                          controller: serverData.allTimeTableCountController,
-                                decoration: const InputDecoration(
-                            labelText: 'All-Time Tables',
-                            hintText: '0',
-                                  border: OutlineInputBorder(),
-                                ),
-                                keyboardType: TextInputType.number,
-                          onChanged: (_) => _onFieldChanged(),
+                              child: _buildStyledTextField(
+                                controller: serverData.allTimeTableCountController,
+                                labelText: 'All-Time Tables',
+                                hintText: '0',
+                                icon: Icons.table_restaurant,
+                                suffixText: ' tables',
                               ),
                             ),
                           ],
@@ -491,6 +838,52 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
                 );
               },
       ),
+    );
+  }
+
+  Widget _buildStyledTextField({
+    required TextEditingController controller,
+    required String labelText,
+    required String hintText,
+    required IconData icon,
+    String? prefixText,
+    String? suffixText,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: TextInputType.number,
+      onChanged: (_) => _onFieldChanged(),
+      decoration: InputDecoration(
+        labelText: labelText,
+        hintText: hintText,
+        prefixText: prefixText,
+        suffixText: suffixText,
+        prefixIcon: Icon(icon, size: 18),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Colors.grey[300]!),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Colors.grey[300]!),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 2),
+        ),
+        filled: true,
+        fillColor: Colors.grey[50],
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        labelStyle: TextStyle(
+          color: Colors.grey[600],
+          fontSize: 12,
+        ),
+        hintStyle: TextStyle(
+          color: Colors.grey[400],
+          fontSize: 12,
+        ),
+      ),
+      style: const TextStyle(fontSize: 14),
     );
   }
 
