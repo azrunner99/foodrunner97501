@@ -80,24 +80,44 @@ class _SavedNPSReportsScreenState extends State<SavedNPSReportsScreen> {
       final Map<String, Set<String>> monthToServers = {};
       
       for (final report in filteredReports) {
-        final reportMonth = report['report_month'] as int?;
-        final reportYear = report['report_year'] as int?;
+        final reportMonthFromDb = report['report_month'] as int?;
+        final reportYearFromDb = report['report_year'] as int?;
         
-        d('[SavedNPSReports] Processing report: month=$reportMonth, year=$reportYear');
+        d('[SavedNPSReports] Processing report: report_month=$reportMonthFromDb, report_year=$reportYearFromDb');
         
-        if (reportMonth == null || reportYear == null) {
+        int year;
+        int month;
+        
+        // Handle YYYYMM format in report_month column (current data format)
+        if (reportMonthFromDb != null && reportMonthFromDb > 10000) {
+          // Data is stored as YYYYMM (e.g., 202509)
+          final monthStr = reportMonthFromDb.toString();
+          if (monthStr.length == 6) {
+            year = int.parse(monthStr.substring(0, 4));
+            month = int.parse(monthStr.substring(4, 6));
+            d('[SavedNPSReports] Parsed YYYYMM format: $reportMonthFromDb -> year=$year, month=$month');
+          } else {
+            d('[SavedNPSReports] ⚠️ Invalid YYYYMM format: $reportMonthFromDb, skipping');
+            continue;
+          }
+        } else if (reportMonthFromDb != null && reportYearFromDb != null) {
+          // Data is stored in separate columns (new format)
+          year = reportYearFromDb;
+          month = reportMonthFromDb;
+          d('[SavedNPSReports] Using separate columns: year=$year, month=$month');
+        } else {
           d('[SavedNPSReports] Skipping report with null month/year: $report');
           continue;
         }
         
         // Validate month is in valid range (1-12)
-        if (reportMonth < 1 || reportMonth > 12) {
-          d('[SavedNPSReports] ⚠️ Invalid month number: $reportMonth, skipping this report');
+        if (month < 1 || month > 12) {
+          d('[SavedNPSReports] ⚠️ Invalid month number: $month, skipping this report');
           continue;
         }
         
         // Create month key in YYYYMM format
-        final monthKey = '${reportYear}${reportMonth.toString().padLeft(2, '0')}';
+        final monthKey = '${year}${month.toString().padLeft(2, '0')}';
         final serverId = report['server_id']?.toString() ?? '';
         
         d('[SavedNPSReports] Adding to month $monthKey, server: $serverId');
