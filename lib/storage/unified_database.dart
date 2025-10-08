@@ -58,8 +58,9 @@ class UnifiedDatabase extends _$UnifiedDatabase {
 }
 
 /// Servers table - Core server information
+/// Phase 2: Updated to use TEXT IDs for consistency with AppState and NPS Database
 class Servers extends Table {
-  IntColumn get id => integer().autoIncrement()();
+  TextColumn get id => text()();  // ⭐ Changed from INTEGER to TEXT for String ID consistency
   TextColumn get name => text()();
   TextColumn get originalId => text().nullable()();
   TextColumn get teamColor => text().nullable()();
@@ -68,6 +69,9 @@ class Servers extends Table {
   BoolColumn get active => boolean().withDefault(const Constant(true))();
   TextColumn get createdAt => text().withDefault(const Constant('CURRENT_TIMESTAMP'))();
   TextColumn get updatedAt => text().withDefault(const Constant('CURRENT_TIMESTAMP'))();
+  
+  @override
+  Set<Column> get primaryKey => {id};  // TEXT primary key
 }
 
 /// Shift records table - Food run shift data
@@ -81,6 +85,9 @@ class ShiftRecords extends Table {
   TextColumn get stationAssignments => text().nullable()(); // JSON: serverId -> station
   TextColumn get sectionAssignments => text().nullable()(); // JSON: serverId -> section
   TextColumn get createdAt => text().withDefault(const Constant('CURRENT_TIMESTAMP'))();
+  
+  @override
+  Set<Column> get primaryKey => {id};
 }
 
 /// Server profiles table - Extended server information
