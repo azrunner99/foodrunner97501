@@ -12,6 +12,7 @@ import 'services/nps_encryption_service.dart';
 import 'services/nps_audit_service.dart';
 import 'services/nps_gdpr_compliance_service.dart';
 import 'services/server_id_resolver.dart';
+import 'services/database_sync_service.dart';
 import 'storage/nps_database_adapter.dart';
 import 'screens/home_screen.dart';
 import 'screens/assign_servers_screen.dart';
@@ -60,6 +61,28 @@ void main() async {
     print('❌ [Phase 1.1] ServerIdResolver initialization failed: $e');
     print('   Stack trace: $stackTrace');
     // Continue anyway - app should still work without it, just less reliably
+  }
+
+  // ⭐ Phase 1.2: Initialize DatabaseSyncService
+  // This service handles automatic server synchronization between storage systems
+  try {
+    await DatabaseSyncService.instance.initialize();
+    print('✅ [Phase 1.2] DatabaseSyncService initialized');
+    
+    // Verify sync status on startup
+    final syncStatus = await DatabaseSyncService.instance.verifySyncStatus(appState);
+    print('   Sync status: ${syncStatus['serversInSync']}/${syncStatus['appServerCount']} servers in sync (${syncStatus['syncPercentage'].toStringAsFixed(1)}%)');
+    
+    // Auto-fix any sync issues on startup
+    if (!syncStatus['isSynced']) {
+      print('   ⚠️ Servers out of sync, auto-fixing...');
+      final fixResult = await DatabaseSyncService.instance.autoFixSyncIssues(appState);
+      print('   ✅ Applied ${fixResult['fixCount']} fixes');
+    }
+  } catch (e, stackTrace) {
+    print('❌ [Phase 1.2] DatabaseSyncService initialization failed: $e');
+    print('   Stack trace: $stackTrace');
+    // Continue anyway - manual sync will still be available
   }
 
   final npsFilterService = NPSFilterService();
