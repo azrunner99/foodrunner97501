@@ -570,3 +570,6 @@ class TrendAnalysis {
 
 
 
+
+
+

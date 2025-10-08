@@ -933,6 +933,9 @@ class AppState extends ChangeNotifier {
       // Run migrations; any error bubbles up and prevents bump
       await _runMigrations(
           from: storedVersion, to: Storage.currentSchemaVersion);
+      
+      // ID Consolidation Migration: Convert INTEGER server IDs to TEXT
+      await _migrateServerIdsToText();
       // Only after successful migrations do we bump the stored version
       await Storage.setSchemaVersion(Storage.currentSchemaVersion);
       d('[SCHEMA] Migration complete. Updated schemaVersion=${Storage.currentSchemaVersion}');
@@ -1200,6 +1203,130 @@ class AppState extends ChangeNotifier {
     }
     d('[SCHEMA] Applying v0->v1 migration (establish schemaVersion key).');
     // Nothing else to transform yet.
+  }
+
+  /// ID Consolidation Migration: Convert INTEGER server IDs to TEXT format
+  /// This ensures compatibility with the NPS database TEXT ID requirements
+  Future<void> _migrateServerIdsToText() async {
+    try {
+      d('[ID_MIGRATION] Starting server ID consolidation migration...');
+      
+      // Load current server data
+      final sl = (await Storage.serversBox.get('list') as List?)?.cast<Map>() ?? [];
+      if (sl.isEmpty) {
+        d('[ID_MIGRATION] No servers found, skipping migration');
+        return;
+      }
+      
+      bool needsMigration = false;
+      final migratedServers = <Map<String, dynamic>>[];
+      final oldToNewIdMap = <String, String>{}; // old INTEGER ID -> new TEXT ID
+      
+      // Check if any servers have INTEGER IDs that need conversion
+      for (final serverMap in sl) {
+        final server = Map<String, dynamic>.from(serverMap);
+        final currentId = server['id'] as String;
+        
+        // Check if this is an INTEGER ID (numeric string)
+        if (_isIntegerId(currentId)) {
+          needsMigration = true;
+          // Convert INTEGER ID to TEXT format (keep the same value as string)
+          final textId = currentId; // INTEGER IDs are already strings, just ensure they're treated as TEXT
+          oldToNewIdMap[currentId] = textId;
+          server['id'] = textId;
+          d('[ID_MIGRATION] Converting server ID: $currentId -> $textId');
+        }
+        
+        migratedServers.add(server);
+      }
+      
+      if (!needsMigration) {
+        d('[ID_MIGRATION] All server IDs already in TEXT format, no migration needed');
+        return;
+      }
+      
+      // Update all related data structures with new IDs
+      await _updateRelatedDataWithNewIds(oldToNewIdMap);
+      
+      // Save migrated servers
+      await Storage.serversBox.put('list', migratedServers);
+      
+      d('[ID_MIGRATION] ✅ Server ID consolidation migration completed successfully');
+      d('[ID_MIGRATION] Migrated ${oldToNewIdMap.length} server IDs to TEXT format');
+      
+    } catch (e) {
+      d('[ID_MIGRATION] ❌ Error during server ID migration: $e');
+      rethrow; // Let the migration system handle the error
+    }
+  }
+  
+  /// Check if a server ID is in INTEGER format (numeric string)
+  bool _isIntegerId(String id) {
+    // INTEGER IDs are typically short numeric strings like "112", "113", etc.
+    // TEXT IDs are longer alphanumeric strings like "p9xez6i7w1ymnhbj"
+    return RegExp(r'^\d{1,4}$').hasMatch(id);
+  }
+  
+  /// Update all related data structures when server IDs change
+  Future<void> _updateRelatedDataWithNewIds(Map<String, String> oldToNewIdMap) async {
+    if (oldToNewIdMap.isEmpty) return;
+    
+    d('[ID_MIGRATION] Updating related data structures...');
+    
+    // Update totals
+    final totalsData = <String, int>{};
+    final totals = (await Storage.totalsBox.get('totals') as Map?)?.cast<String, int>() ?? {};
+    for (final entry in totals.entries) {
+      if (oldToNewIdMap.containsKey(entry.key)) {
+        final newKey = oldToNewIdMap[entry.key]!;
+        totalsData[newKey] = entry.value;
+        d('[ID_MIGRATION] Updated total: ${entry.key} -> $newKey');
+      } else {
+        totalsData[entry.key] = entry.value;
+      }
+    }
+    await Storage.totalsBox.put('totals', totalsData);
+    
+    // Update shift history
+    final histList = (await Storage.shiftsBox.get('list') as List?)?.cast<Map>() ?? [];
+    final migratedHistory = <Map<String, dynamic>>[];
+    
+    for (final shiftMap in histList) {
+      final shift = Map<String, dynamic>.from(shiftMap);
+      
+      // Update counts map
+      final counts = Map<String, int>.from(shift['counts'] as Map? ?? {});
+      final migratedCounts = <String, int>{};
+      for (final entry in counts.entries) {
+        if (oldToNewIdMap.containsKey(entry.key)) {
+          migratedCounts[oldToNewIdMap[entry.key]!] = entry.value;
+        } else {
+          migratedCounts[entry.key] = entry.value;
+        }
+      }
+      shift['counts'] = migratedCounts;
+      
+      // Update pizookieCounts map if it exists
+      if (shift['pizookieCounts'] != null) {
+        final pizookieCounts = Map<String, int>.from(shift['pizookieCounts'] as Map);
+        final migratedPizookieCounts = <String, int>{};
+        for (final entry in pizookieCounts.entries) {
+          if (oldToNewIdMap.containsKey(entry.key)) {
+            migratedPizookieCounts[oldToNewIdMap[entry.key]!] = entry.value;
+          } else {
+            migratedPizookieCounts[entry.key] = entry.value;
+          }
+        }
+        shift['pizookieCounts'] = migratedPizookieCounts;
+      }
+      
+      migratedHistory.add(shift);
+    }
+    
+    await Storage.shiftsBox.put('list', migratedHistory);
+    
+    d('[ID_MIGRATION] ✅ Related data structures updated successfully');
+    d('[ID_MIGRATION] Note: Profile updates will be handled during normal app operation');
   }
 
   /// Debug-only convenience to re-run migrations without bumping unless all succeed.

@@ -180,11 +180,26 @@ class ServerIdResolver {
   static Future<Server?> resolveToServerObject(dynamic serverId) async {
     if (serverId == null) return null;
     final canonicalId = instance.getCanonicalId(serverId.toString());
-    // Return a basic server object with canonical ID
-    return Server(
-      id: canonicalId,
-      name: 'Server $canonicalId', // Fallback name
-    );
+    
+    // Try to get the actual server name from AppState
+    try {
+      final appState = AppState();
+      final server = appState.servers.firstWhere(
+        (s) => s.id == canonicalId,
+        orElse: () => Server(
+          id: canonicalId,
+          name: 'Server $canonicalId', // Fallback name only if not found in AppState
+        ),
+      );
+      return server;
+    } catch (e) {
+      d('[ServerIdResolver] Error resolving server name for $canonicalId: $e');
+      // Return a basic server object with canonical ID as fallback
+      return Server(
+        id: canonicalId,
+        name: 'Server $canonicalId', // Fallback name
+      );
+    }
   }
   
   /// Static method for compatibility with existing code
