@@ -263,9 +263,9 @@ class ConflictResolver {
     
     return {
       'total': results.length,
-      'needsAction': stats[ConflictResolution.createInTarget]! +
-          stats[ConflictResolution.deleteFromTarget]! +
-          stats[ConflictResolution.useAppState]!,
+      'needsAction': (stats[ConflictResolution.createInTarget] ?? 0) +
+          (stats[ConflictResolution.deleteFromTarget] ?? 0) +
+          (stats[ConflictResolution.useAppState] ?? 0),
       'inSync': stats[ConflictResolution.noAction] ?? 0,
       'requiresManual': stats[ConflictResolution.requiresManualResolution] ?? 0,
       'breakdown': {
