@@ -25,6 +25,7 @@ import '../services/server_data_service.dart';
 import '../services/server_id_resolver.dart';
 import '../storage/database_factory.dart';
 import '../storage/nps_database_adapter.dart';
+import '../debug/unified_storage_test.dart';
 
 class CleanAdminScreen extends StatefulWidget {
   const CleanAdminScreen({super.key});
@@ -367,6 +368,35 @@ class _CleanAdminScreenState extends State<CleanAdminScreen> {
                     subtitle: 'Automatically fix common sync problems',
                     enabled: true,
                     onTap: () => _autoFixSyncIssues(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              // ⭐ Phase 2.4: Unified Storage Testing Section
+              _buildSectionCard(
+                'Unified Storage Testing',
+                Icons.storage,
+                [
+                  _buildAdminTile(
+                    icon: Icons.play_arrow,
+                    title: 'Run All Tests',
+                    subtitle: 'Comprehensive test suite for real database persistence',
+                    enabled: true,
+                    onTap: () => _runUnifiedStorageTests(),
+                  ),
+                  _buildAdminTile(
+                    icon: Icons.speed,
+                    title: 'Performance Benchmark',
+                    subtitle: 'Measure database operation speeds',
+                    enabled: true,
+                    onTap: () => _runPerformanceBenchmark(),
+                  ),
+                  _buildAdminTile(
+                    icon: Icons.check_circle,
+                    title: 'Quick Smoke Test',
+                    subtitle: 'Fast validation of basic operations',
+                    enabled: true,
+                    onTap: () => _runQuickSmokeTest(),
                   ),
                 ],
               ),
@@ -1379,6 +1409,189 @@ class _CleanAdminScreenState extends State<CleanAdminScreen> {
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Auto-fix failed: $e')),
+      );
+    }
+  }
+
+  // ⭐ Phase 2.4: Unified Storage Test Methods
+
+  /// Run comprehensive test suite for UnifiedStorageService
+  Future<void> _runUnifiedStorageTests() async {
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Running tests...'),
+          ],
+        ),
+      ),
+    );
+    
+    try {
+      final results = await UnifiedStorageTest.runAllTests();
+      final summary = results['summary'] as Map<String, dynamic>;
+      
+      if (!mounted) return;
+      Navigator.of(context).pop(); // Close loading dialog
+      
+      // Show results dialog
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(
+                summary['allPassed'] ? Icons.check_circle : Icons.warning,
+                color: summary['allPassed'] ? Colors.green : Colors.orange,
+              ),
+              const SizedBox(width: 8),
+              Text('Tests: ${summary['passed']}/${summary['total']} Passed'),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildStatusRow('Success Rate', '${summary['successRate'].toStringAsFixed(1)}%'),
+                const Divider(),
+                const Text('Test Results:', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                ...results.entries.where((e) => e.key != 'summary').map((entry) {
+                  final result = entry.value as Map<String, dynamic>;
+                  final status = result['passed'] == true ? '✅' : '❌';
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text('$status ${entry.key}'),
+                  );
+                }),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Tests failed: $e')),
+      );
+    }
+  }
+
+  /// Run performance benchmark
+  Future<void> _runPerformanceBenchmark() async {
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Benchmarking...'),
+          ],
+        ),
+      ),
+    );
+    
+    try {
+      final results = await UnifiedStorageTest.performanceBenchmark();
+      
+      if (!mounted) return;
+      Navigator.of(context).pop(); // Close loading dialog
+      
+      // Show results
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.speed, color: Colors.blue),
+              SizedBox(width: 8),
+              Text('Performance Results'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Operation Speeds:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              ...results.entries.map((entry) => _buildStatusRow(
+                entry.key.replaceAll('_', ' '), 
+                '${entry.value}ms',
+              )),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Benchmark failed: $e')),
+      );
+    }
+  }
+
+  /// Run quick smoke test
+  Future<void> _runQuickSmokeTest() async {
+    try {
+      final passed = await UnifiedStorageTest.quickSmokeTest();
+      
+      if (!mounted) return;
+      
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(
+                passed ? Icons.check_circle : Icons.error,
+                color: passed ? Colors.green : Colors.red,
+              ),
+              const SizedBox(width: 8),
+              Text(passed ? 'Test Passed!' : 'Test Failed'),
+            ],
+          ),
+          content: Text(
+            passed 
+                ? '✅ UnifiedStorageService basic operations work correctly!\n\n🎯 Data is being persisted to the database!'
+                : '❌ UnifiedStorageService test failed.\n\nCheck console for details.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Smoke test error: $e')),
       );
     }
   }
