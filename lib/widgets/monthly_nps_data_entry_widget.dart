@@ -6,6 +6,7 @@ import '../models/monthly_report.dart';
 import '../utils/log.dart';
 import '../screens/saved_nps_reports_screen.dart';
 import '../screens/server_nps_tracking_screen.dart';
+import '../services/server_data_service.dart';
 
 /// Simple, working Monthly NPS Data Entry Widget
 /// 
@@ -89,17 +90,18 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
     setState(() => _isLoading = true);
     
     try {
-      final appState = Provider.of<AppState>(context, listen: false);
-      final npsProvider = Provider.of<NPSProvider>(context, listen: false);
+      d('[MonthlyNPSDataEntry] Loading server data using ServerDataService...');
       
-      d('[MonthlyNPSDataEntry] Loading server data...');
-      d('[MonthlyNPSDataEntry] AppState has ${appState.servers.length} servers');
+      // ⭐ Phase 1.4: Use ServerDataService for unified server access
+      final servers = await ServerDataService.instance.getAllServers();
+      
+      d('[MonthlyNPSDataEntry] ServerDataService returned ${servers.length} servers');
       
       // Clear existing data
       _serverData.clear();
       
       // Create data entries for each server
-      for (final server in appState.servers) {
+      for (final server in servers) {
         _serverData[server.id] = _ServerData(serverId: server.id, serverName: server.name);
       }
       

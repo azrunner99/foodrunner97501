@@ -18,6 +18,7 @@ import '../services/historical_nps_aggregation_service.dart';
 import '../services/performance_timeline_service.dart';
 // import '../services/intelligent_performance_classifier.dart';
 import '../models/historical_nps_data.dart';
+import '../services/server_data_service.dart';
 import '../models/performance_models.dart' as performance_models;
 
 /// Enhanced analytics dashboard with charts and visualizations
@@ -69,17 +70,16 @@ class _EnhancedNPSAnalyticsWidgetState
       await HistoricalNPSAggregationService.instance.initialize();
       print('🔍 [EnhancedNPSAnalyticsWidget] Service initialized, calling getAllHistoricalData()');
 
-      // Get AppState servers for name mapping
-      final appState = Provider.of<AppState>(context, listen: false);
-      final appStateServers = appState.servers;
-      print('🔍 [EnhancedNPSAnalyticsWidget] Found ${appStateServers.length} servers in AppState for name mapping');
-      for (int i = 0; i < appStateServers.length && i < 5; i++) {
-        final server = appStateServers[i];
-        print('🔍 [EnhancedNPSAnalyticsWidget] AppState server ${i + 1}: id=${server.id}, name=${server.name}');
+      // ⭐ Phase 1.4: Get servers using ServerDataService for unified access
+      final servers = await ServerDataService.instance.getAllServers();
+      print('🔍 [EnhancedNPSAnalyticsWidget] ServerDataService returned ${servers.length} servers for name mapping');
+      for (int i = 0; i < servers.length && i < 5; i++) {
+        final server = servers[i];
+        print('🔍 [EnhancedNPSAnalyticsWidget] Server ${i + 1}: id=${server.id}, name=${server.name}');
       }
 
-      // Load historical data for all servers with AppState server mapping
-      final historicalData = await HistoricalNPSAggregationService.instance.getAllHistoricalDataWithAppState(appStateServers);
+      // Load historical data for all servers with server mapping
+      final historicalData = await HistoricalNPSAggregationService.instance.getAllHistoricalDataWithAppState(servers);
 
       // Load performance timelines
       final timelines = await PerformanceTimelineService.instance.getAllTimelines();
