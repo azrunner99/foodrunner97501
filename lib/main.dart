@@ -14,6 +14,7 @@ import 'services/nps_gdpr_compliance_service.dart';
 import 'services/server_id_resolver.dart';
 import 'services/database_sync_service.dart';
 import 'services/server_data_service.dart';
+import 'services/periodic_sync_service.dart';
 import 'storage/nps_database_adapter.dart';
 import 'screens/home_screen.dart';
 import 'screens/assign_servers_screen.dart';
@@ -97,6 +98,22 @@ void main() async {
     print('❌ [Phase 1.3] ServerDataService initialization failed: $e');
     print('   Stack trace: $stackTrace');
     // Continue anyway - widgets can still access data directly
+  }
+
+  // ⭐ Phase 3.2: Initialize PeriodicSyncService
+  // This service runs background validation and auto-sync every 5 minutes
+  try {
+    PeriodicSyncService.instance.initialize(
+      appState,
+      autoFixEnabled: true,
+      syncInterval: const Duration(minutes: 5),
+    );
+    PeriodicSyncService.instance.start();
+    print('✅ [Phase 3.2] PeriodicSyncService started (5 min interval, auto-fix enabled)');
+  } catch (e, stackTrace) {
+    print('❌ [Phase 3.2] PeriodicSyncService initialization failed: $e');
+    print('   Stack trace: $stackTrace');
+    // Continue anyway - manual sync will still work
   }
 
   final npsFilterService = NPSFilterService();

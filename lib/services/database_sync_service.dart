@@ -70,6 +70,22 @@ class DatabaseSyncService {
     }
   }
   
+  /// Delete a server from NPS Database
+  /// 
+  /// Called when a server is removed from AppState to keep databases in sync.
+  /// Phase 3.1 Auto-sync hook.
+  Future<void> deleteServerFromNPS(String serverId) async {
+    try {
+      d('[DatabaseSyncService] Deleting server $serverId from NPS Database...');
+      await _npsAdapter.deleteServer(serverId);
+      d('[DatabaseSyncService] ✅ Deleted server $serverId from NPS Database');
+    } catch (e, stackTrace) {
+      d('[DatabaseSyncService] ❌ Error deleting server $serverId: $e');
+      d('[DatabaseSyncService] Stack trace: $stackTrace');
+      // Don't rethrow - sync failures shouldn't break the app
+    }
+  }
+  
   /// Sync all servers from AppState to NPS Database
   /// 
   /// This is useful for:

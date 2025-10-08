@@ -23,6 +23,8 @@ import '../debug/nps_database_schema_repair.dart';
 import '../services/database_sync_service.dart';
 import '../services/server_data_service.dart';
 import '../services/server_id_resolver.dart';
+import '../services/periodic_sync_service.dart';
+import '../services/conflict_resolver.dart';
 import '../storage/database_factory.dart';
 import '../storage/nps_database_adapter.dart';
 import '../debug/unified_storage_test.dart';
@@ -370,6 +372,29 @@ class _CleanAdminScreenState extends State<CleanAdminScreen> {
                     subtitle: 'Automatically fix common sync problems',
                     enabled: true,
                     onTap: () => _autoFixSyncIssues(),
+                  ),
+                  // ⭐ Phase 3.4: Real-Time Monitoring Tools
+                  const Divider(height: 32, thickness: 1, indent: 16, endIndent: 16),
+                  _buildAdminTile(
+                    icon: Icons.monitor_heart,
+                    title: 'Periodic Sync Status',
+                    subtitle: 'Real-time monitoring of background sync service',
+                    enabled: true,
+                    onTap: () => _showPeriodicSyncStatus(),
+                  ),
+                  _buildAdminTile(
+                    icon: Icons.settings,
+                    title: 'Periodic Sync Controls',
+                    subtitle: 'Start/Stop/Configure background sync',
+                    enabled: true,
+                    onTap: () => _showPeriodicSyncControls(),
+                  ),
+                  _buildAdminTile(
+                    icon: Icons.warning_amber,
+                    title: 'Conflict Analysis',
+                    subtitle: 'Detect and analyze data conflicts',
+                    enabled: true,
+                    onTap: () => _showConflictAnalysis(),
                   ),
                 ],
               ),
@@ -1447,6 +1472,305 @@ class _CleanAdminScreenState extends State<CleanAdminScreen> {
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Auto-fix failed: $e')),
+      );
+    }
+  }
+
+  // ⭐ Phase 3.4: Real-Time Monitoring Methods
+
+  /// Show periodic sync service status
+  Future<void> _showPeriodicSyncStatus() async {
+    final status = PeriodicSyncService.instance.getStatus();
+    final report = PeriodicSyncService.instance.generateReport();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.monitor_heart, color: Colors.blue),
+            SizedBox(width: 8),
+            Text('Periodic Sync Status'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildStatusRow(
+                'Service Status',
+                status['isRunning'] ? '🟢 RUNNING' : '🔴 STOPPED',
+              ),
+              _buildStatusRow(
+                'Auto-Fix',
+                status['autoFixEnabled'] ? '✅ ENABLED' : '⚠️ DISABLED',
+              ),
+              _buildStatusRow(
+                'Sync Interval',
+                '${status['syncInterval']} minutes',
+              ),
+              _buildStatusRow(
+                'Total Syncs',
+                '${status['totalSyncsRun']}',
+              ),
+              _buildStatusRow(
+                'Issues Fixed',
+                '${status['totalIssuesFixed']}',
+              ),
+              _buildStatusRow(
+                'Last Sync',
+                status['lastSyncTime'] != null
+                    ? DateTime.parse(status['lastSyncTime']).toLocal().toString()
+                    : 'Never',
+              ),
+              const Divider(),
+              const Text('Detailed Report:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: SelectableText(
+                  report,
+                  style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          if (status['isRunning'])
+            TextButton(
+              onPressed: () async {
+                await PeriodicSyncService.instance.triggerManualSync();
+                if (!mounted) return;
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Manual sync triggered')),
+                );
+              },
+              child: const Text('Trigger Sync Now'),
+            ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Show periodic sync service controls
+  Future<void> _showPeriodicSyncControls() async {
+    final status = PeriodicSyncService.instance.getStatus();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.settings, color: Colors.blue),
+            SizedBox(width: 8),
+            Text('Periodic Sync Controls'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Current Status: ${status['isRunning'] ? '🟢 RUNNING' : '🔴 STOPPED'}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () {
+                if (status['isRunning']) {
+                  PeriodicSyncService.instance.stop();
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Periodic sync stopped')),
+                  );
+                } else {
+                  PeriodicSyncService.instance.start();
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Periodic sync started')),
+                  );
+                }
+              },
+              icon: Icon(status['isRunning'] ? Icons.stop : Icons.play_arrow),
+              label: Text(status['isRunning'] ? 'Stop Service' : 'Start Service'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: status['isRunning'] ? Colors.red : Colors.green,
+                foregroundColor: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text('Auto-Fix:', style: TextStyle(fontWeight: FontWeight.bold)),
+            SwitchListTile(
+              title: const Text('Enable Auto-Fix'),
+              subtitle: const Text('Automatically fix sync issues when detected'),
+              value: status['autoFixEnabled'],
+              onChanged: (value) {
+                PeriodicSyncService.instance.setAutoFix(value);
+                Navigator.of(context).pop();
+                _showPeriodicSyncControls(); // Refresh dialog
+              },
+            ),
+            const SizedBox(height: 16),
+            const Text('Sync Interval:', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: [
+                _buildIntervalChip(1),
+                _buildIntervalChip(5),
+                _buildIntervalChip(10),
+                _buildIntervalChip(15),
+                _buildIntervalChip(30),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build interval chip for periodic sync controls
+  Widget _buildIntervalChip(int minutes) {
+    final status = PeriodicSyncService.instance.getStatus();
+    final isSelected = status['syncInterval'] == minutes;
+    
+    return ActionChip(
+      label: Text('$minutes min'),
+      onPressed: () {
+        PeriodicSyncService.instance.setSyncInterval(Duration(minutes: minutes));
+        Navigator.of(context).pop();
+        _showPeriodicSyncControls(); // Refresh dialog
+      },
+      backgroundColor: isSelected ? Colors.blue : null,
+      labelStyle: TextStyle(color: isSelected ? Colors.white : null),
+    );
+  }
+
+  /// Show conflict analysis report
+  Future<void> _showConflictAnalysis() async {
+    final app = context.read<AppState>();
+    
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Analyzing conflicts...'),
+          ],
+        ),
+      ),
+    );
+    
+    try {
+      // Get data from all sources
+      final appStateServers = app.servers;
+      final npsAdapter = NPSDatabaseAdapter(DatabaseFactory.instance);
+      final npsServers = await npsAdapter.getAllServers();
+      
+      // Run conflict analysis
+      final conflicts = ConflictResolver.instance.resolveAllConflicts(
+        appStateServers: appStateServers,
+        npsServers: npsServers,
+      );
+      
+      final stats = ConflictResolver.instance.getConflictStats(conflicts);
+      final report = ConflictResolver.instance.generateConflictReport(conflicts);
+      
+      if (!mounted) return;
+      Navigator.of(context).pop(); // Close loading dialog
+      
+      // Show conflict report
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(
+                stats['requiresManual'] > 0 ? Icons.warning : Icons.check_circle,
+                color: stats['requiresManual'] > 0 ? Colors.orange : Colors.green,
+              ),
+              const SizedBox(width: 8),
+              const Text('Conflict Analysis'),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildStatusRow('Total Servers', '${stats['total']}'),
+                _buildStatusRow('In Sync', '${stats['inSync']}'),
+                _buildStatusRow('Need Action', '${stats['needsAction']}'),
+                _buildStatusRow('Require Manual', '${stats['requiresManual']}'),
+                const Divider(),
+                const Text('Breakdown:', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                _buildStatusRow('  Create', '${stats['breakdown']['create']}'),
+                _buildStatusRow('  Update', '${stats['breakdown']['update']}'),
+                _buildStatusRow('  Delete', '${stats['breakdown']['delete']}'),
+                _buildStatusRow('  No Action', '${stats['breakdown']['noAction']}'),
+                const Divider(),
+                const Text('Detailed Report:', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: SelectableText(
+                    report,
+                    style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            if (stats['needsAction'] > 0)
+              ElevatedButton(
+                onPressed: () async {
+                  Navigator.of(context).pop();
+                  await _autoFixSyncIssues(); // Reuse the auto-fix method
+                },
+                child: const Text('Auto-Fix Now'),
+              ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    } catch (error, stackTrace) {
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      if (kDebugMode) print('[CleanAdminScreen] Conflict analysis failed: $error');
+      if (kDebugMode) print('[CleanAdminScreen] Stack trace: $stackTrace');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Conflict analysis failed: $error')),
       );
     }
   }
