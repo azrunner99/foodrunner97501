@@ -26,6 +26,8 @@ import '../services/server_id_resolver.dart';
 import '../storage/database_factory.dart';
 import '../storage/nps_database_adapter.dart';
 import '../debug/unified_storage_test.dart';
+import '../services/hive_to_unified_migration_service.dart';
+import '../services/unified_storage_service.dart';
 
 class CleanAdminScreen extends StatefulWidget {
   const CleanAdminScreen({super.key});
@@ -368,6 +370,42 @@ class _CleanAdminScreenState extends State<CleanAdminScreen> {
                     subtitle: 'Automatically fix common sync problems',
                     enabled: true,
                     onTap: () => _autoFixSyncIssues(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              // ⭐ Phase 2.5: Data Migration Section
+              _buildSectionCard(
+                'Data Migration',
+                Icons.import_export,
+                [
+                  _buildAdminTile(
+                    icon: Icons.assessment,
+                    title: 'Migration Status',
+                    subtitle: 'Check if migration from Hive to UnifiedDB is needed',
+                    enabled: true,
+                    onTap: () => _checkMigrationStatus(),
+                  ),
+                  _buildAdminTile(
+                    icon: Icons.preview,
+                    title: 'Dry Run Migration',
+                    subtitle: 'Preview what will be migrated (no changes)',
+                    enabled: true,
+                    onTap: () => _runDryRunMigration(),
+                  ),
+                  _buildAdminTile(
+                    icon: Icons.sync_alt,
+                    title: 'Migrate Data',
+                    subtitle: 'Migrate all data from Hive to UnifiedDatabase',
+                    enabled: true,
+                    onTap: () => _runFullMigration(),
+                  ),
+                  _buildAdminTile(
+                    icon: Icons.verified,
+                    title: 'Verify Migration',
+                    subtitle: 'Verify data integrity after migration',
+                    enabled: true,
+                    onTap: () => _verifyMigration(),
                   ),
                 ],
               ),
@@ -1592,6 +1630,348 @@ class _CleanAdminScreenState extends State<CleanAdminScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Smoke test error: $e')),
+      );
+    }
+  }
+
+  // ⭐ Phase 2.5: Data Migration Methods
+
+  /// Check migration status
+  Future<void> _checkMigrationStatus() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Checking migration status...'),
+          ],
+        ),
+      ),
+    );
+    
+    try {
+      final report = await HiveToUnifiedMigrationService.instance.generateMigrationReport();
+      
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.info, color: Colors.blue),
+              SizedBox(width: 8),
+              Text('Migration Status'),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: SelectableText(
+                report,
+                style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error checking status: $e')),
+      );
+    }
+  }
+
+  /// Run dry run migration
+  Future<void> _runDryRunMigration() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Running dry run...'),
+          ],
+        ),
+      ),
+    );
+    
+    try {
+      final result = await HiveToUnifiedMigrationService.instance.migrateAllData(dryRun: true);
+      final summary = result['summary'] as Map<String, dynamic>;
+      
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.preview, color: Colors.blue),
+              SizedBox(width: 8),
+              Text('Dry Run Results'),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('⚠️ No data was actually migrated (dry run)', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Divider(),
+                _buildStatusRow('Total Items', '${summary['totalMigrated']}'),
+                _buildStatusRow('Errors', '${summary['totalErrors']}'),
+                const Divider(),
+                ...result.entries.where((e) => e.key != 'summary').map((entry) {
+                  final data = entry.value as Map<String, dynamic>;
+                  return _buildStatusRow(entry.key, '${data['migrated']} items');
+                }),
+              ],
+            ),
+          ),
+          actions: [
+            if (summary['totalMigrated'] > 0)
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _runFullMigration();
+                },
+                child: const Text('Run Real Migration'),
+              ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Dry run failed: $e')),
+      );
+    }
+  }
+
+  /// Run full migration
+  Future<void> _runFullMigration() async {
+    // Confirm action
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning, color: Colors.orange),
+            SizedBox(width: 8),
+            Text('Migrate Data'),
+          ],
+        ),
+        content: const Text(
+          'This will migrate all data from Hive storage to the new UnifiedDatabase.\n\n'
+          '✅ Hive data will be preserved as backup\n'
+          '✅ You can verify migration after\n'
+          '✅ This is a one-time operation\n\n'
+          'Continue?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Migrate Now'),
+          ),
+        ],
+      ),
+    );
+    
+    if (confirmed != true) return;
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Migrating data...'),
+            SizedBox(height: 8),
+            Text('This may take a moment...', style: TextStyle(fontSize: 12)),
+          ],
+        ),
+      ),
+    );
+    
+    try {
+      final result = await HiveToUnifiedMigrationService.instance.migrateAllData(dryRun: false);
+      final summary = result['summary'] as Map<String, dynamic>;
+      
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(
+                summary['success'] ? Icons.check_circle : Icons.warning,
+                color: summary['success'] ? Colors.green : Colors.orange,
+              ),
+              const SizedBox(width: 8),
+              Text('Migration ${summary['success'] ? 'Complete' : 'Completed with Errors'}'),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildStatusRow('Total Migrated', '${summary['totalMigrated']}'),
+                _buildStatusRow('Errors', '${summary['totalErrors']}'),
+                const Divider(),
+                const Text('Details:', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                ...result.entries.where((e) => e.key != 'summary').map((entry) {
+                  final data = entry.value as Map<String, dynamic>;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text('${entry.key}: ${data['migrated']} migrated'),
+                  );
+                }),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton.icon(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _verifyMigration();
+              },
+              icon: const Icon(Icons.verified),
+              label: const Text('Verify'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Migration failed: $e')),
+      );
+    }
+  }
+
+  /// Verify migration
+  Future<void> _verifyMigration() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Verifying migration...'),
+          ],
+        ),
+      ),
+    );
+    
+    try {
+      final result = await HiveToUnifiedMigrationService.instance.verifyMigration();
+      
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(
+                result['overallMatch'] ? Icons.check_circle : Icons.warning,
+                color: result['overallMatch'] ? Colors.green : Colors.orange,
+              ),
+              const SizedBox(width: 8),
+              Text(result['overallMatch'] ? 'Verification Passed' : 'Data Mismatch'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Data Counts:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              if (result['servers'] != null) ...[
+                _buildStatusRow('Servers (Hive)', '${result['servers']['hive']}'),
+                _buildStatusRow('Servers (Unified)', '${result['servers']['unified']}'),
+                Text(
+                  result['servers']['match'] ? '✅ Match' : '⚠️ Mismatch',
+                  style: TextStyle(
+                    color: result['servers']['match'] ? Colors.green : Colors.orange,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+              const Divider(),
+              if (result['shifts'] != null) ...[
+                _buildStatusRow('Shifts (Hive)', '${result['shifts']['hive']}'),
+                _buildStatusRow('Shifts (Unified)', '${result['shifts']['unified']}'),
+                Text(
+                  result['shifts']['match'] ? '✅ Match' : '⚠️ Mismatch',
+                  style: TextStyle(
+                    color: result['shifts']['match'] ? Colors.green : Colors.orange,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Verification failed: $e')),
       );
     }
   }

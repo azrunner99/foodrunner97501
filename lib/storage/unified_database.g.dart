@@ -10,13 +10,9 @@ class $ServersTable extends Servers with TableInfo<$ServersTable, Server> {
   $ServersTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
       'id', aliasedName, false,
-      hasAutoIncrement: true,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      defaultConstraints:
-          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+      type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _nameMeta = const VerificationMeta('name');
   @override
   late final GeneratedColumn<String> name = GeneratedColumn<String>(
@@ -95,6 +91,8 @@ class $ServersTable extends Servers with TableInfo<$ServersTable, Server> {
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
     }
     if (data.containsKey('name')) {
       context.handle(
@@ -146,7 +144,7 @@ class $ServersTable extends Servers with TableInfo<$ServersTable, Server> {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return Server(
       id: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
       name: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
       originalId: attachedDatabase.typeMapping
@@ -173,7 +171,7 @@ class $ServersTable extends Servers with TableInfo<$ServersTable, Server> {
 }
 
 class Server extends DataClass implements Insertable<Server> {
-  final int id;
+  final String id;
   final String name;
   final String? originalId;
   final String? teamColor;
@@ -195,7 +193,7 @@ class Server extends DataClass implements Insertable<Server> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
+    map['id'] = Variable<String>(id);
     map['name'] = Variable<String>(name);
     if (!nullToAbsent || originalId != null) {
       map['original_id'] = Variable<String>(originalId);
@@ -237,7 +235,7 @@ class Server extends DataClass implements Insertable<Server> {
       {ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Server(
-      id: serializer.fromJson<int>(json['id']),
+      id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
       originalId: serializer.fromJson<String?>(json['originalId']),
       teamColor: serializer.fromJson<String?>(json['teamColor']),
@@ -252,7 +250,7 @@ class Server extends DataClass implements Insertable<Server> {
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
+      'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
       'originalId': serializer.toJson<String?>(originalId),
       'teamColor': serializer.toJson<String?>(teamColor),
@@ -265,7 +263,7 @@ class Server extends DataClass implements Insertable<Server> {
   }
 
   Server copyWith(
-          {int? id,
+          {String? id,
           String? name,
           Value<String?> originalId = const Value.absent(),
           Value<String?> teamColor = const Value.absent(),
@@ -336,7 +334,7 @@ class Server extends DataClass implements Insertable<Server> {
 }
 
 class ServersCompanion extends UpdateCompanion<Server> {
-  final Value<int> id;
+  final Value<String> id;
   final Value<String> name;
   final Value<String?> originalId;
   final Value<String?> teamColor;
@@ -345,6 +343,7 @@ class ServersCompanion extends UpdateCompanion<Server> {
   final Value<bool> active;
   final Value<String> createdAt;
   final Value<String> updatedAt;
+  final Value<int> rowid;
   const ServersCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
@@ -355,9 +354,10 @@ class ServersCompanion extends UpdateCompanion<Server> {
     this.active = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
   });
   ServersCompanion.insert({
-    this.id = const Value.absent(),
+    required String id,
     required String name,
     this.originalId = const Value.absent(),
     this.teamColor = const Value.absent(),
@@ -366,10 +366,12 @@ class ServersCompanion extends UpdateCompanion<Server> {
     this.active = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
-  })  : name = Value(name),
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        name = Value(name),
         hireDate = Value(hireDate);
   static Insertable<Server> custom({
-    Expression<int>? id,
+    Expression<String>? id,
     Expression<String>? name,
     Expression<String>? originalId,
     Expression<String>? teamColor,
@@ -378,6 +380,7 @@ class ServersCompanion extends UpdateCompanion<Server> {
     Expression<bool>? active,
     Expression<String>? createdAt,
     Expression<String>? updatedAt,
+    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -389,11 +392,12 @@ class ServersCompanion extends UpdateCompanion<Server> {
       if (active != null) 'active': active,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
     });
   }
 
   ServersCompanion copyWith(
-      {Value<int>? id,
+      {Value<String>? id,
       Value<String>? name,
       Value<String?>? originalId,
       Value<String?>? teamColor,
@@ -401,7 +405,8 @@ class ServersCompanion extends UpdateCompanion<Server> {
       Value<String>? hireDate,
       Value<bool>? active,
       Value<String>? createdAt,
-      Value<String>? updatedAt}) {
+      Value<String>? updatedAt,
+      Value<int>? rowid}) {
     return ServersCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
@@ -412,6 +417,7 @@ class ServersCompanion extends UpdateCompanion<Server> {
       active: active ?? this.active,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
     );
   }
 
@@ -419,7 +425,7 @@ class ServersCompanion extends UpdateCompanion<Server> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     if (id.present) {
-      map['id'] = Variable<int>(id.value);
+      map['id'] = Variable<String>(id.value);
     }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
@@ -445,6 +451,9 @@ class ServersCompanion extends UpdateCompanion<Server> {
     if (updatedAt.present) {
       map['updated_at'] = Variable<String>(updatedAt.value);
     }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
     return map;
   }
 
@@ -459,7 +468,8 @@ class ServersCompanion extends UpdateCompanion<Server> {
           ..write('hireDate: $hireDate, ')
           ..write('active: $active, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
@@ -601,7 +611,7 @@ class $ShiftRecordsTable extends ShiftRecords
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => const {};
+  Set<GeneratedColumn> get $primaryKey => {id};
   @override
   ShiftRecord map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -4856,7 +4866,7 @@ abstract class _$UnifiedDatabase extends GeneratedDatabase {
 }
 
 typedef $$ServersTableCreateCompanionBuilder = ServersCompanion Function({
-  Value<int> id,
+  required String id,
   required String name,
   Value<String?> originalId,
   Value<String?> teamColor,
@@ -4865,9 +4875,10 @@ typedef $$ServersTableCreateCompanionBuilder = ServersCompanion Function({
   Value<bool> active,
   Value<String> createdAt,
   Value<String> updatedAt,
+  Value<int> rowid,
 });
 typedef $$ServersTableUpdateCompanionBuilder = ServersCompanion Function({
-  Value<int> id,
+  Value<String> id,
   Value<String> name,
   Value<String?> originalId,
   Value<String?> teamColor,
@@ -4876,6 +4887,7 @@ typedef $$ServersTableUpdateCompanionBuilder = ServersCompanion Function({
   Value<bool> active,
   Value<String> createdAt,
   Value<String> updatedAt,
+  Value<int> rowid,
 });
 
 class $$ServersTableFilterComposer
@@ -4887,7 +4899,7 @@ class $$ServersTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnFilters<int> get id => $composableBuilder(
+  ColumnFilters<String> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get name => $composableBuilder(
@@ -4924,7 +4936,7 @@ class $$ServersTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnOrderings<int> get id => $composableBuilder(
+  ColumnOrderings<String> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<String> get name => $composableBuilder(
@@ -4961,7 +4973,7 @@ class $$ServersTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  GeneratedColumn<int> get id =>
+  GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
   GeneratedColumn<String> get name =>
@@ -5012,7 +5024,7 @@ class $$ServersTableTableManager extends RootTableManager<
           createComputedFieldComposer: () =>
               $$ServersTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback: ({
-            Value<int> id = const Value.absent(),
+            Value<String> id = const Value.absent(),
             Value<String> name = const Value.absent(),
             Value<String?> originalId = const Value.absent(),
             Value<String?> teamColor = const Value.absent(),
@@ -5021,6 +5033,7 @@ class $$ServersTableTableManager extends RootTableManager<
             Value<bool> active = const Value.absent(),
             Value<String> createdAt = const Value.absent(),
             Value<String> updatedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
           }) =>
               ServersCompanion(
             id: id,
@@ -5032,9 +5045,10 @@ class $$ServersTableTableManager extends RootTableManager<
             active: active,
             createdAt: createdAt,
             updatedAt: updatedAt,
+            rowid: rowid,
           ),
           createCompanionCallback: ({
-            Value<int> id = const Value.absent(),
+            required String id,
             required String name,
             Value<String?> originalId = const Value.absent(),
             Value<String?> teamColor = const Value.absent(),
@@ -5043,6 +5057,7 @@ class $$ServersTableTableManager extends RootTableManager<
             Value<bool> active = const Value.absent(),
             Value<String> createdAt = const Value.absent(),
             Value<String> updatedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
           }) =>
               ServersCompanion.insert(
             id: id,
@@ -5054,6 +5069,7 @@ class $$ServersTableTableManager extends RootTableManager<
             active: active,
             createdAt: createdAt,
             updatedAt: updatedAt,
+            rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
