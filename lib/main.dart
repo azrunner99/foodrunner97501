@@ -11,6 +11,8 @@ import 'services/nps_security_service.dart';
 import 'services/nps_encryption_service.dart';
 import 'services/nps_audit_service.dart';
 import 'services/nps_gdpr_compliance_service.dart';
+import 'services/server_id_resolver.dart';
+import 'storage/nps_database_adapter.dart';
 import 'screens/home_screen.dart';
 import 'screens/assign_servers_screen.dart';
 import 'screens/settings_screen.dart';
@@ -41,6 +43,24 @@ void main() async {
 
   // Initialize NPSProvider with AppState to sync servers
   await npsProvider.initialize(appState: appState);
+
+  // ⭐ Phase 1.1: Initialize ServerIdResolver globally
+  // This ensures consistent server ID resolution across all widgets
+  final npsAdapter = NPSDatabaseAdapter(DatabaseFactory.instance);
+  try {
+    await ServerIdResolver.instance.initialize(appState, npsAdapter);
+    final serverCount = ServerIdResolver.instance.getAllCanonicalIds().length;
+    print('✅ [Phase 1.1] ServerIdResolver initialized with $serverCount servers');
+    
+    // Print detailed mapping info for debugging
+    if (serverCount > 0) {
+      print('   Server mappings established for: ${ServerIdResolver.instance.getAllCanonicalIds().take(5).join(", ")}${serverCount > 5 ? "..." : ""}');
+    }
+  } catch (e, stackTrace) {
+    print('❌ [Phase 1.1] ServerIdResolver initialization failed: $e');
+    print('   Stack trace: $stackTrace');
+    // Continue anyway - app should still work without it, just less reliably
+  }
 
   final npsFilterService = NPSFilterService();
   final npsBenchmarkingService = NPSBenchmarkingService();
