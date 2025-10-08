@@ -13,6 +13,7 @@ import 'services/nps_audit_service.dart';
 import 'services/nps_gdpr_compliance_service.dart';
 import 'services/server_id_resolver.dart';
 import 'services/database_sync_service.dart';
+import 'services/server_data_service.dart';
 import 'storage/nps_database_adapter.dart';
 import 'screens/home_screen.dart';
 import 'screens/assign_servers_screen.dart';
@@ -71,7 +72,7 @@ void main() async {
     
     // Verify sync status on startup
     final syncStatus = await DatabaseSyncService.instance.verifySyncStatus(appState);
-    print('   Sync status: ${syncStatus['serversInSync']}/${syncStatus['appServerCount']} servers in sync (${syncStatus['syncPercentage'].toStringAsFixed(1)}%)');
+    print('   Sync status: ${syncStatus['serversInSync']}/${syncStatus['appServerCount']} servers in sync (${(syncStatus['syncPercentage'] as double).toStringAsFixed(1)}%)');
     
     // Auto-fix any sync issues on startup
     if (!syncStatus['isSynced']) {
@@ -83,6 +84,19 @@ void main() async {
     print('❌ [Phase 1.2] DatabaseSyncService initialization failed: $e');
     print('   Stack trace: $stackTrace');
     // Continue anyway - manual sync will still be available
+  }
+
+  // ⭐ Phase 1.3: Initialize ServerDataService
+  // This provides a unified API for accessing server data from any source
+  try {
+    ServerDataService.instance.initialize(appState);
+    final serverCounts = await ServerDataService.instance.getServerCountBySource();
+    print('✅ [Phase 1.3] ServerDataService initialized');
+    print('   Servers available: ${serverCounts['total']} (AppState: ${serverCounts['appState']}, NPS: ${serverCounts['npsDatabase']})');
+  } catch (e, stackTrace) {
+    print('❌ [Phase 1.3] ServerDataService initialization failed: $e');
+    print('   Stack trace: $stackTrace');
+    // Continue anyway - widgets can still access data directly
   }
 
   final npsFilterService = NPSFilterService();
