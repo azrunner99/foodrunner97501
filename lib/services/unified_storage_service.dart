@@ -38,6 +38,26 @@ class UnifiedStorageService {
   Future<void> _ensureInit() async { 
     if (!_initialized) await init(); 
   }
+  
+  // ⭐ Phase 2.3: Transaction Support
+  /// Execute multiple operations in a single transaction
+  /// Rollback all changes if any operation fails
+  Future<T> transaction<T>(Future<T> Function() action) async {
+    await _ensureInit();
+    
+    try {
+      d('[UnifiedStorageService] Starting transaction...');
+      final result = await _db.transaction(() async {
+        return await action();
+      });
+      d('[UnifiedStorageService] ✅ Transaction committed successfully');
+      return result;
+    } catch (e, stackTrace) {
+      d('[UnifiedStorageService] ❌ Transaction rolled back: $e');
+      d('[UnifiedStorageService] Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
 
   // ⭐ Phase 2.2: Servers - Real Drift Implementation
   Future<List<models.Server>> getAllServers() async {
