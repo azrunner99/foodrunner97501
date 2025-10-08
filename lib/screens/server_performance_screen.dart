@@ -12,6 +12,7 @@ import '../widgets/performance_charts.dart';
 import '../storage.dart';
 import 'bulk_data_entry_screen.dart';
 import 'server_performance_profile_screen.dart';
+import '../services/server_data_service.dart';
 
 class ServerPerformanceScreen extends StatefulWidget {
   const ServerPerformanceScreen({super.key});
@@ -84,7 +85,10 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
         npsProvider: npsProvider,
       );
 
-      for (final server in app.servers) {
+      // ⭐ Phase 1.4: Get servers using ServerDataService for unified access
+      final servers = await ServerDataService.instance.getAllServers();
+
+      for (final server in servers) {
         // Use actual hire date or default to 6 months ago for servers without hire date
         final hireDate = server.hireDate ??
             DateTime.now().subtract(const Duration(days: 180));
@@ -97,7 +101,7 @@ class _ServerPerformanceScreenState extends State<ServerPerformanceScreen> {
           businessData: _currentBusinessData,
           hireDate: hireDate,
           npsHistory: npsHistory,
-          totalServerCount: app.servers.length,
+          totalServerCount: servers.length,
         );
 
         performanceDataList.add(performance);

@@ -11,6 +11,7 @@ import '../models/performance_models.dart' as performance_models;
 import '../core/types.dart';
 import '../app_state.dart';
 import '../services/application_update_service.dart';
+import '../services/server_data_service.dart';
 
 /// Server NPS Status Widget
 /// Displays Intelligent Performance Classification and server status
@@ -81,15 +82,9 @@ class _ServerNPSStatusWidgetState extends State<ServerNPSStatusWidget> {
         final serverId = entry.key;
         final serverReports = entry.value;
         
-        // Get server name directly from AppState (same approach as working IMPACT tab)
-        final servers = context.read<AppState>().servers;
-        String serverName = 'Server $serverId';
-        for (final server in servers) {
-          if (server.id == serverId) {
-            serverName = server.name;
-            break;
-          }
-        }
+        // ⭐ Phase 1.4: Get server name using ServerDataService for reliable lookup
+        final server = await ServerDataService.instance.getServer(serverId);
+        final serverName = server?.name ?? 'Server $serverId';
         d('[ServerNPSStatusWidget] Got server name: $serverName for ID: $serverId');
         
         // Convert raw reports to NPSMonthlyReport objects
