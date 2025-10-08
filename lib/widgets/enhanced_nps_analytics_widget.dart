@@ -53,8 +53,13 @@ class _EnhancedNPSAnalyticsWidgetState
     super.didChangeDependencies();
     // Force reload historical data whenever the widget becomes visible
     // This ensures we always have fresh data when navigating to Analytics tab
-    print('🔄 [EnhancedNPSAnalyticsWidget] didChangeDependencies() - forcing historical data reload');
-    _loadHistoricalData();
+    // Schedule for after the current build frame to avoid setState during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        print('🔄 [EnhancedNPSAnalyticsWidget] didChangeDependencies() - forcing historical data reload');
+        _loadHistoricalData();
+      }
+    });
   }
 
   Future<void> _loadHistoricalData() async {
@@ -64,19 +69,13 @@ class _EnhancedNPSAnalyticsWidgetState
 
     try {
       d('[EnhancedNPSAnalyticsWidget] Loading historical data...');
-      print('🚨🚨🚨 [EnhancedNPSAnalyticsWidget] _loadHistoricalData() CALLED! 🚨🚨🚨');
 
       // First, verify the service is initialized
       await HistoricalNPSAggregationService.instance.initialize();
-      print('🔍 [EnhancedNPSAnalyticsWidget] Service initialized, calling getAllHistoricalData()');
 
       // ⭐ Phase 1.4: Get servers using ServerDataService for unified access
       final servers = await ServerDataService.instance.getAllServers();
-      print('🔍 [EnhancedNPSAnalyticsWidget] ServerDataService returned ${servers.length} servers for name mapping');
-      for (int i = 0; i < servers.length && i < 5; i++) {
-        final server = servers[i];
-        print('🔍 [EnhancedNPSAnalyticsWidget] Server ${i + 1}: id=${server.id}, name=${server.name}');
-      }
+      d('[EnhancedNPSAnalyticsWidget] Loading data for ${servers.length} servers');
 
       // Load historical data for all servers with server mapping
       final historicalData = await HistoricalNPSAggregationService.instance.getAllHistoricalDataWithAppState(servers);
