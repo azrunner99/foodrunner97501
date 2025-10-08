@@ -20,6 +20,11 @@ import 'phase4_runner.dart';
 import 'phase6_runner.dart';
 import '../debug/nps_database_inspector.dart';
 import '../debug/nps_database_schema_repair.dart';
+import '../services/database_sync_service.dart';
+import '../services/server_data_service.dart';
+import '../services/server_id_resolver.dart';
+import '../storage/database_factory.dart';
+import '../storage/nps_database_adapter.dart';
 
 class CleanAdminScreen extends StatefulWidget {
   const CleanAdminScreen({super.key});
@@ -326,6 +331,42 @@ class _CleanAdminScreenState extends State<CleanAdminScreen> {
                     subtitle: 'Update the administrator PIN',
                     enabled: true,
                     onTap: () => _showChangePinDialog(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              // ⭐ Phase 1.5: Database Sync Tools Section
+              _buildSectionCard(
+                'Database Synchronization',
+                Icons.sync,
+                [
+                  _buildAdminTile(
+                    icon: Icons.sync_alt,
+                    title: 'Sync Status',
+                    subtitle: 'View synchronization status between storage systems',
+                    enabled: true,
+                    onTap: () => _showSyncStatusDialog(),
+                  ),
+                  _buildAdminTile(
+                    icon: Icons.refresh,
+                    title: 'Manual Sync',
+                    subtitle: 'Force synchronization of all servers',
+                    enabled: true,
+                    onTap: () => _performManualSync(),
+                  ),
+                  _buildAdminTile(
+                    icon: Icons.bug_report,
+                    title: 'Server Data Report',
+                    subtitle: 'View detailed server data from all sources',
+                    enabled: true,
+                    onTap: () => _showServerDataReport(),
+                  ),
+                  _buildAdminTile(
+                    icon: Icons.healing,
+                    title: 'Auto-Fix Issues',
+                    subtitle: 'Automatically fix common sync problems',
+                    enabled: true,
+                    onTap: () => _autoFixSyncIssues(),
                   ),
                 ],
               ),
@@ -985,6 +1026,360 @@ class _CleanAdminScreenState extends State<CleanAdminScreen> {
           SnackBar(content: Text('Error updating PIN: $e')),
         );
       }
+    }
+  }
+
+  // ⭐ Phase 1.5: Database Sync Tool Methods
+
+  /// Show sync status dialog with detailed information
+  Future<void> _showSyncStatusDialog() async {
+    final app = context.read<AppState>();
+    
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Checking sync status...'),
+          ],
+        ),
+      ),
+    );
+    
+    try {
+      final syncStatus = await DatabaseSyncService.instance.verifySyncStatus(app);
+      final serverCounts = await ServerDataService.instance.getServerCountBySource();
+      
+      if (!mounted) return;
+      Navigator.of(context).pop(); // Close loading dialog
+      
+      // Show status dialog
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(
+                syncStatus['isSynced'] ? Icons.check_circle : Icons.warning,
+                color: syncStatus['isSynced'] ? Colors.green : Colors.orange,
+              ),
+              const SizedBox(width: 8),
+              Text(syncStatus['isSynced'] ? 'All Synced' : 'Sync Issues'),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildStatusRow('AppState Servers', '${serverCounts['appState']}'),
+                _buildStatusRow('NPS Database Servers', '${serverCounts['npsDatabase']}'),
+                _buildStatusRow('Total Unified', '${serverCounts['total']}'),
+                const Divider(),
+                _buildStatusRow('Servers In Sync', '${syncStatus['serversInSync']}/${syncStatus['appServerCount']}'),
+                _buildStatusRow('Sync Percentage', '${(syncStatus['syncPercentage'] as double).toStringAsFixed(1)}%'),
+                if (syncStatus['missingFromNPS'].isNotEmpty) ...[
+                  const Divider(),
+                  const Text('Missing from NPS:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
+                  ...((syncStatus['missingFromNPS'] as List).map((id) => Text('  • $id'))),
+                ],
+                if (syncStatus['orphanedInNPS'].isNotEmpty) ...[
+                  const Divider(),
+                  const Text('Orphaned in NPS:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+                  ...((syncStatus['orphanedInNPS'] as List).map((id) => Text('  • $id'))),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            if (!syncStatus['isSynced'])
+              TextButton.icon(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _autoFixSyncIssues();
+                },
+                icon: const Icon(Icons.healing),
+                label: const Text('Auto-Fix'),
+              ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error checking sync status: $e')),
+      );
+    }
+  }
+
+  Widget _buildStatusRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  /// Perform manual sync of all servers
+  Future<void> _performManualSync() async {
+    final app = context.read<AppState>();
+    
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Syncing servers...'),
+          ],
+        ),
+      ),
+    );
+    
+    try {
+      final result = await DatabaseSyncService.instance.syncAllServersToNPS(app);
+      
+      if (!mounted) return;
+      Navigator.of(context).pop(); // Close loading dialog
+      
+      // Show result dialog
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(
+                result['success'] ? Icons.check_circle : Icons.warning,
+                color: result['success'] ? Colors.green : Colors.orange,
+              ),
+              const SizedBox(width: 8),
+              Text('Sync ${result['success'] ? 'Complete' : 'Completed with Errors'}'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildStatusRow('Total Servers', '${result['total']}'),
+              _buildStatusRow('Successfully Synced', '${result['synced']}'),
+              _buildStatusRow('Inserted New', '${result['inserted']}'),
+              _buildStatusRow('Updated Existing', '${result['updated']}'),
+              _buildStatusRow('Errors', '${result['errors']}'),
+              if (result['errors'] > 0) ...[
+                const Divider(),
+                const Text('Errors:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+                ...((result['errorDetails'] as List).map((error) => Text('  • $error', style: const TextStyle(fontSize: 12)))),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Sync failed: $e')),
+      );
+    }
+  }
+
+  /// Show server data report from all sources
+  Future<void> _showServerDataReport() async {
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Generating report...'),
+          ],
+        ),
+      ),
+    );
+    
+    try {
+      final report = await ServerDataService.instance.generateServerReport();
+      
+      if (!mounted) return;
+      Navigator.of(context).pop(); // Close loading dialog
+      
+      // Show report dialog
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Server Data Report'),
+          content: SingleChildScrollView(
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: SelectableText(
+                report,
+                style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error generating report: $e')),
+      );
+    }
+  }
+
+  /// Auto-fix common sync issues
+  Future<void> _autoFixSyncIssues() async {
+    final app = context.read<AppState>();
+    
+    // Confirm action
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.healing, color: Colors.blue),
+            SizedBox(width: 8),
+            Text('Auto-Fix Sync Issues'),
+          ],
+        ),
+        content: const Text(
+          'This will automatically fix common synchronization problems:\n\n'
+          '• Sync missing servers to NPS database\n'
+          '• Update server ID mappings\n'
+          '• Refresh data cache\n\n'
+          'Continue?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Fix Issues'),
+          ),
+        ],
+      ),
+    );
+    
+    if (confirmed != true) return;
+    
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Fixing issues...'),
+          ],
+        ),
+      ),
+    );
+    
+    try {
+      final fixResult = await DatabaseSyncService.instance.autoFixSyncIssues(app);
+      
+      // Refresh ServerIdResolver
+      final npsAdapter = NPSDatabaseAdapter(DatabaseFactory.instance);
+      await ServerIdResolver.instance.initialize(app, npsAdapter);
+      
+      // Invalidate cache
+      ServerDataService.instance.invalidateCache();
+      
+      if (!mounted) return;
+      Navigator.of(context).pop(); // Close loading dialog
+      
+      // Show result dialog
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(
+                fixResult['success'] ? Icons.check_circle : Icons.warning,
+                color: fixResult['success'] ? Colors.green : Colors.orange,
+              ),
+              const SizedBox(width: 8),
+              const Text('Auto-Fix Complete'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildStatusRow('Fixes Applied', '${fixResult['fixCount']}'),
+              const SizedBox(height: 12),
+              if ((fixResult['fixesApplied'] as List).isNotEmpty) ...[
+                const Text('Actions Taken:', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                ...((fixResult['fixesApplied'] as List).map((fix) => Padding(
+                  padding: const EdgeInsets.only(left: 8, bottom: 4),
+                  child: Text('✓ $fix', style: const TextStyle(fontSize: 12)),
+                ))),
+              ],
+              const Divider(),
+              _buildStatusRow('Before Sync', '${fixResult['beforeSync']['serversInSync']}/${fixResult['beforeSync']['appServerCount']}'),
+              _buildStatusRow('After Sync', '${fixResult['afterSync']['serversInSync']}/${fixResult['afterSync']['appServerCount']}'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Auto-fix failed: $e')),
+      );
     }
   }
 }
