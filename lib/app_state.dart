@@ -13,6 +13,8 @@ import 'storage.dart';
 import 'gamification.dart';
 import 'services/milestone_detection_service.dart';
 import 'services/stations_repository.dart';
+import 'services/database_sync_service.dart';
+import 'services/unified_storage_service.dart';
 
 String _randId() {
   final r = Random();
@@ -2500,6 +2502,16 @@ class AppState extends ChangeNotifier {
     await _persistProfiles();
     await _persistTotals();
     notifyListeners();
+    
+    // 🆕 PHASE 3: Auto-sync to all databases
+    try {
+      await DatabaseSyncService.instance.syncServerToNPS(s);
+      await UnifiedStorageService.instance.saveServer(s);
+      if (kDebugMode) print('[AppState] 🔄 Auto-synced new server: ${s.name}');
+    } catch (e) {
+      if (kDebugMode) print('[AppState] ⚠️ Auto-sync failed for ${s.name}: $e');
+      // Don't throw - sync will be retried on next periodic check
+    }
   }
 
   Future<bool> renameServer(String id, String newName,
@@ -2510,11 +2522,25 @@ class AppState extends ChangeNotifier {
     s.name = newName.trim();
     await _persistServers();
     notifyListeners();
+    
+    // 🆕 PHASE 3: Auto-sync updated server to all databases
+    try {
+      await DatabaseSyncService.instance.syncServerToNPS(s);
+      await UnifiedStorageService.instance.saveServer(s);
+      if (kDebugMode) print('[AppState] 🔄 Auto-synced renamed server: ${s.name}');
+    } catch (e) {
+      if (kDebugMode) print('[AppState] ⚠️ Auto-sync failed for renamed server ${s.name}: $e');
+    }
+    
     return true;
   }
 
   Future<bool> removeServer(String id, {required String pin}) async {
     if (!(await isValidAdminPin(pin))) return false;
+    
+    // Get server name before deletion for logging
+    final serverName = serverById(id)?.name ?? 'Unknown';
+    
     _servers.removeWhere((s) => s.id == id);
     _totals.remove(id);
     _profiles.remove(id);
@@ -2529,6 +2555,16 @@ class AppState extends ChangeNotifier {
     await _persistProfiles();
     await _persistHistory();
     notifyListeners();
+    
+    // 🆕 PHASE 3: Auto-sync deletion to all databases
+    try {
+      await DatabaseSyncService.instance.deleteServerFromNPS(id);
+      await UnifiedStorageService.instance.deleteServer(id);
+      if (kDebugMode) print('[AppState] 🔄 Auto-synced deleted server: $serverName ($id)');
+    } catch (e) {
+      if (kDebugMode) print('[AppState] ⚠️ Auto-sync failed for deleted server $serverName: $e');
+    }
+    
     return true;
   }
 
