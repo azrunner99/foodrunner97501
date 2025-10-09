@@ -501,13 +501,27 @@ class _ImpactAnalyticsWidgetState extends State<ImpactAnalyticsWidget> with Serv
         monthNames, consistencyScore, improvementRate, overallPerformance);
 
     // Calculate sales percentage and restaurant impact
-    final totalRestaurantSales = allReports
+    // ✅ FIX: Use most recent report's allTimeSales, not sum of all monthly reports
+    // This prevents double/triple counting when a server has multiple monthly reports
+    
+    // Get most recent report per server for total restaurant sales
+    final Map<String, NPSMonthlyReport> mostRecentByServer = {};
+    for (final report in allReports) {
+      final serverId = report.serverId;
+      if (!mostRecentByServer.containsKey(serverId) ||
+          report.reportMonth > mostRecentByServer[serverId]!.reportMonth) {
+        mostRecentByServer[serverId] = report;
+      }
+    }
+    
+    final totalRestaurantSales = mostRecentByServer.values
         .map((r) => r.allTimeSales)
         .fold(0.0, (sum, sales) => sum + sales);
 
-    final serverTotalSales = serverReports
-        .map((r) => r.allTimeSales)
-        .fold(0.0, (sum, sales) => sum + sales);
+    // For this specific server, use their most recent report's sales
+    final mostRecentServerReport = serverReports.reduce((a, b) => 
+      a.reportMonth > b.reportMonth ? a : b);
+    final serverTotalSales = mostRecentServerReport.allTimeSales;
 
     final salesPercentage = totalRestaurantSales > 0
         ? (serverTotalSales / totalRestaurantSales) * 100
