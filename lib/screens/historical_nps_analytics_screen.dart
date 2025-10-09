@@ -242,17 +242,24 @@ class _HistoricalNPSAnalyticsScreenState extends State<HistoricalNPSAnalyticsScr
                 border: OutlineInputBorder(),
                 labelText: 'Server',
               ),
-              dropdownColor: Theme.of(context).cardColor,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Theme.of(context).textTheme.bodyLarge?.color,
+              dropdownColor: Colors.white,
+              style: const TextStyle(
+                color: Colors.black,
+                fontSize: 16,
               ),
               items: _historicalData.map((data) {
                 return DropdownMenuItem<String>(
                   value: data.serverId,
-                  child: Text(
-                    data.serverName,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Theme.of(context).textTheme.bodyLarge?.color,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Text(
+                      data.serverName,
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                 );
