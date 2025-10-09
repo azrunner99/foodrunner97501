@@ -37,13 +37,6 @@ class _ImpactAnalyticsWidgetState extends State<ImpactAnalyticsWidget> with Serv
       final reports = await getAllNPSMonthlyReports();
       d('[ImpactAnalyticsWidget] Loaded ${reports.length} reports (orphaned IDs already filtered)');
       
-      // Debug: Show what months we have data for
-      final monthsFound = <String>{};
-      for (final report in reports) {
-        monthsFound.add('${report.reportYear}-${report.reportMonth}');
-      }
-      d('[ImpactAnalyticsWidget] Available months: ${monthsFound.toList()..sort()}');
-      
       setState(() {
         _monthlyReports = reports;
         _isLoading = false;

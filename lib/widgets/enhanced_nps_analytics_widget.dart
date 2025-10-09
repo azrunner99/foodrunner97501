@@ -406,7 +406,6 @@ class _EnhancedNPSAnalyticsWidgetState
 
   /// Build key metrics from monthly reports
   Widget _buildKeyMetricsFromReports(List<NPSMonthlyReport> reports) {
-    // Debug: Log what we're actually displaying
     d('[EnhancedNPSAnalyticsWidget] Displaying metrics for ${reports.length} total reports, ${_getUniqueMonthsCount(reports)} unique months');
     
     return Card(
