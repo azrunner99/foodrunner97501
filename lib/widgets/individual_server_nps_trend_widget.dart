@@ -5,11 +5,10 @@ import '../models/monthly_report.dart' hide PerformanceTrend;
 import '../models/historical_nps_data.dart';
 // import '../services/intelligent_performance_classifier.dart';
 import '../services/advanced_trend_analysis_service.dart' as trend_analysis;
-import '../storage/database_factory.dart';
-import '../storage/nps_database_adapter.dart';
 import '../utils/log.dart';
 import '../app_state.dart';
 import '../services/application_update_service.dart';
+import '../mixins/server_data_mixin.dart';
 
 /// Individual Server NPS Trend Widget
 /// Contains the Advanced Trend Analysis section
@@ -20,7 +19,7 @@ class IndividualServerNPSTrendWidget extends StatefulWidget {
   State<IndividualServerNPSTrendWidget> createState() => _IndividualServerNPSTrendWidgetState();
 }
 
-class _IndividualServerNPSTrendWidgetState extends State<IndividualServerNPSTrendWidget> {
+class _IndividualServerNPSTrendWidgetState extends State<IndividualServerNPSTrendWidget> with ServerDataMixin {
   List<NPSMonthlyReport> _monthlyReports = [];
   bool _isLoading = true;
   Map<String, trend_analysis.AdvancedTrendAnalysis> _serverTrendAnalyses = {};
@@ -38,16 +37,13 @@ class _IndividualServerNPSTrendWidgetState extends State<IndividualServerNPSTren
     });
 
     try {
-      d('[IndividualServerNPSTrendWidget] Loading monthly reports...');
+      d('[IndividualServerNPSTrendWidget] Loading monthly reports using ServerDataMixin...');
       
-      // Use the same data loading approach as the working HistoricalNPSAggregationService
-      final database = DatabaseFactory.instance;
+      // ✅ Use mixin method - automatic filtering, ID resolution, and typing
+      final reports = await getAllNPSMonthlyReports();
+      d('[IndividualServerNPSTrendWidget] Found ${reports.length} reports (orphaned IDs already filtered)');
       
-      // Load all monthly reports
-      final allReports = await database.queryTable('nps_monthly_reports');
-      d('[IndividualServerNPSTrendWidget] Found ${allReports.length} total monthly reports');
-      
-      if (allReports.isEmpty) {
+      if (reports.isEmpty) {
         d('[IndividualServerNPSTrendWidget] No monthly reports found - returning empty list');
         setState(() {
           _monthlyReports = [];
@@ -56,22 +52,6 @@ class _IndividualServerNPSTrendWidgetState extends State<IndividualServerNPSTren
         });
         return;
       }
-      
-      // Filter out integer server IDs (EXACT same logic as HistoricalNPSAggregationService)
-      final filteredReports = allReports.where((report) {
-        final serverId = report['server_id'].toString();
-        final isNumericId = RegExp(r'^\d+$').hasMatch(serverId);
-        if (isNumericId) {
-          d('[IndividualServerNPSTrendWidget] Filtering out numeric server_id: $serverId');
-        }
-        return !isNumericId;
-      }).toList();
-      
-      d('[IndividualServerNPSTrendWidget] After filtering: ${filteredReports.length} reports (removed ${allReports.length - filteredReports.length} old format reports)');
-      
-      // Convert to NPSMonthlyReport objects
-      final reports = filteredReports.map((row) => NPSMonthlyReport.fromMap(row)).toList();
-      d('[IndividualServerNPSTrendWidget] Loaded ${reports.length} monthly reports');
       
       // Load trend analyses with proper server name resolution
       final trendAnalyses = <String, trend_analysis.AdvancedTrendAnalysis>{};
