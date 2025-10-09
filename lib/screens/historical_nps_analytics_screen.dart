@@ -236,49 +236,77 @@ class _HistoricalNPSAnalyticsScreenState extends State<HistoricalNPSAnalyticsScr
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 12),
-            DropdownButtonHideUnderline(
-              child: DropdownButtonFormField<String>(
-                value: _selectedServerId.isEmpty ? null : _selectedServerId,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: 'Server',
-                  filled: true,
-                  fillColor: Colors.white,
-                ),
-                dropdownColor: Colors.white,
-                icon: const Icon(Icons.arrow_drop_down, color: Colors.black),
-                style: const TextStyle(
-                  color: Colors.black,
-                  fontSize: 16,
-                ),
-                items: _historicalData.map((data) {
-                  return DropdownMenuItem<String>(
-                    value: data.serverId,
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                      child: Text(
-                        data.serverName,
-                        style: const TextStyle(
-                          color: Colors.black,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
+            Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey),
+                borderRadius: BorderRadius.circular(4),
+                color: Colors.white,
+              ),
+              child: InkWell(
+                onTap: () => _showServerPicker(),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _selectedServerId.isEmpty 
+                            ? 'Select Server' 
+                            : _historicalData
+                                .firstWhere((data) => data.serverId == _selectedServerId, orElse: () => _historicalData.first)
+                                .serverName,
+                          style: TextStyle(
+                            color: _selectedServerId.isEmpty ? Colors.grey : Colors.black,
+                            fontSize: 16,
+                          ),
                         ),
-                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedServerId = value ?? '';
-                  });
-                },
+                      const Icon(Icons.arrow_drop_down, color: Colors.black),
+                    ],
+                  ),
+                ),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  void _showServerPicker() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Select Server'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: _historicalData.length,
+              itemBuilder: (context, index) {
+                final data = _historicalData[index];
+                return ListTile(
+                  title: Text(
+                    data.serverName,
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  onTap: () {
+                    setState(() {
+                      _selectedServerId = data.serverId;
+                    });
+                    Navigator.of(context).pop();
+                  },
+                );
+              },
+            ),
+          ),
+        );
+      },
     );
   }
 
