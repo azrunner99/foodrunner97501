@@ -9,9 +9,6 @@ import '../services/nps_filter_service.dart';
 import '../services/nps_benchmarking_service.dart';
 import '../models/nps_score_feedback.dart';
 import '../models/monthly_report.dart';
-import '../storage/nps_database.dart';
-import '../storage/database_factory.dart';
-import '../storage/nps_database_adapter.dart';
 import 'secured_nps_widgets.dart';
 import '../screens/nps_benchmarking_screen.dart';
 import '../services/historical_nps_aggregation_service.dart';
@@ -20,8 +17,11 @@ import '../services/performance_timeline_service.dart';
 import '../models/historical_nps_data.dart';
 import '../services/server_data_service.dart';
 import '../models/performance_models.dart' as performance_models;
+import '../mixins/server_data_mixin.dart';
 
 /// Enhanced analytics dashboard with charts and visualizations
+/// 
+/// ✅ Refactored to use ServerDataMixin for standardized data access
 class EnhancedNPSAnalyticsWidget extends StatefulWidget {
   const EnhancedNPSAnalyticsWidget({super.key});
 
@@ -31,7 +31,7 @@ class EnhancedNPSAnalyticsWidget extends StatefulWidget {
 }
 
 class _EnhancedNPSAnalyticsWidgetState
-    extends State<EnhancedNPSAnalyticsWidget> {
+    extends State<EnhancedNPSAnalyticsWidget> with ServerDataMixin {
   int _selectedTimeRange = 30; // Days
   String _selectedChartType = 'trend';
   
@@ -87,8 +87,8 @@ class _EnhancedNPSAnalyticsWidgetState
       final classifications = <String, performance_models.PerformanceClassification>{};
       
       for (final data in historicalData) {
-        // Get monthly reports for this server
-        final monthlyReports = await _getMonthlyReportsForServer(data.serverId);
+        // ✅ Use mixin method instead of direct DB access
+        final monthlyReports = await getServerNPSHistory(data.serverId);
         
         // Classify performance - temporarily disabled
         // final classification = IntelligentPerformanceClassifier.classifyPerformance(
@@ -229,75 +229,10 @@ class _EnhancedNPSAnalyticsWidgetState
     try {
       d('[EnhancedNPSAnalyticsWidget] Starting to load monthly reports...');
       
-      // Use the same data source as the working Server NPS Scorecard
-      final db = DatabaseFactory.instance;
-      
-      // Get ALL available months with data (like the scorecard does)
-      final availableMonths = await _getAvailableMonthsWithData(db);
-      
-      if (availableMonths.isEmpty) {
-        d('[EnhancedNPSAnalyticsWidget] No months with data found');
-        return [];
-      }
-      
-      d('[EnhancedNPSAnalyticsWidget] Found ${availableMonths.length} months with data');
-      
-      // Load data from ALL available months (not just current month)
-      final allReports = <NPSMonthlyReport>[];
-      
-      for (final monthData in availableMonths) {
-        final year = monthData['year'] as int;
-        final month = monthData['month'] as int;
-        
-        d('[EnhancedNPSAnalyticsWidget] Loading data for month: $month/$year');
-        
-        // Use the same method as the scorecard
-        final serverData = await _getServerNPSDataForMonth(db, month, year);
-        
-        d('[EnhancedNPSAnalyticsWidget] Retrieved ${serverData.length} server records for $month/$year');
-        
-        // Convert server data to NPSMonthlyReport format for compatibility
-        for (final data in serverData) {
-          try {
-            final report = NPSMonthlyReport(
-              serverId: data['server_id']?.toString() ?? '',
-              reportMonth: month,
-              reportYear: year,
-              allTimeNpsPercentage: (data['all_time_nps_percentage'] as num?)?.toDouble(),
-              threeMonthNpsPercentage: (data['three_month_nps_percentage'] as num?)?.toDouble(),
-              oneMonthNpsPercentage: (data['one_month_nps_percentage'] as num?)?.toDouble(),
-              allTimeSales: (data['all_time_sales'] as num?)?.toDouble() ?? 0.0,
-              allTimeTableCount: (data['all_time_table_count'] as num?)?.toInt() ?? 0,
-              monthFeedback: FeedbackCounts(
-                yes: (data['month_feedback_yes'] as num?)?.toInt() ?? 0,
-                maybe: (data['month_feedback_maybe'] as num?)?.toInt() ?? 0,
-                no: (data['month_feedback_no'] as num?)?.toInt() ?? 0,
-              ),
-              threeMonthFeedback: FeedbackCounts(
-                yes: (data['three_month_feedback_yes'] as num?)?.toInt() ?? 0,
-                maybe: (data['three_month_feedback_maybe'] as num?)?.toInt() ?? 0,
-                no: (data['three_month_feedback_no'] as num?)?.toInt() ?? 0,
-              ),
-              allTimeFeedback: FeedbackCounts(
-                yes: (data['all_time_feedback_yes'] as num?)?.toInt() ?? 0,
-                maybe: (data['all_time_feedback_maybe'] as num?)?.toInt() ?? 0,
-                no: (data['all_time_feedback_no'] as num?)?.toInt() ?? 0,
-              ),
-              generatedAt: DateTime.now(),
-              dataAsOfDate: DateTime.now(),
-            );
-            allReports.add(report);
-            d('[EnhancedNPSAnalyticsWidget] Added report for server: ${data['server_name']} (ID: ${data['server_id']}) for $month/$year');
-          } catch (e) {
-            d('[EnhancedNPSAnalyticsWidget] Error converting server data to report format: $e');
-          }
-        }
-      }
-      
-      d('[EnhancedNPSAnalyticsWidget] Converted ${allReports.length} total server records to NPSMonthlyReport format across ${availableMonths.length} months');
-      
-      // Debug: Log the actual reports to see what we're getting
-      d('[EnhancedNPSAnalyticsWidget] Loaded ${allReports.length} total reports from all available months');
+      // ✅ Use mixin method - automatic filtering, ID resolution, and typing
+      // This replaces 83 lines of manual database queries and data transformation
+      final allReports = await getAllNPSMonthlyReports();
+      d('[EnhancedNPSAnalyticsWidget] Loaded ${allReports.length} reports (orphaned IDs already filtered)');
       
       if (allReports.isNotEmpty) {
         d('[EnhancedNPSAnalyticsWidget] First report: Server ${allReports.first.serverId}, NPS: ${allReports.first.allTimeNpsPercentage}% for ${allReports.first.reportMonth}/${allReports.first.reportYear}');
@@ -461,24 +396,7 @@ class _EnhancedNPSAnalyticsWidgetState
   }
 
   /// Get monthly reports for a specific server
-  Future<List<NPSMonthlyReport>> _getMonthlyReportsForServer(String serverId) async {
-    try {
-      final database = DatabaseFactory.instance;
-      final isSqflite = database.runtimeType.toString().contains('Sqflite');
-      
-      final results = await database.queryTable(
-        'nps_monthly_reports',
-        where: 'server_id = ?',
-        whereArgs: [serverId],
-        orderBy: 'report_year DESC, report_month DESC',
-      );
-      
-      return results.map((row) => NPSMonthlyReport.fromMap(row)).toList();
-    } catch (e) {
-      d('[EnhancedNPSAnalyticsWidget] Error loading monthly reports for server $serverId: $e');
-      return [];
-    }
-  }
+  // ✅ Removed - using mixin method getServerNPSHistory() instead
 
 
 

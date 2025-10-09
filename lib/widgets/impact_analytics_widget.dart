@@ -3,16 +3,15 @@ import 'package:provider/provider.dart';
 import '../providers/nps_provider.dart';
 import '../models/monthly_report.dart' hide PerformanceTrend;
 import '../models/historical_nps_data.dart';
-import '../storage/database_factory.dart';
-import '../storage/nps_database_adapter.dart';
 import '../utils/log.dart';
 import '../app_state.dart';
 import '../services/application_update_service.dart';
-import '../services/server_id_resolver.dart';
-import '../storage/drift_database.dart';
+import '../mixins/server_data_mixin.dart';
 
 /// Impact Analytics Widget
 /// Displays Restaurant Impact Rankings and server performance impact analysis
+/// 
+/// ✅ Refactored to use ServerDataMixin for standardized data access
 class ImpactAnalyticsWidget extends StatefulWidget {
   const ImpactAnalyticsWidget({super.key});
 
@@ -20,7 +19,7 @@ class ImpactAnalyticsWidget extends StatefulWidget {
   State<ImpactAnalyticsWidget> createState() => _ImpactAnalyticsWidgetState();
 }
 
-class _ImpactAnalyticsWidgetState extends State<ImpactAnalyticsWidget> {
+class _ImpactAnalyticsWidgetState extends State<ImpactAnalyticsWidget> with ServerDataMixin {
   List<NPSMonthlyReport> _monthlyReports = [];
   bool _isLoading = true;
 
@@ -34,56 +33,19 @@ class _ImpactAnalyticsWidgetState extends State<ImpactAnalyticsWidget> {
     try {
       d('[ImpactAnalyticsWidget] Starting to load monthly reports...');
       
-      // Use the same data source as the working Server NPS Scorecard
-      final db = DatabaseFactory.instance;
-      final adapter = NPSDatabaseAdapter(db);
-      
-      // Load ALL monthly reports from database (not just one month)
-      d('[ImpactAnalyticsWidget] Loading ALL monthly reports from database...');
-      
-      List<Map<String, dynamic>> reportMaps;
-      
-      // Handle different database schemas
-      final dbType = DatabaseFactory.implementationType;
-      d('[ImpactAnalyticsWidget] Detected database type: $dbType');
-      
-      // Use Drift schema (report_month and report_year columns)
-      d('[ImpactAnalyticsWidget] Using Drift schema with report_month and report_year columns');
-      reportMaps = await db.queryTable(
-        'nps_monthly_reports',
-        orderBy: 'report_year DESC, report_month DESC',
-      );
-      
-      d('[ImpactAnalyticsWidget] Retrieved ${reportMaps.length} monthly reports from database');
+      // ✅ Use mixin method - automatic filtering, ID resolution, and typing
+      final reports = await getAllNPSMonthlyReports();
+      d('[ImpactAnalyticsWidget] Loaded ${reports.length} reports (orphaned IDs already filtered)');
       
       // Debug: Show what months we have data for
       final monthsFound = <String>{};
-      for (final report in reportMaps) {
-        final month = report['report_month']?.toString() ?? '';
-        final year = report['report_year']?.toString() ?? '';
-        monthsFound.add('$year-$month');
+      for (final report in reports) {
+        monthsFound.add('${report.reportYear}-${report.reportMonth}');
       }
       d('[ImpactAnalyticsWidget] Available months: ${monthsFound.toList()..sort()}');
       
-      // Convert to NPSMonthlyReport objects
-      final allReports = reportMaps.map((map) => NPSMonthlyReport.fromMap(map)).toList();
-      
-      // Filter out integer server IDs to avoid "Server #" entries (keep only string IDs with proper names)
-      final filteredReports = allReports.where((report) {
-        final serverId = report.serverId.toString();
-        // Filter out ALL numeric IDs (both single and multi-digit) - these show as "Server #"
-        final isNumericId = RegExp(r'^\d+$').hasMatch(serverId);
-        if (isNumericId) {
-          d('[ImpactAnalyticsWidget] Filtering out numeric server_id: $serverId (would show as Server #)');
-        }
-        return !isNumericId; // Keep only string IDs with proper name mappings
-      }).toList();
-      
-      d('[ImpactAnalyticsWidget] After filtering: ${filteredReports.length} reports (removed ${allReports.length - filteredReports.length} old format reports)');
-      d('[ImpactAnalyticsWidget] Successfully loaded ${filteredReports.length} monthly reports');
-      
       setState(() {
-        _monthlyReports = filteredReports;
+        _monthlyReports = reports;
         _isLoading = false;
       });
     } catch (e) {
