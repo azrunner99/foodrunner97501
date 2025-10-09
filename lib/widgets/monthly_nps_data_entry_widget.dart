@@ -130,35 +130,44 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> w
     if (_serverData.isEmpty) return;
     
     try {
-      final npsProvider = Provider.of<NPSProvider>(context, listen: false);
-      final reportMonth = int.parse('${_selectedMonth.year}${_selectedMonth.month.toString().padLeft(2, '0')}');
-      
-      d('[MonthlyNPSDataEntry] Loading existing data for month $reportMonth (${_selectedMonth.year}-${_selectedMonth.month})');
+      d('[MonthlyNPSDataEntry] Loading existing data for month ${_selectedMonth.year}-${_selectedMonth.month} using ServerDataMixin...');
       d('[MonthlyNPSDataEntry] Loading data for ${_serverData.length} servers');
+      
+      // ✅ Use mixin method to get all monthly reports, then filter by month
+      final allReports = await getAllNPSMonthlyReports();
+      final reportMonth = int.parse('${_selectedMonth.year}${_selectedMonth.month.toString().padLeft(2, '0')}');
+      final monthlyReports = allReports.where((report) => report.reportMonth == reportMonth).toList();
+      d('[MonthlyNPSDataEntry] Found ${monthlyReports.length} monthly reports for ${_selectedMonth.year}-${_selectedMonth.month}');
+      
+      // Create a map of serverId -> report for quick lookup
+      final reportsByServerId = <String, NPSMonthlyReport>{};
+      for (final report in monthlyReports) {
+        reportsByServerId[report.serverId] = report;
+      }
       
       for (final entry in _serverData.entries) {
         final serverId = entry.key;
         final serverData = entry.value;
         
         try {
-          // Try to get existing monthly report
-          final existingReport = await npsProvider.database.getMonthlyReport(serverId, reportMonth);
+          // Check if we have a report for this server and month
+          final existingReport = reportsByServerId[serverId];
           
           if (existingReport != null) {
-            d('[MonthlyNPSDataEntry] Found existing report for server $serverId: $existingReport');
+            d('[MonthlyNPSDataEntry] Found existing report for server $serverId: NPS=${existingReport.allTimeNpsPercentage}');
             
-            // Load the saved data
-            serverData.allTimeNpsController.text = (existingReport['all_time_nps_percentage'] ?? 0.0).toString();
-            serverData.threeMonthNpsController.text = (existingReport['three_month_nps_percentage'] ?? 0.0).toString();
-            serverData.oneMonthNpsController.text = (existingReport['one_month_nps_percentage'] ?? 0.0).toString();
-            serverData.allTimeSalesController.text = (existingReport['all_time_sales'] ?? 0.0).toString();
-            serverData.allTimeTableCountController.text = (existingReport['all_time_table_count'] ?? 0).toString();
+            // Load the saved data using the typed model
+            serverData.allTimeNpsController.text = (existingReport.allTimeNpsPercentage ?? 0.0).toString();
+            serverData.threeMonthNpsController.text = (existingReport.threeMonthNpsPercentage ?? 0.0).toString();
+            serverData.oneMonthNpsController.text = (existingReport.oneMonthNpsPercentage ?? 0.0).toString();
+            serverData.allTimeSalesController.text = existingReport.allTimeSales.toString();
+            serverData.allTimeTableCountController.text = existingReport.allTimeTableCount.toString();
             
             d('[MonthlyNPSDataEntry] ✅ Loaded data for server $serverId');
           } else {
-            // Clear fields if no saved data
+            // Clear fields if no saved data for this month
             serverData.clear();
-            d('[MonthlyNPSDataEntry] ❌ No saved data for server $serverId');
+            d('[MonthlyNPSDataEntry] ❌ No saved data for server $serverId in ${_selectedMonth.year}-${_selectedMonth.month}');
           }
         } catch (e) {
           d('[MonthlyNPSDataEntry] ❌ Error loading data for server $serverId: $e');
