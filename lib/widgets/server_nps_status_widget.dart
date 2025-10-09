@@ -4,17 +4,17 @@ import '../providers/nps_provider.dart';
 import '../models/monthly_report.dart' hide PerformanceTrend;
 import '../models/historical_nps_data.dart';
 import '../services/intelligent_performance_classifier.dart';
-import '../storage/database_factory.dart';
-import '../storage/nps_database_adapter.dart';
 import '../utils/log.dart';
 import '../models/performance_models.dart' as performance_models;
 import '../core/types.dart';
 import '../app_state.dart';
 import '../services/application_update_service.dart';
-import '../services/server_data_service.dart';
+import '../mixins/server_data_mixin.dart';
 
 /// Server NPS Status Widget
 /// Displays Intelligent Performance Classification and server status
+/// 
+/// ✅ Refactored to use ServerDataMixin for standardized data access
 class ServerNPSStatusWidget extends StatefulWidget {
   const ServerNPSStatusWidget({super.key});
 
@@ -22,7 +22,7 @@ class ServerNPSStatusWidget extends StatefulWidget {
   State<ServerNPSStatusWidget> createState() => _ServerNPSStatusWidgetState();
 }
 
-class _ServerNPSStatusWidgetState extends State<ServerNPSStatusWidget> {
+class _ServerNPSStatusWidgetState extends State<ServerNPSStatusWidget> with ServerDataMixin {
   List<HistoricalNPSData> _historicalData = [];
   Map<String, performance_models.PerformanceClassification> _serverClassifications = {};
   bool _isLoading = true;
@@ -38,12 +38,9 @@ class _ServerNPSStatusWidgetState extends State<ServerNPSStatusWidget> {
     try {
       d('[ServerNPSStatusWidget] Starting to load data...');
       
-      // Use the same data loading approach as the working HistoricalNPSAggregationService
-      final db = DatabaseFactory.instance;
-      
-      // Load all monthly reports
-      final allReports = await db.queryTable('nps_monthly_reports');
-      d('[ServerNPSStatusWidget] Found ${allReports.length} total monthly reports');
+      // ✅ Use mixin method - automatic filtering, ID resolution, and typing
+      final allReports = await getAllNPSMonthlyReports();
+      d('[ServerNPSStatusWidget] Found ${allReports.length} reports (orphaned IDs already filtered)');
       
       if (allReports.isEmpty) {
         d('[ServerNPSStatusWidget] No monthly reports found - returning empty list');
@@ -55,40 +52,23 @@ class _ServerNPSStatusWidgetState extends State<ServerNPSStatusWidget> {
         return;
       }
       
-      // Filter out integer server IDs (EXACT same logic as HistoricalNPSAggregationService)
-      final filteredReports = allReports.where((report) {
-        final serverId = report['server_id'].toString();
-        final isNumericId = RegExp(r'^\d+$').hasMatch(serverId);
-        if (isNumericId) {
-          d('[ServerNPSStatusWidget] Filtering out numeric server_id: $serverId');
-        }
-        return !isNumericId;
-      }).toList();
-      
-      d('[ServerNPSStatusWidget] After filtering: ${filteredReports.length} reports (removed ${allReports.length - filteredReports.length} old format reports)');
-      
       // Load historical data with proper server name resolution
       final historicalData = <HistoricalNPSData>[];
-      final Map<String, List<Map<String, dynamic>>> reportsByServer = {};
+      final Map<String, List<NPSMonthlyReport>> reportsByServer = {};
       
       // Group reports by server ID
-      for (final report in filteredReports) {
-        final serverId = report['server_id'].toString();
-        reportsByServer.putIfAbsent(serverId, () => []).add(report);
+      for (final report in allReports) {
+        reportsByServer.putIfAbsent(report.serverId, () => []).add(report);
       }
       
       // Create HistoricalNPSData for each server with proper name resolution
       for (final entry in reportsByServer.entries) {
         final serverId = entry.key;
-        final serverReports = entry.value;
+        final npsReports = entry.value;
         
-        // ⭐ Phase 1.4: Get server name using ServerDataService for reliable lookup
-        final server = await ServerDataService.instance.getServer(serverId);
-        final serverName = server?.name ?? 'Server $serverId';
+        // ✅ Use mixin method for server name lookup
+        final serverName = await getServerName(serverId);
         d('[ServerNPSStatusWidget] Got server name: $serverName for ID: $serverId');
-        
-        // Convert raw reports to NPSMonthlyReport objects
-        final npsReports = serverReports.map((report) => NPSMonthlyReport.fromMap(report)).toList();
         
         historicalData.add(HistoricalNPSData(
           serverId: serverId,
@@ -129,11 +109,12 @@ class _ServerNPSStatusWidgetState extends State<ServerNPSStatusWidget> {
       final classifier = IntelligentPerformanceClassifier();
       
       for (final data in historicalData) {
-        final monthlyReports = await _getMonthlyReportsForServer(data.serverId);
+        // ✅ Use mixin method instead of direct DB access
+        final monthlyReports = await getServerNPSHistory(data.serverId);
         final classification = classifier.classifyServerPerformance(
           monthlyReports: monthlyReports,
           serverName: data.serverName,
-          serverId: data.serverId, // Already a ServerId (String)
+          serverId: data.serverId,
         );
         classifications[data.serverId] = classification;
       }
@@ -150,25 +131,6 @@ class _ServerNPSStatusWidgetState extends State<ServerNPSStatusWidget> {
       setState(() {
         _isLoading = false;
       });
-    }
-  }
-
-  Future<List<NPSMonthlyReport>> _getMonthlyReportsForServer(String serverId) async {
-    try {
-      final database = DatabaseFactory.instance;
-      final isSqflite = database.runtimeType.toString().contains('Sqflite');
-
-      final results = await database.queryTable(
-        'nps_monthly_reports',
-        where: 'server_id = ?',
-        whereArgs: [serverId],
-        orderBy: 'report_year DESC, report_month DESC',
-      );
-
-      return results.map((row) => NPSMonthlyReport.fromMap(row)).toList();
-    } catch (e) {
-      d('[ServerNPSStatusWidget] Error loading monthly reports for server $serverId: $e');
-      return [];
     }
   }
 
