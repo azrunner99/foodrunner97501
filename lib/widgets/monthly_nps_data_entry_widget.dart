@@ -7,6 +7,7 @@ import '../utils/log.dart';
 import '../screens/saved_nps_reports_screen.dart';
 import '../screens/server_nps_tracking_screen.dart';
 import '../services/server_data_service.dart';
+import '../mixins/server_data_mixin.dart';
 
 /// Simple, working Monthly NPS Data Entry Widget
 /// 
@@ -25,7 +26,7 @@ class MonthlyNPSDataEntryWidget extends StatefulWidget {
   State<MonthlyNPSDataEntryWidget> createState() => _MonthlyNPSDataEntryWidgetState();
 }
 
-class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
+class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> with ServerDataMixin {
   DateTime _selectedMonth = DateTime.now();
   final Map<String, _ServerData> _serverData = {};
   bool _isLoading = false;
@@ -48,33 +49,36 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> {
   /// Load which months have data to highlight them in the month selector
   Future<void> _loadMonthsWithData() async {
     try {
-      final npsProvider = Provider.of<NPSProvider>(context, listen: false);
-      final allReports = await npsProvider.database.queryTable('nps_monthly_reports');
+      d('[MonthlyNPSDataEntry] Loading months with data using ServerDataMixin...');
+      
+      // ✅ Use mixin method - automatic filtering, ID resolution, and typing
+      final allReports = await getAllNPSMonthlyReports();
+      d('[MonthlyNPSDataEntry] Found ${allReports.length} reports (orphaned IDs already filtered)');
       
       _monthsWithData.clear();
       
       for (final report in allReports) {
-        final reportMonth = report['report_month'] as int?;
-        final reportYear = report['report_year'] as int?;
+        final reportMonth = report.reportMonth;
+        final reportYear = report.reportYear;
         
-        if (reportMonth != null && reportYear != null) {
-          // Handle both YYYYMM format and separate columns
-          int year, month;
-          
-          if (reportMonth > 1000) {
-            // YYYYMM format (e.g., 202509)
-            year = reportMonth ~/ 100;
-            month = reportMonth % 100;
-          } else {
-            // Separate columns
-            year = reportYear;
-            month = reportMonth;
-          }
-          
-          final monthKey = '${year}_$month';
-          _monthsWithData[monthKey] = true;
+        // Handle both YYYYMM format and separate columns
+        int year, month;
+        
+        if (reportMonth > 1000) {
+          // YYYYMM format (e.g., 202509)
+          year = reportMonth ~/ 100;
+          month = reportMonth % 100;
+        } else {
+          // Separate columns
+          year = reportYear;
+          month = reportMonth;
         }
+        
+        final monthKey = '${year}_$month';
+        _monthsWithData[monthKey] = true;
       }
+      
+      d('[MonthlyNPSDataEntry] Loaded ${_monthsWithData.length} months with data');
       
       if (mounted) {
         setState(() {});
