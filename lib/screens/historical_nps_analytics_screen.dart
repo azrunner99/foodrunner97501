@@ -261,6 +261,22 @@ class _HistoricalNPSAnalyticsScreenState extends State<HistoricalNPSAnalyticsScr
   }
 
   Widget _buildServerDetails() {
+    if (_historicalData.isEmpty || _timelines.isEmpty) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Center(
+            child: Text(
+              'No historical data available',
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: Colors.grey,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     final historicalData = _historicalData.firstWhere(
       (data) => data.serverId == _selectedServerId,
       orElse: () => _historicalData.first,
