@@ -18,6 +18,7 @@ class DatabaseSyncService {
   DatabaseSyncService._();
   
   final NPSDatabaseAdapter _npsAdapter = NPSDatabaseAdapter(DatabaseFactory.instance);
+  NPSDatabaseAdapter get npsAdapter => _npsAdapter; // Expose adapter for advanced operations
   bool _initialized = false;
   
   /// Initialize the sync service

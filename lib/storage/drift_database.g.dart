@@ -400,540 +400,6 @@ class ServersCompanion extends UpdateCompanion<Server> {
   }
 }
 
-class NpsFeedback extends Table with TableInfo<NpsFeedback, NpsFeedbackData> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  NpsFeedback(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
-      'id', aliasedName, false,
-      hasAutoIncrement: true,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      $customConstraints: 'NOT NULL PRIMARY KEY AUTOINCREMENT');
-  static const VerificationMeta _serverIdMeta =
-      const VerificationMeta('serverId');
-  late final GeneratedColumn<String> serverId = GeneratedColumn<String>(
-      'server_id', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL');
-  static const VerificationMeta _feedbackTypeMeta =
-      const VerificationMeta('feedbackType');
-  late final GeneratedColumn<String> feedbackType = GeneratedColumn<String>(
-      'feedback_type', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints:
-          'NOT NULL CHECK (feedback_type IN (\'yes\', \'maybe\', \'no\'))');
-  static const VerificationMeta _feedbackDateMeta =
-      const VerificationMeta('feedbackDate');
-  late final GeneratedColumn<DateTime> feedbackDate = GeneratedColumn<DateTime>(
-      'feedback_date', aliasedName, false,
-      type: DriftSqlType.dateTime,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL');
-  static const VerificationMeta _salesAmountMeta =
-      const VerificationMeta('salesAmount');
-  late final GeneratedColumn<double> salesAmount = GeneratedColumn<double>(
-      'sales_amount', aliasedName, true,
-      type: DriftSqlType.double,
-      requiredDuringInsert: false,
-      $customConstraints: '');
-  static const VerificationMeta _tableNumberMeta =
-      const VerificationMeta('tableNumber');
-  late final GeneratedColumn<int> tableNumber = GeneratedColumn<int>(
-      'table_number', aliasedName, true,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      $customConstraints: '');
-  static const VerificationMeta _shiftPeriodMeta =
-      const VerificationMeta('shiftPeriod');
-  late final GeneratedColumn<String> shiftPeriod = GeneratedColumn<String>(
-      'shift_period', aliasedName, true,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      $customConstraints:
-          'CHECK (shift_period IN (\'breakfast\', \'lunch\', \'dinner\', \'late_night\'))');
-  static const VerificationMeta _guestCountMeta =
-      const VerificationMeta('guestCount');
-  late final GeneratedColumn<int> guestCount = GeneratedColumn<int>(
-      'guest_count', aliasedName, true,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      $customConstraints: '');
-  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
-  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
-      'notes', aliasedName, true,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      $customConstraints: '');
-  static const VerificationMeta _createdAtMeta =
-      const VerificationMeta('createdAt');
-  late final GeneratedColumn<String> createdAt = GeneratedColumn<String>(
-      'created_at', aliasedName, true,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      $customConstraints: 'DEFAULT CURRENT_TIMESTAMP',
-      defaultValue: const CustomExpression('CURRENT_TIMESTAMP'));
-  @override
-  List<GeneratedColumn> get $columns => [
-        id,
-        serverId,
-        feedbackType,
-        feedbackDate,
-        salesAmount,
-        tableNumber,
-        shiftPeriod,
-        guestCount,
-        notes,
-        createdAt
-      ];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'nps_feedback';
-  @override
-  VerificationContext validateIntegrity(Insertable<NpsFeedbackData> instance,
-      {bool isInserting = false}) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
-    if (data.containsKey('server_id')) {
-      context.handle(_serverIdMeta,
-          serverId.isAcceptableOrUnknown(data['server_id']!, _serverIdMeta));
-    } else if (isInserting) {
-      context.missing(_serverIdMeta);
-    }
-    if (data.containsKey('feedback_type')) {
-      context.handle(
-          _feedbackTypeMeta,
-          feedbackType.isAcceptableOrUnknown(
-              data['feedback_type']!, _feedbackTypeMeta));
-    } else if (isInserting) {
-      context.missing(_feedbackTypeMeta);
-    }
-    if (data.containsKey('feedback_date')) {
-      context.handle(
-          _feedbackDateMeta,
-          feedbackDate.isAcceptableOrUnknown(
-              data['feedback_date']!, _feedbackDateMeta));
-    } else if (isInserting) {
-      context.missing(_feedbackDateMeta);
-    }
-    if (data.containsKey('sales_amount')) {
-      context.handle(
-          _salesAmountMeta,
-          salesAmount.isAcceptableOrUnknown(
-              data['sales_amount']!, _salesAmountMeta));
-    }
-    if (data.containsKey('table_number')) {
-      context.handle(
-          _tableNumberMeta,
-          tableNumber.isAcceptableOrUnknown(
-              data['table_number']!, _tableNumberMeta));
-    }
-    if (data.containsKey('shift_period')) {
-      context.handle(
-          _shiftPeriodMeta,
-          shiftPeriod.isAcceptableOrUnknown(
-              data['shift_period']!, _shiftPeriodMeta));
-    }
-    if (data.containsKey('guest_count')) {
-      context.handle(
-          _guestCountMeta,
-          guestCount.isAcceptableOrUnknown(
-              data['guest_count']!, _guestCountMeta));
-    }
-    if (data.containsKey('notes')) {
-      context.handle(
-          _notesMeta, notes.isAcceptableOrUnknown(data['notes']!, _notesMeta));
-    }
-    if (data.containsKey('created_at')) {
-      context.handle(_createdAtMeta,
-          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
-    }
-    return context;
-  }
-
-  @override
-  Set<GeneratedColumn> get $primaryKey => {id};
-  @override
-  NpsFeedbackData map(Map<String, dynamic> data, {String? tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return NpsFeedbackData(
-      id: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
-      serverId: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}server_id'])!,
-      feedbackType: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}feedback_type'])!,
-      feedbackDate: attachedDatabase.typeMapping.read(
-          DriftSqlType.dateTime, data['${effectivePrefix}feedback_date'])!,
-      salesAmount: attachedDatabase.typeMapping
-          .read(DriftSqlType.double, data['${effectivePrefix}sales_amount']),
-      tableNumber: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}table_number']),
-      shiftPeriod: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}shift_period']),
-      guestCount: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}guest_count']),
-      notes: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}notes']),
-      createdAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}created_at']),
-    );
-  }
-
-  @override
-  NpsFeedback createAlias(String alias) {
-    return NpsFeedback(attachedDatabase, alias);
-  }
-
-  @override
-  List<String> get customConstraints =>
-      const ['FOREIGN KEY(server_id)REFERENCES servers(id)ON DELETE RESTRICT'];
-  @override
-  bool get dontWriteConstraints => true;
-}
-
-class NpsFeedbackData extends DataClass implements Insertable<NpsFeedbackData> {
-  final int id;
-  final String serverId;
-  final String feedbackType;
-  final DateTime feedbackDate;
-  final double? salesAmount;
-  final int? tableNumber;
-  final String? shiftPeriod;
-  final int? guestCount;
-  final String? notes;
-  final String? createdAt;
-  const NpsFeedbackData(
-      {required this.id,
-      required this.serverId,
-      required this.feedbackType,
-      required this.feedbackDate,
-      this.salesAmount,
-      this.tableNumber,
-      this.shiftPeriod,
-      this.guestCount,
-      this.notes,
-      this.createdAt});
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
-    map['server_id'] = Variable<String>(serverId);
-    map['feedback_type'] = Variable<String>(feedbackType);
-    map['feedback_date'] = Variable<DateTime>(feedbackDate);
-    if (!nullToAbsent || salesAmount != null) {
-      map['sales_amount'] = Variable<double>(salesAmount);
-    }
-    if (!nullToAbsent || tableNumber != null) {
-      map['table_number'] = Variable<int>(tableNumber);
-    }
-    if (!nullToAbsent || shiftPeriod != null) {
-      map['shift_period'] = Variable<String>(shiftPeriod);
-    }
-    if (!nullToAbsent || guestCount != null) {
-      map['guest_count'] = Variable<int>(guestCount);
-    }
-    if (!nullToAbsent || notes != null) {
-      map['notes'] = Variable<String>(notes);
-    }
-    if (!nullToAbsent || createdAt != null) {
-      map['created_at'] = Variable<String>(createdAt);
-    }
-    return map;
-  }
-
-  NpsFeedbackCompanion toCompanion(bool nullToAbsent) {
-    return NpsFeedbackCompanion(
-      id: Value(id),
-      serverId: Value(serverId),
-      feedbackType: Value(feedbackType),
-      feedbackDate: Value(feedbackDate),
-      salesAmount: salesAmount == null && nullToAbsent
-          ? const Value.absent()
-          : Value(salesAmount),
-      tableNumber: tableNumber == null && nullToAbsent
-          ? const Value.absent()
-          : Value(tableNumber),
-      shiftPeriod: shiftPeriod == null && nullToAbsent
-          ? const Value.absent()
-          : Value(shiftPeriod),
-      guestCount: guestCount == null && nullToAbsent
-          ? const Value.absent()
-          : Value(guestCount),
-      notes:
-          notes == null && nullToAbsent ? const Value.absent() : Value(notes),
-      createdAt: createdAt == null && nullToAbsent
-          ? const Value.absent()
-          : Value(createdAt),
-    );
-  }
-
-  factory NpsFeedbackData.fromJson(Map<String, dynamic> json,
-      {ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return NpsFeedbackData(
-      id: serializer.fromJson<int>(json['id']),
-      serverId: serializer.fromJson<String>(json['server_id']),
-      feedbackType: serializer.fromJson<String>(json['feedback_type']),
-      feedbackDate: serializer.fromJson<DateTime>(json['feedback_date']),
-      salesAmount: serializer.fromJson<double?>(json['sales_amount']),
-      tableNumber: serializer.fromJson<int?>(json['table_number']),
-      shiftPeriod: serializer.fromJson<String?>(json['shift_period']),
-      guestCount: serializer.fromJson<int?>(json['guest_count']),
-      notes: serializer.fromJson<String?>(json['notes']),
-      createdAt: serializer.fromJson<String?>(json['created_at']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
-      'server_id': serializer.toJson<String>(serverId),
-      'feedback_type': serializer.toJson<String>(feedbackType),
-      'feedback_date': serializer.toJson<DateTime>(feedbackDate),
-      'sales_amount': serializer.toJson<double?>(salesAmount),
-      'table_number': serializer.toJson<int?>(tableNumber),
-      'shift_period': serializer.toJson<String?>(shiftPeriod),
-      'guest_count': serializer.toJson<int?>(guestCount),
-      'notes': serializer.toJson<String?>(notes),
-      'created_at': serializer.toJson<String?>(createdAt),
-    };
-  }
-
-  NpsFeedbackData copyWith(
-          {int? id,
-          String? serverId,
-          String? feedbackType,
-          DateTime? feedbackDate,
-          Value<double?> salesAmount = const Value.absent(),
-          Value<int?> tableNumber = const Value.absent(),
-          Value<String?> shiftPeriod = const Value.absent(),
-          Value<int?> guestCount = const Value.absent(),
-          Value<String?> notes = const Value.absent(),
-          Value<String?> createdAt = const Value.absent()}) =>
-      NpsFeedbackData(
-        id: id ?? this.id,
-        serverId: serverId ?? this.serverId,
-        feedbackType: feedbackType ?? this.feedbackType,
-        feedbackDate: feedbackDate ?? this.feedbackDate,
-        salesAmount: salesAmount.present ? salesAmount.value : this.salesAmount,
-        tableNumber: tableNumber.present ? tableNumber.value : this.tableNumber,
-        shiftPeriod: shiftPeriod.present ? shiftPeriod.value : this.shiftPeriod,
-        guestCount: guestCount.present ? guestCount.value : this.guestCount,
-        notes: notes.present ? notes.value : this.notes,
-        createdAt: createdAt.present ? createdAt.value : this.createdAt,
-      );
-  NpsFeedbackData copyWithCompanion(NpsFeedbackCompanion data) {
-    return NpsFeedbackData(
-      id: data.id.present ? data.id.value : this.id,
-      serverId: data.serverId.present ? data.serverId.value : this.serverId,
-      feedbackType: data.feedbackType.present
-          ? data.feedbackType.value
-          : this.feedbackType,
-      feedbackDate: data.feedbackDate.present
-          ? data.feedbackDate.value
-          : this.feedbackDate,
-      salesAmount:
-          data.salesAmount.present ? data.salesAmount.value : this.salesAmount,
-      tableNumber:
-          data.tableNumber.present ? data.tableNumber.value : this.tableNumber,
-      shiftPeriod:
-          data.shiftPeriod.present ? data.shiftPeriod.value : this.shiftPeriod,
-      guestCount:
-          data.guestCount.present ? data.guestCount.value : this.guestCount,
-      notes: data.notes.present ? data.notes.value : this.notes,
-      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('NpsFeedbackData(')
-          ..write('id: $id, ')
-          ..write('serverId: $serverId, ')
-          ..write('feedbackType: $feedbackType, ')
-          ..write('feedbackDate: $feedbackDate, ')
-          ..write('salesAmount: $salesAmount, ')
-          ..write('tableNumber: $tableNumber, ')
-          ..write('shiftPeriod: $shiftPeriod, ')
-          ..write('guestCount: $guestCount, ')
-          ..write('notes: $notes, ')
-          ..write('createdAt: $createdAt')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode => Object.hash(id, serverId, feedbackType, feedbackDate,
-      salesAmount, tableNumber, shiftPeriod, guestCount, notes, createdAt);
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is NpsFeedbackData &&
-          other.id == this.id &&
-          other.serverId == this.serverId &&
-          other.feedbackType == this.feedbackType &&
-          other.feedbackDate == this.feedbackDate &&
-          other.salesAmount == this.salesAmount &&
-          other.tableNumber == this.tableNumber &&
-          other.shiftPeriod == this.shiftPeriod &&
-          other.guestCount == this.guestCount &&
-          other.notes == this.notes &&
-          other.createdAt == this.createdAt);
-}
-
-class NpsFeedbackCompanion extends UpdateCompanion<NpsFeedbackData> {
-  final Value<int> id;
-  final Value<String> serverId;
-  final Value<String> feedbackType;
-  final Value<DateTime> feedbackDate;
-  final Value<double?> salesAmount;
-  final Value<int?> tableNumber;
-  final Value<String?> shiftPeriod;
-  final Value<int?> guestCount;
-  final Value<String?> notes;
-  final Value<String?> createdAt;
-  const NpsFeedbackCompanion({
-    this.id = const Value.absent(),
-    this.serverId = const Value.absent(),
-    this.feedbackType = const Value.absent(),
-    this.feedbackDate = const Value.absent(),
-    this.salesAmount = const Value.absent(),
-    this.tableNumber = const Value.absent(),
-    this.shiftPeriod = const Value.absent(),
-    this.guestCount = const Value.absent(),
-    this.notes = const Value.absent(),
-    this.createdAt = const Value.absent(),
-  });
-  NpsFeedbackCompanion.insert({
-    this.id = const Value.absent(),
-    required String serverId,
-    required String feedbackType,
-    required DateTime feedbackDate,
-    this.salesAmount = const Value.absent(),
-    this.tableNumber = const Value.absent(),
-    this.shiftPeriod = const Value.absent(),
-    this.guestCount = const Value.absent(),
-    this.notes = const Value.absent(),
-    this.createdAt = const Value.absent(),
-  })  : serverId = Value(serverId),
-        feedbackType = Value(feedbackType),
-        feedbackDate = Value(feedbackDate);
-  static Insertable<NpsFeedbackData> custom({
-    Expression<int>? id,
-    Expression<String>? serverId,
-    Expression<String>? feedbackType,
-    Expression<DateTime>? feedbackDate,
-    Expression<double>? salesAmount,
-    Expression<int>? tableNumber,
-    Expression<String>? shiftPeriod,
-    Expression<int>? guestCount,
-    Expression<String>? notes,
-    Expression<String>? createdAt,
-  }) {
-    return RawValuesInsertable({
-      if (id != null) 'id': id,
-      if (serverId != null) 'server_id': serverId,
-      if (feedbackType != null) 'feedback_type': feedbackType,
-      if (feedbackDate != null) 'feedback_date': feedbackDate,
-      if (salesAmount != null) 'sales_amount': salesAmount,
-      if (tableNumber != null) 'table_number': tableNumber,
-      if (shiftPeriod != null) 'shift_period': shiftPeriod,
-      if (guestCount != null) 'guest_count': guestCount,
-      if (notes != null) 'notes': notes,
-      if (createdAt != null) 'created_at': createdAt,
-    });
-  }
-
-  NpsFeedbackCompanion copyWith(
-      {Value<int>? id,
-      Value<String>? serverId,
-      Value<String>? feedbackType,
-      Value<DateTime>? feedbackDate,
-      Value<double?>? salesAmount,
-      Value<int?>? tableNumber,
-      Value<String?>? shiftPeriod,
-      Value<int?>? guestCount,
-      Value<String?>? notes,
-      Value<String?>? createdAt}) {
-    return NpsFeedbackCompanion(
-      id: id ?? this.id,
-      serverId: serverId ?? this.serverId,
-      feedbackType: feedbackType ?? this.feedbackType,
-      feedbackDate: feedbackDate ?? this.feedbackDate,
-      salesAmount: salesAmount ?? this.salesAmount,
-      tableNumber: tableNumber ?? this.tableNumber,
-      shiftPeriod: shiftPeriod ?? this.shiftPeriod,
-      guestCount: guestCount ?? this.guestCount,
-      notes: notes ?? this.notes,
-      createdAt: createdAt ?? this.createdAt,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<int>(id.value);
-    }
-    if (serverId.present) {
-      map['server_id'] = Variable<String>(serverId.value);
-    }
-    if (feedbackType.present) {
-      map['feedback_type'] = Variable<String>(feedbackType.value);
-    }
-    if (feedbackDate.present) {
-      map['feedback_date'] = Variable<DateTime>(feedbackDate.value);
-    }
-    if (salesAmount.present) {
-      map['sales_amount'] = Variable<double>(salesAmount.value);
-    }
-    if (tableNumber.present) {
-      map['table_number'] = Variable<int>(tableNumber.value);
-    }
-    if (shiftPeriod.present) {
-      map['shift_period'] = Variable<String>(shiftPeriod.value);
-    }
-    if (guestCount.present) {
-      map['guest_count'] = Variable<int>(guestCount.value);
-    }
-    if (notes.present) {
-      map['notes'] = Variable<String>(notes.value);
-    }
-    if (createdAt.present) {
-      map['created_at'] = Variable<String>(createdAt.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('NpsFeedbackCompanion(')
-          ..write('id: $id, ')
-          ..write('serverId: $serverId, ')
-          ..write('feedbackType: $feedbackType, ')
-          ..write('feedbackDate: $feedbackDate, ')
-          ..write('salesAmount: $salesAmount, ')
-          ..write('tableNumber: $tableNumber, ')
-          ..write('shiftPeriod: $shiftPeriod, ')
-          ..write('guestCount: $guestCount, ')
-          ..write('notes: $notes, ')
-          ..write('createdAt: $createdAt')
-          ..write(')'))
-        .toString();
-  }
-}
-
 class NpsMonthlyReports extends Table
     with TableInfo<NpsMonthlyReports, NpsMonthlyReport> {
   @override
@@ -1005,78 +471,6 @@ class NpsMonthlyReports extends Table
       requiredDuringInsert: false,
       $customConstraints: 'DEFAULT 0',
       defaultValue: const CustomExpression('0'));
-  static const VerificationMeta _monthFeedbackYesMeta =
-      const VerificationMeta('monthFeedbackYes');
-  late final GeneratedColumn<int> monthFeedbackYes = GeneratedColumn<int>(
-      'month_feedback_yes', aliasedName, true,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      $customConstraints: 'DEFAULT 0',
-      defaultValue: const CustomExpression('0'));
-  static const VerificationMeta _monthFeedbackMaybeMeta =
-      const VerificationMeta('monthFeedbackMaybe');
-  late final GeneratedColumn<int> monthFeedbackMaybe = GeneratedColumn<int>(
-      'month_feedback_maybe', aliasedName, true,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      $customConstraints: 'DEFAULT 0',
-      defaultValue: const CustomExpression('0'));
-  static const VerificationMeta _monthFeedbackNoMeta =
-      const VerificationMeta('monthFeedbackNo');
-  late final GeneratedColumn<int> monthFeedbackNo = GeneratedColumn<int>(
-      'month_feedback_no', aliasedName, true,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      $customConstraints: 'DEFAULT 0',
-      defaultValue: const CustomExpression('0'));
-  static const VerificationMeta _threeMonthFeedbackYesMeta =
-      const VerificationMeta('threeMonthFeedbackYes');
-  late final GeneratedColumn<int> threeMonthFeedbackYes = GeneratedColumn<int>(
-      'three_month_feedback_yes', aliasedName, true,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      $customConstraints: 'DEFAULT 0',
-      defaultValue: const CustomExpression('0'));
-  static const VerificationMeta _threeMonthFeedbackMaybeMeta =
-      const VerificationMeta('threeMonthFeedbackMaybe');
-  late final GeneratedColumn<int> threeMonthFeedbackMaybe =
-      GeneratedColumn<int>('three_month_feedback_maybe', aliasedName, true,
-          type: DriftSqlType.int,
-          requiredDuringInsert: false,
-          $customConstraints: 'DEFAULT 0',
-          defaultValue: const CustomExpression('0'));
-  static const VerificationMeta _threeMonthFeedbackNoMeta =
-      const VerificationMeta('threeMonthFeedbackNo');
-  late final GeneratedColumn<int> threeMonthFeedbackNo = GeneratedColumn<int>(
-      'three_month_feedback_no', aliasedName, true,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      $customConstraints: 'DEFAULT 0',
-      defaultValue: const CustomExpression('0'));
-  static const VerificationMeta _allTimeFeedbackYesMeta =
-      const VerificationMeta('allTimeFeedbackYes');
-  late final GeneratedColumn<int> allTimeFeedbackYes = GeneratedColumn<int>(
-      'all_time_feedback_yes', aliasedName, true,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      $customConstraints: 'DEFAULT 0',
-      defaultValue: const CustomExpression('0'));
-  static const VerificationMeta _allTimeFeedbackMaybeMeta =
-      const VerificationMeta('allTimeFeedbackMaybe');
-  late final GeneratedColumn<int> allTimeFeedbackMaybe = GeneratedColumn<int>(
-      'all_time_feedback_maybe', aliasedName, true,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      $customConstraints: 'DEFAULT 0',
-      defaultValue: const CustomExpression('0'));
-  static const VerificationMeta _allTimeFeedbackNoMeta =
-      const VerificationMeta('allTimeFeedbackNo');
-  late final GeneratedColumn<int> allTimeFeedbackNo = GeneratedColumn<int>(
-      'all_time_feedback_no', aliasedName, true,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      $customConstraints: 'DEFAULT 0',
-      defaultValue: const CustomExpression('0'));
   static const VerificationMeta _generatedAtMeta =
       const VerificationMeta('generatedAt');
   late final GeneratedColumn<String> generatedAt = GeneratedColumn<String>(
@@ -1103,15 +497,6 @@ class NpsMonthlyReports extends Table
         oneMonthNpsPercentage,
         allTimeSales,
         allTimeTableCount,
-        monthFeedbackYes,
-        monthFeedbackMaybe,
-        monthFeedbackNo,
-        threeMonthFeedbackYes,
-        threeMonthFeedbackMaybe,
-        threeMonthFeedbackNo,
-        allTimeFeedbackYes,
-        allTimeFeedbackMaybe,
-        allTimeFeedbackNo,
         generatedAt,
         dataAsOfDate
       ];
@@ -1181,61 +566,6 @@ class NpsMonthlyReports extends Table
           allTimeTableCount.isAcceptableOrUnknown(
               data['all_time_table_count']!, _allTimeTableCountMeta));
     }
-    if (data.containsKey('month_feedback_yes')) {
-      context.handle(
-          _monthFeedbackYesMeta,
-          monthFeedbackYes.isAcceptableOrUnknown(
-              data['month_feedback_yes']!, _monthFeedbackYesMeta));
-    }
-    if (data.containsKey('month_feedback_maybe')) {
-      context.handle(
-          _monthFeedbackMaybeMeta,
-          monthFeedbackMaybe.isAcceptableOrUnknown(
-              data['month_feedback_maybe']!, _monthFeedbackMaybeMeta));
-    }
-    if (data.containsKey('month_feedback_no')) {
-      context.handle(
-          _monthFeedbackNoMeta,
-          monthFeedbackNo.isAcceptableOrUnknown(
-              data['month_feedback_no']!, _monthFeedbackNoMeta));
-    }
-    if (data.containsKey('three_month_feedback_yes')) {
-      context.handle(
-          _threeMonthFeedbackYesMeta,
-          threeMonthFeedbackYes.isAcceptableOrUnknown(
-              data['three_month_feedback_yes']!, _threeMonthFeedbackYesMeta));
-    }
-    if (data.containsKey('three_month_feedback_maybe')) {
-      context.handle(
-          _threeMonthFeedbackMaybeMeta,
-          threeMonthFeedbackMaybe.isAcceptableOrUnknown(
-              data['three_month_feedback_maybe']!,
-              _threeMonthFeedbackMaybeMeta));
-    }
-    if (data.containsKey('three_month_feedback_no')) {
-      context.handle(
-          _threeMonthFeedbackNoMeta,
-          threeMonthFeedbackNo.isAcceptableOrUnknown(
-              data['three_month_feedback_no']!, _threeMonthFeedbackNoMeta));
-    }
-    if (data.containsKey('all_time_feedback_yes')) {
-      context.handle(
-          _allTimeFeedbackYesMeta,
-          allTimeFeedbackYes.isAcceptableOrUnknown(
-              data['all_time_feedback_yes']!, _allTimeFeedbackYesMeta));
-    }
-    if (data.containsKey('all_time_feedback_maybe')) {
-      context.handle(
-          _allTimeFeedbackMaybeMeta,
-          allTimeFeedbackMaybe.isAcceptableOrUnknown(
-              data['all_time_feedback_maybe']!, _allTimeFeedbackMaybeMeta));
-    }
-    if (data.containsKey('all_time_feedback_no')) {
-      context.handle(
-          _allTimeFeedbackNoMeta,
-          allTimeFeedbackNo.isAcceptableOrUnknown(
-              data['all_time_feedback_no']!, _allTimeFeedbackNoMeta));
-    }
     if (data.containsKey('generated_at')) {
       context.handle(
           _generatedAtMeta,
@@ -1284,25 +614,6 @@ class NpsMonthlyReports extends Table
           .read(DriftSqlType.double, data['${effectivePrefix}all_time_sales']),
       allTimeTableCount: attachedDatabase.typeMapping.read(
           DriftSqlType.int, data['${effectivePrefix}all_time_table_count']),
-      monthFeedbackYes: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}month_feedback_yes']),
-      monthFeedbackMaybe: attachedDatabase.typeMapping.read(
-          DriftSqlType.int, data['${effectivePrefix}month_feedback_maybe']),
-      monthFeedbackNo: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}month_feedback_no']),
-      threeMonthFeedbackYes: attachedDatabase.typeMapping.read(
-          DriftSqlType.int, data['${effectivePrefix}three_month_feedback_yes']),
-      threeMonthFeedbackMaybe: attachedDatabase.typeMapping.read(
-          DriftSqlType.int,
-          data['${effectivePrefix}three_month_feedback_maybe']),
-      threeMonthFeedbackNo: attachedDatabase.typeMapping.read(
-          DriftSqlType.int, data['${effectivePrefix}three_month_feedback_no']),
-      allTimeFeedbackYes: attachedDatabase.typeMapping.read(
-          DriftSqlType.int, data['${effectivePrefix}all_time_feedback_yes']),
-      allTimeFeedbackMaybe: attachedDatabase.typeMapping.read(
-          DriftSqlType.int, data['${effectivePrefix}all_time_feedback_maybe']),
-      allTimeFeedbackNo: attachedDatabase.typeMapping.read(
-          DriftSqlType.int, data['${effectivePrefix}all_time_feedback_no']),
       generatedAt: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}generated_at']),
       dataAsOfDate: attachedDatabase.typeMapping.read(
@@ -1335,15 +646,6 @@ class NpsMonthlyReport extends DataClass
   final double? oneMonthNpsPercentage;
   final double? allTimeSales;
   final int? allTimeTableCount;
-  final int? monthFeedbackYes;
-  final int? monthFeedbackMaybe;
-  final int? monthFeedbackNo;
-  final int? threeMonthFeedbackYes;
-  final int? threeMonthFeedbackMaybe;
-  final int? threeMonthFeedbackNo;
-  final int? allTimeFeedbackYes;
-  final int? allTimeFeedbackMaybe;
-  final int? allTimeFeedbackNo;
   final String? generatedAt;
   final DateTime dataAsOfDate;
   const NpsMonthlyReport(
@@ -1356,15 +658,6 @@ class NpsMonthlyReport extends DataClass
       this.oneMonthNpsPercentage,
       this.allTimeSales,
       this.allTimeTableCount,
-      this.monthFeedbackYes,
-      this.monthFeedbackMaybe,
-      this.monthFeedbackNo,
-      this.threeMonthFeedbackYes,
-      this.threeMonthFeedbackMaybe,
-      this.threeMonthFeedbackNo,
-      this.allTimeFeedbackYes,
-      this.allTimeFeedbackMaybe,
-      this.allTimeFeedbackNo,
       this.generatedAt,
       required this.dataAsOfDate});
   @override
@@ -1389,34 +682,6 @@ class NpsMonthlyReport extends DataClass
     }
     if (!nullToAbsent || allTimeTableCount != null) {
       map['all_time_table_count'] = Variable<int>(allTimeTableCount);
-    }
-    if (!nullToAbsent || monthFeedbackYes != null) {
-      map['month_feedback_yes'] = Variable<int>(monthFeedbackYes);
-    }
-    if (!nullToAbsent || monthFeedbackMaybe != null) {
-      map['month_feedback_maybe'] = Variable<int>(monthFeedbackMaybe);
-    }
-    if (!nullToAbsent || monthFeedbackNo != null) {
-      map['month_feedback_no'] = Variable<int>(monthFeedbackNo);
-    }
-    if (!nullToAbsent || threeMonthFeedbackYes != null) {
-      map['three_month_feedback_yes'] = Variable<int>(threeMonthFeedbackYes);
-    }
-    if (!nullToAbsent || threeMonthFeedbackMaybe != null) {
-      map['three_month_feedback_maybe'] =
-          Variable<int>(threeMonthFeedbackMaybe);
-    }
-    if (!nullToAbsent || threeMonthFeedbackNo != null) {
-      map['three_month_feedback_no'] = Variable<int>(threeMonthFeedbackNo);
-    }
-    if (!nullToAbsent || allTimeFeedbackYes != null) {
-      map['all_time_feedback_yes'] = Variable<int>(allTimeFeedbackYes);
-    }
-    if (!nullToAbsent || allTimeFeedbackMaybe != null) {
-      map['all_time_feedback_maybe'] = Variable<int>(allTimeFeedbackMaybe);
-    }
-    if (!nullToAbsent || allTimeFeedbackNo != null) {
-      map['all_time_feedback_no'] = Variable<int>(allTimeFeedbackNo);
     }
     if (!nullToAbsent || generatedAt != null) {
       map['generated_at'] = Variable<String>(generatedAt);
@@ -1446,33 +711,6 @@ class NpsMonthlyReport extends DataClass
       allTimeTableCount: allTimeTableCount == null && nullToAbsent
           ? const Value.absent()
           : Value(allTimeTableCount),
-      monthFeedbackYes: monthFeedbackYes == null && nullToAbsent
-          ? const Value.absent()
-          : Value(monthFeedbackYes),
-      monthFeedbackMaybe: monthFeedbackMaybe == null && nullToAbsent
-          ? const Value.absent()
-          : Value(monthFeedbackMaybe),
-      monthFeedbackNo: monthFeedbackNo == null && nullToAbsent
-          ? const Value.absent()
-          : Value(monthFeedbackNo),
-      threeMonthFeedbackYes: threeMonthFeedbackYes == null && nullToAbsent
-          ? const Value.absent()
-          : Value(threeMonthFeedbackYes),
-      threeMonthFeedbackMaybe: threeMonthFeedbackMaybe == null && nullToAbsent
-          ? const Value.absent()
-          : Value(threeMonthFeedbackMaybe),
-      threeMonthFeedbackNo: threeMonthFeedbackNo == null && nullToAbsent
-          ? const Value.absent()
-          : Value(threeMonthFeedbackNo),
-      allTimeFeedbackYes: allTimeFeedbackYes == null && nullToAbsent
-          ? const Value.absent()
-          : Value(allTimeFeedbackYes),
-      allTimeFeedbackMaybe: allTimeFeedbackMaybe == null && nullToAbsent
-          ? const Value.absent()
-          : Value(allTimeFeedbackMaybe),
-      allTimeFeedbackNo: allTimeFeedbackNo == null && nullToAbsent
-          ? const Value.absent()
-          : Value(allTimeFeedbackNo),
       generatedAt: generatedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(generatedAt),
@@ -1497,22 +735,6 @@ class NpsMonthlyReport extends DataClass
       allTimeSales: serializer.fromJson<double?>(json['all_time_sales']),
       allTimeTableCount:
           serializer.fromJson<int?>(json['all_time_table_count']),
-      monthFeedbackYes: serializer.fromJson<int?>(json['month_feedback_yes']),
-      monthFeedbackMaybe:
-          serializer.fromJson<int?>(json['month_feedback_maybe']),
-      monthFeedbackNo: serializer.fromJson<int?>(json['month_feedback_no']),
-      threeMonthFeedbackYes:
-          serializer.fromJson<int?>(json['three_month_feedback_yes']),
-      threeMonthFeedbackMaybe:
-          serializer.fromJson<int?>(json['three_month_feedback_maybe']),
-      threeMonthFeedbackNo:
-          serializer.fromJson<int?>(json['three_month_feedback_no']),
-      allTimeFeedbackYes:
-          serializer.fromJson<int?>(json['all_time_feedback_yes']),
-      allTimeFeedbackMaybe:
-          serializer.fromJson<int?>(json['all_time_feedback_maybe']),
-      allTimeFeedbackNo:
-          serializer.fromJson<int?>(json['all_time_feedback_no']),
       generatedAt: serializer.fromJson<String?>(json['generated_at']),
       dataAsOfDate: serializer.fromJson<DateTime>(json['data_as_of_date']),
     );
@@ -1533,17 +755,6 @@ class NpsMonthlyReport extends DataClass
           serializer.toJson<double?>(oneMonthNpsPercentage),
       'all_time_sales': serializer.toJson<double?>(allTimeSales),
       'all_time_table_count': serializer.toJson<int?>(allTimeTableCount),
-      'month_feedback_yes': serializer.toJson<int?>(monthFeedbackYes),
-      'month_feedback_maybe': serializer.toJson<int?>(monthFeedbackMaybe),
-      'month_feedback_no': serializer.toJson<int?>(monthFeedbackNo),
-      'three_month_feedback_yes':
-          serializer.toJson<int?>(threeMonthFeedbackYes),
-      'three_month_feedback_maybe':
-          serializer.toJson<int?>(threeMonthFeedbackMaybe),
-      'three_month_feedback_no': serializer.toJson<int?>(threeMonthFeedbackNo),
-      'all_time_feedback_yes': serializer.toJson<int?>(allTimeFeedbackYes),
-      'all_time_feedback_maybe': serializer.toJson<int?>(allTimeFeedbackMaybe),
-      'all_time_feedback_no': serializer.toJson<int?>(allTimeFeedbackNo),
       'generated_at': serializer.toJson<String?>(generatedAt),
       'data_as_of_date': serializer.toJson<DateTime>(dataAsOfDate),
     };
@@ -1559,15 +770,6 @@ class NpsMonthlyReport extends DataClass
           Value<double?> oneMonthNpsPercentage = const Value.absent(),
           Value<double?> allTimeSales = const Value.absent(),
           Value<int?> allTimeTableCount = const Value.absent(),
-          Value<int?> monthFeedbackYes = const Value.absent(),
-          Value<int?> monthFeedbackMaybe = const Value.absent(),
-          Value<int?> monthFeedbackNo = const Value.absent(),
-          Value<int?> threeMonthFeedbackYes = const Value.absent(),
-          Value<int?> threeMonthFeedbackMaybe = const Value.absent(),
-          Value<int?> threeMonthFeedbackNo = const Value.absent(),
-          Value<int?> allTimeFeedbackYes = const Value.absent(),
-          Value<int?> allTimeFeedbackMaybe = const Value.absent(),
-          Value<int?> allTimeFeedbackNo = const Value.absent(),
           Value<String?> generatedAt = const Value.absent(),
           DateTime? dataAsOfDate}) =>
       NpsMonthlyReport(
@@ -1589,33 +791,6 @@ class NpsMonthlyReport extends DataClass
         allTimeTableCount: allTimeTableCount.present
             ? allTimeTableCount.value
             : this.allTimeTableCount,
-        monthFeedbackYes: monthFeedbackYes.present
-            ? monthFeedbackYes.value
-            : this.monthFeedbackYes,
-        monthFeedbackMaybe: monthFeedbackMaybe.present
-            ? monthFeedbackMaybe.value
-            : this.monthFeedbackMaybe,
-        monthFeedbackNo: monthFeedbackNo.present
-            ? monthFeedbackNo.value
-            : this.monthFeedbackNo,
-        threeMonthFeedbackYes: threeMonthFeedbackYes.present
-            ? threeMonthFeedbackYes.value
-            : this.threeMonthFeedbackYes,
-        threeMonthFeedbackMaybe: threeMonthFeedbackMaybe.present
-            ? threeMonthFeedbackMaybe.value
-            : this.threeMonthFeedbackMaybe,
-        threeMonthFeedbackNo: threeMonthFeedbackNo.present
-            ? threeMonthFeedbackNo.value
-            : this.threeMonthFeedbackNo,
-        allTimeFeedbackYes: allTimeFeedbackYes.present
-            ? allTimeFeedbackYes.value
-            : this.allTimeFeedbackYes,
-        allTimeFeedbackMaybe: allTimeFeedbackMaybe.present
-            ? allTimeFeedbackMaybe.value
-            : this.allTimeFeedbackMaybe,
-        allTimeFeedbackNo: allTimeFeedbackNo.present
-            ? allTimeFeedbackNo.value
-            : this.allTimeFeedbackNo,
         generatedAt: generatedAt.present ? generatedAt.value : this.generatedAt,
         dataAsOfDate: dataAsOfDate ?? this.dataAsOfDate,
       );
@@ -1642,33 +817,6 @@ class NpsMonthlyReport extends DataClass
       allTimeTableCount: data.allTimeTableCount.present
           ? data.allTimeTableCount.value
           : this.allTimeTableCount,
-      monthFeedbackYes: data.monthFeedbackYes.present
-          ? data.monthFeedbackYes.value
-          : this.monthFeedbackYes,
-      monthFeedbackMaybe: data.monthFeedbackMaybe.present
-          ? data.monthFeedbackMaybe.value
-          : this.monthFeedbackMaybe,
-      monthFeedbackNo: data.monthFeedbackNo.present
-          ? data.monthFeedbackNo.value
-          : this.monthFeedbackNo,
-      threeMonthFeedbackYes: data.threeMonthFeedbackYes.present
-          ? data.threeMonthFeedbackYes.value
-          : this.threeMonthFeedbackYes,
-      threeMonthFeedbackMaybe: data.threeMonthFeedbackMaybe.present
-          ? data.threeMonthFeedbackMaybe.value
-          : this.threeMonthFeedbackMaybe,
-      threeMonthFeedbackNo: data.threeMonthFeedbackNo.present
-          ? data.threeMonthFeedbackNo.value
-          : this.threeMonthFeedbackNo,
-      allTimeFeedbackYes: data.allTimeFeedbackYes.present
-          ? data.allTimeFeedbackYes.value
-          : this.allTimeFeedbackYes,
-      allTimeFeedbackMaybe: data.allTimeFeedbackMaybe.present
-          ? data.allTimeFeedbackMaybe.value
-          : this.allTimeFeedbackMaybe,
-      allTimeFeedbackNo: data.allTimeFeedbackNo.present
-          ? data.allTimeFeedbackNo.value
-          : this.allTimeFeedbackNo,
       generatedAt:
           data.generatedAt.present ? data.generatedAt.value : this.generatedAt,
       dataAsOfDate: data.dataAsOfDate.present
@@ -1689,15 +837,6 @@ class NpsMonthlyReport extends DataClass
           ..write('oneMonthNpsPercentage: $oneMonthNpsPercentage, ')
           ..write('allTimeSales: $allTimeSales, ')
           ..write('allTimeTableCount: $allTimeTableCount, ')
-          ..write('monthFeedbackYes: $monthFeedbackYes, ')
-          ..write('monthFeedbackMaybe: $monthFeedbackMaybe, ')
-          ..write('monthFeedbackNo: $monthFeedbackNo, ')
-          ..write('threeMonthFeedbackYes: $threeMonthFeedbackYes, ')
-          ..write('threeMonthFeedbackMaybe: $threeMonthFeedbackMaybe, ')
-          ..write('threeMonthFeedbackNo: $threeMonthFeedbackNo, ')
-          ..write('allTimeFeedbackYes: $allTimeFeedbackYes, ')
-          ..write('allTimeFeedbackMaybe: $allTimeFeedbackMaybe, ')
-          ..write('allTimeFeedbackNo: $allTimeFeedbackNo, ')
           ..write('generatedAt: $generatedAt, ')
           ..write('dataAsOfDate: $dataAsOfDate')
           ..write(')'))
@@ -1715,15 +854,6 @@ class NpsMonthlyReport extends DataClass
       oneMonthNpsPercentage,
       allTimeSales,
       allTimeTableCount,
-      monthFeedbackYes,
-      monthFeedbackMaybe,
-      monthFeedbackNo,
-      threeMonthFeedbackYes,
-      threeMonthFeedbackMaybe,
-      threeMonthFeedbackNo,
-      allTimeFeedbackYes,
-      allTimeFeedbackMaybe,
-      allTimeFeedbackNo,
       generatedAt,
       dataAsOfDate);
   @override
@@ -1739,15 +869,6 @@ class NpsMonthlyReport extends DataClass
           other.oneMonthNpsPercentage == this.oneMonthNpsPercentage &&
           other.allTimeSales == this.allTimeSales &&
           other.allTimeTableCount == this.allTimeTableCount &&
-          other.monthFeedbackYes == this.monthFeedbackYes &&
-          other.monthFeedbackMaybe == this.monthFeedbackMaybe &&
-          other.monthFeedbackNo == this.monthFeedbackNo &&
-          other.threeMonthFeedbackYes == this.threeMonthFeedbackYes &&
-          other.threeMonthFeedbackMaybe == this.threeMonthFeedbackMaybe &&
-          other.threeMonthFeedbackNo == this.threeMonthFeedbackNo &&
-          other.allTimeFeedbackYes == this.allTimeFeedbackYes &&
-          other.allTimeFeedbackMaybe == this.allTimeFeedbackMaybe &&
-          other.allTimeFeedbackNo == this.allTimeFeedbackNo &&
           other.generatedAt == this.generatedAt &&
           other.dataAsOfDate == this.dataAsOfDate);
 }
@@ -1762,15 +883,6 @@ class NpsMonthlyReportsCompanion extends UpdateCompanion<NpsMonthlyReport> {
   final Value<double?> oneMonthNpsPercentage;
   final Value<double?> allTimeSales;
   final Value<int?> allTimeTableCount;
-  final Value<int?> monthFeedbackYes;
-  final Value<int?> monthFeedbackMaybe;
-  final Value<int?> monthFeedbackNo;
-  final Value<int?> threeMonthFeedbackYes;
-  final Value<int?> threeMonthFeedbackMaybe;
-  final Value<int?> threeMonthFeedbackNo;
-  final Value<int?> allTimeFeedbackYes;
-  final Value<int?> allTimeFeedbackMaybe;
-  final Value<int?> allTimeFeedbackNo;
   final Value<String?> generatedAt;
   final Value<DateTime> dataAsOfDate;
   const NpsMonthlyReportsCompanion({
@@ -1783,15 +895,6 @@ class NpsMonthlyReportsCompanion extends UpdateCompanion<NpsMonthlyReport> {
     this.oneMonthNpsPercentage = const Value.absent(),
     this.allTimeSales = const Value.absent(),
     this.allTimeTableCount = const Value.absent(),
-    this.monthFeedbackYes = const Value.absent(),
-    this.monthFeedbackMaybe = const Value.absent(),
-    this.monthFeedbackNo = const Value.absent(),
-    this.threeMonthFeedbackYes = const Value.absent(),
-    this.threeMonthFeedbackMaybe = const Value.absent(),
-    this.threeMonthFeedbackNo = const Value.absent(),
-    this.allTimeFeedbackYes = const Value.absent(),
-    this.allTimeFeedbackMaybe = const Value.absent(),
-    this.allTimeFeedbackNo = const Value.absent(),
     this.generatedAt = const Value.absent(),
     this.dataAsOfDate = const Value.absent(),
   });
@@ -1805,15 +908,6 @@ class NpsMonthlyReportsCompanion extends UpdateCompanion<NpsMonthlyReport> {
     this.oneMonthNpsPercentage = const Value.absent(),
     this.allTimeSales = const Value.absent(),
     this.allTimeTableCount = const Value.absent(),
-    this.monthFeedbackYes = const Value.absent(),
-    this.monthFeedbackMaybe = const Value.absent(),
-    this.monthFeedbackNo = const Value.absent(),
-    this.threeMonthFeedbackYes = const Value.absent(),
-    this.threeMonthFeedbackMaybe = const Value.absent(),
-    this.threeMonthFeedbackNo = const Value.absent(),
-    this.allTimeFeedbackYes = const Value.absent(),
-    this.allTimeFeedbackMaybe = const Value.absent(),
-    this.allTimeFeedbackNo = const Value.absent(),
     this.generatedAt = const Value.absent(),
     required DateTime dataAsOfDate,
   })  : serverId = Value(serverId),
@@ -1830,15 +924,6 @@ class NpsMonthlyReportsCompanion extends UpdateCompanion<NpsMonthlyReport> {
     Expression<double>? oneMonthNpsPercentage,
     Expression<double>? allTimeSales,
     Expression<int>? allTimeTableCount,
-    Expression<int>? monthFeedbackYes,
-    Expression<int>? monthFeedbackMaybe,
-    Expression<int>? monthFeedbackNo,
-    Expression<int>? threeMonthFeedbackYes,
-    Expression<int>? threeMonthFeedbackMaybe,
-    Expression<int>? threeMonthFeedbackNo,
-    Expression<int>? allTimeFeedbackYes,
-    Expression<int>? allTimeFeedbackMaybe,
-    Expression<int>? allTimeFeedbackNo,
     Expression<String>? generatedAt,
     Expression<DateTime>? dataAsOfDate,
   }) {
@@ -1855,21 +940,6 @@ class NpsMonthlyReportsCompanion extends UpdateCompanion<NpsMonthlyReport> {
         'one_month_nps_percentage': oneMonthNpsPercentage,
       if (allTimeSales != null) 'all_time_sales': allTimeSales,
       if (allTimeTableCount != null) 'all_time_table_count': allTimeTableCount,
-      if (monthFeedbackYes != null) 'month_feedback_yes': monthFeedbackYes,
-      if (monthFeedbackMaybe != null)
-        'month_feedback_maybe': monthFeedbackMaybe,
-      if (monthFeedbackNo != null) 'month_feedback_no': monthFeedbackNo,
-      if (threeMonthFeedbackYes != null)
-        'three_month_feedback_yes': threeMonthFeedbackYes,
-      if (threeMonthFeedbackMaybe != null)
-        'three_month_feedback_maybe': threeMonthFeedbackMaybe,
-      if (threeMonthFeedbackNo != null)
-        'three_month_feedback_no': threeMonthFeedbackNo,
-      if (allTimeFeedbackYes != null)
-        'all_time_feedback_yes': allTimeFeedbackYes,
-      if (allTimeFeedbackMaybe != null)
-        'all_time_feedback_maybe': allTimeFeedbackMaybe,
-      if (allTimeFeedbackNo != null) 'all_time_feedback_no': allTimeFeedbackNo,
       if (generatedAt != null) 'generated_at': generatedAt,
       if (dataAsOfDate != null) 'data_as_of_date': dataAsOfDate,
     });
@@ -1885,15 +955,6 @@ class NpsMonthlyReportsCompanion extends UpdateCompanion<NpsMonthlyReport> {
       Value<double?>? oneMonthNpsPercentage,
       Value<double?>? allTimeSales,
       Value<int?>? allTimeTableCount,
-      Value<int?>? monthFeedbackYes,
-      Value<int?>? monthFeedbackMaybe,
-      Value<int?>? monthFeedbackNo,
-      Value<int?>? threeMonthFeedbackYes,
-      Value<int?>? threeMonthFeedbackMaybe,
-      Value<int?>? threeMonthFeedbackNo,
-      Value<int?>? allTimeFeedbackYes,
-      Value<int?>? allTimeFeedbackMaybe,
-      Value<int?>? allTimeFeedbackNo,
       Value<String?>? generatedAt,
       Value<DateTime>? dataAsOfDate}) {
     return NpsMonthlyReportsCompanion(
@@ -1908,17 +969,6 @@ class NpsMonthlyReportsCompanion extends UpdateCompanion<NpsMonthlyReport> {
           oneMonthNpsPercentage ?? this.oneMonthNpsPercentage,
       allTimeSales: allTimeSales ?? this.allTimeSales,
       allTimeTableCount: allTimeTableCount ?? this.allTimeTableCount,
-      monthFeedbackYes: monthFeedbackYes ?? this.monthFeedbackYes,
-      monthFeedbackMaybe: monthFeedbackMaybe ?? this.monthFeedbackMaybe,
-      monthFeedbackNo: monthFeedbackNo ?? this.monthFeedbackNo,
-      threeMonthFeedbackYes:
-          threeMonthFeedbackYes ?? this.threeMonthFeedbackYes,
-      threeMonthFeedbackMaybe:
-          threeMonthFeedbackMaybe ?? this.threeMonthFeedbackMaybe,
-      threeMonthFeedbackNo: threeMonthFeedbackNo ?? this.threeMonthFeedbackNo,
-      allTimeFeedbackYes: allTimeFeedbackYes ?? this.allTimeFeedbackYes,
-      allTimeFeedbackMaybe: allTimeFeedbackMaybe ?? this.allTimeFeedbackMaybe,
-      allTimeFeedbackNo: allTimeFeedbackNo ?? this.allTimeFeedbackNo,
       generatedAt: generatedAt ?? this.generatedAt,
       dataAsOfDate: dataAsOfDate ?? this.dataAsOfDate,
     );
@@ -1957,37 +1007,6 @@ class NpsMonthlyReportsCompanion extends UpdateCompanion<NpsMonthlyReport> {
     if (allTimeTableCount.present) {
       map['all_time_table_count'] = Variable<int>(allTimeTableCount.value);
     }
-    if (monthFeedbackYes.present) {
-      map['month_feedback_yes'] = Variable<int>(monthFeedbackYes.value);
-    }
-    if (monthFeedbackMaybe.present) {
-      map['month_feedback_maybe'] = Variable<int>(monthFeedbackMaybe.value);
-    }
-    if (monthFeedbackNo.present) {
-      map['month_feedback_no'] = Variable<int>(monthFeedbackNo.value);
-    }
-    if (threeMonthFeedbackYes.present) {
-      map['three_month_feedback_yes'] =
-          Variable<int>(threeMonthFeedbackYes.value);
-    }
-    if (threeMonthFeedbackMaybe.present) {
-      map['three_month_feedback_maybe'] =
-          Variable<int>(threeMonthFeedbackMaybe.value);
-    }
-    if (threeMonthFeedbackNo.present) {
-      map['three_month_feedback_no'] =
-          Variable<int>(threeMonthFeedbackNo.value);
-    }
-    if (allTimeFeedbackYes.present) {
-      map['all_time_feedback_yes'] = Variable<int>(allTimeFeedbackYes.value);
-    }
-    if (allTimeFeedbackMaybe.present) {
-      map['all_time_feedback_maybe'] =
-          Variable<int>(allTimeFeedbackMaybe.value);
-    }
-    if (allTimeFeedbackNo.present) {
-      map['all_time_feedback_no'] = Variable<int>(allTimeFeedbackNo.value);
-    }
     if (generatedAt.present) {
       map['generated_at'] = Variable<String>(generatedAt.value);
     }
@@ -2009,15 +1028,6 @@ class NpsMonthlyReportsCompanion extends UpdateCompanion<NpsMonthlyReport> {
           ..write('oneMonthNpsPercentage: $oneMonthNpsPercentage, ')
           ..write('allTimeSales: $allTimeSales, ')
           ..write('allTimeTableCount: $allTimeTableCount, ')
-          ..write('monthFeedbackYes: $monthFeedbackYes, ')
-          ..write('monthFeedbackMaybe: $monthFeedbackMaybe, ')
-          ..write('monthFeedbackNo: $monthFeedbackNo, ')
-          ..write('threeMonthFeedbackYes: $threeMonthFeedbackYes, ')
-          ..write('threeMonthFeedbackMaybe: $threeMonthFeedbackMaybe, ')
-          ..write('threeMonthFeedbackNo: $threeMonthFeedbackNo, ')
-          ..write('allTimeFeedbackYes: $allTimeFeedbackYes, ')
-          ..write('allTimeFeedbackMaybe: $allTimeFeedbackMaybe, ')
-          ..write('allTimeFeedbackNo: $allTimeFeedbackNo, ')
           ..write('generatedAt: $generatedAt, ')
           ..write('dataAsOfDate: $dataAsOfDate')
           ..write(')'))
@@ -2581,15 +1591,6 @@ abstract class _$DriftNPSDatabase extends GeneratedDatabase {
       'CREATE INDEX idx_servers_active ON servers (active)');
   late final Index idxServersHireDate = Index('idx_servers_hire_date',
       'CREATE INDEX idx_servers_hire_date ON servers (hire_date)');
-  late final NpsFeedback npsFeedback = NpsFeedback(this);
-  late final Index idxFeedbackServerId = Index('idx_feedback_server_id',
-      'CREATE INDEX idx_feedback_server_id ON nps_feedback (server_id)');
-  late final Index idxFeedbackDate = Index('idx_feedback_date',
-      'CREATE INDEX idx_feedback_date ON nps_feedback (feedback_date)');
-  late final Index idxFeedbackServerDate = Index('idx_feedback_server_date',
-      'CREATE INDEX idx_feedback_server_date ON nps_feedback (server_id, feedback_date)');
-  late final Index idxFeedbackType = Index('idx_feedback_type',
-      'CREATE INDEX idx_feedback_type ON nps_feedback (feedback_type)');
   late final NpsMonthlyReports npsMonthlyReports = NpsMonthlyReports(this);
   late final Index idxMonthlyReportsServerId = Index(
       'idx_monthly_reports_server_id',
@@ -2614,11 +1615,6 @@ abstract class _$DriftNPSDatabase extends GeneratedDatabase {
         servers,
         idxServersActive,
         idxServersHireDate,
-        npsFeedback,
-        idxFeedbackServerId,
-        idxFeedbackDate,
-        idxFeedbackServerDate,
-        idxFeedbackType,
         npsMonthlyReports,
         idxMonthlyReportsServerId,
         idxMonthlyReportsMonth,
@@ -2834,248 +1830,6 @@ typedef $ServersProcessedTableManager = ProcessedTableManager<
     (Server, BaseReferences<_$DriftNPSDatabase, Servers, Server>),
     Server,
     PrefetchHooks Function()>;
-typedef $NpsFeedbackCreateCompanionBuilder = NpsFeedbackCompanion Function({
-  Value<int> id,
-  required String serverId,
-  required String feedbackType,
-  required DateTime feedbackDate,
-  Value<double?> salesAmount,
-  Value<int?> tableNumber,
-  Value<String?> shiftPeriod,
-  Value<int?> guestCount,
-  Value<String?> notes,
-  Value<String?> createdAt,
-});
-typedef $NpsFeedbackUpdateCompanionBuilder = NpsFeedbackCompanion Function({
-  Value<int> id,
-  Value<String> serverId,
-  Value<String> feedbackType,
-  Value<DateTime> feedbackDate,
-  Value<double?> salesAmount,
-  Value<int?> tableNumber,
-  Value<String?> shiftPeriod,
-  Value<int?> guestCount,
-  Value<String?> notes,
-  Value<String?> createdAt,
-});
-
-class $NpsFeedbackFilterComposer
-    extends Composer<_$DriftNPSDatabase, NpsFeedback> {
-  $NpsFeedbackFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<int> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get serverId => $composableBuilder(
-      column: $table.serverId, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get feedbackType => $composableBuilder(
-      column: $table.feedbackType, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<DateTime> get feedbackDate => $composableBuilder(
-      column: $table.feedbackDate, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<double> get salesAmount => $composableBuilder(
-      column: $table.salesAmount, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<int> get tableNumber => $composableBuilder(
-      column: $table.tableNumber, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get shiftPeriod => $composableBuilder(
-      column: $table.shiftPeriod, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<int> get guestCount => $composableBuilder(
-      column: $table.guestCount, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get notes => $composableBuilder(
-      column: $table.notes, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnFilters(column));
-}
-
-class $NpsFeedbackOrderingComposer
-    extends Composer<_$DriftNPSDatabase, NpsFeedback> {
-  $NpsFeedbackOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<int> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get serverId => $composableBuilder(
-      column: $table.serverId, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get feedbackType => $composableBuilder(
-      column: $table.feedbackType,
-      builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<DateTime> get feedbackDate => $composableBuilder(
-      column: $table.feedbackDate,
-      builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<double> get salesAmount => $composableBuilder(
-      column: $table.salesAmount, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<int> get tableNumber => $composableBuilder(
-      column: $table.tableNumber, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get shiftPeriod => $composableBuilder(
-      column: $table.shiftPeriod, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<int> get guestCount => $composableBuilder(
-      column: $table.guestCount, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get notes => $composableBuilder(
-      column: $table.notes, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
-}
-
-class $NpsFeedbackAnnotationComposer
-    extends Composer<_$DriftNPSDatabase, NpsFeedback> {
-  $NpsFeedbackAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<String> get serverId =>
-      $composableBuilder(column: $table.serverId, builder: (column) => column);
-
-  GeneratedColumn<String> get feedbackType => $composableBuilder(
-      column: $table.feedbackType, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get feedbackDate => $composableBuilder(
-      column: $table.feedbackDate, builder: (column) => column);
-
-  GeneratedColumn<double> get salesAmount => $composableBuilder(
-      column: $table.salesAmount, builder: (column) => column);
-
-  GeneratedColumn<int> get tableNumber => $composableBuilder(
-      column: $table.tableNumber, builder: (column) => column);
-
-  GeneratedColumn<String> get shiftPeriod => $composableBuilder(
-      column: $table.shiftPeriod, builder: (column) => column);
-
-  GeneratedColumn<int> get guestCount => $composableBuilder(
-      column: $table.guestCount, builder: (column) => column);
-
-  GeneratedColumn<String> get notes =>
-      $composableBuilder(column: $table.notes, builder: (column) => column);
-
-  GeneratedColumn<String> get createdAt =>
-      $composableBuilder(column: $table.createdAt, builder: (column) => column);
-}
-
-class $NpsFeedbackTableManager extends RootTableManager<
-    _$DriftNPSDatabase,
-    NpsFeedback,
-    NpsFeedbackData,
-    $NpsFeedbackFilterComposer,
-    $NpsFeedbackOrderingComposer,
-    $NpsFeedbackAnnotationComposer,
-    $NpsFeedbackCreateCompanionBuilder,
-    $NpsFeedbackUpdateCompanionBuilder,
-    (
-      NpsFeedbackData,
-      BaseReferences<_$DriftNPSDatabase, NpsFeedback, NpsFeedbackData>
-    ),
-    NpsFeedbackData,
-    PrefetchHooks Function()> {
-  $NpsFeedbackTableManager(_$DriftNPSDatabase db, NpsFeedback table)
-      : super(TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $NpsFeedbackFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $NpsFeedbackOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $NpsFeedbackAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback: ({
-            Value<int> id = const Value.absent(),
-            Value<String> serverId = const Value.absent(),
-            Value<String> feedbackType = const Value.absent(),
-            Value<DateTime> feedbackDate = const Value.absent(),
-            Value<double?> salesAmount = const Value.absent(),
-            Value<int?> tableNumber = const Value.absent(),
-            Value<String?> shiftPeriod = const Value.absent(),
-            Value<int?> guestCount = const Value.absent(),
-            Value<String?> notes = const Value.absent(),
-            Value<String?> createdAt = const Value.absent(),
-          }) =>
-              NpsFeedbackCompanion(
-            id: id,
-            serverId: serverId,
-            feedbackType: feedbackType,
-            feedbackDate: feedbackDate,
-            salesAmount: salesAmount,
-            tableNumber: tableNumber,
-            shiftPeriod: shiftPeriod,
-            guestCount: guestCount,
-            notes: notes,
-            createdAt: createdAt,
-          ),
-          createCompanionCallback: ({
-            Value<int> id = const Value.absent(),
-            required String serverId,
-            required String feedbackType,
-            required DateTime feedbackDate,
-            Value<double?> salesAmount = const Value.absent(),
-            Value<int?> tableNumber = const Value.absent(),
-            Value<String?> shiftPeriod = const Value.absent(),
-            Value<int?> guestCount = const Value.absent(),
-            Value<String?> notes = const Value.absent(),
-            Value<String?> createdAt = const Value.absent(),
-          }) =>
-              NpsFeedbackCompanion.insert(
-            id: id,
-            serverId: serverId,
-            feedbackType: feedbackType,
-            feedbackDate: feedbackDate,
-            salesAmount: salesAmount,
-            tableNumber: tableNumber,
-            shiftPeriod: shiftPeriod,
-            guestCount: guestCount,
-            notes: notes,
-            createdAt: createdAt,
-          ),
-          withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
-              .toList(),
-          prefetchHooksCallback: null,
-        ));
-}
-
-typedef $NpsFeedbackProcessedTableManager = ProcessedTableManager<
-    _$DriftNPSDatabase,
-    NpsFeedback,
-    NpsFeedbackData,
-    $NpsFeedbackFilterComposer,
-    $NpsFeedbackOrderingComposer,
-    $NpsFeedbackAnnotationComposer,
-    $NpsFeedbackCreateCompanionBuilder,
-    $NpsFeedbackUpdateCompanionBuilder,
-    (
-      NpsFeedbackData,
-      BaseReferences<_$DriftNPSDatabase, NpsFeedback, NpsFeedbackData>
-    ),
-    NpsFeedbackData,
-    PrefetchHooks Function()>;
 typedef $NpsMonthlyReportsCreateCompanionBuilder = NpsMonthlyReportsCompanion
     Function({
   Value<int> id,
@@ -3087,15 +1841,6 @@ typedef $NpsMonthlyReportsCreateCompanionBuilder = NpsMonthlyReportsCompanion
   Value<double?> oneMonthNpsPercentage,
   Value<double?> allTimeSales,
   Value<int?> allTimeTableCount,
-  Value<int?> monthFeedbackYes,
-  Value<int?> monthFeedbackMaybe,
-  Value<int?> monthFeedbackNo,
-  Value<int?> threeMonthFeedbackYes,
-  Value<int?> threeMonthFeedbackMaybe,
-  Value<int?> threeMonthFeedbackNo,
-  Value<int?> allTimeFeedbackYes,
-  Value<int?> allTimeFeedbackMaybe,
-  Value<int?> allTimeFeedbackNo,
   Value<String?> generatedAt,
   required DateTime dataAsOfDate,
 });
@@ -3110,15 +1855,6 @@ typedef $NpsMonthlyReportsUpdateCompanionBuilder = NpsMonthlyReportsCompanion
   Value<double?> oneMonthNpsPercentage,
   Value<double?> allTimeSales,
   Value<int?> allTimeTableCount,
-  Value<int?> monthFeedbackYes,
-  Value<int?> monthFeedbackMaybe,
-  Value<int?> monthFeedbackNo,
-  Value<int?> threeMonthFeedbackYes,
-  Value<int?> threeMonthFeedbackMaybe,
-  Value<int?> threeMonthFeedbackNo,
-  Value<int?> allTimeFeedbackYes,
-  Value<int?> allTimeFeedbackMaybe,
-  Value<int?> allTimeFeedbackNo,
   Value<String?> generatedAt,
   Value<DateTime> dataAsOfDate,
 });
@@ -3161,42 +1897,6 @@ class $NpsMonthlyReportsFilterComposer
 
   ColumnFilters<int> get allTimeTableCount => $composableBuilder(
       column: $table.allTimeTableCount,
-      builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<int> get monthFeedbackYes => $composableBuilder(
-      column: $table.monthFeedbackYes,
-      builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<int> get monthFeedbackMaybe => $composableBuilder(
-      column: $table.monthFeedbackMaybe,
-      builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<int> get monthFeedbackNo => $composableBuilder(
-      column: $table.monthFeedbackNo,
-      builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<int> get threeMonthFeedbackYes => $composableBuilder(
-      column: $table.threeMonthFeedbackYes,
-      builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<int> get threeMonthFeedbackMaybe => $composableBuilder(
-      column: $table.threeMonthFeedbackMaybe,
-      builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<int> get threeMonthFeedbackNo => $composableBuilder(
-      column: $table.threeMonthFeedbackNo,
-      builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<int> get allTimeFeedbackYes => $composableBuilder(
-      column: $table.allTimeFeedbackYes,
-      builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<int> get allTimeFeedbackMaybe => $composableBuilder(
-      column: $table.allTimeFeedbackMaybe,
-      builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<int> get allTimeFeedbackNo => $composableBuilder(
-      column: $table.allTimeFeedbackNo,
       builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get generatedAt => $composableBuilder(
@@ -3247,42 +1947,6 @@ class $NpsMonthlyReportsOrderingComposer
       column: $table.allTimeTableCount,
       builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<int> get monthFeedbackYes => $composableBuilder(
-      column: $table.monthFeedbackYes,
-      builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<int> get monthFeedbackMaybe => $composableBuilder(
-      column: $table.monthFeedbackMaybe,
-      builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<int> get monthFeedbackNo => $composableBuilder(
-      column: $table.monthFeedbackNo,
-      builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<int> get threeMonthFeedbackYes => $composableBuilder(
-      column: $table.threeMonthFeedbackYes,
-      builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<int> get threeMonthFeedbackMaybe => $composableBuilder(
-      column: $table.threeMonthFeedbackMaybe,
-      builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<int> get threeMonthFeedbackNo => $composableBuilder(
-      column: $table.threeMonthFeedbackNo,
-      builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<int> get allTimeFeedbackYes => $composableBuilder(
-      column: $table.allTimeFeedbackYes,
-      builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<int> get allTimeFeedbackMaybe => $composableBuilder(
-      column: $table.allTimeFeedbackMaybe,
-      builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<int> get allTimeFeedbackNo => $composableBuilder(
-      column: $table.allTimeFeedbackNo,
-      builder: (column) => ColumnOrderings(column));
-
   ColumnOrderings<String> get generatedAt => $composableBuilder(
       column: $table.generatedAt, builder: (column) => ColumnOrderings(column));
 
@@ -3327,33 +1991,6 @@ class $NpsMonthlyReportsAnnotationComposer
   GeneratedColumn<int> get allTimeTableCount => $composableBuilder(
       column: $table.allTimeTableCount, builder: (column) => column);
 
-  GeneratedColumn<int> get monthFeedbackYes => $composableBuilder(
-      column: $table.monthFeedbackYes, builder: (column) => column);
-
-  GeneratedColumn<int> get monthFeedbackMaybe => $composableBuilder(
-      column: $table.monthFeedbackMaybe, builder: (column) => column);
-
-  GeneratedColumn<int> get monthFeedbackNo => $composableBuilder(
-      column: $table.monthFeedbackNo, builder: (column) => column);
-
-  GeneratedColumn<int> get threeMonthFeedbackYes => $composableBuilder(
-      column: $table.threeMonthFeedbackYes, builder: (column) => column);
-
-  GeneratedColumn<int> get threeMonthFeedbackMaybe => $composableBuilder(
-      column: $table.threeMonthFeedbackMaybe, builder: (column) => column);
-
-  GeneratedColumn<int> get threeMonthFeedbackNo => $composableBuilder(
-      column: $table.threeMonthFeedbackNo, builder: (column) => column);
-
-  GeneratedColumn<int> get allTimeFeedbackYes => $composableBuilder(
-      column: $table.allTimeFeedbackYes, builder: (column) => column);
-
-  GeneratedColumn<int> get allTimeFeedbackMaybe => $composableBuilder(
-      column: $table.allTimeFeedbackMaybe, builder: (column) => column);
-
-  GeneratedColumn<int> get allTimeFeedbackNo => $composableBuilder(
-      column: $table.allTimeFeedbackNo, builder: (column) => column);
-
   GeneratedColumn<String> get generatedAt => $composableBuilder(
       column: $table.generatedAt, builder: (column) => column);
 
@@ -3396,15 +2033,6 @@ class $NpsMonthlyReportsTableManager extends RootTableManager<
             Value<double?> oneMonthNpsPercentage = const Value.absent(),
             Value<double?> allTimeSales = const Value.absent(),
             Value<int?> allTimeTableCount = const Value.absent(),
-            Value<int?> monthFeedbackYes = const Value.absent(),
-            Value<int?> monthFeedbackMaybe = const Value.absent(),
-            Value<int?> monthFeedbackNo = const Value.absent(),
-            Value<int?> threeMonthFeedbackYes = const Value.absent(),
-            Value<int?> threeMonthFeedbackMaybe = const Value.absent(),
-            Value<int?> threeMonthFeedbackNo = const Value.absent(),
-            Value<int?> allTimeFeedbackYes = const Value.absent(),
-            Value<int?> allTimeFeedbackMaybe = const Value.absent(),
-            Value<int?> allTimeFeedbackNo = const Value.absent(),
             Value<String?> generatedAt = const Value.absent(),
             Value<DateTime> dataAsOfDate = const Value.absent(),
           }) =>
@@ -3418,15 +2046,6 @@ class $NpsMonthlyReportsTableManager extends RootTableManager<
             oneMonthNpsPercentage: oneMonthNpsPercentage,
             allTimeSales: allTimeSales,
             allTimeTableCount: allTimeTableCount,
-            monthFeedbackYes: monthFeedbackYes,
-            monthFeedbackMaybe: monthFeedbackMaybe,
-            monthFeedbackNo: monthFeedbackNo,
-            threeMonthFeedbackYes: threeMonthFeedbackYes,
-            threeMonthFeedbackMaybe: threeMonthFeedbackMaybe,
-            threeMonthFeedbackNo: threeMonthFeedbackNo,
-            allTimeFeedbackYes: allTimeFeedbackYes,
-            allTimeFeedbackMaybe: allTimeFeedbackMaybe,
-            allTimeFeedbackNo: allTimeFeedbackNo,
             generatedAt: generatedAt,
             dataAsOfDate: dataAsOfDate,
           ),
@@ -3440,15 +2059,6 @@ class $NpsMonthlyReportsTableManager extends RootTableManager<
             Value<double?> oneMonthNpsPercentage = const Value.absent(),
             Value<double?> allTimeSales = const Value.absent(),
             Value<int?> allTimeTableCount = const Value.absent(),
-            Value<int?> monthFeedbackYes = const Value.absent(),
-            Value<int?> monthFeedbackMaybe = const Value.absent(),
-            Value<int?> monthFeedbackNo = const Value.absent(),
-            Value<int?> threeMonthFeedbackYes = const Value.absent(),
-            Value<int?> threeMonthFeedbackMaybe = const Value.absent(),
-            Value<int?> threeMonthFeedbackNo = const Value.absent(),
-            Value<int?> allTimeFeedbackYes = const Value.absent(),
-            Value<int?> allTimeFeedbackMaybe = const Value.absent(),
-            Value<int?> allTimeFeedbackNo = const Value.absent(),
             Value<String?> generatedAt = const Value.absent(),
             required DateTime dataAsOfDate,
           }) =>
@@ -3462,15 +2072,6 @@ class $NpsMonthlyReportsTableManager extends RootTableManager<
             oneMonthNpsPercentage: oneMonthNpsPercentage,
             allTimeSales: allTimeSales,
             allTimeTableCount: allTimeTableCount,
-            monthFeedbackYes: monthFeedbackYes,
-            monthFeedbackMaybe: monthFeedbackMaybe,
-            monthFeedbackNo: monthFeedbackNo,
-            threeMonthFeedbackYes: threeMonthFeedbackYes,
-            threeMonthFeedbackMaybe: threeMonthFeedbackMaybe,
-            threeMonthFeedbackNo: threeMonthFeedbackNo,
-            allTimeFeedbackYes: allTimeFeedbackYes,
-            allTimeFeedbackMaybe: allTimeFeedbackMaybe,
-            allTimeFeedbackNo: allTimeFeedbackNo,
             generatedAt: generatedAt,
             dataAsOfDate: dataAsOfDate,
           ),
@@ -3754,8 +2355,6 @@ class $DriftNPSDatabaseManager {
   final _$DriftNPSDatabase _db;
   $DriftNPSDatabaseManager(this._db);
   $ServersTableManager get servers => $ServersTableManager(_db, _db.servers);
-  $NpsFeedbackTableManager get npsFeedback =>
-      $NpsFeedbackTableManager(_db, _db.npsFeedback);
   $NpsMonthlyReportsTableManager get npsMonthlyReports =>
       $NpsMonthlyReportsTableManager(_db, _db.npsMonthlyReports);
   $NpsCalculationLogTableManager get npsCalculationLog =>

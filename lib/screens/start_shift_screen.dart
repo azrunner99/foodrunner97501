@@ -36,7 +36,7 @@ class _StartShiftScreenState extends State<StartShiftScreen> {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
-    final servers = app.servers;
+    final servers = app.activeServers; // Only show non-archived servers for shift selection
 
     return Scaffold(
       appBar: AppBar(title: const Text('Start New Shift')),

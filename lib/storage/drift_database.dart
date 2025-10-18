@@ -27,7 +27,7 @@ class DriftNPSDatabase extends _$DriftNPSDatabase implements DatabaseInterface {
       DriftNPSDatabase._internal(drift_native.NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -126,6 +126,86 @@ class DriftNPSDatabase extends _$DriftNPSDatabase implements DatabaseInterface {
         
         // Re-enable foreign keys
         await customStatement('PRAGMA foreign_keys=ON');
+      }
+      
+      // Migration to version 4: Remove unused feedback count columns
+      if (from < 4) {
+        d('[Migration v4] Removing unused NPS feedback count columns...');
+        
+        // Disable foreign keys temporarily
+        await customStatement('PRAGMA foreign_keys=OFF');
+        
+        // Create new table without unused columns
+        await customStatement('''
+          CREATE TABLE nps_monthly_reports_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            server_id TEXT NOT NULL,
+            report_month INTEGER NOT NULL,
+            report_year INTEGER NOT NULL,
+            all_time_nps_percentage REAL,
+            three_month_nps_percentage REAL,
+            one_month_nps_percentage REAL,
+            all_time_sales REAL DEFAULT 0.00,
+            all_time_table_count INTEGER DEFAULT 0,
+            generated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            data_as_of_date DATE NOT NULL,
+            FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE RESTRICT,
+            UNIQUE(server_id, report_month)
+          )
+        ''');
+        
+        // Copy data (only the columns we're keeping)
+        await customStatement('''
+          INSERT INTO nps_monthly_reports_new (
+            id, server_id, report_month, report_year,
+            all_time_nps_percentage, three_month_nps_percentage, one_month_nps_percentage,
+            all_time_sales, all_time_table_count, generated_at, data_as_of_date
+          )
+          SELECT 
+            id, server_id, report_month, report_year,
+            all_time_nps_percentage, three_month_nps_percentage, one_month_nps_percentage,
+            all_time_sales, all_time_table_count, generated_at, data_as_of_date
+          FROM nps_monthly_reports
+        ''');
+        
+        // Drop old table
+        await customStatement('DROP TABLE nps_monthly_reports');
+        
+        // Rename new table
+        await customStatement('ALTER TABLE nps_monthly_reports_new RENAME TO nps_monthly_reports');
+        
+        // Recreate indexes
+        await customStatement('CREATE INDEX idx_monthly_reports_server_id ON nps_monthly_reports(server_id)');
+        await customStatement('CREATE INDEX idx_monthly_reports_month ON nps_monthly_reports(report_month)');
+        await customStatement('CREATE INDEX idx_monthly_reports_year ON nps_monthly_reports(report_year)');
+        await customStatement('CREATE INDEX idx_monthly_reports_server_month ON nps_monthly_reports(server_id, report_month)');
+        
+        // Re-enable foreign keys
+        await customStatement('PRAGMA foreign_keys=ON');
+        
+        d('[Migration v4] ✅ Removed 9 unused feedback count columns');
+      }
+      
+      // Migration to version 5: Drop unused nps_feedback table
+      if (from < 5) {
+        d('[Migration v5] Dropping unused nps_feedback table...');
+        
+        try {
+          // Check if table exists before dropping
+          final tableCheck = await customSelect(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='nps_feedback'"
+          ).get();
+          
+          if (tableCheck.isNotEmpty) {
+            await customStatement('DROP TABLE IF EXISTS nps_feedback');
+            d('[Migration v5] ✅ Dropped nps_feedback table (was never used)');
+          } else {
+            d('[Migration v5] ℹ️ nps_feedback table does not exist, skipping');
+          }
+        } catch (e) {
+          d('[Migration v5] ⚠️ Error dropping nps_feedback table: $e');
+          // Non-fatal - continue migration
+        }
       }
     },
     beforeOpen: (OpeningDetails details) async {

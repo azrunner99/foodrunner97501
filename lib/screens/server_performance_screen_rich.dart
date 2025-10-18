@@ -84,7 +84,7 @@ class _ServerPerformanceScreenRichState extends State<ServerPerformanceScreenRic
         npsProvider: npsProvider,
       );
 
-      for (final server in app.servers) {
+      for (final server in app.activeServers) { // Only show active servers in rankings
         // Use actual hire date or default to 6 months ago for servers without hire date
         final hireDate = server.hireDate ??
             DateTime.now().subtract(const Duration(days: 180));
@@ -97,7 +97,7 @@ class _ServerPerformanceScreenRichState extends State<ServerPerformanceScreenRic
           businessData: _currentBusinessData,
           hireDate: hireDate,
           npsHistory: npsHistory,
-          totalServerCount: app.servers.length,
+          totalServerCount: app.activeServers.length,
         );
 
         performanceDataList.add(performance);
@@ -832,6 +832,7 @@ class _ServerPerformanceScreenRichState extends State<ServerPerformanceScreenRic
     });
   }
 }
+
 
 
 

@@ -97,7 +97,8 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> w
       d('[MonthlyNPSDataEntry] Loading server data using ServerDataService...');
       
       // ⭐ Phase 1.4: Use ServerDataService for unified server access
-      final servers = await ServerDataService.instance.getAllServers();
+      // Only show active (non-archived) servers in data entry
+      final servers = await ServerDataService.instance.getAllServers(activeOnly: true);
       
       d('[MonthlyNPSDataEntry] ServerDataService returned ${servers.length} servers');
       
@@ -230,15 +231,6 @@ class _MonthlyNPSDataEntryWidgetState extends State<MonthlyNPSDataEntryWidget> w
               'one_month_nps_percentage': double.tryParse(serverData.oneMonthNpsController.text) ?? 0.0,
               'all_time_sales': double.tryParse(serverData.allTimeSalesController.text) ?? 0.0,
               'all_time_table_count': int.tryParse(serverData.allTimeTableCountController.text) ?? 0,
-              'month_feedback_yes': 0,
-              'month_feedback_maybe': 0,
-              'month_feedback_no': 0,
-              'three_month_feedback_yes': 0,
-              'three_month_feedback_maybe': 0,
-              'three_month_feedback_no': 0,
-              'all_time_feedback_yes': 0,
-              'all_time_feedback_maybe': 0,
-              'all_time_feedback_no': 0,
               'generated_at': DateTime.now().toIso8601String(),
               'data_as_of_date': DateTime.now().toIso8601String(),
             };

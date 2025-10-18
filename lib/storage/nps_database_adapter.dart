@@ -1,7 +1,6 @@
 import 'database_interface.dart';
 import 'database_factory.dart';
 import '../models/server.dart';
-import '../models/nps_feedback.dart';
 import '../utils/log.dart';
 import '../services/query_cache_service.dart';
 import '../core/types.dart';
@@ -259,15 +258,7 @@ class NPSDatabaseAdapter {
             'one_month_nps_percentage': report['one_month_nps_percentage'],
             'all_time_sales': report['all_time_sales'],
             'all_time_table_count': report['all_time_table_count'],
-            'month_feedback_yes': report['month_feedback_yes'],
-            'month_feedback_maybe': report['month_feedback_maybe'],
-            'month_feedback_no': report['month_feedback_no'],
-            'three_month_feedback_yes': report['three_month_feedback_yes'],
-            'three_month_feedback_maybe': report['three_month_feedback_maybe'],
-            'three_month_feedback_no': report['three_month_feedback_no'],
-            'all_time_feedback_yes': report['all_time_feedback_yes'],
-            'all_time_feedback_maybe': report['all_time_feedback_maybe'],
-            'all_time_feedback_no': report['all_time_feedback_no'],
+            // Note: Feedback count columns removed from database schema in v4
           };
           serverData.add(serverReport);
           print('[NPSDatabaseAdapter] Added server report: $serverReport');
@@ -514,15 +505,7 @@ class NPSDatabaseAdapter {
         'one_month_nps_percentage': report['one_month_nps_percentage'],
         'all_time_sales': report['all_time_sales'],
         'all_time_table_count': report['all_time_table_count'],
-        'month_feedback_yes': report['month_feedback_yes'],
-        'month_feedback_maybe': report['month_feedback_maybe'],
-        'month_feedback_no': report['month_feedback_no'],
-        'three_month_feedback_yes': report['three_month_feedback_yes'],
-        'three_month_feedback_maybe': report['three_month_feedback_maybe'],
-        'three_month_feedback_no': report['three_month_feedback_no'],
-        'all_time_feedback_yes': report['all_time_feedback_yes'],
-        'all_time_feedback_maybe': report['all_time_feedback_maybe'],
-        'all_time_feedback_no': report['all_time_feedback_no'],
+        // Note: Feedback count columns removed from database schema in v4
         'generated_at': report['generated_at'] ?? DateTime.now().toIso8601String(),
         'data_as_of_date': report['data_as_of_date'] ?? DateTime.now().toIso8601String().split('T')[0],
       };

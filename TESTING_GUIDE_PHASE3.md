@@ -163,3 +163,6 @@ Use this space to jot down observations:
 
 Please navigate through each widget in order and report your findings. I'll update `PHASE_3_WIDGET_TESTING_REPORT.md` based on your feedback.
 
+
+
+

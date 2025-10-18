@@ -15,163 +15,79 @@ class NPSCalculator {
   NPSCalculator(this._database);
 
   /// Calculate all-time NPS for a specific server
+  /// NOTE: Returns null because individual feedback tracking is not used
   Future<double?> calculateAllTimeNPS(String serverId) async {
-    try {
-      final feedback = await _database.getFeedbackForServer(serverId);
-      return _calculateNPSFromFeedback(feedback);
-    } catch (e) {
-      d('[NPSCalculator] Error calculating all-time NPS: $e');
-      return null;
-    }
+    // Individual feedback table is empty - admin enters NPS percentages directly
+    return null;
   }
 
   /// Calculate three-month NPS for a specific server
+  /// NOTE: Returns null because individual feedback tracking is not used
   Future<double?> calculateThreeMonthNPS(String serverId,
       [DateTime? endDate]) async {
-    try {
-      final end = endDate ?? DateTime.now();
-      final start = DateTime(end.year, end.month - 3, end.day);
-
-      final feedback = await _database.getFeedbackForServerInRange(
-        serverId,
-        startDate: start,
-        endDate: end,
-      );
-
-      return _calculateNPSFromFeedback(feedback);
-    } catch (e) {
-      d('[NPSCalculator] Error calculating three-month NPS: $e');
-      return null;
-    }
+    // Individual feedback table is empty - admin enters NPS percentages directly
+    return null;
   }
 
   /// Calculate one-month NPS for a specific server
+  /// NOTE: Returns null because individual feedback tracking is not used
   Future<double?> calculateOneMonthNPS(String serverId, int monthKey) async {
-    try {
-      final year = monthKey ~/ 100;
-      final month = monthKey % 100;
-
-      final startDate = DateTime(year, month, 1);
-      final endDate = DateTime(year, month + 1, 0); // Last day of month
-
-      final feedback = await _database.getFeedbackForServerInRange(
-        serverId,
-        startDate: startDate,
-        endDate: endDate,
-      );
-
-      return _calculateNPSFromFeedback(feedback);
-    } catch (e) {
-      d('[NPSCalculator] Error calculating one-month NPS: $e');
-      return null;
-    }
+    // Individual feedback table is empty - admin enters NPS percentages directly
+    return null;
   }
 
   /// Generate trend analysis for a server
+  /// NOTE: Returns empty analysis because individual feedback tracking is not used
   Future<NPSTrendAnalysis> generateTrendAnalysis(String serverId) async {
-    try {
-      final now = DateTime.now();
-      final currentMonth = now.year * 100 + now.month;
-
-      final oneMonthNPS = await calculateOneMonthNPS(serverId, currentMonth);
-      final threeMonthNPS = await calculateThreeMonthNPS(serverId);
-      final allTimeNPS = await calculateAllTimeNPS(serverId);
-
-      return NPSTrendAnalysis(
-        serverId: serverId,
-        oneMonthNPS: oneMonthNPS,
-        threeMonthNPS: threeMonthNPS,
-        allTimeNPS: allTimeNPS,
-        calculatedAt: now,
-      );
-    } catch (e) {
-      d('[NPSCalculator] Error generating trend analysis: $e');
-      return NPSTrendAnalysis(
-        serverId: serverId,
-        oneMonthNPS: null,
-        threeMonthNPS: null,
-        allTimeNPS: null,
-        calculatedAt: DateTime.now(),
-      );
-    }
+    // Returns empty since we don't calculate from feedback
+    return NPSTrendAnalysis(
+      serverId: serverId,
+      oneMonthNPS: null,
+      threeMonthNPS: null,
+      allTimeNPS: null,
+      calculatedAt: DateTime.now(),
+    );
   }
 
   /// Generate complete monthly report for a server
+  /// NOTE: Returns empty report because individual feedback tracking is not used
+  /// Use saveMonthlyReport() to save manually-entered data instead
   Future<NPSMonthlyReport> generateMonthlyReport(
       String serverId, int reportMonth) async {
-    try {
-      d('[NPSCalculator] Generating monthly report for server $serverId, month $reportMonth');
+    d('[NPSCalculator] WARNING: generateMonthlyReport called but returns empty (no feedback data)');
+    d('[NPSCalculator] Admin should use monthly data entry widget to input reports manually');
+    
+    final year = reportMonth ~/ 100;
+    final month = reportMonth % 100;
 
-      final year = reportMonth ~/ 100;
-      final month = reportMonth % 100;
-
-      // Calculate NPS scores
-      final allTimeNPS = await calculateAllTimeNPS(serverId);
-      final threeMonthNPS =
-          await calculateThreeMonthNPS(serverId, DateTime(year, month + 1, 0));
-      final oneMonthNPS = await calculateOneMonthNPS(serverId, reportMonth);
-
-      // Get feedback counts
-      final allTimeFeedback = await _getFeedbackCounts(serverId);
-      final threeMonthFeedback = await _getFeedbackCounts(
-        serverId,
-        DateTime(year, month - 2, 1),
-        DateTime(year, month + 1, 0),
-      );
-      final monthFeedback = await _getFeedbackCounts(
-        serverId,
-        DateTime(year, month, 1),
-        DateTime(year, month + 1, 0),
-      );
-
-      // Get cumulative metrics
-      final allTimeMetrics = await _getCumulativeMetrics(serverId);
-
-      return NPSMonthlyReport(
-        serverId: serverId,
-        reportMonth: reportMonth,
-        reportYear: year,
-        allTimeNpsPercentage: allTimeNPS,
-        threeMonthNpsPercentage: threeMonthNPS,
-        oneMonthNpsPercentage: oneMonthNPS,
-        allTimeSales: allTimeMetrics['sales'] ?? 0.0,
-        allTimeTableCount: allTimeMetrics['tableCount'] ?? 0,
-        monthFeedback: monthFeedback,
-        threeMonthFeedback: threeMonthFeedback,
-        allTimeFeedback: allTimeFeedback,
-        generatedAt: DateTime.now(),
-        dataAsOfDate: DateTime(year, month + 1, 0),
-      );
-    } catch (e) {
-      d('[NPSCalculator] Error generating monthly report: $e');
-      rethrow;
-    }
+    // Return empty report since feedback table is empty
+    return NPSMonthlyReport(
+      serverId: serverId,
+      reportMonth: reportMonth,
+      reportYear: year,
+      allTimeNpsPercentage: null,
+      threeMonthNpsPercentage: null,
+      oneMonthNpsPercentage: null,
+      allTimeSales: 0.0,
+      allTimeTableCount: 0,
+      monthFeedback: FeedbackCounts(),
+      threeMonthFeedback: FeedbackCounts(),
+      allTimeFeedback: FeedbackCounts(),
+      generatedAt: DateTime.now(),
+      dataAsOfDate: DateTime(year, month + 1, 0),
+    );
   }
 
   /// Generate monthly reports for all active servers
+  /// NOTE: Returns empty reports because individual feedback tracking is not used
+  /// Admin should use monthly data entry widget instead
   Future<List<NPSMonthlyReport>> generateMonthlyReportsForAllServers(
       int reportMonth) async {
-    try {
-      final servers = await _database.getAllServers(activeOnly: true);
-      final reports = <NPSMonthlyReport>[];
-
-      for (final serverMap in servers) {
-        final serverId = serverMap['id'] as String;
-        try {
-          final report = await generateMonthlyReport(serverId, reportMonth);
-          reports.add(report);
-        } catch (e) {
-          d('[NPSCalculator] Error generating report for server $serverId: $e');
-          // Continue with other servers
-        }
-      }
-
-      d('[NPSCalculator] Generated ${reports.length} monthly reports');
-      return reports;
-    } catch (e) {
-      d('[NPSCalculator] Error generating monthly reports for all servers: $e');
-      rethrow;
-    }
+    d('[NPSCalculator] WARNING: Auto-generation returns empty reports (no feedback data)');
+    d('[NPSCalculator] Use monthly data entry widget to input reports manually');
+    
+    // Return empty list since we don't auto-calculate
+    return [];
   }
 
   /// Save monthly report to database
@@ -190,131 +106,19 @@ class NPSCalculator {
   }
 
   /// Process monthly report generation for a specific month
+  /// NOTE: Does nothing because individual feedback tracking is not used
+  /// Admin enters reports manually via the monthly data entry widget
   Future<List<NPSMonthlyReport>> processMonthlyReports(int reportMonth) async {
-    try {
-      d('[NPSCalculator] Processing monthly reports for month $reportMonth');
-
-      final reports = await generateMonthlyReportsForAllServers(reportMonth);
-
-      // Save all reports to database
-      for (final report in reports) {
-        await saveMonthlyReport(report);
-      }
-
-      d('[NPSCalculator] Processed and saved ${reports.length} monthly reports');
-      return reports;
-    } catch (e) {
-      d('[NPSCalculator] Error processing monthly reports: $e');
-      rethrow;
-    }
+    d('[NPSCalculator] WARNING: processMonthlyReports does nothing (no feedback data)');
+    d('[NPSCalculator] Admin should use monthly data entry widget');
+    return [];
   }
 
-  /// Private helper methods
-
-  /// Calculate NPS from a list of feedback records
-  double? _calculateNPSFromFeedback(
-      List<Map<String, dynamic>> feedbackRecords) {
-    if (feedbackRecords.isEmpty) return null;
-
-    int yes = 0;
-    int maybe = 0;
-    int no = 0;
-
-    for (final record in feedbackRecords) {
-      final type = record['feedback_type'] as String;
-      switch (type) {
-        case 'yes':
-          yes++;
-          break;
-        case 'maybe':
-          maybe++;
-          break;
-        case 'no':
-          no++;
-          break;
-      }
-    }
-
-    final total = yes + maybe + no;
-    if (total == 0) return null;
-
-    return ((yes - no) / total) * 100.0;
-  }
-
-  /// Get feedback counts for a server within a date range
-  Future<FeedbackCounts> _getFeedbackCounts(
-    String serverId, [
-    DateTime? startDate,
-    DateTime? endDate,
-  ]) async {
-    try {
-      final feedback = await _database.getFeedbackForServerInRange(
-        serverId,
-        startDate: startDate,
-        endDate: endDate,
-      );
-
-      int yes = 0;
-      int maybe = 0;
-      int no = 0;
-
-      for (final record in feedback) {
-        final type = record['feedback_type'] as String;
-        switch (type) {
-          case 'yes':
-            yes++;
-            break;
-          case 'maybe':
-            maybe++;
-            break;
-          case 'no':
-            no++;
-            break;
-        }
-      }
-
-      return FeedbackCounts(yes: yes, maybe: maybe, no: no);
-    } catch (e) {
-      d('[NPSCalculator] Error getting feedback counts: $e');
-      return FeedbackCounts();
-    }
-  }
-
-  /// Get cumulative metrics (sales and table count) for a server
-  Future<Map<String, dynamic>> _getCumulativeMetrics(String serverId) async {
-    try {
-      final feedback = await _database.getFeedbackForServer(serverId);
-
-      double totalSales = 0.0;
-      int tableCount = 0;
-      final uniqueTables = <String>{};
-
-      for (final record in feedback) {
-        // Add sales if available
-        final salesAmount = record['sales_amount'] as double?;
-        if (salesAmount != null) {
-          totalSales += salesAmount;
-        }
-
-        // Count unique tables
-        final tableNumber = record['table_number'] as int?;
-        final feedbackDate = record['feedback_date'] as String;
-        if (tableNumber != null) {
-          uniqueTables.add('${feedbackDate}_$tableNumber');
-        }
-      }
-
-      tableCount = uniqueTables.length;
-
-      return {
-        'sales': totalSales,
-        'tableCount': tableCount,
-      };
-    } catch (e) {
-      d('[NPSCalculator] Error getting cumulative metrics: $e');
-      return {'sales': 0.0, 'tableCount': 0};
-    }
-  }
+  // REMOVED: Private helper methods that calculated from empty feedback table
+  // - _calculateNPSFromFeedback()
+  // - _getFeedbackCounts()
+  // - _getCumulativeMetrics()
+  // These are not needed since admin manually enters all NPS data
 
   /// Utility methods
 

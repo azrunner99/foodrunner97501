@@ -341,7 +341,7 @@ class _RosterBodyState extends State<_RosterBody> {
     lunchRoster = todayPlan?.lunchRoster.toList() ?? [];
     dinnerRoster = todayPlan?.dinnerRoster.toList() ?? [];
     teamColors = {
-      for (var s in widget.app.servers) s.id: s.teamColor,
+      for (var s in widget.app.activeServers) s.id: s.teamColor,
     };
   }
 
@@ -354,7 +354,7 @@ class _RosterBodyState extends State<_RosterBody> {
 
   @override
   Widget build(BuildContext context) {
-    final servers = widget.app.servers;
+    final servers = widget.app.activeServers; // Only show active servers in roster
 
     return Padding(
       padding: const EdgeInsets.all(16),

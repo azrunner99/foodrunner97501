@@ -52,7 +52,7 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
 
   Widget _buildSystemHealth() {
     final app = context.watch<AppState>();
-    final servers = app.servers;
+    final servers = app.activeServers; // Only show active servers
     final assessments = _generateIntegrityAssessments(app, servers);
 
     final highRisk = assessments.where((a) => a.riskScore >= 70).length;
@@ -232,7 +232,7 @@ class _ServerDashboardScreenState extends State<ServerDashboardScreen> {
 
   Widget _buildSmartInsights() {
     final app = context.watch<AppState>();
-    final servers = app.servers;
+    final servers = app.activeServers; // Only show active servers
     final assessments = _generateIntegrityAssessments(app, servers);
     final insights = _generateSmartInsights(assessments);
 

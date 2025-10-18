@@ -239,7 +239,7 @@ class _MvpScreenState extends State<MvpScreen> {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
-    final servers = app.servers;
+    final servers = app.activeServers; // Only show active servers in MVP rankings
     final dateRange = _getDateRange();
 
     return FutureBuilder<Map<String, Map<String, String?>>>(

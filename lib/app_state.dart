@@ -698,6 +698,39 @@ class AppState extends ChangeNotifier {
   // expose
   List<Server> get servers => List.unmodifiable(_servers
       .sorted((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase())));
+  
+  /// Get only active (non-archived) servers
+  /// Use this for current operations, rosters, rankings, and active displays
+  /// Use `servers` for historical data, reports, and administrative views
+  List<Server> get activeServers {
+    final active = _servers
+        .where((server) {
+          final profile = _profiles[server.id];
+          final isActive = profile == null || !profile.isArchived;
+          
+          // Debug logging for archived servers
+          if (server.id == 'rtintker4mvv4qfl') {
+            d('[AppState.activeServers] Antonio M check:');
+            d('  - Profile exists: ${profile != null}');
+            d('  - isArchived: ${profile?.isArchived ?? false}');
+            d('  - Considered active: $isActive');
+          }
+          if (server.id == 'hjemzqy3sslvtt3o') {
+            d('[AppState.activeServers] Abby T check:');
+            d('  - Profile exists: ${profile != null}');
+            d('  - isArchived: ${profile?.isArchived ?? false}');
+            d('  - Considered active: $isActive');
+          }
+          
+          return isActive;
+        })
+        .sorted((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()))
+        .toList();
+    
+    d('[AppState.activeServers] Returning ${active.length} active servers');
+    return active;
+  }
+  
   Map<String, int> get totals => Map.unmodifiable(_totals);
   Map<String, ServerProfile> get profiles => Map.unmodifiable(_profiles);
   WeeklyHours get hours => _hours;
@@ -1406,6 +1439,26 @@ class AppState extends ChangeNotifier {
       String serverId, ServerProfile profile) async {
     _profiles[serverId] = profile;
     await _persistProfiles();
+    
+    // Sync archived status to NPS database's active column
+    try {
+      final syncService = DatabaseSyncService.instance;
+      final server = serverById(serverId);
+      if (server != null) {
+        // NPS database uses 'active' column (inverse of isArchived)
+        final isActive = !profile.isArchived;
+        await syncService.syncServerToNPS(server);
+        
+        // Also update the active status in NPS database
+        await syncService.npsAdapter.updateServer(serverId, {'active': isActive ? 1 : 0});
+        
+        d('[AppState] Synced archived status to NPS database: $serverId active=$isActive');
+      }
+    } catch (e) {
+      d('[AppState] Warning: Failed to sync archived status to NPS database: $e');
+      // Don't fail the operation if NPS sync fails
+    }
+    
     notifyListeners();
   }
 

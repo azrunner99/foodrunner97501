@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../app_state.dart';
 import '../models/server.dart';
 import '../providers/nps_provider.dart';
 
@@ -259,7 +260,7 @@ class ServerManagementWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<NPSProvider>(
       builder: (context, npsProvider, child) {
-        if (npsProvider.isLoading && npsProvider.servers.isEmpty) {
+        if (npsProvider.isLoading && npsProvider.activeServers.isEmpty) { // Use activeServers
           return const Center(
             child: CircularProgressIndicator(),
           );
@@ -318,7 +319,7 @@ class ServerManagementWidget extends StatelessWidget {
                 ),
               ),
             Expanded(
-              child: npsProvider.servers.isEmpty
+              child: npsProvider.activeServers.isEmpty // Use activeServers
                   ? const Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -348,9 +349,9 @@ class ServerManagementWidget extends StatelessWidget {
                       ),
                     )
                   : ListView.builder(
-                      itemCount: npsProvider.servers.length,
+                      itemCount: npsProvider.activeServers.length, // Use activeServers
                       itemBuilder: (context, index) {
-                        final server = npsProvider.servers[index];
+                        final server = npsProvider.activeServers[index]; // Use activeServers
                         return ServerListTile(server: server);
                       },
                     ),
@@ -421,7 +422,8 @@ class ServerListTile extends StatelessWidget {
               case 'archive':
                 final confirmed = await _showArchiveConfirmation(context);
                 if (confirmed == true) {
-                  final success = await npsProvider.archiveServer(server.id!);
+                  final appState = Provider.of<AppState>(context, listen: false);
+                  final success = await npsProvider.archiveServer(server.id!, appState: appState);
                   if (context.mounted && success) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(

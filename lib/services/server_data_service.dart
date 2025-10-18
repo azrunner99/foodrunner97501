@@ -140,10 +140,19 @@ class ServerDataService {
     
     // Start with AppState servers (primary source)
     if (_appState != null) {
-      for (final server in _appState!.servers) {
+      // Use activeServers if activeOnly is true, otherwise all servers
+      final servers = activeOnly ? _appState!.activeServers : _appState!.servers;
+      
+      // Debug Antonio specifically
+      final antonioInList = servers.any((s) => s.id == 'rtintker4mvv4qfl');
+      final antonioProfile = _appState!.profiles['rtintker4mvv4qfl'];
+      d('[ServerDataService] activeOnly=$activeOnly, Antonio in list: $antonioInList');
+      d('[ServerDataService] Antonio profile exists: ${antonioProfile != null}, isArchived: ${antonioProfile?.isArchived ?? false}');
+      
+      for (final server in servers) {
         serverMap[server.id] = server;
       }
-      d('[ServerDataService] Loaded ${serverMap.length} servers from AppState');
+      d('[ServerDataService] Loaded ${serverMap.length} servers from AppState (activeOnly: $activeOnly)');
     }
     
     // Add any servers from NPS DB not in AppState
@@ -354,4 +363,5 @@ class ServerDataService {
     return buffer.toString();
   }
 }
+
 

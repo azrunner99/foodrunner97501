@@ -22,7 +22,7 @@ class ProfilesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
-    final servers = app.servers;
+    final servers = app.activeServers; // Only show active server profiles
 
     return Scaffold(
       appBar: AppBar(title: const Text('Server Profiles')),

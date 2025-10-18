@@ -424,8 +424,8 @@ class _RosterBodyState extends State<_RosterBody> {
     await Storage.setLunchStationSection(lunchStationSection);
     await Storage.setDinnerStationSection(dinnerStationSection);
 
-    // Sync teamColor assignments to AppState servers
-    for (final s in widget.app.servers) {
+    // Sync teamColor assignments to AppState servers (active only)
+    for (final s in widget.app.activeServers) {
       s.teamColor = isLunch ? lunchTeamColors[s.id] : dinnerTeamColors[s.id];
     }
 
@@ -453,7 +453,7 @@ class _RosterBodyState extends State<_RosterBody> {
   Widget build(BuildContext context) {
     // Sync teamColor on server objects when switching between lunch/dinner
     void syncServerTeamColors() {
-      for (final s in widget.app.servers) {
+      for (final s in widget.app.activeServers) {
         s.teamColor = isLunch ? lunchTeamColors[s.id] : dinnerTeamColors[s.id];
       }
     }
@@ -466,9 +466,9 @@ class _RosterBodyState extends State<_RosterBody> {
         isLunch ? lunchStationSection : dinnerStationSection;
 
     final assignedServers =
-        widget.app.servers.where((s) => roster.contains(s.id)).toList();
+        widget.app.activeServers.where((s) => roster.contains(s.id)).toList();
     final unassignedServers =
-        widget.app.servers.where((s) => !roster.contains(s.id)).toList();
+        widget.app.activeServers.where((s) => !roster.contains(s.id)).toList();
 
     // Sort assigned servers by station type order, then by section number within each station type
     assignedServers.sort((a, b) {

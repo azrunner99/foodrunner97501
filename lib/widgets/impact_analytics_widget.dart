@@ -66,7 +66,7 @@ class _ImpactAnalyticsWidgetState extends State<ImpactAnalyticsWidget> with Serv
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Restaurant Impact Rankings
-            _buildServerRankings(_monthlyReports, context.read<AppState>().servers),
+            _buildServerRankings(_monthlyReports, context.read<AppState>().activeServers), // Only show active servers
           ],
         ),
       ),
@@ -74,14 +74,23 @@ class _ImpactAnalyticsWidgetState extends State<ImpactAnalyticsWidget> with Serv
   }
 
   Widget _buildServerRankings(
-      List<NPSMonthlyReport> monthlyReports, List<dynamic> servers) {
-    // Group reports by server ID and aggregate their performance
+      List<NPSMonthlyReport> monthlyReports, List<dynamic> activeServers) {
+    // Create set of active server IDs for filtering
+    final activeServerIds = activeServers.map((s) => s.id.toString()).toSet();
+    
+    // Group reports by server ID and aggregate their performance (active servers only)
     final Map<String, List<NPSMonthlyReport>> reportsByServer = {};
     for (final report in monthlyReports) {
-      reportsByServer.putIfAbsent(report.serverId.toString(), () => []).add(report);
+      final serverId = report.serverId.toString();
+      // Skip archived servers
+      if (!activeServerIds.contains(serverId)) {
+        d('[ImpactAnalyticsWidget] Skipping archived server: $serverId');
+        continue;
+      }
+      reportsByServer.putIfAbsent(serverId, () => []).add(report);
     }
 
-    d('[ImpactAnalyticsWidget] Grouped reports for ${reportsByServer.length} servers: ${reportsByServer.keys.toList()}');
+    d('[ImpactAnalyticsWidget] Grouped reports for ${reportsByServer.length} active servers: ${reportsByServer.keys.toList()}');
 
     // Calculate aggregated performance scores for each server
     final serverScores = reportsByServer.entries.map((entry) {

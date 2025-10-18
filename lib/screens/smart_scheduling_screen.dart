@@ -81,7 +81,7 @@ class _SmartSchedulingScreenState extends State<SmartSchedulingScreen>
 
   Future<void> _generateNewPrediction() async {
     final app = context.read<AppState>();
-    final availableServers = app.servers.map((s) => s.id).toList();
+    final availableServers = app.activeServers.map((s) => s.id).toList(); // Only schedule active servers
 
     setState(() {
       _isLoading = true;

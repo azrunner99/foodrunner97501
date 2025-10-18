@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../utils/log.dart';
 import '../models/server.dart';
-import '../models/nps_feedback.dart';
 import '../models/monthly_report.dart';
 import '../storage/database_factory.dart';
 import '../storage/nps_database_adapter.dart';
@@ -17,7 +16,6 @@ class NPSProvider with ChangeNotifier {
 
   // State variables
   List<NPSServer> _servers = [];
-  List<NPSFeedback> _recentFeedback = [];
   NPSMonthlyReport? _currentReport;
   bool _isLoading = false;
   bool _isInitialized = false;
@@ -31,7 +29,12 @@ class NPSProvider with ChangeNotifier {
 
   // Getters
   List<NPSServer> get servers => List.unmodifiable(_servers);
-  List<NPSFeedback> get recentFeedback => List.unmodifiable(_recentFeedback);
+  
+  /// Get only active (non-archived) servers for current operations
+  /// This filters based on the NPS database's active column
+  List<NPSServer> get activeServers => 
+      List.unmodifiable(_servers.where((s) => s.active).toList());
+  
   NPSMonthlyReport? get currentReport => _currentReport;
   NPSCalculator get calculator => _calculator;
   NPSDatabaseAdapter get database => _database;
@@ -60,7 +63,6 @@ class NPSProvider with ChangeNotifier {
       }
 
       await _loadServers();
-      await _loadRecentFeedback();
       await _generateCurrentReport();
       _isInitialized = true;
       _clearError();
@@ -218,21 +220,6 @@ class NPSProvider with ChangeNotifier {
     }
   }
 
-  /// Load recent feedback (last 30 days) from the database
-  Future<void> _loadRecentFeedback() async {
-    try {
-      final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
-      final feedbackMaps = await _database.getFeedbackInDateRange(
-        thirtyDaysAgo,
-        DateTime.now(),
-      );
-      _recentFeedback =
-          feedbackMaps.map((map) => NPSFeedback.fromMap(map)).toList();
-      notifyListeners();
-    } catch (e) {
-      _setError('Failed to load recent feedback: $e');
-    }
-  }
 
   /// Generate the current month's report
   Future<void> _generateCurrentReport() async {
@@ -359,12 +346,24 @@ class NPSProvider with ChangeNotifier {
   }
 
   /// Archive a server (set as inactive)
-  Future<bool> archiveServer(String serverId) async {
+  Future<bool> archiveServer(String serverId, {AppState? appState}) async {
     try {
       final server = _servers.firstWhere((s) => s.id == serverId);
       final archivedServer = server.copyWith(active: false);
 
-      return await updateServer(archivedServer);
+      final success = await updateServer(archivedServer);
+      
+      // Also sync to AppState's isArchived flag if provided
+      if (success && appState != null) {
+        final profile = appState.profiles[serverId] ?? ServerProfile();
+        final updatedProfile = profile.copyWith(
+          isArchived: true,
+          archiveNotes: 'Archived via NPS Management',
+        );
+        await appState.updateServerProfile(serverId, updatedProfile);
+      }
+      
+      return success;
     } catch (e) {
       _setError('Failed to archive server: $e');
       return false;
@@ -380,86 +379,6 @@ class NPSProvider with ChangeNotifier {
     }
   }
 
-  /// Get active servers only
-  List<NPSServer> get activeServers {
-    return _servers.where((s) => s.active).toList();
-  }
-
-  // Feedback Management Operations
-
-  /// Submit new feedback for a server
-  Future<bool> submitFeedback(NPSFeedback feedback) async {
-    _setLoading(true);
-    try {
-      // Validate feedback
-      if (!feedback.isValid()) {
-        throw Exception('Feedback data is invalid');
-      }
-
-      // Verify server exists and is active
-      final server = getServerById(feedback.serverId);
-      if (server == null) {
-        throw Exception('Server not found');
-      }
-      if (!server.active) {
-        throw Exception('Cannot submit feedback for inactive server');
-      }
-
-      // Add to database
-      final feedbackId = await _database.insertFeedback(feedback.toMap());
-      final newFeedback = feedback.copyWith(id: feedbackId);
-
-      // Update recent feedback if within last 30 days
-      final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
-      if (newFeedback.feedbackDate.isAfter(thirtyDaysAgo)) {
-        _recentFeedback.add(newFeedback);
-        _recentFeedback
-            .sort((a, b) => b.feedbackDate.compareTo(a.feedbackDate));
-      }
-
-      // Regenerate current report if feedback is for current month
-      final now = DateTime.now();
-      if (newFeedback.feedbackDate.year == now.year &&
-          newFeedback.feedbackDate.month == now.month) {
-        await _generateCurrentReport();
-      }
-
-      _clearError();
-      notifyListeners();
-      return true;
-    } catch (e) {
-      _setError('Failed to submit feedback: $e');
-      return false;
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  /// Get feedback for a specific server
-  Future<List<NPSFeedback>> getServerFeedback(String serverId) async {
-    try {
-      final feedbackMaps = await _database.getFeedbackForServer(serverId);
-      return feedbackMaps.map((map) => NPSFeedback.fromMap(map)).toList();
-    } catch (e) {
-      _setError('Failed to load server feedback: $e');
-      return [];
-    }
-  }
-
-  /// Get feedback within a date range
-  Future<List<NPSFeedback>> getFeedbackByDateRange(
-    DateTime startDate,
-    DateTime endDate,
-  ) async {
-    try {
-      final feedbackMaps =
-          await _database.getFeedbackInDateRange(startDate, endDate);
-      return feedbackMaps.map((map) => NPSFeedback.fromMap(map)).toList();
-    } catch (e) {
-      _setError('Failed to load feedback by date range: $e');
-      return [];
-    }
-  }
 
   // Analytics and Reporting
 
@@ -475,29 +394,6 @@ class NPSProvider with ChangeNotifier {
       if (startDate == null && endDate == null) {
         // All-time NPS
         npsScore = await _calculator.calculateAllTimeNPS(serverId);
-      } else if (startDate != null && endDate != null) {
-        // Date range NPS - use feedback data directly
-        final feedbackMaps =
-            await _database.getFeedbackInDateRange(startDate, endDate);
-        final feedback = feedbackMaps
-            .map((map) => NPSFeedback.fromMap(map))
-            .where((f) => f.serverId == serverId)
-            .toList();
-
-        // Calculate NPS manually for date range
-        if (feedback.isEmpty) {
-          npsScore = null;
-        } else {
-          final yes =
-              feedback.where((f) => f.feedbackType == FeedbackType.yes).length;
-          final no =
-              feedback.where((f) => f.feedbackType == FeedbackType.no).length;
-          final total = feedback.length;
-
-          if (total > 0) {
-            npsScore = ((yes - no) / total) * 100;
-          }
-        }
       }
 
       return {
@@ -512,42 +408,6 @@ class NPSProvider with ChangeNotifier {
     }
   }
 
-  /// Generate comprehensive analytics report
-  Future<Map<String, dynamic>> generateAnalyticsReport() async {
-    try {
-      final analytics = <String, dynamic>{};
-
-      // Get overall statistics
-      analytics['total_servers'] = _servers.length;
-      analytics['active_servers'] = _servers.where((s) => s.active).length;
-      analytics['total_feedback'] = _recentFeedback.length;
-
-      // Calculate overall NPS for all servers
-      if (_recentFeedback.isNotEmpty) {
-        final yes = _recentFeedback
-            .where((f) => f.feedbackType == FeedbackType.yes)
-            .length;
-        final no = _recentFeedback
-            .where((f) => f.feedbackType == FeedbackType.no)
-            .length;
-        final total = _recentFeedback.length;
-
-        analytics['overall_nps'] = ((yes - no) / total) * 100;
-        analytics['feedback_breakdown'] = {
-          'yes': yes,
-          'maybe': _recentFeedback
-              .where((f) => f.feedbackType == FeedbackType.maybe)
-              .length,
-          'no': no,
-        };
-      }
-
-      return analytics;
-    } catch (e) {
-      _setError('Failed to generate analytics report: $e');
-      return {};
-    }
-  }
 
   /// Refresh all data from database
   Future<void> refreshData() async {

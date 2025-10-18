@@ -4,6 +4,7 @@ import '../models/monthly_report.dart' hide PerformanceTrend;
 import '../storage/database_factory.dart';
 import '../utils/log.dart';
 import '../app_state.dart';
+import 'server_data_service.dart';
 
 /// Service for aggregating and analyzing historical NPS data
 class HistoricalNPSAggregationService {
@@ -86,19 +87,43 @@ class HistoricalNPSAggregationService {
       d('[HistoricalNPSAggregationService] Found ${allReports.length} total monthly reports');
       print('🔍 [HistoricalNPSAggregationService] Found ${allReports.length} total monthly reports');
       
-      // Filter out ALL integer server IDs to avoid orphaned records without proper names
-      // Keep only string format IDs that have proper server name mappings
+      // Create set of active server IDs for quick lookup
+      final activeServerIds = appStateServers.map((s) {
+        if (s is Map) return s['id']?.toString() ?? '';
+        return s.id?.toString() ?? '';
+      }).where((id) => id.isNotEmpty).toSet();
+      
+      print('🔍 [HistoricalNPSAggregationService] Active server IDs: ${activeServerIds.length}');
+      print('🔍 [HistoricalNPSAggregationService] Sample active IDs: ${activeServerIds.take(5).toList()}');
+      print('🔍 [HistoricalNPSAggregationService] Contains Antonio (rtintker4mvv4qfl)? ${activeServerIds.contains("rtintker4mvv4qfl")}');
+      
+      // Filter reports:
+      // 1. Remove ALL integer server IDs (orphaned records)
+      // 2. Remove reports for archived servers (not in activeServerIds)
       final filteredReports = allReports.where((report) {
         final serverId = report['server_id'].toString();
+        
         // Filter out ALL numeric IDs (both single and multi-digit)
         final isNumericId = RegExp(r'^\d+$').hasMatch(serverId);
         if (isNumericId) {
           print('🔍 [HistoricalNPSAggregationService] Filtering out numeric server_id: $serverId');
+          return false;
         }
-        return !isNumericId; // Keep only string IDs with proper name mappings
+        
+        // Filter out archived servers (not in active server list)
+        if (!activeServerIds.contains(serverId)) {
+          print('🔍 [HistoricalNPSAggregationService] Filtering out archived server_id: $serverId');
+          return false;
+        }
+        
+        return true; // Keep only string IDs with proper name mappings and active status
       }).toList();
       
       print('🔍 [HistoricalNPSAggregationService] After filtering: ${filteredReports.length} reports (removed ${allReports.length - filteredReports.length} old format reports)');
+      
+      // Debug: Show which server IDs are in the filtered reports
+      final reportServerIds = filteredReports.map((r) => r['server_id'].toString()).toSet();
+      print('🔍 [HistoricalNPSAggregationService] Server IDs in filtered reports: $reportServerIds');
       
       if (filteredReports.isEmpty) {
         d('[HistoricalNPSAggregationService] No monthly reports found after filtering - returning empty list');
@@ -180,6 +205,13 @@ class HistoricalNPSAggregationService {
       d('[HistoricalNPSAggregationService] Loading historical data for all servers');
       print('🔍🔍🔍 [HistoricalNPSAggregationService] STARTING getAllHistoricalData() 🔍🔍🔍');
       
+      // Get active servers from ServerDataService
+      final activeServers = await ServerDataService.instance.getAllServers(activeOnly: true);
+      final activeServerIds = activeServers.map((s) => s.id).toSet();
+      print('🔍 [HistoricalNPSAggregationService] Active server IDs: ${activeServerIds.length}');
+      print('🔍 [HistoricalNPSAggregationService] Sample active IDs: ${activeServerIds.take(5).toList()}');
+      print('🔍 [HistoricalNPSAggregationService] Contains Antonio (rtintker4mvv4qfl)? ${activeServerIds.contains("rtintker4mvv4qfl")}');
+      
       // Instead of starting with servers table, start with monthly reports
       // This mirrors the logic used in the summary calculation
       final allReports = await _database.queryTable('nps_monthly_reports');
@@ -191,9 +223,39 @@ class HistoricalNPSAggregationService {
         return [];
       }
       
+      // Filter reports to only include active servers
+      final filteredReports = allReports.where((report) {
+        final serverId = report['server_id'].toString();
+        
+        // Filter out numeric IDs
+        final isNumericId = RegExp(r'^\d+$').hasMatch(serverId);
+        if (isNumericId) {
+          return false;
+        }
+        
+        // Filter out archived servers
+        if (!activeServerIds.contains(serverId)) {
+          print('🔍 [HistoricalNPSAggregationService] Filtering out archived server: $serverId');
+          return false;
+        }
+        
+        return true;
+      }).toList();
+      
+      print('🔍 [HistoricalNPSAggregationService] After filtering: ${filteredReports.length} reports');
+      
+      // Debug: Show which server IDs are in the filtered reports
+      final reportServerIds = filteredReports.map((r) => r['server_id'].toString()).toSet();
+      print('🔍 [HistoricalNPSAggregationService] Server IDs in filtered reports: $reportServerIds');
+      
+      if (filteredReports.isEmpty) {
+        d('[HistoricalNPSAggregationService] No reports found after filtering - returning empty list');
+        return [];
+      }
+      
       // Group reports by server ID
       final serverReports = <String, List<Map<String, dynamic>>>{};
-      for (final report in allReports) {
+      for (final report in filteredReports) {
         final serverId = report['server_id'].toString();
         serverReports.putIfAbsent(serverId, () => []).add(report);
       }
@@ -479,9 +541,8 @@ class HistoricalNPSAggregationService {
       oneMonthNPS: (report['one_month_nps_percentage'] as num?)?.toDouble() ?? 0.0,
       threeMonthNPS: (report['three_month_nps_percentage'] as num?)?.toDouble() ?? 0.0,
       allTimeNPS: (report['all_time_nps_percentage'] as num?)?.toDouble() ?? 0.0,
-      responseCount: (report['month_feedback_yes'] as int? ?? 0) + 
-                    (report['month_feedback_maybe'] as int? ?? 0) + 
-                    (report['month_feedback_no'] as int? ?? 0),
+      // Note: Individual feedback tracking is not used - responseCount always 0
+      responseCount: 0,
       context: PerformanceContext(
         isNewHire: false, // TODO: Implement based on hire date
         isTrainingPeriod: false, // TODO: Implement based on business logic

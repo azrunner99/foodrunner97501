@@ -56,6 +56,10 @@ class _ServerNPSStatusWidgetState extends State<ServerNPSStatusWidget> with Serv
       final historicalData = <HistoricalNPSData>[];
       final Map<String, List<NPSMonthlyReport>> reportsByServer = {};
       
+      // Get active servers list to filter out archived servers
+      final activeServers = context.read<AppState>().activeServers;
+      final activeServerIds = activeServers.map((s) => s.id).toSet();
+      
       // Group reports by server ID
       for (final report in allReports) {
         reportsByServer.putIfAbsent(report.serverId, () => []).add(report);
@@ -65,6 +69,12 @@ class _ServerNPSStatusWidgetState extends State<ServerNPSStatusWidget> with Serv
       for (final entry in reportsByServer.entries) {
         final serverId = entry.key;
         final npsReports = entry.value;
+        
+        // Skip archived servers
+        if (!activeServerIds.contains(serverId)) {
+          d('[ServerNPSStatusWidget] Skipping archived server: $serverId');
+          continue;
+        }
         
         // ✅ Use mixin method for server name lookup
         final serverName = await getServerName(serverId);

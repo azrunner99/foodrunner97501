@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/server.dart';
-import '../models/nps_feedback.dart';
 import '../providers/nps_provider.dart';
 
 /// Widget for displaying analytics and reports
@@ -53,13 +52,13 @@ class _NPSAnalyticsWidgetState extends State<NPSAnalyticsWidget> {
         }
 
         _analyticsData = await npsProvider.calculateServerNPS(
-          _selectedServer!.id!,
+          _selectedServer!.id,
           startDate: startDate,
           endDate: endDate,
         );
       } else {
-        // Overall analytics
-        _analyticsData = await npsProvider.generateAnalyticsReport();
+        // Overall analytics not available (no individual feedback tracking)
+        _analyticsData = {};
       }
     } finally {
       if (mounted) {
@@ -144,11 +143,11 @@ class _NPSAnalyticsWidgetState extends State<NPSAnalyticsWidget> {
                 border: OutlineInputBorder(),
               ),
               items: [
-                const DropdownMenuItem<NPSServer?>(
+                const                 DropdownMenuItem<NPSServer?>(
                   value: null,
                   child: Text('All Servers'),
                 ),
-                ...npsProvider.servers.map((server) {
+                ...npsProvider.activeServers.map((server) { // Only show active servers
                   return DropdownMenuItem<NPSServer?>(
                     value: server,
                     child: Text(server.name),
@@ -500,80 +499,8 @@ class _NPSAnalyticsWidgetState extends State<NPSAnalyticsWidget> {
   }
 
   Widget _buildFeedbackTrendsCard(NPSProvider npsProvider) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Recent Activity',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            if (npsProvider.recentFeedback.isEmpty)
-              const Center(
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.trending_up,
-                      size: 48,
-                      color: Colors.grey,
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      'No recent activity',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            else ...[
-              Text(
-                '${npsProvider.recentFeedback.length} feedback entries in the last 30 days',
-                style: const TextStyle(fontSize: 14, color: Colors.grey),
-              ),
-              const SizedBox(height: 8),
-              SizedBox(
-                height: 200,
-                child: ListView.builder(
-                  itemCount: npsProvider.recentFeedback.take(5).length,
-                  itemBuilder: (context, index) {
-                    final feedback = npsProvider.recentFeedback[index];
-                    final server = npsProvider.getServerById(feedback.serverId);
-
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor:
-                            _getFeedbackColor(feedback.feedbackType),
-                        child: Icon(
-                          _getFeedbackIcon(feedback.feedbackType),
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      ),
-                      title: Text(server?.name ?? 'Unknown Server'),
-                      subtitle: Text(
-                          '${feedback.feedbackType.displayName} - ${_formatDate(feedback.feedbackDate)}'),
-                      trailing: feedback.salesAmount != null
-                          ? Text(
-                              '\$${feedback.salesAmount!.toStringAsFixed(2)}')
-                          : null,
-                    );
-                  },
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
+    // Individual feedback tracking removed - no longer used
+    return const SizedBox.shrink();
   }
 
   Widget _buildStatCard(
@@ -670,27 +597,6 @@ class _NPSAnalyticsWidgetState extends State<NPSAnalyticsWidget> {
     return 'Poor';
   }
 
-  Color _getFeedbackColor(FeedbackType type) {
-    switch (type) {
-      case FeedbackType.yes:
-        return Colors.green;
-      case FeedbackType.maybe:
-        return Colors.orange;
-      case FeedbackType.no:
-        return Colors.red;
-    }
-  }
-
-  IconData _getFeedbackIcon(FeedbackType type) {
-    switch (type) {
-      case FeedbackType.yes:
-        return Icons.thumb_up;
-      case FeedbackType.maybe:
-        return Icons.thumbs_up_down;
-      case FeedbackType.no:
-        return Icons.thumb_down;
-    }
-  }
 
   String _formatDate(DateTime date) {
     return '${date.month}/${date.day}/${date.year}';

@@ -131,6 +131,7 @@ class NPSMonthlyReport {
           : null,
       allTimeSales: (map['all_time_sales'] as num?)?.toDouble() ?? 0.0,
       allTimeTableCount: map['all_time_table_count'] as int? ?? 0,
+      // Note: Individual feedback tracking is not used - these are always zero
       monthFeedback: FeedbackCounts(
         yes: map['month_feedback_yes'] as int? ?? 0,
         maybe: map['month_feedback_maybe'] as int? ?? 0,
@@ -165,15 +166,8 @@ class NPSMonthlyReport {
       'one_month_nps_percentage': oneMonthNpsPercentage,
       'all_time_sales': allTimeSales,
       'all_time_table_count': allTimeTableCount,
-      'month_feedback_yes': monthFeedback.yes,
-      'month_feedback_maybe': monthFeedback.maybe,
-      'month_feedback_no': monthFeedback.no,
-      'three_month_feedback_yes': threeMonthFeedback.yes,
-      'three_month_feedback_maybe': threeMonthFeedback.maybe,
-      'three_month_feedback_no': threeMonthFeedback.no,
-      'all_time_feedback_yes': allTimeFeedback.yes,
-      'all_time_feedback_maybe': allTimeFeedback.maybe,
-      'all_time_feedback_no': allTimeFeedback.no,
+      // Note: Feedback count columns removed from database schema in v4
+      // Individual feedback tracking is not used
       'generated_at': generatedAt?.toIso8601String(),
       'data_as_of_date': dataAsOfDate.toIso8601String().split('T')[0],
     };

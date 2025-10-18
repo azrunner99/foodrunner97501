@@ -1,7 +1,6 @@
 import '../models.dart';
 import '../models/server.dart';
 import '../models/monthly_report.dart';
-import '../models/nps_feedback.dart';
 import '../services/server_data_service.dart';
 import '../services/server_id_resolver.dart';
 import '../storage/database_factory.dart';
@@ -125,44 +124,15 @@ mixin ServerDataMixin {
   ///   endDate: DateTime(2025, 12, 31),
   /// );
   /// ```
-  Future<List<NPSFeedback>> getServerNPSFeedback(
+  // REMOVED: Individual feedback tracking no longer used
+  /* Future<List<NPSFeedback>> getServerNPSFeedback(
     String serverId, {
     DateTime? startDate,
     DateTime? endDate,
   }) async {
-    try {
-      // Resolve canonical ID
-      final canonicalId = ServerIdResolver.instance.getCanonicalId(serverId);
-      
-      // Build where clause
-      String where = 'server_id = ?';
-      List<dynamic> whereArgs = [canonicalId];
-      
-      if (startDate != null) {
-        where += ' AND feedback_date >= ?';
-        whereArgs.add(startDate.toIso8601String().split('T')[0]);
-      }
-      
-      if (endDate != null) {
-        where += ' AND feedback_date <= ?';
-        whereArgs.add(endDate.toIso8601String().split('T')[0]);
-      }
-      
-      // Query feedback
-      final results = await _adapter.queryTable(
-        'nps_feedback',
-        where: where,
-        whereArgs: whereArgs,
-        orderBy: 'feedback_date DESC',
-      );
-      
-      // Convert to typed objects
-      return results.map((row) => NPSFeedback.fromMap(row)).toList();
-    } catch (e) {
-      d('[ServerDataMixin] Error getting NPS feedback for $serverId: $e');
-      return [];
-    }
-  }
+    // Individual feedback no longer tracked
+    return [];
+  } */
   
   /// Get all NPS monthly reports (across all servers)
   /// 

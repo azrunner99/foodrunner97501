@@ -63,15 +63,24 @@ class _IndividualServerNPSTrendWidgetState extends State<IndividualServerNPSTren
         reportsByServer.putIfAbsent(serverId, () => []).add(report);
       }
       
+      // Get active servers list to filter out archived servers
+      final activeServers = context.read<AppState>().activeServers;
+      final activeServerIds = activeServers.map((s) => s.id).toSet();
+      
       // Analyze trends for each server with proper name resolution
       for (final entry in reportsByServer.entries) {
         final serverId = entry.key;
         final serverReports = entry.value;
         
-        // Get server name directly from AppState (same approach as working IMPACT tab)
-        final servers = context.read<AppState>().servers;
+        // Skip archived servers
+        if (!activeServerIds.contains(serverId)) {
+          d('[IndividualServerNPSTrendWidget] Skipping archived server: $serverId');
+          continue;
+        }
+        
+        // Get server name directly from AppState (only active servers)
         String serverName = 'Server $serverId';
-        for (final server in servers) {
+        for (final server in activeServers) {
           if (server.id == serverId) {
             serverName = server.name;
             break;
