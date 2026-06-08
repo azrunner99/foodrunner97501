@@ -86,4 +86,44 @@ void main() {
       app.dispose(); // cancel the ticker before leaving fake time
     });
   });
+
+  test('dinner-only servers can log runs during the transition window '
+      'without a manual toggle', () {
+    final start = DateTime(2026, 1, 5, 14, 0);
+
+    FakeAsync(initialTime: start).run((async) {
+      Storage.init();
+      final app = AppState();
+      app.load();
+      async.flushMicrotasks();
+      async.elapse(const Duration(milliseconds: 1));
+
+      app.addServer('A'); // lunch-only
+      app.addServer('B'); // both shifts
+      app.addServer('C'); // dinner-only
+      async.flushMicrotasks();
+      final id = {for (final s in app.servers) s.name: s.id};
+
+      app.setTodayPlan([id['A']!, id['B']!], [id['B']!, id['C']!]);
+      async.flushMicrotasks();
+      expect(app.shiftActive, isTrue);
+
+      // Before the transition window the dinner-only server isn't on the floor.
+      expect(app.increment(id['C']!), isNull);
+      expect(app.currentCounts[id['C']!] ?? 0, 0);
+
+      // Enter the transition window (15:45). The ticker should put the dinner
+      // crew on the floor automatically — no toggle required.
+      async.elapse(const Duration(minutes: 105));
+      expect(app.workingServerIds.contains(id['C']!), isTrue);
+
+      app.increment(id['C']!);
+      expect(app.currentCounts[id['C']!], 1);
+      // The lunch crew can still log runs during the overlap.
+      app.increment(id['A']!);
+      expect(app.currentCounts[id['A']!], 1);
+
+      app.dispose();
+    });
+  });
 }

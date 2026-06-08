@@ -409,11 +409,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 } else if (m >= end) {
                   ids = dinnerIds;
                 } else {
-                  if (app.activeRosterView == 'dinner') {
-                    ids = dinnerIds.where((id) => !lunchIds.contains(id)).toList();
-                  } else {
-                    ids = lunchIds;
-                  }
+                  // Transition window: both lunch and dinner crews are on the
+                  // floor, so show everyone (deduped just below).
+                  ids = [...lunchIds, ...dinnerIds];
                 }
                 ids = ids.toSet().toList();
                 
@@ -506,10 +504,16 @@ class _HomeScreenState extends State<HomeScreen> {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(isDinner ? Icons.nights_stay : Icons.wb_sunny, color: Colors.grey[700]),
+                                Icon(
+                                    showToggle
+                                        ? Icons.swap_horiz
+                                        : (isDinner ? Icons.nights_stay : Icons.wb_sunny),
+                                    color: Colors.grey[700]),
                                 const SizedBox(width: 8),
                                 Text(
-                                  isDinner ? 'Dinner shift displayed' : 'Lunch shift displayed',
+                                  showToggle
+                                      ? 'Lunch → Dinner transition'
+                                      : (isDinner ? 'Dinner shift displayed' : 'Lunch shift displayed'),
                                   textAlign: TextAlign.center,
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
@@ -523,38 +527,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ),
-                    if (showToggle)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            ChoiceChip(
-                              label: const Text('Lunch'),
-                              selected: app.activeRosterView != 'dinner',
-                              onSelected: (selected) {
-                                if (selected && app.activeRosterView == 'dinner') {
-                                  setState(() {
-                                    app.toggleRosterView();
-                                  });
-                                }
-                              },
-                            ),
-                            const SizedBox(width: 12),
-                            ChoiceChip(
-                              label: const Text('Dinner'),
-                              selected: app.activeRosterView == 'dinner',
-                              onSelected: (selected) {
-                                if (selected && app.activeRosterView != 'dinner') {
-                                  setState(() {
-                                    app.toggleRosterView();
-                                  });
-                                }
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
+                    // During the transition window both crews are shown
+                    // automatically, so the old manual Lunch/Dinner toggle is
+                    // no longer needed.
                     if (!app.shiftActive)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 8.0),

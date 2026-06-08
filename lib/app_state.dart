@@ -738,7 +738,13 @@ class AppState extends ChangeNotifier {
     final switchingToDinner = intended == 'Dinner' && _shiftType == 'Lunch' && _shiftActive;
 
     if (switchingToDinner) {
-      // Only finalize lunch and start dinner at the END of transition
+      // Transition window (intended is Dinner but the lunch shift is still
+      // running until transitionEnd). Keep BOTH crews on the floor so arriving
+      // dinner-only servers can log runs without a manual toggle. Lunch counts
+      // are untouched; the lunch->dinner handoff is finalized at transitionEnd
+      // by _maybeFinalizeLunchToDinner().
+      _ensureWorkingServers(
+          {..._todayPlan!.lunchRoster, ..._todayPlan!.dinnerRoster});
       return;
     }
 
@@ -1275,6 +1281,29 @@ class AppState extends ChangeNotifier {
     }
     _persistCurrentShift();
     notifyListeners();
+  }
+
+  /// Adds [ids] to the working set (initializing their per-shift counters to 0
+  /// if absent) without disturbing any existing counts. Used during the
+  /// transition window to put both lunch and dinner crews on the floor.
+  void _ensureWorkingServers(Set<String> ids) {
+    var changed = false;
+    for (final id in ids) {
+      if (_workingServerIds.add(id)) {
+        _currentCounts.putIfAbsent(id, () => 0);
+        _currentStreaks.putIfAbsent(id, () => 0);
+        _lunchPeakCount.putIfAbsent(id, () => 0);
+        _dinnerPeakCount.putIfAbsent(id, () => 0);
+        _lunchCloserCount.putIfAbsent(id, () => 0);
+        _dinnerCloserCount.putIfAbsent(id, () => 0);
+        _currentPizookieCounts.putIfAbsent(id, () => 0);
+        changed = true;
+      }
+    }
+    if (changed) {
+      _persistCurrentShift();
+      notifyListeners();
+    }
   }
 
   void deleteShift(ShiftRecord shift) {
