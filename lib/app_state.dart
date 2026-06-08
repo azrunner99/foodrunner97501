@@ -224,6 +224,7 @@ class AppState extends ChangeNotifier {
   final Map<String, Map<int, int>> _tapPerMinute = {};
   String? _recentBadgeBubble;
   Timer? _ticker;
+  bool _disposed = false;
 
   // Roster toggle state: 'auto', 'lunch', 'dinner'
   String _activeRosterView = 'auto';
@@ -572,6 +573,18 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  @override
+  void dispose() {
+    // Cancel the periodic shift-clock ticker so it doesn't leak past the
+    // lifetime of this notifier (and so widget tests don't see a pending
+    // timer). Idempotent: safe to call more than once.
+    if (_disposed) return;
+    _disposed = true;
+    _ticker?.cancel();
+    _ticker = null;
+    super.dispose();
+  }
+
   Future<void> _persistServers() async =>
       Storage.serversBox.put('list', _servers.map((s) => s.toMap()).toList());
   Future<void> _persistTotals() async => Storage.totalsBox.put('totals', _totals);
@@ -662,7 +675,6 @@ class AppState extends ChangeNotifier {
   void _maybeActivateShiftByClock() {
     final now = clock.now();
     final ymd = _ymd(now);
-    logDebug('[DEBUG] _maybeActivateShiftByClock called at $now');
     
     if (_todayPlan == null || _todayPlan!.ymd != ymd) {
       if (_shiftActive) {
@@ -694,15 +706,11 @@ class AppState extends ChangeNotifier {
     final shouldBeActiveLunch = m >= open && m < transitionEnd && (_shiftType == 'Lunch' || intended == 'Lunch') && roster.isNotEmpty && !_shiftPaused;
     final shouldBeActiveDinner = m >= transitionEnd && m < close && (_shiftType == 'Dinner' || intended == 'Dinner') && roster.isNotEmpty && !_shiftPaused;
 
-    logDebug('[DEBUG] _maybeActivateShiftByClock: m=$m, open=$open, close=$close, transitionEnd=$transitionEnd');
-    logDebug('[DEBUG] _maybeActivateShiftByClock: intended=$intended, _shiftType=$_shiftType, _shiftActive=$_shiftActive');
-    logDebug('[DEBUG] _maybeActivateShiftByClock: shouldBeActiveLunch=$shouldBeActiveLunch, shouldBeActiveDinner=$shouldBeActiveDinner');
 
     final switchingToDinner = intended == 'Dinner' && _shiftType == 'Lunch' && _shiftActive;
 
     if (switchingToDinner) {
       // Only finalize lunch and start dinner at the END of transition
-      logDebug('[DEBUG] _maybeActivateShiftByClock: switchingToDinner, returning early');
       return;
     }
 
@@ -714,7 +722,6 @@ class AppState extends ChangeNotifier {
         _shiftActive = true;
         notifyListeners();
       } else {
-        logDebug('[DEBUG] _maybeActivateShiftByClock: Lunch shift already active');
       }
       return;
     }
@@ -725,13 +732,11 @@ class AppState extends ChangeNotifier {
         _shiftActive = true;
         notifyListeners();
       } else {
-        logDebug('[DEBUG] _maybeActivateShiftByClock: Dinner shift already active');
       }
       return;
     }
     
     // Outside of open hours - deactivate shift
-    logDebug('[DEBUG] _maybeActivateShiftByClock: Outside operating hours, deactivating shift');
     if (_shiftActive) {
       // If we're at transition end, let the ticker handle it with preservation logic
       final plan = _todayPlan;
@@ -741,7 +746,6 @@ class AppState extends ChangeNotifier {
         logDebug('[DEBUG] _maybeActivateShiftByClock: Finalizing shift (not transition end)');
         _finalizeAndSaveShift(_shiftType);
       } else {
-        logDebug('[DEBUG] _maybeActivateShiftByClock: At transition end, letting ticker handle it');
       }
     }
     _shiftActive = false;
