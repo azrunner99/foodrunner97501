@@ -114,80 +114,28 @@ class AppState extends ChangeNotifier {
     const delta = 1;
     const pizookiePoints = 25;
 
-  _currentCounts[id] = (_currentCounts[id] ?? 0) + delta;
-  lastRunServerId = id;
+    _currentCounts[id] = (_currentCounts[id] ?? 0) + delta;
+    lastRunServerId = id;
     _teamTotalThisShift += delta;
-
-    // Increment per-shift pizookie count
     _currentPizookieCounts[id] = (_currentPizookieCounts[id] ?? 0) + delta;
-
     _currentStreaks[id] = (_currentStreaks[id] ?? 0) + 1;
     final sCount = _currentCounts[id]!;
     final prof = _profiles[id] ?? ServerProfile();
     final serverName = serverById(id)?.name ?? 'Server';
 
-
     prof.points += pizookiePoints;
     prof.allTimeRuns += delta;
     prof.pizookieRuns += delta;
-    logDebug('[DEBUG] Server $id ran a Pizookie: ${prof.points} XP, level ${prof.level}, allTimeRuns: ${prof.allTimeRuns}, pizookieRuns: ${prof.pizookieRuns}');
 
-    final prevIso = prof.lastTapIso;
-    prof.lastTapIso = now.toIso8601String();
-    if (prevIso != null) {
-      final prev = DateTime.tryParse(prevIso);
-      if (prev != null) {
-        final ms = now.difference(prev).inMilliseconds;
-        if (ms > 0 && ms < 20 * 60 * 1000) {
-          prof.tapIntervalsMsSum += ms;
-          prof.tapIntervalsCount += 1;
-        }
-      }
-    }
+    _recordTapInterval(prof, now);
 
     if (settings.gamificationEnabled) {
-      if (_currentStreaks[id]! > prof.streakBest) {
-        prof.streakBest = _currentStreaks[id]!;
-      }
-      if (prof.streakBest >= 3) _awardOnce(prof, 'three_streak', serverName);
-      if (prof.streakBest >= 5) _awardOnce(prof, 'five_streak', serverName);
-
-      if (sCount >= 10) _awardOnce(prof, 'ten_in_shift', serverName);
-      if (sCount >= 20) _awardOnce(prof, 'twenty_in_shift', serverName);
-      if (now.hour >= 23) _awardOnce(prof, 'night_owl', serverName);
-
-      _awardOnce(prof, 'first_run_today', serverName);
-      if (prof.allTimeRuns == 0 && !_profiles.containsKey('first_run_\\${id}_awarded')) {
-        _awardOnce(prof, 'first_run', serverName);
-      }
-
-      if (isLunchPeak(now)) {
-        _lunchPeakCount[id] = (_lunchPeakCount[id] ?? 0) + delta;
-        if (_lunchPeakCount[id]! >= 10) _awardOnce(prof, 'lunch_peak_10', serverName);
-      }
-      if (isDinnerPeak(now)) {
-        _dinnerPeakCount[id] = (_dinnerPeakCount[id] ?? 0) + delta;
-        if (_dinnerPeakCount[id]! >= 10) _awardOnce(prof, 'dinner_peak_10', serverName);
-      }
-      if (isLunchCloser(now)) {
-        _lunchCloserCount[id] = (_lunchCloserCount[id] ?? 0) + delta;
-        if (_lunchCloserCount[id]! >= 8) _awardOnce(prof, 'lunch_closer_8', serverName);
-      }
-      if (isDinnerCloser(now)) {
-        _dinnerCloserCount[id] = (_dinnerCloserCount[id] ?? 0) + delta;
-        if (_dinnerCloserCount[id]! >= 8) _awardOnce(prof, 'dinner_closer_8', serverName);
-      }
+      _awardStreakAndShiftBadges(prof, id, sCount, serverName, now);
+      _awardPeakCloserBadges(prof, id, serverName, now);
     }
 
     _profiles[id] = prof;
-
-    final minuteEpoch = DateTime(now.year, now.month, now.day, now.hour, now.minute).millisecondsSinceEpoch;
-    _tapPerMinute.putIfAbsent(id, () => <int, int>{});
-    _tapPerMinute[id]![minuteEpoch] = (_tapPerMinute[id]![minuteEpoch] ?? 0) + 1;
-    _persistTapLog();
-    _persistProfiles();
-    _persistTotals();
-
+    _recordTapBucketAndPersist(id, now);
     notifyListeners();
     return null;
   }
@@ -1024,114 +972,122 @@ class AppState extends ChangeNotifier {
   }
 
   String? increment(String id) {
-  logDebug('[DEBUG] increment attempt: server=$id, shiftActive=$_shiftActive, workingIds=$_workingServerIds');
-  if (!_shiftActive || !_workingServerIds.contains(id)) {
-    logDebug('[DEBUG] increment BLOCKED: shiftActive=$_shiftActive, serverInWorking=${_workingServerIds.contains(id)}');
-    return null;
-  }
-  logDebug('[DEBUG] increment SUCCESS: server $id proceeding');
+    if (!_shiftActive || !_workingServerIds.contains(id)) return null;
 
     final now = clock.now();
     const delta = 1;
 
-
-
-    // --- Full Hands! achievement logic (now 2 rapid taps) ---
+    // Full Hands! achievement: two taps within 3 seconds.
     String? justAwarded;
     final tapList = _recentTapTimes.putIfAbsent(id, () => <DateTime>[]);
     tapList.add(now);
     if (tapList.length > 2) tapList.removeAt(0);
-    bool awardedFullHands = false;
+    var awardedFullHands = false;
     final prof = _profiles[id] ?? ServerProfile();
     final serverName = serverById(id)?.name ?? 'Server';
 
-    if (settings.gamificationEnabled) {
-      if (tapList.length == 2) {
-        final t0 = tapList[0];
-        final t1 = tapList[1];
-        if (t1.difference(t0).inMilliseconds <= 3000) {
-          _awardOnce(prof, 'full_hands', serverName);
-          _profiles[id] = prof;
-          justAwarded = 'full_hands';
-          awardedFullHands = true;
-        }
+    if (settings.gamificationEnabled && tapList.length == 2) {
+      if (tapList[1].difference(tapList[0]).inMilliseconds <= 3000) {
+        _awardOnce(prof, 'full_hands', serverName);
+        _profiles[id] = prof;
+        justAwarded = 'full_hands';
+        awardedFullHands = true;
       }
     }
 
     _currentCounts[id] = (_currentCounts[id] ?? 0) + delta;
     lastRunServerId = id;
     _teamTotalThisShift += delta;
-
     _currentStreaks[id] = (_currentStreaks[id] ?? 0) + 1;
     final sCount = _currentCounts[id]!;
 
-    // Only award 35 XP for Full Hands if gamification is enabled, otherwise always 10 XP
+    // Full Hands awards 35 via the badge; otherwise a run is worth 10.
     if (!awardedFullHands || !settings.gamificationEnabled) {
-  prof.points += 10;
-  logDebug('[DEBUG] +10 points awarded to $id, total now: ${prof.points}');
-  logDebug('[DEBUG] +25 Pizookie points awarded to $id, total now: ${prof.points}');
+      prof.points += 10;
     }
     prof.allTimeRuns += delta;
-    logDebug('[DEBUG] Server $id now has ${prof.points} XP, level ${prof.level}, allTimeRuns: ${prof.allTimeRuns}');
 
-    final prevIso = prof.lastTapIso;
-    prof.lastTapIso = now.toIso8601String();
-    if (prevIso != null) {
-      final prev = DateTime.tryParse(prevIso);
-      if (prev != null) {
-        final ms = now.difference(prev).inMilliseconds;
-        if (ms > 0 && ms < 20 * 60 * 1000) {
-          prof.tapIntervalsMsSum += ms;
-          prof.tapIntervalsCount += 1;
-        }
-      }
-    }
+    _recordTapInterval(prof, now);
 
     if (settings.gamificationEnabled) {
-      if (_currentStreaks[id]! > prof.streakBest) {
-        prof.streakBest = _currentStreaks[id]!;
-      }
-      if (prof.streakBest >= 3) _awardOnce(prof, 'three_streak', serverName);
-      if (prof.streakBest >= 5) _awardOnce(prof, 'five_streak', serverName);
-
-      if (sCount >= 10) _awardOnce(prof, 'ten_in_shift', serverName);
-      if (sCount >= 20) _awardOnce(prof, 'twenty_in_shift', serverName);
-      if (now.hour >= 23) _awardOnce(prof, 'night_owl', serverName);
-
-      _awardOnce(prof, 'first_run_today', serverName);
-      if (prof.allTimeRuns == 0 && !_profiles.containsKey('first_run_${id}_awarded')) {
-        _awardOnce(prof, 'first_run', serverName);
-      }
+      _awardStreakAndShiftBadges(prof, id, sCount, serverName, now);
     }
+    // NOTE: regular runs award peak/closer badges unconditionally (even when
+    // gamification is disabled). Preserved from the original behavior;
+    // incrementPizookie does this only when gamification is enabled.
+    _awardPeakCloserBadges(prof, id, serverName, now);
 
+    _profiles[id] = prof;
+    _recordTapBucketAndPersist(id, now);
+    notifyListeners();
+    return justAwarded;
+  }
+
+  /// Updates a profile's running average of seconds between taps.
+  void _recordTapInterval(ServerProfile prof, DateTime now) {
+    final prevIso = prof.lastTapIso;
+    prof.lastTapIso = now.toIso8601String();
+    if (prevIso == null) return;
+    final prev = DateTime.tryParse(prevIso);
+    if (prev == null) return;
+    final ms = now.difference(prev).inMilliseconds;
+    if (ms > 0 && ms < 20 * 60 * 1000) {
+      prof.tapIntervalsMsSum += ms;
+      prof.tapIntervalsCount += 1;
+    }
+  }
+
+  /// Streak and per-shift run-count badges. Caller decides whether
+  /// gamification is enabled before invoking.
+  void _awardStreakAndShiftBadges(
+      ServerProfile prof, String id, int sCount, String serverName, DateTime now) {
+    if (_currentStreaks[id]! > prof.streakBest) {
+      prof.streakBest = _currentStreaks[id]!;
+    }
+    if (prof.streakBest >= 3) _awardOnce(prof, 'three_streak', serverName);
+    if (prof.streakBest >= 5) _awardOnce(prof, 'five_streak', serverName);
+    if (sCount >= 10) _awardOnce(prof, 'ten_in_shift', serverName);
+    if (sCount >= 20) _awardOnce(prof, 'twenty_in_shift', serverName);
+    if (now.hour >= 23) _awardOnce(prof, 'night_owl', serverName);
+    _awardOnce(prof, 'first_run_today', serverName);
+    if (prof.allTimeRuns == 0 &&
+        !_profiles.containsKey('first_run_${id}_awarded')) {
+      _awardOnce(prof, 'first_run', serverName);
+    }
+  }
+
+  /// Time-of-day peak/closer badges. Increments the matching window counter
+  /// and awards the badge at its threshold.
+  void _awardPeakCloserBadges(
+      ServerProfile prof, String id, String serverName, DateTime now) {
     if (isLunchPeak(now)) {
-      _lunchPeakCount[id] = (_lunchPeakCount[id] ?? 0) + delta;
+      _lunchPeakCount[id] = (_lunchPeakCount[id] ?? 0) + 1;
       if (_lunchPeakCount[id]! >= 10) _awardOnce(prof, 'lunch_peak_10', serverName);
     }
     if (isDinnerPeak(now)) {
-      _dinnerPeakCount[id] = (_dinnerPeakCount[id] ?? 0) + delta;
+      _dinnerPeakCount[id] = (_dinnerPeakCount[id] ?? 0) + 1;
       if (_dinnerPeakCount[id]! >= 10) _awardOnce(prof, 'dinner_peak_10', serverName);
     }
     if (isLunchCloser(now)) {
-      _lunchCloserCount[id] = (_lunchCloserCount[id] ?? 0) + delta;
+      _lunchCloserCount[id] = (_lunchCloserCount[id] ?? 0) + 1;
       if (_lunchCloserCount[id]! >= 8) _awardOnce(prof, 'lunch_closer_8', serverName);
     }
     if (isDinnerCloser(now)) {
-      _dinnerCloserCount[id] = (_dinnerCloserCount[id] ?? 0) + delta;
+      _dinnerCloserCount[id] = (_dinnerCloserCount[id] ?? 0) + 1;
       if (_dinnerCloserCount[id]! >= 8) _awardOnce(prof, 'dinner_closer_8', serverName);
     }
+  }
 
-  _profiles[id] = prof;
-
-  final minuteEpoch = DateTime(now.year, now.month, now.day, now.hour, now.minute).millisecondsSinceEpoch;
-  _tapPerMinute.putIfAbsent(id, () => <int, int>{});
-  _tapPerMinute[id]![minuteEpoch] = (_tapPerMinute[id]![minuteEpoch] ?? 0) + 1;
-  _persistTapLog();
-  _persistProfiles();
-  _persistTotals();
-
-  notifyListeners();
-  return justAwarded;
+  /// Records this run in the per-minute tap histogram and persists the run.
+  void _recordTapBucketAndPersist(String id, DateTime now) {
+    final minuteEpoch =
+        DateTime(now.year, now.month, now.day, now.hour, now.minute)
+            .millisecondsSinceEpoch;
+    _tapPerMinute.putIfAbsent(id, () => <int, int>{});
+    _tapPerMinute[id]![minuteEpoch] = (_tapPerMinute[id]![minuteEpoch] ?? 0) + 1;
+    _persistTapLog();
+    _persistProfiles();
+    _persistTotals();
   }
 
   void decrement(String id) {
