@@ -232,7 +232,11 @@ void main() {
     });
 
     test('a finalized shift leaves nothing to restore', () async {
-      await withClock(Clock.fixed(_lunchTime), () async {
+      // After closing time, so the clock won't auto-start a new shift on reload
+      // (that would be correct behavior, but it would obscure what we're testing
+      // here: that finalizing clears the persisted snapshot).
+      final afterClose = DateTime(2026, 1, 5, 23, 30);
+      await withClock(Clock.fixed(afterClose), () async {
         final app1 = AppState();
         await app1.addServer('A');
         final aId = app1.servers.single.id;
