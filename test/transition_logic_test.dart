@@ -1,67 +1,89 @@
+// Characterization test for the lunch->dinner shift transition.
+//
+// This is the fragile, "do not modify" logic from TRANSITION_PROTECTION.md.
+// It is driven by AppState's 30-second periodic ticker comparing the wall
+// clock against the day plan's transition window. We pin today's behavior so
+// the engine can be redesigned safely in Phase 3.
+//
+// Technique: AppState reads `clock.now()`, and `package:fake_async` overrides
+// that clock — so elapsing fake time both advances the clock AND fires the
+// periodic ticker, deterministically reproducing the transition.
+
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:bjs_food_runs/app_state.dart';
 import 'package:bjs_food_runs/storage.dart';
 
 void main() {
-  // These are placeholder stubs. Real characterization tests for the
-  // lunch->dinner transition are built in Phase 1 (clock injection + fakeAsync).
-  group('Transition Logic Tests', () {
-    late AppState appState;
+  setUp(() {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    SharedPreferences.setMockInitialValues({});
+  });
 
-    setUp(() async {
-      // In-memory SharedPreferences so AppState persistence calls work.
-      TestWidgetsFlutterBinding.ensureInitialized();
-      SharedPreferences.setMockInitialValues({});
-      await Storage.init();
-      appState = AppState();
-    });
+  test('lunch->dinner transition: lunch-only removed, both reset, '
+      'dinner-only preserved', () {
+    // Monday 14:00 — open, lunch shift, before the 15:30 dinner switch.
+    final start = DateTime(2026, 1, 5, 14, 0);
 
-    test('Dinner-only server preserves transition counts', () async {
-      // Setup: Lunch roster [A, B], Dinner roster [B, C]
-      final lunchRoster = ['server_a', 'server_b'];
-      final dinnerRoster = ['server_b', 'server_c'];
-      
-      // Set up today's plan
-      appState.setTodayPlan(lunchRoster, dinnerRoster);
-      
-      // Simulate lunch shift with counts
-      // appState._currentCounts['server_a'] = 5;
-      // appState._currentCounts['server_b'] = 8;
-      
-      // Simulate transition period - server_c gets clicks
-      // appState._currentCounts['server_c'] = 3;
-      
-      // Trigger transition to dinner
-      // This would normally happen via _startTicker
-      
-      // Verify expectations:
-      // - server_a: removed (lunch-only)
-      // - server_b: reset to 0 (both-shift)  
-      // - server_c: preserves 3 counts (dinner-only)
-      
-      // Note: This test structure shows what we want to test
-      // Actual implementation needs access to private methods
-    });
+    FakeAsync(initialTime: start).run((async) {
+      // Storage.init() is synchronous in effect (assigns boxes, no awaits).
+      Storage.init();
 
-    test('Both-shift server resets to 0 at dinner start', () async {
-      // Test that servers in both lunch and dinner rosters
-      // get their counts reset to 0 when dinner starts
-    });
+      final app = AppState();
+      app.load(); // starts the periodic ticker after its async storage reads
+      async.flushMicrotasks();
+      async.elapse(const Duration(milliseconds: 1));
 
-    test('Lunch-only server removed at transition', () async {
-      // Test that servers only in lunch roster
-      // are removed from working set at transition
-    });
+      // Roster: lunch [A, B], dinner [B, C].
+      //   A = lunch-only  -> removed at dinner
+      //   B = both shifts  -> reset to 0 at dinner
+      //   C = dinner-only  -> counts preserved through transition
+      app.addServer('A');
+      app.addServer('B');
+      app.addServer('C');
+      async.flushMicrotasks();
+      final id = {for (final s in app.servers) s.name: s.id};
 
-    test('Transition timing respects restaurant hours', () async {
-      // Test that transition only happens at correct times
-      // based on transitionEndMinutes setting
-    });
+      app.setTodayPlan([id['A']!, id['B']!], [id['B']!, id['C']!]);
+      async.flushMicrotasks();
+      expect(app.shiftActive, isTrue, reason: 'lunch shift should auto-start');
+      expect(app.shiftType, 'Lunch');
 
-    test('Working server IDs updated correctly during transition', () async {
-      // Test that _workingServerIds contains correct servers
-      // after transition completes
+      // Lunch runs for A and B.
+      for (var i = 0; i < 5; i++) {
+        app.increment(id['A']!);
+      }
+      for (var i = 0; i < 3; i++) {
+        app.increment(id['B']!);
+      }
+      expect(app.currentCounts[id['A']!], 5);
+      expect(app.currentCounts[id['B']!], 3);
+
+      // Move into the transition window (15:45) and bring the dinner-only
+      // server C onto the floor, the way a manager toggling to dinner would.
+      async.elapse(const Duration(minutes: 105));
+      app.updateActiveRoster([id['A']!, id['B']!, id['C']!],
+          preserveExistingCounts: true);
+      for (var i = 0; i < 4; i++) {
+        app.increment(id['C']!);
+      }
+      expect(app.currentCounts[id['C']!], 4);
+
+      // Cross the transition end (17:00); the ticker finalizes the handoff.
+      async.elapse(const Duration(minutes: 80));
+
+      expect(app.shiftType, 'Dinner', reason: 'should have switched to dinner');
+      expect(app.currentCounts.containsKey(id['A']!), isFalse,
+          reason: 'lunch-only A is removed');
+      expect(app.currentCounts[id['B']!], 0,
+          reason: 'both-shift B resets to 0');
+      expect(app.currentCounts[id['C']!], 4,
+          reason: 'dinner-only C keeps its transition counts');
+      expect(app.workingServerIds, {id['B']!, id['C']!});
+
+      app.dispose(); // cancel the ticker before leaving fake time
     });
   });
 }
