@@ -199,4 +199,56 @@ void main() {
       expect(app.currentCounts[aId] ?? 0, 0);
     });
   });
+
+  group('Restart persistence', () {
+    test('an in-progress shift is restored after an app restart', () async {
+      await withClock(Clock.fixed(_lunchTime), () async {
+        // First session: start a lunch shift and record some runs.
+        final app1 = AppState();
+        await app1.addServer('A');
+        await app1.addServer('B');
+        final ids = {for (final s in app1.servers) s.name: s.id};
+        app1.setTodayPlan([ids['A']!, ids['B']!], [ids['A']!, ids['B']!]);
+        app1.forceStartCurrentShift();
+        app1.increment(ids['A']!);
+        app1.increment(ids['A']!);
+        app1.increment(ids['B']!);
+        // Let fire-and-forget persistence flush to the (mock) store.
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        app1.dispose();
+
+        // Second session (simulated restart): a fresh AppState over the same
+        // storage should restore the live counts rather than zeroing them.
+        final app2 = AppState();
+        await app2.load();
+
+        expect(app2.shiftActive, isTrue);
+        expect(app2.shiftType, 'Lunch');
+        expect(app2.currentCounts[ids['A']!], 2);
+        expect(app2.currentCounts[ids['B']!], 1);
+        expect(app2.workingServerIds, {ids['A']!, ids['B']!});
+        app2.dispose();
+      });
+    });
+
+    test('a finalized shift leaves nothing to restore', () async {
+      await withClock(Clock.fixed(_lunchTime), () async {
+        final app1 = AppState();
+        await app1.addServer('A');
+        final aId = app1.servers.single.id;
+        app1.setTodayPlan([aId], [aId]);
+        app1.forceStartCurrentShift();
+        app1.increment(aId);
+        await app1.endCurrentShiftWithPin('5520'); // finalizes + clears snapshot
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        app1.dispose();
+
+        final app2 = AppState();
+        await app2.load();
+        expect(app2.shiftActive, isFalse);
+        expect(app2.currentCounts[aId] ?? 0, 0);
+        app2.dispose();
+      });
+    });
+  });
 }

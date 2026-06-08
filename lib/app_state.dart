@@ -252,6 +252,7 @@ class AppState extends ChangeNotifier {
       final m = now.hour * 60 + now.minute;
       _activeRosterView = m >= dinnerFullSwitchMinutes ? 'lunch' : 'dinner';
     }
+    _persistCurrentShift();
     notifyListeners();
   }
 
@@ -347,10 +348,21 @@ class AppState extends ChangeNotifier {
       await Storage.settingsBox.put('gamification', settings.toMap());
     }
 
+    // Restore an in-progress shift if the app was restarted mid-shift today.
+    final csRaw = (await Storage.currentShiftBox.get('snapshot') as Map?) ?? {};
+    if (csRaw.isNotEmpty && csRaw['ymd'] == ymd) {
+      _restoreCurrentShift(Map<String, dynamic>.from(csRaw));
+    } else if (csRaw.isNotEmpty) {
+      await Storage.currentShiftBox.delete('snapshot'); // stale (previous day)
+    }
+
     _teamGoal = _computeGoalFromHistory();
 
     _startTicker();
     _maybeActivateShiftByClock();
+    // If the lunch->dinner handoff came due while the app was closed, finish it
+    // now instead of waiting for the next tick.
+    _maybeFinalizeLunchToDinner();
     notifyListeners();
   }
 
@@ -518,6 +530,7 @@ class AppState extends ChangeNotifier {
 
     logDebug('[transition] lunch->dinner complete; '
         'working=$_workingServerIds counts=$_currentCounts');
+    _persistCurrentShift();
     notifyListeners();
   }
 
@@ -552,6 +565,73 @@ class AppState extends ChangeNotifier {
   Future<void> _persistTapLog() async {
     final map = _tapPerMinute.map((sid, m) => MapEntry(sid, m.map((k, v) => MapEntry(k.toString(), v))));
     await Storage.tapBox.put('per_minute', map);
+  }
+
+  /// Persists a snapshot of the in-progress shift so live run counts survive an
+  /// app restart/crash. Tagged with today's date; a stale snapshot from a
+  /// previous day is ignored (and cleared) on load.
+  Future<void> _persistCurrentShift() async {
+    final snapshot = <String, dynamic>{
+      'ymd': _ymd(clock.now()),
+      'shiftActive': _shiftActive,
+      'shiftPaused': _shiftPaused,
+      'shiftType': _shiftType,
+      'shiftStart': _shiftStart?.toIso8601String(),
+      'activeRosterView': _activeRosterView,
+      'workingServerIds': _workingServerIds.toList(),
+      'currentCounts': _currentCounts,
+      'currentStreaks': _currentStreaks,
+      'currentPizookieCounts': _currentPizookieCounts,
+      'lunchPeakCount': _lunchPeakCount,
+      'dinnerPeakCount': _dinnerPeakCount,
+      'lunchCloserCount': _lunchCloserCount,
+      'dinnerCloserCount': _dinnerCloserCount,
+      'teamTotalThisShift': _teamTotalThisShift,
+    };
+    await Storage.currentShiftBox.put('snapshot', snapshot);
+  }
+
+  Future<void> _clearPersistedCurrentShift() async {
+    await Storage.currentShiftBox.delete('snapshot');
+  }
+
+  void _restoreCurrentShift(Map<String, dynamic> m) {
+    Map<String, int> ints(dynamic v) => v == null
+        ? <String, int>{}
+        : Map<String, int>.from(
+            (v as Map).map((k, val) => MapEntry(k as String, val as int)));
+
+    _shiftActive = (m['shiftActive'] as bool?) ?? false;
+    _shiftPaused = (m['shiftPaused'] as bool?) ?? false;
+    _shiftType = (m['shiftType'] as String?) ?? 'Lunch';
+    _shiftStart =
+        m['shiftStart'] != null ? DateTime.tryParse(m['shiftStart'] as String) : null;
+    _activeRosterView = (m['activeRosterView'] as String?) ?? 'auto';
+    _workingServerIds
+      ..clear()
+      ..addAll((m['workingServerIds'] as List?)?.cast<String>() ?? const <String>[]);
+    _currentCounts
+      ..clear()
+      ..addAll(ints(m['currentCounts']));
+    _currentStreaks
+      ..clear()
+      ..addAll(ints(m['currentStreaks']));
+    _currentPizookieCounts
+      ..clear()
+      ..addAll(ints(m['currentPizookieCounts']));
+    _lunchPeakCount
+      ..clear()
+      ..addAll(ints(m['lunchPeakCount']));
+    _dinnerPeakCount
+      ..clear()
+      ..addAll(ints(m['dinnerPeakCount']));
+    _lunchCloserCount
+      ..clear()
+      ..addAll(ints(m['lunchCloserCount']));
+    _dinnerCloserCount
+      ..clear()
+      ..addAll(ints(m['dinnerCloserCount']));
+    _teamTotalThisShift = (m['teamTotalThisShift'] as int?) ?? 0;
   }
 
   Future<void> saveSettings(GamificationSettings s) async {
@@ -766,6 +846,7 @@ class AppState extends ChangeNotifier {
     _teamTotalThisShift = 0;
     _teamGoal = _computeGoalFromHistory();
     resetRosterView();
+    _persistCurrentShift();
     notifyListeners();
   }
 
@@ -848,6 +929,8 @@ class AppState extends ChangeNotifier {
   _dinnerCloserCount.clear();
   _currentPizookieCounts.clear();
   _teamTotalThisShift = 0;
+  // The shift is over; drop the in-progress snapshot so it can't be restored.
+  _clearPersistedCurrentShift();
   }
 
   Future<bool> endCurrentShiftWithPin(String pin) async {
@@ -866,6 +949,7 @@ class AppState extends ChangeNotifier {
     if (_shiftActive) {
       _shiftActive = false;
       _shiftPaused = true;
+      _persistCurrentShift();
       notifyListeners();
     }
     return true;
@@ -876,6 +960,7 @@ class AppState extends ChangeNotifier {
     if (_shiftPaused) {
       _shiftActive = true;
       _shiftPaused = false;
+      _persistCurrentShift();
       notifyListeners();
     }
     return true;
@@ -1088,6 +1173,7 @@ class AppState extends ChangeNotifier {
     _persistTapLog();
     _persistProfiles();
     _persistTotals();
+    _persistCurrentShift();
   }
 
   void decrement(String id) {
@@ -1098,6 +1184,7 @@ class AppState extends ChangeNotifier {
       _teamTotalThisShift = (_teamTotalThisShift - 1).clamp(0, 1 << 31);
     }
     _currentStreaks[id] = 0;
+    _persistCurrentShift();
     notifyListeners();
   }
 
@@ -1186,6 +1273,7 @@ class AppState extends ChangeNotifier {
         }
       }
     }
+    _persistCurrentShift();
     notifyListeners();
   }
 
