@@ -168,5 +168,35 @@ void main() {
         expect(app.totals[aId], greaterThan(0));
       });
     });
+
+    test('a pizookie run counts as a run and adds pizookie stats + points',
+        () async {
+      await withClock(Clock.fixed(_lunchTime), () async {
+        final app = AppState();
+        await app.addServer('A');
+        final aId = app.servers.single.id;
+        app.setTodayPlan([aId], [aId]);
+        app.forceStartCurrentShift();
+
+        final pointsBefore = app.profiles[aId]!.points;
+        app.incrementPizookie(aId);
+
+        expect(app.currentCounts[aId], 1);
+        expect(app.currentPizookieCounts[aId], 1);
+        expect(app.profiles[aId]!.pizookieRuns, 1);
+        expect(app.profiles[aId]!.allTimeRuns, 1);
+        // A pizookie is worth 25 (plus any same-tick daily badges).
+        expect(app.profiles[aId]!.points, greaterThanOrEqualTo(pointsBefore + 25));
+      });
+    });
+
+    test('a pizookie run is blocked when no shift is active', () async {
+      final app = AppState();
+      await app.addServer('A');
+      final aId = app.servers.single.id;
+
+      expect(app.incrementPizookie(aId), isNull);
+      expect(app.currentCounts[aId] ?? 0, 0);
+    });
   });
 }
