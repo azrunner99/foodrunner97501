@@ -1,6 +1,7 @@
 /// Register a Pizookie run: counts as a run, +2 points, +1 pizookieRuns
 import 'dart:async';
 import 'dart:math';
+import 'package:clock/clock.dart';
 import 'package:flutter/foundation.dart';
 import 'package:collection/collection.dart';
 import 'models.dart';
@@ -109,7 +110,7 @@ class AppState extends ChangeNotifier {
   String? incrementPizookie(String id) {
     if (!_shiftActive || !_workingServerIds.contains(id)) return null;
 
-    final now = DateTime.now();
+    final now = clock.now();
     const delta = 1;
     const pizookiePoints = 25;
 
@@ -256,7 +257,7 @@ class AppState extends ChangeNotifier {
     if (_activeRosterView == 'lunch') {
       _activeRosterView = 'dinner';
       if (plan != null) {
-        final now = DateTime.now();
+        final now = clock.now();
         final m = now.hour * 60 + now.minute;
         final start = plan.transitionStartMinutes;
         final end = plan.transitionEndMinutes;
@@ -287,7 +288,7 @@ class AppState extends ChangeNotifier {
     } else if (_activeRosterView == 'dinner') {
       _activeRosterView = 'lunch';
       if (plan != null) {
-        final now = DateTime.now();
+        final now = clock.now();
         final m = now.hour * 60 + now.minute;
         final start = plan.transitionStartMinutes;
         final end = plan.transitionEndMinutes;
@@ -298,7 +299,7 @@ class AppState extends ChangeNotifier {
         }
       }
     } else {
-      final now = DateTime.now();
+      final now = clock.now();
       final m = now.hour * 60 + now.minute;
       _activeRosterView = m >= dinnerFullSwitchMinutes ? 'lunch' : 'dinner';
     }
@@ -311,7 +312,7 @@ class AppState extends ChangeNotifier {
   }
 
   List<String> get currentRoster {
-    final now = DateTime.now();
+    final now = clock.now();
     final m = now.hour * 60 + now.minute;
     if (_activeRosterView == 'lunch') {
       return _todayPlan?.lunchRoster ?? [];
@@ -373,7 +374,7 @@ class AppState extends ChangeNotifier {
     final hm = (await Storage.settingsBox.get('weekly_hours') as Map?) ?? {};
     _hours = hm.isEmpty ? WeeklyHours.defaults() : WeeklyHours.fromMap(Map<String, dynamic>.from(hm));
 
-    final ymd = _ymd(DateTime.now());
+    final ymd = _ymd(clock.now());
     final dp = (await Storage.dayPlanBox.get(ymd) as Map?) ?? {};
     _todayPlan = dp.isEmpty ? null : DayPlan.fromMap(Map<String, dynamic>.from(dp));
 
@@ -418,7 +419,7 @@ class AppState extends ChangeNotifier {
       id: _randId(),
       label: type,
       shiftType: type,
-      start: _shiftStart ?? DateTime.now(),
+      start: _shiftStart ?? clock.now(),
       counts: filteredCounts,
       pizookieCounts: filteredPizookieCounts,
     );
@@ -494,7 +495,7 @@ class AppState extends ChangeNotifier {
       // ⚠️ CRITICAL: Order of operations matters for count preservation!
       // ⚠️ See commit a7fa1ef for working implementation details
       // --- Auto-switch from lunch to dinner at end of transition ---
-      final now = DateTime.now();
+      final now = clock.now();
       final m = now.hour * 60 + now.minute;
       final plan = _todayPlan;
       if (plan != null) {
@@ -638,7 +639,7 @@ class AppState extends ChangeNotifier {
   }
 
   void setTodayPlan(List<String> lunch, List<String> dinner) {
-    final ymd = _ymd(DateTime.now());
+    final ymd = _ymd(clock.now());
     _todayPlan = DayPlan(
       ymd: ymd,
       lunchRoster: List.of(lunch),
@@ -652,7 +653,7 @@ class AppState extends ChangeNotifier {
   }
 
   bool forceStartCurrentShift() {
-    final now = DateTime.now();
+    final now = clock.now();
     if (_todayPlan == null) return false;
     final intended = currentIntendedShiftType(now);
     final roster = intended == 'Lunch' ? _todayPlan!.lunchRoster : _todayPlan!.dinnerRoster;
@@ -662,7 +663,7 @@ class AppState extends ChangeNotifier {
   }
 
   bool get isOpenNow {
-    final now = DateTime.now();
+    final now = clock.now();
   final wd = AppState.weekday(now);
     final open = _hours.openMinutes[wd] ?? 11 * 60;
     final close = _hours.closeMinutes[wd] ?? 23 * 60;
@@ -680,7 +681,7 @@ class AppState extends ChangeNotifier {
   }
 
   void _maybeActivateShiftByClock() {
-    final now = DateTime.now();
+    final now = clock.now();
     final ymd = _ymd(now);
     logDebug('[DEBUG] _maybeActivateShiftByClock called at $now');
     
@@ -781,7 +782,7 @@ class AppState extends ChangeNotifier {
     _shiftActive = true;
     _shiftPaused = false;
     _shiftType = type;
-    _shiftStart = DateTime.now();
+    _shiftStart = clock.now();
 
     _workingServerIds
       ..clear()
@@ -850,7 +851,7 @@ class AppState extends ChangeNotifier {
       id: _randId(),
       label: type,
       shiftType: type,
-      start: _shiftStart ?? DateTime.now(),
+      start: _shiftStart ?? clock.now(),
       counts: Map<String, int>.from(_currentCounts),
       pizookieCounts: pizookieCounts,
     );
@@ -1026,7 +1027,7 @@ class AppState extends ChangeNotifier {
     if (!def.repeatable && p.achievements.contains(id)) return;
 
     if (def.repeatable) {
-      final ymd = _ymd(DateTime.now());
+      final ymd = _ymd(clock.now());
       final key = '${id}_$ymd';
       if (p.repeatEarnedDates.contains(key)) return;
       p.repeatEarnedDates.add(key);
@@ -1047,7 +1048,7 @@ class AppState extends ChangeNotifier {
   }
   logDebug('[DEBUG] increment SUCCESS: server $id proceeding');
 
-    final now = DateTime.now();
+    final now = clock.now();
     const delta = 1;
 
 
@@ -1164,7 +1165,7 @@ class AppState extends ChangeNotifier {
   Map<String, int> integrityBinsFor(String serverId, {bool todayOnly = false}) {
     final buckets = _tapPerMinute[serverId];
     if (buckets == null) return {'1': 0, '2': 0, '3': 0, '4+': 0};
-    final now = DateTime.now();
+    final now = clock.now();
     final ymd = _ymd(now);
     int s1 = 0, s2 = 0, s3 = 0, s4 = 0;
     buckets.forEach((minuteEpoch, count) {
@@ -1182,7 +1183,7 @@ class AppState extends ChangeNotifier {
   }
 
   void _pruneOldTapBuckets() {
-    final cutoff = DateTime.now().subtract(const Duration(days: 180)).millisecondsSinceEpoch;
+    final cutoff = clock.now().subtract(const Duration(days: 180)).millisecondsSinceEpoch;
     for (final m in _tapPerMinute.values) {
       m.removeWhere((k, v) => k < cutoff);
     }
@@ -1198,7 +1199,7 @@ class AppState extends ChangeNotifier {
 
   void updateBothRosters({required List<String> lunch, required List<String> dinner}) {
     setTodayPlan(lunch, dinner);
-    final now = DateTime.now();
+    final now = clock.now();
     final intended = currentIntendedShiftType(now);
     if (intended == 'Lunch') {
       updateActiveRoster(lunch);
@@ -1297,7 +1298,7 @@ class AppState extends ChangeNotifier {
     final profile = _profiles[serverId];
     if (profile != null) {
       profile.avatarPath = avatarPath;
-      final now = DateTime.now();
+      final now = clock.now();
       final entry = {
         'path': avatarPath,
         'timestamp': now.toIso8601String(),
