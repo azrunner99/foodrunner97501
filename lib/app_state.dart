@@ -199,62 +199,8 @@ class AppState extends ChangeNotifier {
     _recentBadgeBubble = null;
   }
 
-  // Roster toggle logic
+  // Roster view (auto/lunch/dinner), used by the home screen for display.
   String get activeRosterView => _activeRosterView;
-  void toggleRosterView() {
-    final plan = _todayPlan;
-    if (_activeRosterView == 'lunch') {
-      _activeRosterView = 'dinner';
-      if (plan != null) {
-        final now = clock.now();
-        final m = now.hour * 60 + now.minute;
-        final start = plan.transitionStartMinutes;
-        final end = plan.transitionEndMinutes;
-        if (m >= start && m < end) {
-          // During transition, ensure all dinner servers (including dinner-only) are added and tracked
-          updateActiveRoster(plan.dinnerRoster, preserveExistingCounts: true);
-        } else {
-          // At the end of transition, only reset counts for servers who are in both lunch and dinner rosters
-          final lunchSet = plan.lunchRoster.toSet();
-          final dinnerSet = plan.dinnerRoster.toSet();
-          final both = lunchSet.intersection(dinnerSet);
-          final dinnerOnly = dinnerSet.difference(lunchSet);
-          // First, preserve counts for dinner-only servers and keep them in workingServerIds
-          updateActiveRoster(plan.dinnerRoster, preserveExistingCounts: true);
-          // Then, reset counts for servers in both lunch and dinner
-          for (final id in both) {
-            _currentCounts[id] = 0;
-            _currentStreaks[id] = 0;
-            _lunchPeakCount[id] = 0;
-            _dinnerPeakCount[id] = 0;
-            _lunchCloserCount[id] = 0;
-            _dinnerCloserCount[id] = 0;
-          }
-          // Dinner-only servers keep their counts
-          notifyListeners();
-        }
-      }
-    } else if (_activeRosterView == 'dinner') {
-      _activeRosterView = 'lunch';
-      if (plan != null) {
-        final now = clock.now();
-        final m = now.hour * 60 + now.minute;
-        final start = plan.transitionStartMinutes;
-        final end = plan.transitionEndMinutes;
-        if (m >= start && m < end) {
-          updateActiveRoster(plan.lunchRoster, preserveExistingCounts: true);
-        } else {
-          updateActiveRoster(plan.lunchRoster);
-        }
-      }
-    } else {
-      final now = clock.now();
-      final m = now.hour * 60 + now.minute;
-      _activeRosterView = m >= dinnerFullSwitchMinutes ? 'lunch' : 'dinner';
-    }
-    _persistCurrentShift();
-    notifyListeners();
-  }
 
   void resetRosterView() {
     _activeRosterView = 'auto';
