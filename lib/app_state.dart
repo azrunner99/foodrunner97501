@@ -6,6 +6,7 @@ import 'package:collection/collection.dart';
 import 'models.dart';
 import 'storage.dart';
 import 'gamification.dart';
+import 'logging.dart';
 
 String _randId() {
   final r = Random();
@@ -128,7 +129,7 @@ class AppState extends ChangeNotifier {
     prof.points += pizookiePoints;
     prof.allTimeRuns += delta;
     prof.pizookieRuns += delta;
-    print('[DEBUG] Server $id ran a Pizookie: \\${prof.points} XP, level \\${prof.level}, allTimeRuns: \\${prof.allTimeRuns}, pizookieRuns: \\${prof.pizookieRuns}');
+    logDebug('[DEBUG] Server $id ran a Pizookie: ${prof.points} XP, level ${prof.level}, allTimeRuns: ${prof.allTimeRuns}, pizookieRuns: ${prof.pizookieRuns}');
 
     final prevIso = prof.lastTapIso;
     prof.lastTapIso = now.toIso8601String();
@@ -512,17 +513,17 @@ class AppState extends ChangeNotifier {
           final preservedStreaks = <String, int>{};
           final preservedPizookies = <String, int>{};
           
-          print('[DEBUG] Lunch roster: $lunchIds');
-          print('[DEBUG] Dinner roster: $dinnerIds');
-          print('[DEBUG] Dinner-only servers: $dinnerOnly');
-          print('[DEBUG] Both-shift servers: $bothShifts');
-          print('[DEBUG] Preserving dinner-only servers: $dinnerOnly');
+          logDebug('[DEBUG] Lunch roster: $lunchIds');
+          logDebug('[DEBUG] Dinner roster: $dinnerIds');
+          logDebug('[DEBUG] Dinner-only servers: $dinnerOnly');
+          logDebug('[DEBUG] Both-shift servers: $bothShifts');
+          logDebug('[DEBUG] Preserving dinner-only servers: $dinnerOnly');
           
           for (final id in dinnerOnly) {
             preservedCounts[id] = _currentCounts[id] ?? 0;
             preservedStreaks[id] = _currentStreaks[id] ?? 0;
             preservedPizookies[id] = _currentPizookieCounts[id] ?? 0;
-            print('[DEBUG] Backing up server $id: ${preservedCounts[id]} counts');
+            logDebug('[DEBUG] Backing up server $id: ${preservedCounts[id]} counts');
           }
           
           // SECOND: Save lunch shift data
@@ -546,18 +547,18 @@ class AppState extends ChangeNotifier {
           _shiftActive = true;
           
           // FIFTH: Restore dinner-only server counts
-          print('[DEBUG] Restoring dinner-only server counts...');
+          logDebug('[DEBUG] Restoring dinner-only server counts...');
           for (final id in dinnerOnly) {
             _currentCounts[id] = preservedCounts[id]!;
             _currentStreaks[id] = preservedStreaks[id]!;
             _currentPizookieCounts[id] = preservedPizookies[id]!;
-            print('[DEBUG] Restored server $id: ${_currentCounts[id]} counts');
+            logDebug('[DEBUG] Restored server $id: ${_currentCounts[id]} counts');
           }
           
           // SIXTH: Reset counts ONLY for servers in both lunch and dinner (after restoration)
-          print('[DEBUG] Resetting both-shift servers: $bothShifts');
+          logDebug('[DEBUG] Resetting both-shift servers: $bothShifts');
           for (final id in bothShifts) {
-            print('[DEBUG] Before reset - server $id: ${_currentCounts[id]} counts');
+            logDebug('[DEBUG] Before reset - server $id: ${_currentCounts[id]} counts');
             _currentCounts[id] = 0;
             _currentStreaks[id] = 0;
             _lunchPeakCount[id] = 0;
@@ -565,7 +566,7 @@ class AppState extends ChangeNotifier {
             _lunchCloserCount[id] = 0;
             _dinnerCloserCount[id] = 0;
             _currentPizookieCounts[id] = 0; // Reset pizookie counts too
-            print('[DEBUG] After reset - server $id: ${_currentCounts[id]} counts');
+            logDebug('[DEBUG] After reset - server $id: ${_currentCounts[id]} counts');
           }
           
           // SEVENTH: Update active roster to ensure all dinner servers are in working IDs
@@ -573,9 +574,9 @@ class AppState extends ChangeNotifier {
           _workingServerIds.addAll(plan.dinnerRoster);
           
           _activeRosterView = 'dinner';
-          print('[DEBUG] Dinner shift active: $_shiftActive');
-          print('[DEBUG] Working servers: $_workingServerIds');
-          print('[DEBUG] Current counts: $_currentCounts');
+          logDebug('[DEBUG] Dinner shift active: $_shiftActive');
+          logDebug('[DEBUG] Working servers: $_workingServerIds');
+          logDebug('[DEBUG] Current counts: $_currentCounts');
           notifyListeners();
         }
       }
@@ -672,15 +673,15 @@ class AppState extends ChangeNotifier {
   void _maybeActivateShiftByClock() {
     final now = DateTime.now();
     final ymd = _ymd(now);
-    print('[DEBUG] _maybeActivateShiftByClock called at $now');
+    logDebug('[DEBUG] _maybeActivateShiftByClock called at $now');
     
     if (_todayPlan == null || _todayPlan!.ymd != ymd) {
       if (_shiftActive) {
         // Don't clear state if a shift is active; just log a warning
-        print('[WARNING] _maybeActivateShiftByClock: _todayPlan missing or date mismatch, but shift is active. State NOT cleared.');
+        logDebug('[WARNING] _maybeActivateShiftByClock: _todayPlan missing or date mismatch, but shift is active. State NOT cleared.');
         return;
       } else {
-        print('[DEBUG] _maybeActivateShiftByClock: No plan for today, clearing state');
+        logDebug('[DEBUG] _maybeActivateShiftByClock: No plan for today, clearing state');
         _shiftActive = false;
         _shiftPaused = false;
         _workingServerIds.clear();
@@ -704,54 +705,54 @@ class AppState extends ChangeNotifier {
     final shouldBeActiveLunch = m >= open && m < transitionEnd && (_shiftType == 'Lunch' || intended == 'Lunch') && roster.isNotEmpty && !_shiftPaused;
     final shouldBeActiveDinner = m >= transitionEnd && m < close && (_shiftType == 'Dinner' || intended == 'Dinner') && roster.isNotEmpty && !_shiftPaused;
 
-    print('[DEBUG] _maybeActivateShiftByClock: m=$m, open=$open, close=$close, transitionEnd=$transitionEnd');
-    print('[DEBUG] _maybeActivateShiftByClock: intended=$intended, _shiftType=$_shiftType, _shiftActive=$_shiftActive');
-    print('[DEBUG] _maybeActivateShiftByClock: shouldBeActiveLunch=$shouldBeActiveLunch, shouldBeActiveDinner=$shouldBeActiveDinner');
+    logDebug('[DEBUG] _maybeActivateShiftByClock: m=$m, open=$open, close=$close, transitionEnd=$transitionEnd');
+    logDebug('[DEBUG] _maybeActivateShiftByClock: intended=$intended, _shiftType=$_shiftType, _shiftActive=$_shiftActive');
+    logDebug('[DEBUG] _maybeActivateShiftByClock: shouldBeActiveLunch=$shouldBeActiveLunch, shouldBeActiveDinner=$shouldBeActiveDinner');
 
     final switchingToDinner = intended == 'Dinner' && _shiftType == 'Lunch' && _shiftActive;
 
     if (switchingToDinner) {
       // Only finalize lunch and start dinner at the END of transition
-      print('[DEBUG] _maybeActivateShiftByClock: switchingToDinner, returning early');
+      logDebug('[DEBUG] _maybeActivateShiftByClock: switchingToDinner, returning early');
       return;
     }
 
     // During transition, keep lunch shift active and do not reset
     if (shouldBeActiveLunch) {
       if (!_shiftActive || _shiftType != 'Lunch') {
-        print('[DEBUG] _maybeActivateShiftByClock: Starting lunch shift');
+        logDebug('[DEBUG] _maybeActivateShiftByClock: Starting lunch shift');
         _beginShift('Lunch', roster);
         _shiftActive = true;
         notifyListeners();
       } else {
-        print('[DEBUG] _maybeActivateShiftByClock: Lunch shift already active');
+        logDebug('[DEBUG] _maybeActivateShiftByClock: Lunch shift already active');
       }
       return;
     }
     if (shouldBeActiveDinner) {
       if (!_shiftActive || _shiftType != 'Dinner') {
-        print('[DEBUG] _maybeActivateShiftByClock: Starting dinner shift with preservation');
+        logDebug('[DEBUG] _maybeActivateShiftByClock: Starting dinner shift with preservation');
         _beginShift('Dinner', roster, preserveCounts: true);
         _shiftActive = true;
         notifyListeners();
       } else {
-        print('[DEBUG] _maybeActivateShiftByClock: Dinner shift already active');
+        logDebug('[DEBUG] _maybeActivateShiftByClock: Dinner shift already active');
       }
       return;
     }
     
     // Outside of open hours - deactivate shift
-    print('[DEBUG] _maybeActivateShiftByClock: Outside operating hours, deactivating shift');
+    logDebug('[DEBUG] _maybeActivateShiftByClock: Outside operating hours, deactivating shift');
     if (_shiftActive) {
       // If we're at transition end, let the ticker handle it with preservation logic
       final plan = _todayPlan;
       final isTransitionEnd = plan != null && m >= plan.transitionEndMinutes && _shiftType == 'Lunch';
       
       if (!isTransitionEnd) {
-        print('[DEBUG] _maybeActivateShiftByClock: Finalizing shift (not transition end)');
+        logDebug('[DEBUG] _maybeActivateShiftByClock: Finalizing shift (not transition end)');
         _finalizeAndSaveShift(_shiftType);
       } else {
-        print('[DEBUG] _maybeActivateShiftByClock: At transition end, letting ticker handle it');
+        logDebug('[DEBUG] _maybeActivateShiftByClock: At transition end, letting ticker handle it');
       }
     }
     _shiftActive = false;
@@ -820,64 +821,6 @@ class AppState extends ChangeNotifier {
         ..clear()
         ..addEntries(_workingServerIds.map((id) => MapEntry(id, 0)));
     }
-  // Save a partial shift record for only a subset of servers (e.g., lunch at transition)
-  void _savePartialShift(String type, Map<String, int> counts, Map<String, int> pizookieCounts) {
-    final rec = ShiftRecord(
-      id: _randId(),
-      label: type,
-      shiftType: type,
-      start: _shiftStart ?? DateTime.now(),
-      counts: counts,
-      pizookieCounts: pizookieCounts,
-    );
-    _history.add(rec);
-    // Update totals and profiles for just these servers
-    String? mvpId;
-    int mvpScore = -1;
-    counts.forEach((id, n) {
-      _totals[id] = (_totals[id] ?? 0) + n;
-      final prof = _profiles[id] ?? ServerProfile();
-      if (n > prof.bestShiftRuns) prof.bestShiftRuns = n;
-      // Use _totals[id] for all-time achievements
-      final allTime = _totals[id] ?? 0;
-      if (settings.gamificationEnabled) {
-        if (allTime >= 50 && !prof.achievements.contains('fifty_all_time')) {
-          prof.achievements.add('fifty_all_time');
-          prof.points += _pointsFor('fifty_all_time');
-        }
-        if (allTime >= 100 && !prof.achievements.contains('hundred_all_time')) {
-          prof.achievements.add('hundred_all_time');
-          prof.points += _pointsFor('hundred_all_time');
-        }
-      }
-      if (n > mvpScore) {
-        mvpScore = n;
-        mvpId = id;
-      }
-      _profiles[id] = prof;
-    });
-    if (settings.gamificationEnabled && mvpId != null) {
-      final p = _profiles[mvpId]!;
-      p.shiftsAsMvp += 1;
-      if (!p.achievements.contains('mvp')) {
-        p.achievements.add('mvp');
-        p.points += _pointsFor('mvp');
-      }
-    }
-    final teamTotal = counts.values.fold<int>(0, (a, b) => a + b);
-    if (settings.gamificationEnabled && teamTotal >= _teamGoal) {
-      for (final id in counts.keys) {
-        final prof = _profiles[id]!;
-        if (!prof.achievements.contains('team_goal')) {
-          prof.achievements.add('team_goal');
-          prof.points += _pointsFor('team_goal');
-        }
-      }
-    }
-    _persistTotals();
-    _persistProfiles();
-    _persistHistory();
-  }
 
     _teamTotalThisShift = 0;
     _teamGoal = _computeGoalFromHistory();
@@ -891,9 +834,9 @@ class AppState extends ChangeNotifier {
     for (final id in _currentCounts.keys) {
       pizookieCounts[id] = _currentPizookieCounts[id] ?? 0;
     }
-    print('[DEBUG] Finalizing shift: type=$type');
-    print('[DEBUG] Saving counts: ${_currentCounts}');
-    print('[DEBUG] Saving pizookieCounts: $pizookieCounts');
+    logDebug('[DEBUG] Finalizing shift: type=$type');
+    logDebug('[DEBUG] Saving counts: ${_currentCounts}');
+    logDebug('[DEBUG] Saving pizookieCounts: $pizookieCounts');
     final rec = ShiftRecord(
       id: _randId(),
       label: type,
@@ -1088,12 +1031,12 @@ class AppState extends ChangeNotifier {
   }
 
   String? increment(String id) {
-  print('[DEBUG] increment attempt: server=$id, shiftActive=$_shiftActive, workingIds=$_workingServerIds');
+  logDebug('[DEBUG] increment attempt: server=$id, shiftActive=$_shiftActive, workingIds=$_workingServerIds');
   if (!_shiftActive || !_workingServerIds.contains(id)) {
-    print('[DEBUG] increment BLOCKED: shiftActive=$_shiftActive, serverInWorking=${_workingServerIds.contains(id)}');
+    logDebug('[DEBUG] increment BLOCKED: shiftActive=$_shiftActive, serverInWorking=${_workingServerIds.contains(id)}');
     return null;
   }
-  print('[DEBUG] increment SUCCESS: server $id proceeding');
+  logDebug('[DEBUG] increment SUCCESS: server $id proceeding');
 
     final now = DateTime.now();
     const delta = 1;
@@ -1132,11 +1075,11 @@ class AppState extends ChangeNotifier {
     // Only award 35 XP for Full Hands if gamification is enabled, otherwise always 10 XP
     if (!awardedFullHands || !settings.gamificationEnabled) {
   prof.points += 10;
-  print('[DEBUG] +10 points awarded to $id, total now: ${prof.points}');
-  print('[DEBUG] +25 Pizookie points awarded to $id, total now: ${prof.points}');
+  logDebug('[DEBUG] +10 points awarded to $id, total now: ${prof.points}');
+  logDebug('[DEBUG] +25 Pizookie points awarded to $id, total now: ${prof.points}');
     }
     prof.allTimeRuns += delta;
-    print('[DEBUG] Server $id now has ${prof.points} XP, level ${prof.level}, allTimeRuns: ${prof.allTimeRuns}');
+    logDebug('[DEBUG] Server $id now has ${prof.points} XP, level ${prof.level}, allTimeRuns: ${prof.allTimeRuns}');
 
     final prevIso = prof.lastTapIso;
     prof.lastTapIso = now.toIso8601String();
@@ -1341,7 +1284,7 @@ class AppState extends ChangeNotifier {
   }
 
   void updateAvatar(String serverId, String avatarPath) {
-  print('AppState.updateAvatar called for $serverId with $avatarPath');
+  logDebug('AppState.updateAvatar called for $serverId with $avatarPath');
     final profile = _profiles[serverId];
     if (profile != null) {
       profile.avatarPath = avatarPath;
@@ -1359,7 +1302,7 @@ class AppState extends ChangeNotifier {
   }
 
   void updateBanner(String serverId, String bannerPath) {
-    print('AppState.updateBanner called for $serverId with $bannerPath');
+    logDebug('AppState.updateBanner called for $serverId with $bannerPath');
     final profile = _profiles[serverId];
     if (profile != null) {
       profile.bannerPath = bannerPath;

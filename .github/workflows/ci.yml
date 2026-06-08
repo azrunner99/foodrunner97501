@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  build:
+    name: Analyze & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          # Pinned to the project's current Flutter line. Phase 2 of the
+          # modernization plan bumps this to the latest stable.
+          flutter-version: 3.19.6
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # Formatting is reported but not yet enforced: the existing codebase
+      # predates a consistent `dart format` pass. Once it is formatted
+      # (Phase 2), drop `continue-on-error` to make this a hard gate.
+      - name: Check formatting (non-blocking)
+        continue-on-error: true
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Run tests
+        run: flutter test

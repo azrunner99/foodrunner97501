@@ -10,6 +10,7 @@ import '../app_state.dart';
 import '../models.dart';
 import '../gamification.dart';
 import '../section_assignments.dart';
+import '../logging.dart';
 
 // Screens
 import 'update_roster_screen.dart';
@@ -291,7 +292,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    print('HomeScreen.build called');
+    logDebug('HomeScreen.build called');
     final app = Provider.of<AppState>(context);
       return Scaffold(
         appBar: AppBar(
@@ -1217,7 +1218,7 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
   void _showAchievement(String text) {
     final app = widget.app;
     if (!app.settings.gamificationEnabled) return;
-    print('[_showAchievement] called with: ' + text);
+    logDebug('[_showAchievement] called with: ' + text);
     if (!mounted) return;
     setState(() {
       _achievementText = text;
@@ -1864,7 +1865,7 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                       child: AnimatedBuilder(
                         animation: _achievementController!,
                         builder: (context, child) {
-                          print('[AchievementOverlay] builder: _achievementText=$_achievementText, controller.value=${_achievementController!.value}');
+                          logDebug('[AchievementOverlay] builder: _achievementText=$_achievementText, controller.value=${_achievementController!.value}');
                           final opacity = 1.0 - _achievementController!.value;
                           final scale = 1.0 + 0.2 * (1.0 - _achievementController!.value);
                           return Opacity(

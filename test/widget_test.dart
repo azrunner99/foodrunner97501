@@ -1,21 +1,18 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+// Basic smoke test: the app builds and renders without throwing.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-import '../lib/main.dart';
-import '../lib/app_state.dart';
-import '../lib/storage.dart';
+import 'package:bjs_food_runs/main.dart';
+import 'package:bjs_food_runs/app_state.dart';
+import 'package:bjs_food_runs/storage.dart';
 
 void main() {
   testWidgets('Food Runs App loads correctly', (WidgetTester tester) async {
-    // Initialize storage for testing
+    // Provide an in-memory SharedPreferences so Storage works under test.
+    SharedPreferences.setMockInitialValues({});
     await Storage.init();
     final appState = AppState();
     await appState.load();
@@ -28,7 +25,7 @@ void main() {
       ),
     );
 
-    // Verify that the app loads without errors
+    // Verify that the app loads without errors.
     expect(find.byType(MaterialApp), findsOneWidget);
   });
 }

@@ -1,14 +1,19 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:food_runs_counter/app_state.dart';
-import 'package:food_runs_counter/models.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:bjs_food_runs/app_state.dart';
+import 'package:bjs_food_runs/storage.dart';
 
 void main() {
+  // These are placeholder stubs. Real characterization tests for the
+  // lunch->dinner transition are built in Phase 1 (clock injection + fakeAsync).
   group('Transition Logic Tests', () {
     late AppState appState;
-    
-    setUp(() {
-      // Initialize AppState for testing
-      // Note: This may need adjustment based on your actual initialization
+
+    setUp(() async {
+      // In-memory SharedPreferences so AppState persistence calls work.
+      TestWidgetsFlutterBinding.ensureInitialized();
+      SharedPreferences.setMockInitialValues({});
+      await Storage.init();
       appState = AppState();
     });
 
