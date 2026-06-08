@@ -27,5 +27,10 @@ void main() {
 
     // Verify that the app loads without errors.
     expect(find.byType(MaterialApp), findsOneWidget);
+
+    // Detach the widget tree, then dispose AppState so its periodic ticker
+    // is cancelled before the framework's pending-timer check at teardown.
+    await tester.pumpWidget(const SizedBox());
+    appState.dispose();
   });
 }

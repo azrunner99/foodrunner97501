@@ -583,6 +583,15 @@ class AppState extends ChangeNotifier {
     });
   }
 
+  @override
+  void dispose() {
+    // Cancel the periodic shift-clock ticker so it doesn't leak past the
+    // lifetime of this notifier (and so widget tests don't see a pending timer).
+    _ticker?.cancel();
+    _ticker = null;
+    super.dispose();
+  }
+
   Future<void> _persistServers() async =>
       Storage.serversBox.put('list', _servers.map((s) => s.toMap()).toList());
   Future<void> _persistTotals() async => Storage.totalsBox.put('totals', _totals);
