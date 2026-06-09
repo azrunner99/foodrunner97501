@@ -2,6 +2,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:outlined_text/outlined_text.dart';
 import 'dart:io';
@@ -897,6 +898,45 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                 ],
                               ),
+                              // Undo the most recent run (fixes accidental taps).
+                              if (lastId != null && (app.currentCounts[lastId] ?? 0) > 0)
+                                Positioned(
+                                  bottom: 6,
+                                  right: 10,
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(20),
+                                      onTap: () {
+                                        HapticFeedback.mediumImpact();
+                                        app.decrement(lastId);
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withOpacity(0.55),
+                                          borderRadius: BorderRadius.circular(20),
+                                          border: Border.all(color: Colors.white70),
+                                        ),
+                                        child: const Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.undo, color: Colors.white, size: 18),
+                                            SizedBox(width: 4),
+                                            Text(
+                                              'Undo run',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
                             ],
                             ),
                           );
@@ -970,6 +1010,7 @@ class _ActiveGrid extends StatefulWidget {
 
 class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin {
   bool _isLongPress = false;
+  int _runsSinceEncouragement = 0;
   String? _achievementText;
   AnimationController? _achievementController;
   String? _flashText;
@@ -1183,6 +1224,7 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                           onPressed: () {
                             // Only increment normal run on tap, not on long press
                             if (!this._isLongPress) {
+                              HapticFeedback.lightImpact();
                               final achievement = app.increment(id);
                               int xpEarned = 10;
                               if (achievement == 'full_hands') {
@@ -1199,12 +1241,18 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                                 '+$xpEarned XP',
                                 'Next level: $pointsToNext XP',
                               );
-                              if (app.settings.encouragementFlashEnabled) {
-                                final msg = encouragements[Random().nextInt(encouragements.length)];
-                                ScaffoldMessenger.of(ctx).clearSnackBars();
-                                ScaffoldMessenger.of(ctx).showSnackBar(
-                                  SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),
-                                );
+                              // Throttle encouragements so rapid taps don't spam
+                              // snackbars; skip when a badge already flashed.
+                              if (app.settings.encouragementFlashEnabled && achievement == null) {
+                                _runsSinceEncouragement++;
+                                if (_runsSinceEncouragement >= 4) {
+                                  _runsSinceEncouragement = 0;
+                                  final msg = encouragements[Random().nextInt(encouragements.length)];
+                                  ScaffoldMessenger.of(ctx).clearSnackBars();
+                                  ScaffoldMessenger.of(ctx).showSnackBar(
+                                    SnackBar(content: Text(msg), duration: const Duration(seconds: 2)),
+                                  );
+                                }
                               }
 
                               final bubble = app.recentBadgeBubble;
@@ -1221,6 +1269,7 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                           },
                           onLongPress: () {
                             this._isLongPress = true;
+                            HapticFeedback.mediumImpact();
                             app.incrementPizookie(id);
                             int xpEarned = 25;
                             _showFlash(
@@ -1244,20 +1293,18 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                                     // Current level (left) - big, bold, with background, wider for double digits
                                     GestureDetector(
                                       onLongPress: () {
-                                        Future.delayed(const Duration(seconds: 2), () {
-                                          showDialog(
-                                            context: context,
-                                            builder: (context) => Dialog(
-                                              insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 60),
-                                              backgroundColor: Colors.transparent,
-                                              child: SizedBox(
-                                                width: 340,
-                                                height: 520,
-                                                child: ProfileDetailScreen(serverId: id),
-                                              ),
+                                        showDialog(
+                                          context: context,
+                                          builder: (context) => Dialog(
+                                            insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 60),
+                                            backgroundColor: Colors.transparent,
+                                            child: SizedBox(
+                                              width: 340,
+                                              height: 520,
+                                              child: ProfileDetailScreen(serverId: id),
                                             ),
-                                          );
-                                        });
+                                          ),
+                                        );
                                       },
                                       child: Container(
                                         width: 44,
@@ -1407,6 +1454,7 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                         padding: const EdgeInsets.all(8),
                       ),
                       onPressed: () {
+                        HapticFeedback.lightImpact();
                         final achievement = app.increment(id);
                         int xpEarned = 10;
                         bool isAchievement = false;
@@ -1432,11 +1480,19 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                             forAchievement: isAchievement,
                           );
                         }
-                        final msg = encouragements[Random().nextInt(encouragements.length)];
-                        ScaffoldMessenger.of(ctx).clearSnackBars();
-                        ScaffoldMessenger.of(ctx).showSnackBar(
-                          SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),
-                        );
+                        // Throttle encouragements so rapid taps don't spam
+                        // snackbars; skip when a badge already flashed.
+                        if (app.settings.encouragementFlashEnabled && achievement == null) {
+                          _runsSinceEncouragement++;
+                          if (_runsSinceEncouragement >= 4) {
+                            _runsSinceEncouragement = 0;
+                            final msg = encouragements[Random().nextInt(encouragements.length)];
+                            ScaffoldMessenger.of(ctx).clearSnackBars();
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              SnackBar(content: Text(msg), duration: const Duration(seconds: 2)),
+                            );
+                          }
+                        }
 
                         final bubble = app.recentBadgeBubble;
                         if (bubble != null) {
@@ -1447,6 +1503,7 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                         }
                       },
                       onLongPress: () {
+                        HapticFeedback.mediumImpact();
                         app.incrementPizookie(id);
                         int xpEarned = 25;
                         _showFlash(
@@ -1467,20 +1524,18 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                                 // Current level (left) - big, bold, with background, wider for double digits
                                 GestureDetector(
                                   onLongPress: () {
-                                    Future.delayed(const Duration(seconds: 2), () {
-                                      showDialog(
-                                        context: context,
-                                        builder: (context) => Dialog(
-                                          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 60),
-                                          backgroundColor: Colors.transparent,
-                                          child: SizedBox(
-                                            width: 340,
-                                            height: 520,
-                                            child: ProfileDetailScreen(serverId: id),
-                                          ),
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => Dialog(
+                                        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 60),
+                                        backgroundColor: Colors.transparent,
+                                        child: SizedBox(
+                                          width: 340,
+                                          height: 520,
+                                          child: ProfileDetailScreen(serverId: id),
                                         ),
-                                      );
-                                    });
+                                      ),
+                                    );
                                   },
                                   child: Container(
                                     width: 44,
