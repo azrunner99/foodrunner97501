@@ -509,7 +509,9 @@ class AppState extends ChangeNotifier {
   Future<void> _persistHistory() async =>
       Storage.shiftsBox.put('list', _history.map((h) => h.toMap()).toList());
   Future<void> _persistProfiles() async {
-    for (final e in _profiles.entries) {
+    // Snapshot before the async loop: _profiles can be mutated (e.g. a server
+    // archived/deleted) while this fire-and-forget persist is in flight.
+    for (final e in _profiles.entries.toList()) {
       await Storage.profilesBox.put(e.key, e.value.toMap());
     }
   }
