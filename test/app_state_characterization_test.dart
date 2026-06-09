@@ -255,4 +255,62 @@ void main() {
       });
     });
   });
+
+  group('Roster edits during a shift', () {
+    test('re-saving the roster during the transition does not reset counts',
+        () async {
+      // 16:00 is inside the default 15:30-17:00 transition window.
+      await withClock(Clock.fixed(DateTime(2026, 1, 5, 16, 0)), () async {
+        final app = AppState();
+        await app.addServer('A'); // lunch-only
+        await app.addServer('B'); // both shifts
+        await app.addServer('C'); // dinner-only
+        final ids = {for (final s in app.servers) s.name: s.id};
+        app.setTodayPlan([ids['A']!, ids['B']!], [ids['B']!, ids['C']!]);
+
+        expect(app.shiftActive, isTrue);
+        // All three are on the floor during the transition window.
+        app.increment(ids['A']!);
+        app.increment(ids['A']!);
+        app.increment(ids['B']!);
+        app.increment(ids['C']!);
+        expect(app.currentCounts[ids['A']!], 2);
+
+        // Manager re-saves the SAME roster mid-transition. Nothing resets.
+        app.setTodayPlan([ids['A']!, ids['B']!], [ids['B']!, ids['C']!]);
+        expect(app.currentCounts[ids['A']!], 2);
+        expect(app.currentCounts[ids['B']!], 1);
+        expect(app.currentCounts[ids['C']!], 1);
+      });
+    });
+
+    test('removing a server mid-lunch keeps their runs in the record',
+        () async {
+      await withClock(Clock.fixed(_lunchTime), () async {
+        final app = AppState();
+        await app.addServer('A');
+        await app.addServer('B');
+        final ids = {for (final s in app.servers) s.name: s.id};
+        app.setTodayPlan([ids['A']!, ids['B']!], [ids['A']!, ids['B']!]);
+        app.forceStartCurrentShift();
+        app.increment(ids['A']!);
+        app.increment(ids['B']!);
+        app.increment(ids['B']!); // B has 2
+        expect(app.currentCounts[ids['B']!], 2);
+
+        // B clocks out: manager removes them from the roster.
+        app.setTodayPlan([ids['A']!], [ids['A']!]);
+        expect(app.workingServerIds.contains(ids['B']!), isFalse,
+            reason: 'B is off the floor');
+        expect(app.increment(ids['B']!), isNull, reason: 'B can no longer tap');
+        expect(app.currentCounts[ids['B']!], 2,
+            reason: 'B\'s runs are not erased');
+
+        // Ending the shift records B's runs; totals and profile stay in sync.
+        await app.endCurrentShiftWithPin('5520');
+        expect(app.totals[ids['B']!], 2);
+        expect(app.profiles[ids['B']!]!.allTimeRuns, 2);
+      });
+    });
+  });
 }

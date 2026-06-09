@@ -123,15 +123,8 @@ class _RosterBodyState extends State<_RosterBody> {
       for (final s in widget.app.servers) {
         s.teamColor = isLunch ? lunchTeamColors[s.id] : dinnerTeamColors[s.id];
       }
-
-      // Update the active roster immediately
-      final now = DateTime.now();
-      final intended = widget.app.currentIntendedShiftType(now);
-      if (intended == 'Lunch') {
-        widget.app.updateActiveRoster(lunchRoster);
-      } else {
-        widget.app.updateActiveRoster(dinnerRoster);
-      }
+      // setTodayPlan (above) already syncs the active floor to the new plan
+      // without zeroing any runs, so no separate roster update is needed here.
     }
 
     // Sync teamColor on server objects when switching between lunch/dinner

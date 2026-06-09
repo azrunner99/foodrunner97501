@@ -61,11 +61,9 @@ void main() {
       expect(app.currentCounts[id['A']!], 5);
       expect(app.currentCounts[id['B']!], 3);
 
-      // Move into the transition window (15:45) and bring the dinner-only
-      // server C onto the floor, the way a manager toggling to dinner would.
+      // Move into the transition window (15:45); the dinner-only server C is
+      // put on the floor automatically by the ticker (no manual toggle).
       async.elapse(const Duration(minutes: 105));
-      app.updateActiveRoster([id['A']!, id['B']!, id['C']!],
-          preserveExistingCounts: true);
       for (var i = 0; i < 4; i++) {
         app.increment(id['C']!);
       }
@@ -122,6 +120,52 @@ void main() {
       // The lunch crew can still log runs during the overlap.
       app.increment(id['A']!);
       expect(app.currentCounts[id['A']!], 1);
+
+      app.dispose();
+    });
+  });
+
+  test('a server removed from the roster mid-lunch is still recorded at the '
+      '5:00 handoff', () {
+    final start = DateTime(2026, 1, 5, 14, 0);
+
+    FakeAsync(initialTime: start).run((async) {
+      Storage.init();
+      final app = AppState();
+      app.load();
+      async.flushMicrotasks();
+      async.elapse(const Duration(milliseconds: 1));
+
+      app.addServer('A'); // lunch-only, removed mid-shift
+      app.addServer('B'); // both shifts
+      app.addServer('C'); // dinner-only
+      async.flushMicrotasks();
+      final id = {for (final s in app.servers) s.name: s.id};
+
+      app.setTodayPlan([id['A']!, id['B']!], [id['B']!, id['C']!]);
+      async.flushMicrotasks();
+
+      for (var i = 0; i < 6; i++) {
+        app.increment(id['A']!);
+      }
+      for (var i = 0; i < 2; i++) {
+        app.increment(id['B']!);
+      }
+      expect(app.currentCounts[id['A']!], 6);
+
+      // A clocks out: manager removes A from both rosters mid-lunch.
+      app.setTodayPlan([id['B']!], [id['B']!, id['C']!]);
+      async.flushMicrotasks();
+      expect(app.currentCounts[id['A']!], 6, reason: 'runs are kept off-floor');
+
+      // Cross the 5:00 handoff.
+      async.elapse(const Duration(minutes: 185));
+
+      // A's 6 runs were recorded even though A left the roster, and A is gone
+      // from the live dinner floor.
+      expect(app.totals[id['A']!], 6);
+      expect(app.currentCounts.containsKey(id['A']!), isFalse);
+      expect(app.shiftType, 'Dinner');
 
       app.dispose();
     });

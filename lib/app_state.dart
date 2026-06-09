@@ -314,14 +314,11 @@ class AppState extends ChangeNotifier {
 
   // Save a partial shift record for only a subset of servers (e.g., lunch at transition)
   void _savePartialShift(String type, Map<String, int> counts, Map<String, int> pizookieCounts) {
-    // If saving a Lunch shift, filter out dinner-only servers from counts
-    Map<String, int> filteredCounts = counts;
-    Map<String, int> filteredPizookieCounts = pizookieCounts;
-    if (type == 'Lunch' && _todayPlan != null) {
-      final lunchSet = _todayPlan!.lunchRoster.toSet();
-      filteredCounts = Map.fromEntries(counts.entries.where((e) => lunchSet.contains(e.key)));
-      filteredPizookieCounts = Map.fromEntries(pizookieCounts.entries.where((e) => lunchSet.contains(e.key)));
-    }
+    // Save exactly the counts the caller passes. (The caller decides which
+    // servers belong to this partial shift; do not re-filter here, or runs
+    // from servers removed from the roster mid-shift would be dropped.)
+    final filteredCounts = counts;
+    final filteredPizookieCounts = pizookieCounts;
     final rec = ShiftRecord(
       id: _randId(),
       label: type,
@@ -433,21 +430,25 @@ class AppState extends ChangeNotifier {
       for (final id in dinnerOnly) id: _currentPizookieCounts[id] ?? 0
     };
 
-    // 2. Persist the completed lunch shift (lunch-roster servers only).
+    // 2. Persist the completed lunch shift. Save EVERY server's runs except
+    //    current dinner-only servers (whose runs carry forward into dinner).
+    //    This deliberately includes servers who were removed from the lunch
+    //    roster mid-shift — their runs still belong to the lunch record.
     final lunchCounts = {
       for (final e in _currentCounts.entries)
-        if (lunchSet.contains(e.key)) e.key: e.value
+        if (!dinnerOnly.contains(e.key)) e.key: e.value
     };
     final lunchPizookieCounts = {
       for (final e in _currentPizookieCounts.entries)
-        if (lunchSet.contains(e.key)) e.key: e.value
+        if (!dinnerOnly.contains(e.key)) e.key: e.value
     };
     _savePartialShift('Lunch', lunchCounts, lunchPizookieCounts);
 
-    // 3. Drop lunch-only servers from every counter.
-    bool isLunchOnly(String id) => lunchSet.contains(id) && !dinnerSet.contains(id);
+    // 3. Drop everyone who isn't on the dinner roster from the live counters;
+    //    their runs were just recorded in the lunch shift. Only the dinner
+    //    roster continues (lunch-only and mid-shift-removed servers are gone).
     for (final counter in counters) {
-      counter.removeWhere((id, _) => isLunchOnly(id));
+      counter.removeWhere((id, _) => !dinnerSet.contains(id));
     }
 
     // 4. Start the dinner shift, keeping existing dinner-roster counts.
@@ -615,7 +616,29 @@ class AppState extends ChangeNotifier {
     );
     _persistDayPlan();
     _maybeActivateShiftByClock();
+    // Keep the active floor in sync with the edited plan, non-destructively,
+    // so every roster screen behaves the same and editing never zeroes runs.
+    if (_shiftActive) _syncFloorToPlan();
     notifyListeners();
+  }
+
+  /// Reconciles the working set ("who can tap right now") to today's plan for
+  /// the current time: lunch roster before the transition, the union of both
+  /// rosters during it, and the dinner roster after. Non-destructive.
+  void _syncFloorToPlan() {
+    final plan = _todayPlan;
+    if (plan == null) return;
+    final now = clock.now();
+    final m = now.hour * 60 + now.minute;
+    final List<String> floor;
+    if (m >= plan.transitionStartMinutes && m < plan.transitionEndMinutes) {
+      floor = [...plan.lunchRoster, ...plan.dinnerRoster];
+    } else if (_shiftType == 'Dinner') {
+      floor = plan.dinnerRoster;
+    } else {
+      floor = plan.lunchRoster;
+    }
+    updateActiveRoster(floor);
   }
 
   bool forceStartCurrentShift() {
@@ -1176,53 +1199,28 @@ class AppState extends ChangeNotifier {
   }
 
   void updateBothRosters({required List<String> lunch, required List<String> dinner}) {
+    // setTodayPlan already syncs the active floor to the new plan.
     setTodayPlan(lunch, dinner);
-    final now = clock.now();
-    final intended = currentIntendedShiftType(now);
-    if (intended == 'Lunch') {
-      updateActiveRoster(lunch);
-    } else {
-      updateActiveRoster(dinner);
-    }
   }
 
-  void updateActiveRoster(List<String> newRoster, {bool preserveExistingCounts = false}) {
+  /// Syncs which servers are on the floor (can tap) to [newRoster].
+  ///
+  /// Removing a server takes them OFF the floor but NEVER deletes their
+  /// accumulated runs — those still belong to this shift and are recorded when
+  /// the shift finalizes. New servers join with a fresh count of 0; a server
+  /// who is re-added keeps whatever runs they already had.
+  void updateActiveRoster(List<String> newRoster) {
     final newSet = Set<String>.from(newRoster);
-    for (final id in _workingServerIds.toList()) {
-      if (!newSet.contains(id)) {
-        if (preserveExistingCounts) {
-          // Do not clear counts for servers not in the new roster
-          _workingServerIds.remove(id);
-          continue;
-        }
-        _currentCounts.remove(id);
-        _currentStreaks.remove(id);
-        _lunchPeakCount.remove(id);
-        _dinnerPeakCount.remove(id);
-        _lunchCloserCount.remove(id);
-        _dinnerCloserCount.remove(id);
-        _workingServerIds.remove(id);
-      }
-    }
+    _workingServerIds.removeWhere((id) => !newSet.contains(id));
     for (final id in newSet) {
-      if (!_workingServerIds.contains(id)) {
-        _workingServerIds.add(id);
-        if (!preserveExistingCounts) {
-          _currentCounts[id] = 0;
-          _currentStreaks[id] = 0;
-          _lunchPeakCount[id] = 0;
-          _dinnerPeakCount[id] = 0;
-          _lunchCloserCount[id] = 0;
-          _dinnerCloserCount[id] = 0;
-        } else {
-          // If preserving, only initialize to 0 if not present
-          _currentCounts.putIfAbsent(id, () => 0);
-          _currentStreaks.putIfAbsent(id, () => 0);
-          _lunchPeakCount.putIfAbsent(id, () => 0);
-          _dinnerPeakCount.putIfAbsent(id, () => 0);
-          _lunchCloserCount.putIfAbsent(id, () => 0);
-          _dinnerCloserCount.putIfAbsent(id, () => 0);
-        }
+      if (_workingServerIds.add(id)) {
+        _currentCounts.putIfAbsent(id, () => 0);
+        _currentStreaks.putIfAbsent(id, () => 0);
+        _lunchPeakCount.putIfAbsent(id, () => 0);
+        _dinnerPeakCount.putIfAbsent(id, () => 0);
+        _lunchCloserCount.putIfAbsent(id, () => 0);
+        _dinnerCloserCount.putIfAbsent(id, () => 0);
+        _currentPizookieCounts.putIfAbsent(id, () => 0);
       }
     }
     _persistCurrentShift();
