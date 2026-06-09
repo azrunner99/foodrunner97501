@@ -28,8 +28,9 @@ class _MvpScreenState extends State<MvpScreen> {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
-    final servers = app.servers;
-    final totalAllTime = app.totals.values.fold<int>(0, (a, b) => a + b);
+    final servers = app.servers; // active only
+    final totalAllTime =
+        servers.fold<int>(0, (a, s) => a + (app.totals[s.id] ?? 0));
 
     return FutureBuilder<Map<String, Map<String, String?>>>(
       future: _loadAllAvatarsAndBanners(servers),
@@ -38,7 +39,7 @@ class _MvpScreenState extends State<MvpScreen> {
           final runs = app.totals[s.id] ?? 0;
           final pct = totalAllTime > 0 ? (runs * 100.0 / totalAllTime) : 0.0;
           final pizookieRuns = app.profiles[s.id]?.pizookieRuns ?? 0;
-          final totalPizookie = app.profiles.values.fold<int>(0, (a, b) => a + b.pizookieRuns);
+          final totalPizookie = servers.fold<int>(0, (a, sv) => a + (app.profiles[sv.id]?.pizookieRuns ?? 0));
           final pizookieShare = totalPizookie > 0 ? (pizookieRuns * 100.0 / totalPizookie) : 0.0;
           final shiftsAsMvp = app.profiles[s.id]?.shiftsAsMvp ?? 0;
           final avatarPath = app.profiles[s.id]?.avatarPath; // Use app.profiles instead of avatarMap

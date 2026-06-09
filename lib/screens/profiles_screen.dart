@@ -506,9 +506,11 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
       repeatCounts[id] = (repeatCounts[id] ?? 0) + 1;
     }
 
-    // Calculate team totals for all-time and pizookie runs
-    final teamAllTimeRuns = app.profiles.values.fold<int>(0, (sum, prof) => sum + prof.allTimeRuns);
-    final teamPizookieRuns = app.profiles.values.fold<int>(0, (sum, prof) => sum + prof.pizookieRuns);
+    // Calculate team totals for all-time and pizookie runs (active servers only)
+    final teamAllTimeRuns = app.servers
+        .fold<int>(0, (sum, s) => sum + (app.profiles[s.id]?.allTimeRuns ?? 0));
+    final teamPizookieRuns = app.servers
+        .fold<int>(0, (sum, s) => sum + (app.profiles[s.id]?.pizookieRuns ?? 0));
     final allTimePct = teamAllTimeRuns > 0 ? ((p.allTimeRuns / teamAllTimeRuns) * 100).toStringAsFixed(1) : '0';
     final pizookiePct = teamPizookieRuns > 0 ? ((p.pizookieRuns / teamPizookieRuns) * 100).toStringAsFixed(1) : '0';
 

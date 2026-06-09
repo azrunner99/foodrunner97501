@@ -313,4 +313,65 @@ void main() {
       });
     });
   });
+
+  group('Archiving and deleting servers', () {
+    test('archiving hides a server from the active list but keeps it restorable',
+        () async {
+      await withClock(Clock.fixed(_lunchTime), () async {
+        final app = AppState();
+        await app.addServer('A');
+        await app.addServer('B');
+        final ids = {for (final s in app.allServers) s.name: s.id};
+
+        expect(await app.archiveServer(ids['B']!, pin: '0000'), isFalse);
+        expect(await app.archiveServer(ids['B']!, pin: '5520'), isTrue);
+
+        expect(app.servers.map((s) => s.name).toList(), ['A']);
+        expect(app.allServers.length, 2);
+        expect(app.isActiveServer(ids['B']!), isFalse);
+
+        expect(await app.restoreServer(ids['B']!, pin: '5520'), isTrue);
+        expect(app.servers.map((s) => s.name).toList()..sort(), ['A', 'B']);
+        expect(app.isActiveServer(ids['B']!), isTrue);
+      });
+    });
+
+    test('archiving removes the server from the active shift and roster',
+        () async {
+      await withClock(Clock.fixed(_lunchTime), () async {
+        final app = AppState();
+        await app.addServer('A');
+        await app.addServer('B');
+        final ids = {for (final s in app.allServers) s.name: s.id};
+        app.setTodayPlan([ids['A']!, ids['B']!], [ids['A']!, ids['B']!]);
+        app.forceStartCurrentShift();
+        app.increment(ids['B']!);
+        expect(app.workingServerIds.contains(ids['B']!), isTrue);
+
+        await app.archiveServer(ids['B']!, pin: '5520');
+        expect(app.workingServerIds.contains(ids['B']!), isFalse);
+        expect(app.increment(ids['B']!), isNull);
+        expect(app.todayPlan!.lunchRoster.contains(ids['B']!), isFalse);
+      });
+    });
+
+    test('deleting a server purges them and clears their history entries',
+        () async {
+      await withClock(Clock.fixed(_lunchTime), () async {
+        final app = AppState();
+        await app.addServer('A');
+        final aId = app.servers.single.id;
+        app.setTodayPlan([aId], [aId]);
+        app.forceStartCurrentShift();
+        app.increment(aId);
+        await app.endCurrentShiftWithPin('5520');
+        expect(app.history, isNotEmpty);
+
+        expect(await app.removeServer(aId, pin: '5520'), isTrue);
+        expect(app.allServers, isEmpty);
+        expect(app.totals[aId] ?? 0, 0);
+        expect(app.history.every((r) => !r.counts.containsKey(aId)), isTrue);
+      });
+    });
+  });
 }

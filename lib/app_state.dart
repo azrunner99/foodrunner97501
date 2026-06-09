@@ -178,8 +178,18 @@ class AppState extends ChangeNotifier {
   String _activeRosterView = 'auto';
 
   // expose
-  List<Server> get servers =>
+  // Active servers only — archived users are hidden from every feature and
+  // report that reads this. Use [allServers] for admin management screens.
+  List<Server> get servers => List.unmodifiable(_servers
+      .where((s) => !s.archived)
+      .sorted((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase())));
+  // Every server including archived ones (admin management only).
+  List<Server> get allServers =>
       List.unmodifiable(_servers.sorted((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase())));
+  /// Whether [id] refers to a server that is currently active (exists and not
+  /// archived). Reporting screens use this to skip archived/removed servers.
+  bool isActiveServer(String id) =>
+      _servers.any((s) => s.id == id && !s.archived);
   Map<String, int> get totals => Map.unmodifiable(_totals);
   Map<String, ServerProfile> get profiles => Map.unmodifiable(_profiles);
   WeeklyHours get hours => _hours;
@@ -988,21 +998,80 @@ class AppState extends ChangeNotifier {
     return true;
   }
 
-  Future<bool> removeServer(String id, {required String pin}) async {
-    if (pin != adminPin) return false;
-    _servers.removeWhere((s) => s.id == id);
+  /// Removes a server everywhere they live: live shift, all per-shift counters,
+  /// today's roster plan, totals, profile, and every historical shift record.
+  void _purgeServerData(String id) {
     _totals.remove(id);
     _profiles.remove(id);
     _workingServerIds.remove(id);
     _currentCounts.remove(id);
     _currentStreaks.remove(id);
+    _lunchPeakCount.remove(id);
+    _dinnerPeakCount.remove(id);
+    _lunchCloserCount.remove(id);
+    _dinnerCloserCount.remove(id);
+    _currentPizookieCounts.remove(id);
+    final plan = _todayPlan;
+    if (plan != null) {
+      plan.lunchRoster.remove(id);
+      plan.dinnerRoster.remove(id);
+    }
+  }
+
+  /// Permanently deletes a server and all of their data (irreversible).
+  Future<bool> removeServer(String id, {required String pin}) async {
+    if (pin != adminPin) return false;
+    _servers.removeWhere((s) => s.id == id);
+    _purgeServerData(id);
     for (final rec in _history) {
       rec.counts.remove(id);
+      rec.pizookieCounts.remove(id);
     }
     await _persistServers();
     await _persistTotals();
     await _persistProfiles();
     await _persistHistory();
+    await _persistDayPlan();
+    await _persistCurrentShift();
+    notifyListeners();
+    return true;
+  }
+
+  /// Archives a server: hides them from every feature and report and takes them
+  /// off the active floor/roster, but keeps their data so they can be restored.
+  Future<bool> archiveServer(String id, {required String pin}) async {
+    if (pin != adminPin) return false;
+    final s = serverById(id);
+    if (s == null) return false;
+    s.archived = true;
+    // Take them off today's floor and rosters (their totals/profile are kept).
+    _workingServerIds.remove(id);
+    _currentCounts.remove(id);
+    _currentStreaks.remove(id);
+    _lunchPeakCount.remove(id);
+    _dinnerPeakCount.remove(id);
+    _lunchCloserCount.remove(id);
+    _dinnerCloserCount.remove(id);
+    _currentPizookieCounts.remove(id);
+    final plan = _todayPlan;
+    if (plan != null) {
+      plan.lunchRoster.remove(id);
+      plan.dinnerRoster.remove(id);
+    }
+    await _persistServers();
+    await _persistDayPlan();
+    await _persistCurrentShift();
+    notifyListeners();
+    return true;
+  }
+
+  /// Restores a previously archived server back into active use.
+  Future<bool> restoreServer(String id, {required String pin}) async {
+    if (pin != adminPin) return false;
+    final s = serverById(id);
+    if (s == null) return false;
+    s.archived = false;
+    await _persistServers();
     notifyListeners();
     return true;
   }
