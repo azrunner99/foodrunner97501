@@ -12,6 +12,7 @@ import 'screens/admin_screen.dart';
 import 'screens/manage_servers_screen.dart';
 import 'screens/station_types_screen.dart';
 import 'screens/gamification_options_screen.dart';
+import 'screens/juice_lab_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -48,6 +49,7 @@ class FoodRunsApp extends StatelessWidget {
         '/manage': (_) => const ManageServersScreen(),
         '/stations': (_) => const StationTypesScreen(),
         '/gamification_options': (_) => const GamificationOptionsScreen(),
+        '/juice': (_) => const JuiceLabScreen(),
       },
     );
   }

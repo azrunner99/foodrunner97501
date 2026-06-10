@@ -145,6 +145,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onTap: () => Navigator.pushNamed(context, '/manage'),
           ),
           const Divider(height: 1),
+          const ListTile(title: Text('Design Preview')),
+          ListTile(
+            leading: const Icon(Icons.science_outlined),
+            title: const Text('Juice Lab (preview)'),
+            subtitle: const Text('Try the new cartoon tap-loop juice: bounce, combo, level-up'),
+            onTap: () => Navigator.pushNamed(context, '/juice'),
+          ),
+          const Divider(height: 1),
           const ListTile(title: Text('Manage Stations')),
           ListTile(
             leading: const Icon(Icons.table_restaurant),
