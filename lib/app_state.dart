@@ -7,6 +7,8 @@ import 'package:collection/collection.dart';
 import 'models.dart';
 import 'storage.dart';
 import 'gamification.dart';
+import 'ranks.dart';
+import 'leaderboard.dart';
 import 'logging.dart';
 
 String _randId() {
@@ -95,6 +97,32 @@ class ServerProfile {
     'avatarHistory': avatarHistory,
   };
 }
+/// A run that pushed a server up a level (and possibly into a new rank tier).
+class LevelUpInfo {
+  final String serverId;
+  final int newLevel;
+  final bool tieredUp;
+  final String tierName;
+  const LevelUpInfo({
+    required this.serverId,
+    required this.newLevel,
+    required this.tieredUp,
+    required this.tierName,
+  });
+}
+
+/// A run that moved [runnerId] above [passedId] on the live leaderboard.
+class PassEvent {
+  final String runnerId;
+  final String passedId;
+  final String passedName;
+  const PassEvent({
+    required this.runnerId,
+    required this.passedId,
+    required this.passedName,
+  });
+}
+
 class AppState extends ChangeNotifier {
   String? _lastRunServerId;
   String? get lastRunServerId => _lastRunServerId;
@@ -114,6 +142,9 @@ class AppState extends ChangeNotifier {
     const delta = 1;
     const pizookiePoints = 25;
 
+    final countBefore = _currentCounts[id] ?? 0;
+    final teamBefore = _teamTotalThisShift;
+
     _currentCounts[id] = (_currentCounts[id] ?? 0) + delta;
     lastRunServerId = id;
     _teamTotalThisShift += delta;
@@ -122,6 +153,7 @@ class AppState extends ChangeNotifier {
     final sCount = _currentCounts[id]!;
     final prof = _profiles[id] ?? ServerProfile();
     final serverName = serverById(id)?.name ?? 'Server';
+    final levelBefore = prof.level;
 
     prof.points += pizookiePoints;
     prof.allTimeRuns += delta;
@@ -135,6 +167,9 @@ class AppState extends ChangeNotifier {
     }
 
     _profiles[id] = prof;
+    _noteLevelUp(id, levelBefore, prof);
+    _notePass(id, countBefore);
+    _noteTeamMilestone(teamBefore);
     _recordTapBucketAndPersist(id, now);
     notifyListeners();
     return null;
@@ -207,6 +242,85 @@ class AppState extends ChangeNotifier {
   String? get recentBadgeBubble => _recentBadgeBubble;
   void clearRecentBadgeBubble() {
     _recentBadgeBubble = null;
+  }
+
+  // Most recent level-up caused by a run (consumed by the UI to celebrate).
+  LevelUpInfo? _recentLevelUp;
+  LevelUpInfo? get recentLevelUp => _recentLevelUp;
+  void clearRecentLevelUp() {
+    _recentLevelUp = null;
+  }
+
+  // Most recent "passed a coworker" event on the live shift leaderboard.
+  PassEvent? _recentPass;
+  PassEvent? get recentPass => _recentPass;
+  void clearRecentPass() {
+    _recentPass = null;
+  }
+
+  // Most recent team run-total milestone reached this shift.
+  int? _recentTeamMilestone;
+  int? get recentTeamMilestone => _recentTeamMilestone;
+  void clearRecentTeamMilestone() {
+    _recentTeamMilestone = null;
+  }
+
+  /// Live shift standings (working servers ranked by current runs).
+  List<LeaderboardEntry> currentShiftLeaderboard() =>
+      rankBy(_currentCounts, include: _workingServerIds);
+
+  /// All-time standings across active (non-archived) servers.
+  List<LeaderboardEntry> allTimeLeaderboard() {
+    final ids = _servers.where((s) => !s.archived).map((s) => s.id);
+    return rankBy({for (final id in ids) id: allTimeFor(id)}, include: ids);
+  }
+
+  // Records a level-up if [prof] crossed a level boundary during a run.
+  void _noteLevelUp(String id, int levelBefore, ServerProfile prof) {
+    final after = prof.level;
+    if (after > levelBefore) {
+      _recentLevelUp = LevelUpInfo(
+        serverId: id,
+        newLevel: after,
+        tieredUp: isTierUp(levelBefore, after),
+        tierName: tierForLevel(after).name,
+      );
+    }
+  }
+
+  // Records the coworker [id] just overtook on the live leaderboard, if any.
+  void _notePass(String id, int countBefore) {
+    String? passedId;
+    var passedVal = -1;
+    final countAfter = _currentCounts[id] ?? 0;
+    for (final other in _workingServerIds) {
+      if (other == id) continue;
+      final ov = _currentCounts[other] ?? 0;
+      // Overtook `other` if they were at/above me before but are now strictly
+      // below; pick the closest competitor I passed.
+      if (countBefore <= ov && countAfter > ov && ov > passedVal) {
+        passedVal = ov;
+        passedId = other;
+      }
+    }
+    if (passedId != null) {
+      _recentPass = PassEvent(
+        runnerId: id,
+        passedId: passedId,
+        passedName: serverById(passedId)?.name ?? 'a coworker',
+      );
+    }
+  }
+
+  static const _teamMilestones = [25, 50, 75, 100, 150, 200, 300, 400, 500];
+
+  // Records a team milestone if this run pushed the team total across one.
+  void _noteTeamMilestone(int totalBefore) {
+    for (final m in _teamMilestones) {
+      if (totalBefore < m && _teamTotalThisShift >= m) {
+        _recentTeamMilestone = m;
+      }
+    }
   }
 
   // Roster view (auto/lunch/dinner), used by the home screen for display.
@@ -1116,6 +1230,9 @@ class AppState extends ChangeNotifier {
     var awardedFullHands = false;
     final prof = _profiles[id] ?? ServerProfile();
     final serverName = serverById(id)?.name ?? 'Server';
+    final levelBefore = prof.level;
+    final countBefore = _currentCounts[id] ?? 0;
+    final teamBefore = _teamTotalThisShift;
 
     if (settings.gamificationEnabled && tapList.length == 2) {
       if (tapList[1].difference(tapList[0]).inMilliseconds <= 3000) {
@@ -1149,6 +1266,9 @@ class AppState extends ChangeNotifier {
     _awardPeakCloserBadges(prof, id, serverName, now);
 
     _profiles[id] = prof;
+    _noteLevelUp(id, levelBefore, prof);
+    _notePass(id, countBefore);
+    _noteTeamMilestone(teamBefore);
     _recordTapBucketAndPersist(id, now);
     notifyListeners();
     return justAwarded;
