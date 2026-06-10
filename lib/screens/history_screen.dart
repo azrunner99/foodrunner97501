@@ -152,7 +152,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   void _showShiftDialog(BuildContext context, ShiftRecord s) {
     final app = context.read<AppState>();
-    final items = s.counts.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    // Hide archived/removed servers from the breakdown.
+    final items = s.counts.entries
+        .where((e) => app.isActiveServer(e.key))
+        .toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
     showDialog(
       context: context,
       builder: (_) => Dialog(

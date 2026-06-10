@@ -2,6 +2,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:outlined_text/outlined_text.dart';
 import 'dart:io';
@@ -10,6 +11,7 @@ import '../app_state.dart';
 import '../models.dart';
 import '../gamification.dart';
 import '../section_assignments.dart';
+import '../logging.dart';
 
 // Screens
 import 'update_roster_screen.dart';
@@ -291,7 +293,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    print('HomeScreen.build called');
+    logDebug('HomeScreen.build called');
     final app = Provider.of<AppState>(context);
       return Scaffold(
         appBar: AppBar(
@@ -394,7 +396,7 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Builder(
               builder: (context) {
-                // Recreate ids logic from _Body
+                // Determine which servers are on the floor right now.
                 final now = DateTime.now();
                 final m = now.hour * 60 + now.minute;
                 final start = app.todayPlan?.transitionStartMinutes ?? app.settings.transitionStartMinutes;
@@ -408,11 +410,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 } else if (m >= end) {
                   ids = dinnerIds;
                 } else {
-                  if (app.activeRosterView == 'dinner') {
-                    ids = dinnerIds.where((id) => !lunchIds.contains(id)).toList();
-                  } else {
-                    ids = lunchIds;
-                  }
+                  // Transition window: both lunch and dinner crews are on the
+                  // floor, so show everyone (deduped just below).
+                  ids = [...lunchIds, ...dinnerIds];
                 }
                 ids = ids.toSet().toList();
                 
@@ -505,10 +505,16 @@ class _HomeScreenState extends State<HomeScreen> {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(isDinner ? Icons.nights_stay : Icons.wb_sunny, color: Colors.grey[700]),
+                                Icon(
+                                    showToggle
+                                        ? Icons.swap_horiz
+                                        : (isDinner ? Icons.nights_stay : Icons.wb_sunny),
+                                    color: Colors.grey[700]),
                                 const SizedBox(width: 8),
                                 Text(
-                                  isDinner ? 'Dinner shift displayed' : 'Lunch shift displayed',
+                                  showToggle
+                                      ? 'Lunch → Dinner transition'
+                                      : (isDinner ? 'Dinner shift displayed' : 'Lunch shift displayed'),
                                   textAlign: TextAlign.center,
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
@@ -522,38 +528,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ),
-                    if (showToggle)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            ChoiceChip(
-                              label: const Text('Lunch'),
-                              selected: app.activeRosterView != 'dinner',
-                              onSelected: (selected) {
-                                if (selected && app.activeRosterView == 'dinner') {
-                                  setState(() {
-                                    app.toggleRosterView();
-                                  });
-                                }
-                              },
-                            ),
-                            const SizedBox(width: 12),
-                            ChoiceChip(
-                              label: const Text('Dinner'),
-                              selected: app.activeRosterView == 'dinner',
-                              onSelected: (selected) {
-                                if (selected && app.activeRosterView != 'dinner') {
-                                  setState(() {
-                                    app.toggleRosterView();
-                                  });
-                                }
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
+                    // During the transition window both crews are shown
+                    // automatically, so the old manual Lunch/Dinner toggle is
+                    // no longer needed.
                     if (!app.shiftActive)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 8.0),
@@ -921,6 +898,45 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                 ],
                               ),
+                              // Undo the most recent run (fixes accidental taps).
+                              if (lastId != null && (app.currentCounts[lastId] ?? 0) > 0)
+                                Positioned(
+                                  bottom: 6,
+                                  right: 10,
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(20),
+                                      onTap: () {
+                                        HapticFeedback.mediumImpact();
+                                        app.decrement(lastId);
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withOpacity(0.55),
+                                          borderRadius: BorderRadius.circular(20),
+                                          border: Border.all(color: Colors.white70),
+                                        ),
+                                        child: const Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.undo, color: Colors.white, size: 18),
+                                            SizedBox(width: 4),
+                                            Text(
+                                              'Undo run',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
                             ],
                             ),
                           );
@@ -982,167 +998,6 @@ class TeamPieChart extends StatelessWidget {
   }
 }
 
-class _Body extends StatelessWidget {
-  final AppState app;
-  const _Body({required this.app});
-
-  @override
-  Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final m = now.hour * 60 + now.minute;
-
-    // Use settings for transition times
-    final start = app.todayPlan?.transitionStartMinutes ?? app.settings.transitionStartMinutes;
-    final end = app.todayPlan?.transitionEndMinutes ?? app.settings.transitionEndMinutes;
-    final lunchIds = app.todayPlan?.lunchRoster ?? [];
-    final dinnerIds = app.todayPlan?.dinnerRoster ?? [];
-    List<String> ids = [];
-    final showToggle = m >= start && m < end;
-    if (m < start) {
-      ids = lunchIds;
-    } else if (m >= end) {
-      ids = dinnerIds;
-    } else {
-      // During transition: show toggle, and show correct ids for each view
-      if (app.activeRosterView == 'dinner') {
-        // Show only dinner-only servers (not on lunch) during transition
-        ids = dinnerIds.where((id) => !lunchIds.contains(id)).toList();
-      } else {
-        // Show all lunch servers (including those who work both)
-        ids = lunchIds;
-      }
-    }
-    ids = ids.toSet().toList();
-    
-    // Sort servers alphabetically by name
-    ids.sort((a, b) {
-      final serverA = app.serverById(a);
-      final serverB = app.serverById(b);
-      if (serverA == null && serverB == null) return 0;
-      if (serverA == null) return 1;
-      if (serverB == null) return -1;
-      return serverA.name.toLowerCase().compareTo(serverB.name.toLowerCase());
-    });
-    
-    bool isDinner = (m >= end || (app.activeRosterView == 'dinner' && showToggle));
-
-    // Calculate team run counts
-    final teamCounts = <String, int>{};
-    final teamColors = <String, Color>{
-      'Blue': Colors.blue,
-      'Purple': Colors.purple,
-      'Silver': Colors.grey,
-    };
-    for (final id in ids) {
-      final s = app.serverById(id);
-      if (s == null || s.teamColor == null) continue;
-      teamCounts[s.teamColor!] = (teamCounts[s.teamColor!] ?? 0) + (app.currentCounts[id] ?? 0);
-    }
-    String toggleLabel = (app.activeRosterView == 'lunch' || !showToggle)
-        ? "Switch to Dinner"
-        : "Switch to Lunch";
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (showToggle)
-          Padding(
-            padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text('Lunch', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                Switch(
-                  value: app.activeRosterView == 'dinner',
-                  onChanged: (val) => app.toggleRosterView(),
-                  activeColor: Colors.deepOrange,
-                  inactiveThumbColor: Colors.blue,
-                  inactiveTrackColor: Colors.blueGrey.shade200,
-                ),
-                const Text('Dinner', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-              ],
-            ),
-          )
-        else
-          Padding(
-            padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
-            child: GestureDetector(
-              onTap: () {
-                showDialog(
-                  context: context,
-                  builder: (ctx) {
-                    return _RosterPopup(app: app, rosterLabel: isDinner ? 'DINNER ROSTER DISPLAYED' : 'LUNCH ROSTER DISPLAYED');
-                  },
-                );
-              },
-              child: Center(
-                child: Text(
-                  isDinner ? 'DINNER ROSTER DISPLAYED' : 'LUNCH ROSTER DISPLAYED',
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.blueGrey, decoration: TextDecoration.underline),
-                ),
-              ),
-            ),
-          ),
-        TeamPieChart(teamCounts: teamCounts, teamColors: teamColors),
-        if (ids.isNotEmpty)
-          ...[
-            if (!app.shiftActive)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8.0),
-                child: ShiftStartNotice(app: app),
-              ),
-            Expanded(
-              child: _ActiveGrid(ids: ids, shiftActive: app.shiftActive, app: app),
-            ),
-          ],
-        if (ids.isEmpty)
-          Padding(
-            padding: const EdgeInsets.all(28),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const SizedBox(height: 20),
-                Text(
-                  "Who’s Working Today?",
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.2,
-                      ) ??
-                      const TextStyle(fontSize: 36, fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  "Manager: assign servers to Lunch and Dinner to begin.",
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Colors.black54,
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-                const SizedBox(height: 20),
-                FilledButton.icon(
-                  icon: const Icon(Icons.group),
-                  label: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 10),
-                    child: Text('Open Active Roster'),
-                  ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => UpdateRosterScreen()),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-
 class _ActiveGrid extends StatefulWidget {
   final List<String> ids;
   final bool shiftActive;
@@ -1155,6 +1010,7 @@ class _ActiveGrid extends StatefulWidget {
 
 class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin {
   bool _isLongPress = false;
+  int _runsSinceEncouragement = 0;
   String? _achievementText;
   AnimationController? _achievementController;
   String? _flashText;
@@ -1217,7 +1073,7 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
   void _showAchievement(String text) {
     final app = widget.app;
     if (!app.settings.gamificationEnabled) return;
-    print('[_showAchievement] called with: ' + text);
+    logDebug('[_showAchievement] called with: ' + text);
     if (!mounted) return;
     setState(() {
       _achievementText = text;
@@ -1368,6 +1224,7 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                           onPressed: () {
                             // Only increment normal run on tap, not on long press
                             if (!this._isLongPress) {
+                              HapticFeedback.lightImpact();
                               final achievement = app.increment(id);
                               int xpEarned = 10;
                               if (achievement == 'full_hands') {
@@ -1384,12 +1241,18 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                                 '+$xpEarned XP',
                                 'Next level: $pointsToNext XP',
                               );
-                              if (app.settings.encouragementFlashEnabled) {
-                                final msg = encouragements[Random().nextInt(encouragements.length)];
-                                ScaffoldMessenger.of(ctx).clearSnackBars();
-                                ScaffoldMessenger.of(ctx).showSnackBar(
-                                  SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),
-                                );
+                              // Throttle encouragements so rapid taps don't spam
+                              // snackbars; skip when a badge already flashed.
+                              if (app.settings.encouragementFlashEnabled && achievement == null) {
+                                _runsSinceEncouragement++;
+                                if (_runsSinceEncouragement >= 4) {
+                                  _runsSinceEncouragement = 0;
+                                  final msg = encouragements[Random().nextInt(encouragements.length)];
+                                  ScaffoldMessenger.of(ctx).clearSnackBars();
+                                  ScaffoldMessenger.of(ctx).showSnackBar(
+                                    SnackBar(content: Text(msg), duration: const Duration(seconds: 2)),
+                                  );
+                                }
                               }
 
                               final bubble = app.recentBadgeBubble;
@@ -1406,6 +1269,7 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                           },
                           onLongPress: () {
                             this._isLongPress = true;
+                            HapticFeedback.mediumImpact();
                             app.incrementPizookie(id);
                             int xpEarned = 25;
                             _showFlash(
@@ -1429,20 +1293,18 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                                     // Current level (left) - big, bold, with background, wider for double digits
                                     GestureDetector(
                                       onLongPress: () {
-                                        Future.delayed(const Duration(seconds: 2), () {
-                                          showDialog(
-                                            context: context,
-                                            builder: (context) => Dialog(
-                                              insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 60),
-                                              backgroundColor: Colors.transparent,
-                                              child: SizedBox(
-                                                width: 340,
-                                                height: 520,
-                                                child: ProfileDetailScreen(serverId: id),
-                                              ),
+                                        showDialog(
+                                          context: context,
+                                          builder: (context) => Dialog(
+                                            insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 60),
+                                            backgroundColor: Colors.transparent,
+                                            child: SizedBox(
+                                              width: 340,
+                                              height: 520,
+                                              child: ProfileDetailScreen(serverId: id),
                                             ),
-                                          );
-                                        });
+                                          ),
+                                        );
                                       },
                                       child: Container(
                                         width: 44,
@@ -1592,6 +1454,7 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                         padding: const EdgeInsets.all(8),
                       ),
                       onPressed: () {
+                        HapticFeedback.lightImpact();
                         final achievement = app.increment(id);
                         int xpEarned = 10;
                         bool isAchievement = false;
@@ -1617,11 +1480,19 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                             forAchievement: isAchievement,
                           );
                         }
-                        final msg = encouragements[Random().nextInt(encouragements.length)];
-                        ScaffoldMessenger.of(ctx).clearSnackBars();
-                        ScaffoldMessenger.of(ctx).showSnackBar(
-                          SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),
-                        );
+                        // Throttle encouragements so rapid taps don't spam
+                        // snackbars; skip when a badge already flashed.
+                        if (app.settings.encouragementFlashEnabled && achievement == null) {
+                          _runsSinceEncouragement++;
+                          if (_runsSinceEncouragement >= 4) {
+                            _runsSinceEncouragement = 0;
+                            final msg = encouragements[Random().nextInt(encouragements.length)];
+                            ScaffoldMessenger.of(ctx).clearSnackBars();
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              SnackBar(content: Text(msg), duration: const Duration(seconds: 2)),
+                            );
+                          }
+                        }
 
                         final bubble = app.recentBadgeBubble;
                         if (bubble != null) {
@@ -1632,6 +1503,7 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                         }
                       },
                       onLongPress: () {
+                        HapticFeedback.mediumImpact();
                         app.incrementPizookie(id);
                         int xpEarned = 25;
                         _showFlash(
@@ -1652,20 +1524,18 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                                 // Current level (left) - big, bold, with background, wider for double digits
                                 GestureDetector(
                                   onLongPress: () {
-                                    Future.delayed(const Duration(seconds: 2), () {
-                                      showDialog(
-                                        context: context,
-                                        builder: (context) => Dialog(
-                                          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 60),
-                                          backgroundColor: Colors.transparent,
-                                          child: SizedBox(
-                                            width: 340,
-                                            height: 520,
-                                            child: ProfileDetailScreen(serverId: id),
-                                          ),
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => Dialog(
+                                        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 60),
+                                        backgroundColor: Colors.transparent,
+                                        child: SizedBox(
+                                          width: 340,
+                                          height: 520,
+                                          child: ProfileDetailScreen(serverId: id),
                                         ),
-                                      );
-                                    });
+                                      ),
+                                    );
                                   },
                                   child: Container(
                                     width: 44,
@@ -1864,7 +1734,7 @@ class _ActiveGridState extends State<_ActiveGrid> with TickerProviderStateMixin 
                       child: AnimatedBuilder(
                         animation: _achievementController!,
                         builder: (context, child) {
-                          print('[AchievementOverlay] builder: _achievementText=$_achievementText, controller.value=${_achievementController!.value}');
+                          logDebug('[AchievementOverlay] builder: _achievementText=$_achievementText, controller.value=${_achievementController!.value}');
                           final opacity = 1.0 - _achievementController!.value;
                           final scale = 1.0 + 0.2 * (1.0 - _achievementController!.value);
                           return Opacity(

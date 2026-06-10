@@ -1,11 +1,15 @@
 /// Register a Pizookie run: counts as a run, +2 points, +1 pizookieRuns
 import 'dart:async';
 import 'dart:math';
+import 'package:clock/clock.dart';
 import 'package:flutter/foundation.dart';
 import 'package:collection/collection.dart';
 import 'models.dart';
 import 'storage.dart';
 import 'gamification.dart';
+import 'ranks.dart';
+import 'leaderboard.dart';
+import 'logging.dart';
 
 String _randId() {
   final r = Random();
@@ -93,6 +97,32 @@ class ServerProfile {
     'avatarHistory': avatarHistory,
   };
 }
+/// A run that pushed a server up a level (and possibly into a new rank tier).
+class LevelUpInfo {
+  final String serverId;
+  final int newLevel;
+  final bool tieredUp;
+  final String tierName;
+  const LevelUpInfo({
+    required this.serverId,
+    required this.newLevel,
+    required this.tieredUp,
+    required this.tierName,
+  });
+}
+
+/// A run that moved [runnerId] above [passedId] on the live leaderboard.
+class PassEvent {
+  final String runnerId;
+  final String passedId;
+  final String passedName;
+  const PassEvent({
+    required this.runnerId,
+    required this.passedId,
+    required this.passedName,
+  });
+}
+
 class AppState extends ChangeNotifier {
   String? _lastRunServerId;
   String? get lastRunServerId => _lastRunServerId;
@@ -108,84 +138,39 @@ class AppState extends ChangeNotifier {
   String? incrementPizookie(String id) {
     if (!_shiftActive || !_workingServerIds.contains(id)) return null;
 
-    final now = DateTime.now();
+    final now = clock.now();
     const delta = 1;
     const pizookiePoints = 25;
 
-  _currentCounts[id] = (_currentCounts[id] ?? 0) + delta;
-  lastRunServerId = id;
+    final countBefore = _currentCounts[id] ?? 0;
+    final teamBefore = _teamTotalThisShift;
+
+    _currentCounts[id] = (_currentCounts[id] ?? 0) + delta;
+    lastRunServerId = id;
     _teamTotalThisShift += delta;
-
-    // Increment per-shift pizookie count
     _currentPizookieCounts[id] = (_currentPizookieCounts[id] ?? 0) + delta;
-
     _currentStreaks[id] = (_currentStreaks[id] ?? 0) + 1;
     final sCount = _currentCounts[id]!;
     final prof = _profiles[id] ?? ServerProfile();
     final serverName = serverById(id)?.name ?? 'Server';
-
+    final levelBefore = prof.level;
 
     prof.points += pizookiePoints;
     prof.allTimeRuns += delta;
     prof.pizookieRuns += delta;
-    print('[DEBUG] Server $id ran a Pizookie: \\${prof.points} XP, level \\${prof.level}, allTimeRuns: \\${prof.allTimeRuns}, pizookieRuns: \\${prof.pizookieRuns}');
 
-    final prevIso = prof.lastTapIso;
-    prof.lastTapIso = now.toIso8601String();
-    if (prevIso != null) {
-      final prev = DateTime.tryParse(prevIso);
-      if (prev != null) {
-        final ms = now.difference(prev).inMilliseconds;
-        if (ms > 0 && ms < 20 * 60 * 1000) {
-          prof.tapIntervalsMsSum += ms;
-          prof.tapIntervalsCount += 1;
-        }
-      }
-    }
+    _recordTapInterval(prof, now);
 
     if (settings.gamificationEnabled) {
-      if (_currentStreaks[id]! > prof.streakBest) {
-        prof.streakBest = _currentStreaks[id]!;
-      }
-      if (prof.streakBest >= 3) _awardOnce(prof, 'three_streak', serverName);
-      if (prof.streakBest >= 5) _awardOnce(prof, 'five_streak', serverName);
-
-      if (sCount >= 10) _awardOnce(prof, 'ten_in_shift', serverName);
-      if (sCount >= 20) _awardOnce(prof, 'twenty_in_shift', serverName);
-      if (now.hour >= 23) _awardOnce(prof, 'night_owl', serverName);
-
-      _awardOnce(prof, 'first_run_today', serverName);
-      if (prof.allTimeRuns == 0 && !_profiles.containsKey('first_run_\\${id}_awarded')) {
-        _awardOnce(prof, 'first_run', serverName);
-      }
-
-      if (isLunchPeak(now)) {
-        _lunchPeakCount[id] = (_lunchPeakCount[id] ?? 0) + delta;
-        if (_lunchPeakCount[id]! >= 10) _awardOnce(prof, 'lunch_peak_10', serverName);
-      }
-      if (isDinnerPeak(now)) {
-        _dinnerPeakCount[id] = (_dinnerPeakCount[id] ?? 0) + delta;
-        if (_dinnerPeakCount[id]! >= 10) _awardOnce(prof, 'dinner_peak_10', serverName);
-      }
-      if (isLunchCloser(now)) {
-        _lunchCloserCount[id] = (_lunchCloserCount[id] ?? 0) + delta;
-        if (_lunchCloserCount[id]! >= 8) _awardOnce(prof, 'lunch_closer_8', serverName);
-      }
-      if (isDinnerCloser(now)) {
-        _dinnerCloserCount[id] = (_dinnerCloserCount[id] ?? 0) + delta;
-        if (_dinnerCloserCount[id]! >= 8) _awardOnce(prof, 'dinner_closer_8', serverName);
-      }
+      _awardStreakAndShiftBadges(prof, id, sCount, serverName, now);
+      _awardPeakCloserBadges(prof, id, serverName, now);
     }
 
     _profiles[id] = prof;
-
-    final minuteEpoch = DateTime(now.year, now.month, now.day, now.hour, now.minute).millisecondsSinceEpoch;
-    _tapPerMinute.putIfAbsent(id, () => <int, int>{});
-    _tapPerMinute[id]![minuteEpoch] = (_tapPerMinute[id]![minuteEpoch] ?? 0) + 1;
-    _persistTapLog();
-    _persistProfiles();
-    _persistTotals();
-
+    _noteLevelUp(id, levelBefore, prof);
+    _notePass(id, countBefore);
+    _noteTeamMilestone(teamBefore);
+    _recordTapBucketAndPersist(id, now);
     notifyListeners();
     return null;
   }
@@ -222,13 +207,24 @@ class AppState extends ChangeNotifier {
   final Map<String, Map<int, int>> _tapPerMinute = {};
   String? _recentBadgeBubble;
   Timer? _ticker;
+  bool _disposed = false;
 
   // Roster toggle state: 'auto', 'lunch', 'dinner'
   String _activeRosterView = 'auto';
 
   // expose
-  List<Server> get servers =>
+  // Active servers only — archived users are hidden from every feature and
+  // report that reads this. Use [allServers] for admin management screens.
+  List<Server> get servers => List.unmodifiable(_servers
+      .where((s) => !s.archived)
+      .sorted((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase())));
+  // Every server including archived ones (admin management only).
+  List<Server> get allServers =>
       List.unmodifiable(_servers.sorted((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase())));
+  /// Whether [id] refers to a server that is currently active (exists and not
+  /// archived). Reporting screens use this to skip archived/removed servers.
+  bool isActiveServer(String id) =>
+      _servers.any((s) => s.id == id && !s.archived);
   Map<String, int> get totals => Map.unmodifiable(_totals);
   Map<String, ServerProfile> get profiles => Map.unmodifiable(_profiles);
   WeeklyHours get hours => _hours;
@@ -248,61 +244,87 @@ class AppState extends ChangeNotifier {
     _recentBadgeBubble = null;
   }
 
-  // Roster toggle logic
-  String get activeRosterView => _activeRosterView;
-  void toggleRosterView() {
-    final plan = _todayPlan;
-    if (_activeRosterView == 'lunch') {
-      _activeRosterView = 'dinner';
-      if (plan != null) {
-        final now = DateTime.now();
-        final m = now.hour * 60 + now.minute;
-        final start = plan.transitionStartMinutes;
-        final end = plan.transitionEndMinutes;
-        if (m >= start && m < end) {
-          // During transition, ensure all dinner servers (including dinner-only) are added and tracked
-          updateActiveRoster(plan.dinnerRoster, preserveExistingCounts: true);
-        } else {
-          // At the end of transition, only reset counts for servers who are in both lunch and dinner rosters
-          final lunchSet = plan.lunchRoster.toSet();
-          final dinnerSet = plan.dinnerRoster.toSet();
-          final both = lunchSet.intersection(dinnerSet);
-          final dinnerOnly = dinnerSet.difference(lunchSet);
-          // First, preserve counts for dinner-only servers and keep them in workingServerIds
-          updateActiveRoster(plan.dinnerRoster, preserveExistingCounts: true);
-          // Then, reset counts for servers in both lunch and dinner
-          for (final id in both) {
-            _currentCounts[id] = 0;
-            _currentStreaks[id] = 0;
-            _lunchPeakCount[id] = 0;
-            _dinnerPeakCount[id] = 0;
-            _lunchCloserCount[id] = 0;
-            _dinnerCloserCount[id] = 0;
-          }
-          // Dinner-only servers keep their counts
-          notifyListeners();
-        }
-      }
-    } else if (_activeRosterView == 'dinner') {
-      _activeRosterView = 'lunch';
-      if (plan != null) {
-        final now = DateTime.now();
-        final m = now.hour * 60 + now.minute;
-        final start = plan.transitionStartMinutes;
-        final end = plan.transitionEndMinutes;
-        if (m >= start && m < end) {
-          updateActiveRoster(plan.lunchRoster, preserveExistingCounts: true);
-        } else {
-          updateActiveRoster(plan.lunchRoster);
-        }
-      }
-    } else {
-      final now = DateTime.now();
-      final m = now.hour * 60 + now.minute;
-      _activeRosterView = m >= dinnerFullSwitchMinutes ? 'lunch' : 'dinner';
-    }
-    notifyListeners();
+  // Most recent level-up caused by a run (consumed by the UI to celebrate).
+  LevelUpInfo? _recentLevelUp;
+  LevelUpInfo? get recentLevelUp => _recentLevelUp;
+  void clearRecentLevelUp() {
+    _recentLevelUp = null;
   }
+
+  // Most recent "passed a coworker" event on the live shift leaderboard.
+  PassEvent? _recentPass;
+  PassEvent? get recentPass => _recentPass;
+  void clearRecentPass() {
+    _recentPass = null;
+  }
+
+  // Most recent team run-total milestone reached this shift.
+  int? _recentTeamMilestone;
+  int? get recentTeamMilestone => _recentTeamMilestone;
+  void clearRecentTeamMilestone() {
+    _recentTeamMilestone = null;
+  }
+
+  /// Live shift standings (working servers ranked by current runs).
+  List<LeaderboardEntry> currentShiftLeaderboard() =>
+      rankBy(_currentCounts, include: _workingServerIds);
+
+  /// All-time standings across active (non-archived) servers.
+  List<LeaderboardEntry> allTimeLeaderboard() {
+    final ids = _servers.where((s) => !s.archived).map((s) => s.id);
+    return rankBy({for (final id in ids) id: allTimeFor(id)}, include: ids);
+  }
+
+  // Records a level-up if [prof] crossed a level boundary during a run.
+  void _noteLevelUp(String id, int levelBefore, ServerProfile prof) {
+    final after = prof.level;
+    if (after > levelBefore) {
+      _recentLevelUp = LevelUpInfo(
+        serverId: id,
+        newLevel: after,
+        tieredUp: isTierUp(levelBefore, after),
+        tierName: tierForLevel(after).name,
+      );
+    }
+  }
+
+  // Records the coworker [id] just overtook on the live leaderboard, if any.
+  void _notePass(String id, int countBefore) {
+    String? passedId;
+    var passedVal = -1;
+    final countAfter = _currentCounts[id] ?? 0;
+    for (final other in _workingServerIds) {
+      if (other == id) continue;
+      final ov = _currentCounts[other] ?? 0;
+      // Overtook `other` if they were at/above me before but are now strictly
+      // below; pick the closest competitor I passed.
+      if (countBefore <= ov && countAfter > ov && ov > passedVal) {
+        passedVal = ov;
+        passedId = other;
+      }
+    }
+    if (passedId != null) {
+      _recentPass = PassEvent(
+        runnerId: id,
+        passedId: passedId,
+        passedName: serverById(passedId)?.name ?? 'a coworker',
+      );
+    }
+  }
+
+  static const _teamMilestones = [25, 50, 75, 100, 150, 200, 300, 400, 500];
+
+  // Records a team milestone if this run pushed the team total across one.
+  void _noteTeamMilestone(int totalBefore) {
+    for (final m in _teamMilestones) {
+      if (totalBefore < m && _teamTotalThisShift >= m) {
+        _recentTeamMilestone = m;
+      }
+    }
+  }
+
+  // Roster view (auto/lunch/dinner), used by the home screen for display.
+  String get activeRosterView => _activeRosterView;
 
   void resetRosterView() {
     _activeRosterView = 'auto';
@@ -310,7 +332,7 @@ class AppState extends ChangeNotifier {
   }
 
   List<String> get currentRoster {
-    final now = DateTime.now();
+    final now = clock.now();
     final m = now.hour * 60 + now.minute;
     if (_activeRosterView == 'lunch') {
       return _todayPlan?.lunchRoster ?? [];
@@ -372,7 +394,7 @@ class AppState extends ChangeNotifier {
     final hm = (await Storage.settingsBox.get('weekly_hours') as Map?) ?? {};
     _hours = hm.isEmpty ? WeeklyHours.defaults() : WeeklyHours.fromMap(Map<String, dynamic>.from(hm));
 
-    final ymd = _ymd(DateTime.now());
+    final ymd = _ymd(clock.now());
     final dp = (await Storage.dayPlanBox.get(ymd) as Map?) ?? {};
     _todayPlan = dp.isEmpty ? null : DayPlan.fromMap(Map<String, dynamic>.from(dp));
 
@@ -396,28 +418,36 @@ class AppState extends ChangeNotifier {
       await Storage.settingsBox.put('gamification', settings.toMap());
     }
 
+    // Restore an in-progress shift if the app was restarted mid-shift today.
+    final csRaw = (await Storage.currentShiftBox.get('snapshot') as Map?) ?? {};
+    if (csRaw.isNotEmpty && csRaw['ymd'] == ymd) {
+      _restoreCurrentShift(Map<String, dynamic>.from(csRaw));
+    } else if (csRaw.isNotEmpty) {
+      await Storage.currentShiftBox.delete('snapshot'); // stale (previous day)
+    }
+
     _teamGoal = _computeGoalFromHistory();
 
     _startTicker();
     _maybeActivateShiftByClock();
+    // If the lunch->dinner handoff came due while the app was closed, finish it
+    // now instead of waiting for the next tick.
+    _maybeFinalizeLunchToDinner();
     notifyListeners();
   }
 
   // Save a partial shift record for only a subset of servers (e.g., lunch at transition)
   void _savePartialShift(String type, Map<String, int> counts, Map<String, int> pizookieCounts) {
-    // If saving a Lunch shift, filter out dinner-only servers from counts
-    Map<String, int> filteredCounts = counts;
-    Map<String, int> filteredPizookieCounts = pizookieCounts;
-    if (type == 'Lunch' && _todayPlan != null) {
-      final lunchSet = _todayPlan!.lunchRoster.toSet();
-      filteredCounts = Map.fromEntries(counts.entries.where((e) => lunchSet.contains(e.key)));
-      filteredPizookieCounts = Map.fromEntries(pizookieCounts.entries.where((e) => lunchSet.contains(e.key)));
-    }
+    // Save exactly the counts the caller passes. (The caller decides which
+    // servers belong to this partial shift; do not re-filter here, or runs
+    // from servers removed from the roster mid-shift would be dropped.)
+    final filteredCounts = counts;
+    final filteredPizookieCounts = pizookieCounts;
     final rec = ShiftRecord(
       id: _randId(),
       label: type,
       shiftType: type,
-      start: _shiftStart ?? DateTime.now(),
+      start: _shiftStart ?? clock.now(),
       counts: filteredCounts,
       pizookieCounts: filteredPizookieCounts,
     );
@@ -475,111 +505,116 @@ class AppState extends ChangeNotifier {
     _ticker = Timer.periodic(const Duration(seconds: 30), (_) {
       _maybeActivateShiftByClock();
       _pruneOldTapBuckets();
-
-      // --- CRITICAL TRANSITION LOGIC - DO NOT MODIFY WITHOUT CAREFUL TESTING ---
-      // This section handles the complex lunch-to-dinner transition that preserves
-      // dinner-only server counts while resetting both-shift servers to 0.
-      // 
-      // EXPECTED BEHAVIOR:
-      // - Lunch-only servers: Work until transition end, then removed
-      // - Both-shift servers: Work both shifts, reset to 0 at dinner start  
-      // - Dinner-only servers: Start during transition, preserve counts into dinner
-      //
-      // ROSTER LOGIC:
-      // - dinnerOnly = servers in dinner roster but NOT in lunch roster
-      // - bothShifts = servers in BOTH lunch AND dinner rosters
-      // - lunchOnly = servers in lunch roster but NOT in dinner roster (auto-removed)
-      //
-      // ⚠️ CRITICAL: Order of operations matters for count preservation!
-      // ⚠️ See commit a7fa1ef for working implementation details
-      // --- Auto-switch from lunch to dinner at end of transition ---
-      final now = DateTime.now();
-      final m = now.hour * 60 + now.minute;
-      final plan = _todayPlan;
-      if (plan != null) {
-        final end = plan.transitionEndMinutes;
-        // Only at the END of transition, finalize and clear lunch server counts
-        if (m >= end && _activeRosterView != 'dinner' && _shiftType == 'Lunch') {
-          final lunchIds = plan.lunchRoster;
-          final dinnerIds = plan.dinnerRoster;
-          
-          // FIRST: Preserve dinner-only server counts BEFORE any clearing
-          final lunchSet = lunchIds.toSet();
-          final dinnerSet = dinnerIds.toSet();
-          final dinnerOnly = dinnerSet.difference(lunchSet);
-          final bothShifts = dinnerSet.intersection(lunchSet);
-          final preservedCounts = <String, int>{};
-          final preservedStreaks = <String, int>{};
-          final preservedPizookies = <String, int>{};
-          
-          print('[DEBUG] Lunch roster: $lunchIds');
-          print('[DEBUG] Dinner roster: $dinnerIds');
-          print('[DEBUG] Dinner-only servers: $dinnerOnly');
-          print('[DEBUG] Both-shift servers: $bothShifts');
-          print('[DEBUG] Preserving dinner-only servers: $dinnerOnly');
-          
-          for (final id in dinnerOnly) {
-            preservedCounts[id] = _currentCounts[id] ?? 0;
-            preservedStreaks[id] = _currentStreaks[id] ?? 0;
-            preservedPizookies[id] = _currentPizookieCounts[id] ?? 0;
-            print('[DEBUG] Backing up server $id: ${preservedCounts[id]} counts');
-          }
-          
-          // SECOND: Save lunch shift data
-          final lunchCounts = Map<String, int>.fromEntries(
-            _currentCounts.entries.where((e) => lunchIds.contains(e.key)));
-          final lunchPizookieCounts = Map<String, int>.fromEntries(
-            _currentPizookieCounts.entries.where((e) => lunchIds.contains(e.key)));
-          _savePartialShift('Lunch', lunchCounts, lunchPizookieCounts);
-          
-          // THIRD: Remove lunch-only servers from all maps
-          _currentCounts.removeWhere((id, _) => lunchIds.contains(id) && !dinnerIds.contains(id));
-          _currentStreaks.removeWhere((id, _) => lunchIds.contains(id) && !dinnerIds.contains(id));
-          _lunchPeakCount.removeWhere((id, _) => lunchIds.contains(id) && !dinnerIds.contains(id));
-          _dinnerPeakCount.removeWhere((id, _) => lunchIds.contains(id) && !dinnerIds.contains(id));
-          _lunchCloserCount.removeWhere((id, _) => lunchIds.contains(id) && !dinnerIds.contains(id));
-          _dinnerCloserCount.removeWhere((id, _) => lunchIds.contains(id) && !dinnerIds.contains(id));
-          _currentPizookieCounts.removeWhere((id, _) => lunchIds.contains(id) && !dinnerIds.contains(id));
-          
-          // FOURTH: Start dinner shift
-          _beginShift('Dinner', plan.dinnerRoster, preserveCounts: true);
-          _shiftActive = true;
-          
-          // FIFTH: Restore dinner-only server counts
-          print('[DEBUG] Restoring dinner-only server counts...');
-          for (final id in dinnerOnly) {
-            _currentCounts[id] = preservedCounts[id]!;
-            _currentStreaks[id] = preservedStreaks[id]!;
-            _currentPizookieCounts[id] = preservedPizookies[id]!;
-            print('[DEBUG] Restored server $id: ${_currentCounts[id]} counts');
-          }
-          
-          // SIXTH: Reset counts ONLY for servers in both lunch and dinner (after restoration)
-          print('[DEBUG] Resetting both-shift servers: $bothShifts');
-          for (final id in bothShifts) {
-            print('[DEBUG] Before reset - server $id: ${_currentCounts[id]} counts');
-            _currentCounts[id] = 0;
-            _currentStreaks[id] = 0;
-            _lunchPeakCount[id] = 0;
-            _dinnerPeakCount[id] = 0;
-            _lunchCloserCount[id] = 0;
-            _dinnerCloserCount[id] = 0;
-            _currentPizookieCounts[id] = 0; // Reset pizookie counts too
-            print('[DEBUG] After reset - server $id: ${_currentCounts[id]} counts');
-          }
-          
-          // SEVENTH: Update active roster to ensure all dinner servers are in working IDs
-          _workingServerIds.clear();
-          _workingServerIds.addAll(plan.dinnerRoster);
-          
-          _activeRosterView = 'dinner';
-          print('[DEBUG] Dinner shift active: $_shiftActive');
-          print('[DEBUG] Working servers: $_workingServerIds');
-          print('[DEBUG] Current counts: $_currentCounts');
-          notifyListeners();
-        }
-      }
+      _maybeFinalizeLunchToDinner();
     });
+  }
+
+  /// Finalizes the lunch->dinner handoff once the day plan's transition window
+  /// has ended. Driven by the periodic ticker.
+  ///
+  /// Behavior is locked in by test/transition_logic_test.dart:
+  ///  - lunch-only servers (in lunch, not dinner) are removed
+  ///  - both-shift servers (in lunch AND dinner) are reset to 0
+  ///  - dinner-only servers (in dinner, not lunch) keep the counts they
+  ///    accumulated during the transition window
+  ///
+  /// Order matters: dinner-only counts are backed up before clearing and
+  /// restored after the dinner shift starts.
+  void _maybeFinalizeLunchToDinner() {
+    final plan = _todayPlan;
+    if (plan == null) return;
+
+    final now = clock.now();
+    final m = now.hour * 60 + now.minute;
+    final pastTransitionEnd = m >= plan.transitionEndMinutes;
+    if (!pastTransitionEnd || _activeRosterView == 'dinner' || _shiftType != 'Lunch') {
+      return;
+    }
+
+    final lunchSet = plan.lunchRoster.toSet();
+    final dinnerSet = plan.dinnerRoster.toSet();
+    final dinnerOnly = dinnerSet.difference(lunchSet);
+    final bothShifts = dinnerSet.intersection(lunchSet);
+
+    // Per-server, per-shift counters that move together through a transition.
+    final counters = <Map<String, int>>[
+      _currentCounts,
+      _currentStreaks,
+      _lunchPeakCount,
+      _dinnerPeakCount,
+      _lunchCloserCount,
+      _dinnerCloserCount,
+      _currentPizookieCounts,
+    ];
+
+    // 1. Back up dinner-only counts before anything is cleared.
+    final preservedCounts = {for (final id in dinnerOnly) id: _currentCounts[id] ?? 0};
+    final preservedStreaks = {for (final id in dinnerOnly) id: _currentStreaks[id] ?? 0};
+    final preservedPizookies = {
+      for (final id in dinnerOnly) id: _currentPizookieCounts[id] ?? 0
+    };
+
+    // 2. Persist the completed lunch shift. Save EVERY server's runs except
+    //    current dinner-only servers (whose runs carry forward into dinner).
+    //    This deliberately includes servers who were removed from the lunch
+    //    roster mid-shift — their runs still belong to the lunch record.
+    final lunchCounts = {
+      for (final e in _currentCounts.entries)
+        if (!dinnerOnly.contains(e.key)) e.key: e.value
+    };
+    final lunchPizookieCounts = {
+      for (final e in _currentPizookieCounts.entries)
+        if (!dinnerOnly.contains(e.key)) e.key: e.value
+    };
+    _savePartialShift('Lunch', lunchCounts, lunchPizookieCounts);
+
+    // 3. Drop everyone who isn't on the dinner roster from the live counters;
+    //    their runs were just recorded in the lunch shift. Only the dinner
+    //    roster continues (lunch-only and mid-shift-removed servers are gone).
+    for (final counter in counters) {
+      counter.removeWhere((id, _) => !dinnerSet.contains(id));
+    }
+
+    // 4. Start the dinner shift, keeping existing dinner-roster counts.
+    _beginShift('Dinner', plan.dinnerRoster, preserveCounts: true);
+    _shiftActive = true;
+
+    // 5. Restore dinner-only servers' preserved transition counts.
+    for (final id in dinnerOnly) {
+      _currentCounts[id] = preservedCounts[id]!;
+      _currentStreaks[id] = preservedStreaks[id]!;
+      _currentPizookieCounts[id] = preservedPizookies[id]!;
+    }
+
+    // 6. Reset both-shift servers to a clean dinner start.
+    for (final id in bothShifts) {
+      for (final counter in counters) {
+        counter[id] = 0;
+      }
+    }
+
+    // 7. The working set is exactly the dinner roster.
+    _workingServerIds
+      ..clear()
+      ..addAll(plan.dinnerRoster);
+    _activeRosterView = 'dinner';
+
+    logDebug('[transition] lunch->dinner complete; '
+        'working=$_workingServerIds counts=$_currentCounts');
+    _persistCurrentShift();
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    // Cancel the periodic shift-clock ticker so it doesn't leak past the
+    // lifetime of this notifier (and so widget tests don't see a pending
+    // timer). Idempotent: safe to call more than once.
+    if (_disposed) return;
+    _disposed = true;
+    _ticker?.cancel();
+    _ticker = null;
+    super.dispose();
   }
 
   Future<void> _persistServers() async =>
@@ -588,7 +623,9 @@ class AppState extends ChangeNotifier {
   Future<void> _persistHistory() async =>
       Storage.shiftsBox.put('list', _history.map((h) => h.toMap()).toList());
   Future<void> _persistProfiles() async {
-    for (final e in _profiles.entries) {
+    // Snapshot before the async loop: _profiles can be mutated (e.g. a server
+    // archived/deleted) while this fire-and-forget persist is in flight.
+    for (final e in _profiles.entries.toList()) {
       await Storage.profilesBox.put(e.key, e.value.toMap());
     }
   }
@@ -601,6 +638,73 @@ class AppState extends ChangeNotifier {
   Future<void> _persistTapLog() async {
     final map = _tapPerMinute.map((sid, m) => MapEntry(sid, m.map((k, v) => MapEntry(k.toString(), v))));
     await Storage.tapBox.put('per_minute', map);
+  }
+
+  /// Persists a snapshot of the in-progress shift so live run counts survive an
+  /// app restart/crash. Tagged with today's date; a stale snapshot from a
+  /// previous day is ignored (and cleared) on load.
+  Future<void> _persistCurrentShift() async {
+    final snapshot = <String, dynamic>{
+      'ymd': _ymd(clock.now()),
+      'shiftActive': _shiftActive,
+      'shiftPaused': _shiftPaused,
+      'shiftType': _shiftType,
+      'shiftStart': _shiftStart?.toIso8601String(),
+      'activeRosterView': _activeRosterView,
+      'workingServerIds': _workingServerIds.toList(),
+      'currentCounts': _currentCounts,
+      'currentStreaks': _currentStreaks,
+      'currentPizookieCounts': _currentPizookieCounts,
+      'lunchPeakCount': _lunchPeakCount,
+      'dinnerPeakCount': _dinnerPeakCount,
+      'lunchCloserCount': _lunchCloserCount,
+      'dinnerCloserCount': _dinnerCloserCount,
+      'teamTotalThisShift': _teamTotalThisShift,
+    };
+    await Storage.currentShiftBox.put('snapshot', snapshot);
+  }
+
+  Future<void> _clearPersistedCurrentShift() async {
+    await Storage.currentShiftBox.delete('snapshot');
+  }
+
+  void _restoreCurrentShift(Map<String, dynamic> m) {
+    Map<String, int> ints(dynamic v) => v == null
+        ? <String, int>{}
+        : Map<String, int>.from(
+            (v as Map).map((k, val) => MapEntry(k as String, val as int)));
+
+    _shiftActive = (m['shiftActive'] as bool?) ?? false;
+    _shiftPaused = (m['shiftPaused'] as bool?) ?? false;
+    _shiftType = (m['shiftType'] as String?) ?? 'Lunch';
+    _shiftStart =
+        m['shiftStart'] != null ? DateTime.tryParse(m['shiftStart'] as String) : null;
+    _activeRosterView = (m['activeRosterView'] as String?) ?? 'auto';
+    _workingServerIds
+      ..clear()
+      ..addAll((m['workingServerIds'] as List?)?.cast<String>() ?? const <String>[]);
+    _currentCounts
+      ..clear()
+      ..addAll(ints(m['currentCounts']));
+    _currentStreaks
+      ..clear()
+      ..addAll(ints(m['currentStreaks']));
+    _currentPizookieCounts
+      ..clear()
+      ..addAll(ints(m['currentPizookieCounts']));
+    _lunchPeakCount
+      ..clear()
+      ..addAll(ints(m['lunchPeakCount']));
+    _dinnerPeakCount
+      ..clear()
+      ..addAll(ints(m['dinnerPeakCount']));
+    _lunchCloserCount
+      ..clear()
+      ..addAll(ints(m['lunchCloserCount']));
+    _dinnerCloserCount
+      ..clear()
+      ..addAll(ints(m['dinnerCloserCount']));
+    _teamTotalThisShift = (m['teamTotalThisShift'] as int?) ?? 0;
   }
 
   Future<void> saveSettings(GamificationSettings s) async {
@@ -628,7 +732,7 @@ class AppState extends ChangeNotifier {
   }
 
   void setTodayPlan(List<String> lunch, List<String> dinner) {
-    final ymd = _ymd(DateTime.now());
+    final ymd = _ymd(clock.now());
     _todayPlan = DayPlan(
       ymd: ymd,
       lunchRoster: List.of(lunch),
@@ -638,11 +742,33 @@ class AppState extends ChangeNotifier {
     );
     _persistDayPlan();
     _maybeActivateShiftByClock();
+    // Keep the active floor in sync with the edited plan, non-destructively,
+    // so every roster screen behaves the same and editing never zeroes runs.
+    if (_shiftActive) _syncFloorToPlan();
     notifyListeners();
   }
 
+  /// Reconciles the working set ("who can tap right now") to today's plan for
+  /// the current time: lunch roster before the transition, the union of both
+  /// rosters during it, and the dinner roster after. Non-destructive.
+  void _syncFloorToPlan() {
+    final plan = _todayPlan;
+    if (plan == null) return;
+    final now = clock.now();
+    final m = now.hour * 60 + now.minute;
+    final List<String> floor;
+    if (m >= plan.transitionStartMinutes && m < plan.transitionEndMinutes) {
+      floor = [...plan.lunchRoster, ...plan.dinnerRoster];
+    } else if (_shiftType == 'Dinner') {
+      floor = plan.dinnerRoster;
+    } else {
+      floor = plan.lunchRoster;
+    }
+    updateActiveRoster(floor);
+  }
+
   bool forceStartCurrentShift() {
-    final now = DateTime.now();
+    final now = clock.now();
     if (_todayPlan == null) return false;
     final intended = currentIntendedShiftType(now);
     final roster = intended == 'Lunch' ? _todayPlan!.lunchRoster : _todayPlan!.dinnerRoster;
@@ -652,7 +778,7 @@ class AppState extends ChangeNotifier {
   }
 
   bool get isOpenNow {
-    final now = DateTime.now();
+    final now = clock.now();
   final wd = AppState.weekday(now);
     final open = _hours.openMinutes[wd] ?? 11 * 60;
     final close = _hours.closeMinutes[wd] ?? 23 * 60;
@@ -670,17 +796,16 @@ class AppState extends ChangeNotifier {
   }
 
   void _maybeActivateShiftByClock() {
-    final now = DateTime.now();
+    final now = clock.now();
     final ymd = _ymd(now);
-    print('[DEBUG] _maybeActivateShiftByClock called at $now');
     
     if (_todayPlan == null || _todayPlan!.ymd != ymd) {
       if (_shiftActive) {
         // Don't clear state if a shift is active; just log a warning
-        print('[WARNING] _maybeActivateShiftByClock: _todayPlan missing or date mismatch, but shift is active. State NOT cleared.');
+        logDebug('[WARNING] _maybeActivateShiftByClock: _todayPlan missing or date mismatch, but shift is active. State NOT cleared.');
         return;
       } else {
-        print('[DEBUG] _maybeActivateShiftByClock: No plan for today, clearing state');
+        logDebug('[DEBUG] _maybeActivateShiftByClock: No plan for today, clearing state');
         _shiftActive = false;
         _shiftPaused = false;
         _workingServerIds.clear();
@@ -704,54 +829,52 @@ class AppState extends ChangeNotifier {
     final shouldBeActiveLunch = m >= open && m < transitionEnd && (_shiftType == 'Lunch' || intended == 'Lunch') && roster.isNotEmpty && !_shiftPaused;
     final shouldBeActiveDinner = m >= transitionEnd && m < close && (_shiftType == 'Dinner' || intended == 'Dinner') && roster.isNotEmpty && !_shiftPaused;
 
-    print('[DEBUG] _maybeActivateShiftByClock: m=$m, open=$open, close=$close, transitionEnd=$transitionEnd');
-    print('[DEBUG] _maybeActivateShiftByClock: intended=$intended, _shiftType=$_shiftType, _shiftActive=$_shiftActive');
-    print('[DEBUG] _maybeActivateShiftByClock: shouldBeActiveLunch=$shouldBeActiveLunch, shouldBeActiveDinner=$shouldBeActiveDinner');
 
     final switchingToDinner = intended == 'Dinner' && _shiftType == 'Lunch' && _shiftActive;
 
     if (switchingToDinner) {
-      // Only finalize lunch and start dinner at the END of transition
-      print('[DEBUG] _maybeActivateShiftByClock: switchingToDinner, returning early');
+      // Transition window (intended is Dinner but the lunch shift is still
+      // running until transitionEnd). Keep BOTH crews on the floor so arriving
+      // dinner-only servers can log runs without a manual toggle. Lunch counts
+      // are untouched; the lunch->dinner handoff is finalized at transitionEnd
+      // by _maybeFinalizeLunchToDinner().
+      _ensureWorkingServers(
+          {..._todayPlan!.lunchRoster, ..._todayPlan!.dinnerRoster});
       return;
     }
 
     // During transition, keep lunch shift active and do not reset
     if (shouldBeActiveLunch) {
       if (!_shiftActive || _shiftType != 'Lunch') {
-        print('[DEBUG] _maybeActivateShiftByClock: Starting lunch shift');
+        logDebug('[DEBUG] _maybeActivateShiftByClock: Starting lunch shift');
         _beginShift('Lunch', roster);
         _shiftActive = true;
         notifyListeners();
       } else {
-        print('[DEBUG] _maybeActivateShiftByClock: Lunch shift already active');
       }
       return;
     }
     if (shouldBeActiveDinner) {
       if (!_shiftActive || _shiftType != 'Dinner') {
-        print('[DEBUG] _maybeActivateShiftByClock: Starting dinner shift with preservation');
+        logDebug('[DEBUG] _maybeActivateShiftByClock: Starting dinner shift with preservation');
         _beginShift('Dinner', roster, preserveCounts: true);
         _shiftActive = true;
         notifyListeners();
       } else {
-        print('[DEBUG] _maybeActivateShiftByClock: Dinner shift already active');
       }
       return;
     }
     
     // Outside of open hours - deactivate shift
-    print('[DEBUG] _maybeActivateShiftByClock: Outside operating hours, deactivating shift');
     if (_shiftActive) {
       // If we're at transition end, let the ticker handle it with preservation logic
       final plan = _todayPlan;
       final isTransitionEnd = plan != null && m >= plan.transitionEndMinutes && _shiftType == 'Lunch';
       
       if (!isTransitionEnd) {
-        print('[DEBUG] _maybeActivateShiftByClock: Finalizing shift (not transition end)');
+        logDebug('[DEBUG] _maybeActivateShiftByClock: Finalizing shift (not transition end)');
         _finalizeAndSaveShift(_shiftType);
       } else {
-        print('[DEBUG] _maybeActivateShiftByClock: At transition end, letting ticker handle it');
       }
     }
     _shiftActive = false;
@@ -771,7 +894,7 @@ class AppState extends ChangeNotifier {
     _shiftActive = true;
     _shiftPaused = false;
     _shiftType = type;
-    _shiftStart = DateTime.now();
+    _shiftStart = clock.now();
 
     _workingServerIds
       ..clear()
@@ -820,68 +943,11 @@ class AppState extends ChangeNotifier {
         ..clear()
         ..addEntries(_workingServerIds.map((id) => MapEntry(id, 0)));
     }
-  // Save a partial shift record for only a subset of servers (e.g., lunch at transition)
-  void _savePartialShift(String type, Map<String, int> counts, Map<String, int> pizookieCounts) {
-    final rec = ShiftRecord(
-      id: _randId(),
-      label: type,
-      shiftType: type,
-      start: _shiftStart ?? DateTime.now(),
-      counts: counts,
-      pizookieCounts: pizookieCounts,
-    );
-    _history.add(rec);
-    // Update totals and profiles for just these servers
-    String? mvpId;
-    int mvpScore = -1;
-    counts.forEach((id, n) {
-      _totals[id] = (_totals[id] ?? 0) + n;
-      final prof = _profiles[id] ?? ServerProfile();
-      if (n > prof.bestShiftRuns) prof.bestShiftRuns = n;
-      // Use _totals[id] for all-time achievements
-      final allTime = _totals[id] ?? 0;
-      if (settings.gamificationEnabled) {
-        if (allTime >= 50 && !prof.achievements.contains('fifty_all_time')) {
-          prof.achievements.add('fifty_all_time');
-          prof.points += _pointsFor('fifty_all_time');
-        }
-        if (allTime >= 100 && !prof.achievements.contains('hundred_all_time')) {
-          prof.achievements.add('hundred_all_time');
-          prof.points += _pointsFor('hundred_all_time');
-        }
-      }
-      if (n > mvpScore) {
-        mvpScore = n;
-        mvpId = id;
-      }
-      _profiles[id] = prof;
-    });
-    if (settings.gamificationEnabled && mvpId != null) {
-      final p = _profiles[mvpId]!;
-      p.shiftsAsMvp += 1;
-      if (!p.achievements.contains('mvp')) {
-        p.achievements.add('mvp');
-        p.points += _pointsFor('mvp');
-      }
-    }
-    final teamTotal = counts.values.fold<int>(0, (a, b) => a + b);
-    if (settings.gamificationEnabled && teamTotal >= _teamGoal) {
-      for (final id in counts.keys) {
-        final prof = _profiles[id]!;
-        if (!prof.achievements.contains('team_goal')) {
-          prof.achievements.add('team_goal');
-          prof.points += _pointsFor('team_goal');
-        }
-      }
-    }
-    _persistTotals();
-    _persistProfiles();
-    _persistHistory();
-  }
 
     _teamTotalThisShift = 0;
     _teamGoal = _computeGoalFromHistory();
     resetRosterView();
+    _persistCurrentShift();
     notifyListeners();
   }
 
@@ -891,14 +957,14 @@ class AppState extends ChangeNotifier {
     for (final id in _currentCounts.keys) {
       pizookieCounts[id] = _currentPizookieCounts[id] ?? 0;
     }
-    print('[DEBUG] Finalizing shift: type=$type');
-    print('[DEBUG] Saving counts: ${_currentCounts}');
-    print('[DEBUG] Saving pizookieCounts: $pizookieCounts');
+    logDebug('[DEBUG] Finalizing shift: type=$type');
+    logDebug('[DEBUG] Saving counts: ${_currentCounts}');
+    logDebug('[DEBUG] Saving pizookieCounts: $pizookieCounts');
     final rec = ShiftRecord(
       id: _randId(),
       label: type,
       shiftType: type,
-      start: _shiftStart ?? DateTime.now(),
+      start: _shiftStart ?? clock.now(),
       counts: Map<String, int>.from(_currentCounts),
       pizookieCounts: pizookieCounts,
     );
@@ -964,6 +1030,8 @@ class AppState extends ChangeNotifier {
   _dinnerCloserCount.clear();
   _currentPizookieCounts.clear();
   _teamTotalThisShift = 0;
+  // The shift is over; drop the in-progress snapshot so it can't be restored.
+  _clearPersistedCurrentShift();
   }
 
   Future<bool> endCurrentShiftWithPin(String pin) async {
@@ -982,6 +1050,7 @@ class AppState extends ChangeNotifier {
     if (_shiftActive) {
       _shiftActive = false;
       _shiftPaused = true;
+      _persistCurrentShift();
       notifyListeners();
     }
     return true;
@@ -992,6 +1061,7 @@ class AppState extends ChangeNotifier {
     if (_shiftPaused) {
       _shiftActive = true;
       _shiftPaused = false;
+      _persistCurrentShift();
       notifyListeners();
     }
     return true;
@@ -1044,21 +1114,80 @@ class AppState extends ChangeNotifier {
     return true;
   }
 
-  Future<bool> removeServer(String id, {required String pin}) async {
-    if (pin != adminPin) return false;
-    _servers.removeWhere((s) => s.id == id);
+  /// Removes a server everywhere they live: live shift, all per-shift counters,
+  /// today's roster plan, totals, profile, and every historical shift record.
+  void _purgeServerData(String id) {
     _totals.remove(id);
     _profiles.remove(id);
     _workingServerIds.remove(id);
     _currentCounts.remove(id);
     _currentStreaks.remove(id);
+    _lunchPeakCount.remove(id);
+    _dinnerPeakCount.remove(id);
+    _lunchCloserCount.remove(id);
+    _dinnerCloserCount.remove(id);
+    _currentPizookieCounts.remove(id);
+    final plan = _todayPlan;
+    if (plan != null) {
+      plan.lunchRoster.remove(id);
+      plan.dinnerRoster.remove(id);
+    }
+  }
+
+  /// Permanently deletes a server and all of their data (irreversible).
+  Future<bool> removeServer(String id, {required String pin}) async {
+    if (pin != adminPin) return false;
+    _servers.removeWhere((s) => s.id == id);
+    _purgeServerData(id);
     for (final rec in _history) {
       rec.counts.remove(id);
+      rec.pizookieCounts.remove(id);
     }
     await _persistServers();
     await _persistTotals();
     await _persistProfiles();
     await _persistHistory();
+    await _persistDayPlan();
+    await _persistCurrentShift();
+    notifyListeners();
+    return true;
+  }
+
+  /// Archives a server: hides them from every feature and report and takes them
+  /// off the active floor/roster, but keeps their data so they can be restored.
+  Future<bool> archiveServer(String id, {required String pin}) async {
+    if (pin != adminPin) return false;
+    final s = serverById(id);
+    if (s == null) return false;
+    s.archived = true;
+    // Take them off today's floor and rosters (their totals/profile are kept).
+    _workingServerIds.remove(id);
+    _currentCounts.remove(id);
+    _currentStreaks.remove(id);
+    _lunchPeakCount.remove(id);
+    _dinnerPeakCount.remove(id);
+    _lunchCloserCount.remove(id);
+    _dinnerCloserCount.remove(id);
+    _currentPizookieCounts.remove(id);
+    final plan = _todayPlan;
+    if (plan != null) {
+      plan.lunchRoster.remove(id);
+      plan.dinnerRoster.remove(id);
+    }
+    await _persistServers();
+    await _persistDayPlan();
+    await _persistCurrentShift();
+    notifyListeners();
+    return true;
+  }
+
+  /// Restores a previously archived server back into active use.
+  Future<bool> restoreServer(String id, {required String pin}) async {
+    if (pin != adminPin) return false;
+    final s = serverById(id);
+    if (s == null) return false;
+    s.archived = false;
+    await _persistServers();
     notifyListeners();
     return true;
   }
@@ -1074,7 +1203,7 @@ class AppState extends ChangeNotifier {
     if (!def.repeatable && p.achievements.contains(id)) return;
 
     if (def.repeatable) {
-      final ymd = _ymd(DateTime.now());
+      final ymd = _ymd(clock.now());
       final key = '${id}_$ymd';
       if (p.repeatEarnedDates.contains(key)) return;
       p.repeatEarnedDates.add(key);
@@ -1088,114 +1217,129 @@ class AppState extends ChangeNotifier {
   }
 
   String? increment(String id) {
-  print('[DEBUG] increment attempt: server=$id, shiftActive=$_shiftActive, workingIds=$_workingServerIds');
-  if (!_shiftActive || !_workingServerIds.contains(id)) {
-    print('[DEBUG] increment BLOCKED: shiftActive=$_shiftActive, serverInWorking=${_workingServerIds.contains(id)}');
-    return null;
-  }
-  print('[DEBUG] increment SUCCESS: server $id proceeding');
+    if (!_shiftActive || !_workingServerIds.contains(id)) return null;
 
-    final now = DateTime.now();
+    final now = clock.now();
     const delta = 1;
 
-
-
-    // --- Full Hands! achievement logic (now 2 rapid taps) ---
+    // Full Hands! achievement: two taps within 3 seconds.
     String? justAwarded;
     final tapList = _recentTapTimes.putIfAbsent(id, () => <DateTime>[]);
     tapList.add(now);
     if (tapList.length > 2) tapList.removeAt(0);
-    bool awardedFullHands = false;
+    var awardedFullHands = false;
     final prof = _profiles[id] ?? ServerProfile();
     final serverName = serverById(id)?.name ?? 'Server';
+    final levelBefore = prof.level;
+    final countBefore = _currentCounts[id] ?? 0;
+    final teamBefore = _teamTotalThisShift;
 
-    if (settings.gamificationEnabled) {
-      if (tapList.length == 2) {
-        final t0 = tapList[0];
-        final t1 = tapList[1];
-        if (t1.difference(t0).inMilliseconds <= 3000) {
-          _awardOnce(prof, 'full_hands', serverName);
-          _profiles[id] = prof;
-          justAwarded = 'full_hands';
-          awardedFullHands = true;
-        }
+    if (settings.gamificationEnabled && tapList.length == 2) {
+      if (tapList[1].difference(tapList[0]).inMilliseconds <= 3000) {
+        _awardOnce(prof, 'full_hands', serverName);
+        _profiles[id] = prof;
+        justAwarded = 'full_hands';
+        awardedFullHands = true;
       }
     }
 
     _currentCounts[id] = (_currentCounts[id] ?? 0) + delta;
     lastRunServerId = id;
     _teamTotalThisShift += delta;
-
     _currentStreaks[id] = (_currentStreaks[id] ?? 0) + 1;
     final sCount = _currentCounts[id]!;
 
-    // Only award 35 XP for Full Hands if gamification is enabled, otherwise always 10 XP
+    // Full Hands awards 35 via the badge; otherwise a run is worth 10.
     if (!awardedFullHands || !settings.gamificationEnabled) {
-  prof.points += 10;
-  print('[DEBUG] +10 points awarded to $id, total now: ${prof.points}');
-  print('[DEBUG] +25 Pizookie points awarded to $id, total now: ${prof.points}');
+      prof.points += 10;
     }
     prof.allTimeRuns += delta;
-    print('[DEBUG] Server $id now has ${prof.points} XP, level ${prof.level}, allTimeRuns: ${prof.allTimeRuns}');
 
-    final prevIso = prof.lastTapIso;
-    prof.lastTapIso = now.toIso8601String();
-    if (prevIso != null) {
-      final prev = DateTime.tryParse(prevIso);
-      if (prev != null) {
-        final ms = now.difference(prev).inMilliseconds;
-        if (ms > 0 && ms < 20 * 60 * 1000) {
-          prof.tapIntervalsMsSum += ms;
-          prof.tapIntervalsCount += 1;
-        }
-      }
-    }
+    _recordTapInterval(prof, now);
 
     if (settings.gamificationEnabled) {
-      if (_currentStreaks[id]! > prof.streakBest) {
-        prof.streakBest = _currentStreaks[id]!;
-      }
-      if (prof.streakBest >= 3) _awardOnce(prof, 'three_streak', serverName);
-      if (prof.streakBest >= 5) _awardOnce(prof, 'five_streak', serverName);
-
-      if (sCount >= 10) _awardOnce(prof, 'ten_in_shift', serverName);
-      if (sCount >= 20) _awardOnce(prof, 'twenty_in_shift', serverName);
-      if (now.hour >= 23) _awardOnce(prof, 'night_owl', serverName);
-
-      _awardOnce(prof, 'first_run_today', serverName);
-      if (prof.allTimeRuns == 0 && !_profiles.containsKey('first_run_${id}_awarded')) {
-        _awardOnce(prof, 'first_run', serverName);
-      }
+      _awardStreakAndShiftBadges(prof, id, sCount, serverName, now);
     }
+    // NOTE: regular runs award peak/closer badges unconditionally (even when
+    // gamification is disabled). Preserved from the original behavior;
+    // incrementPizookie does this only when gamification is enabled.
+    _awardPeakCloserBadges(prof, id, serverName, now);
 
+    _profiles[id] = prof;
+    _noteLevelUp(id, levelBefore, prof);
+    _notePass(id, countBefore);
+    _noteTeamMilestone(teamBefore);
+    _recordTapBucketAndPersist(id, now);
+    notifyListeners();
+    return justAwarded;
+  }
+
+  /// Updates a profile's running average of seconds between taps.
+  void _recordTapInterval(ServerProfile prof, DateTime now) {
+    final prevIso = prof.lastTapIso;
+    prof.lastTapIso = now.toIso8601String();
+    if (prevIso == null) return;
+    final prev = DateTime.tryParse(prevIso);
+    if (prev == null) return;
+    final ms = now.difference(prev).inMilliseconds;
+    if (ms > 0 && ms < 20 * 60 * 1000) {
+      prof.tapIntervalsMsSum += ms;
+      prof.tapIntervalsCount += 1;
+    }
+  }
+
+  /// Streak and per-shift run-count badges. Caller decides whether
+  /// gamification is enabled before invoking.
+  void _awardStreakAndShiftBadges(
+      ServerProfile prof, String id, int sCount, String serverName, DateTime now) {
+    if (_currentStreaks[id]! > prof.streakBest) {
+      prof.streakBest = _currentStreaks[id]!;
+    }
+    if (prof.streakBest >= 3) _awardOnce(prof, 'three_streak', serverName);
+    if (prof.streakBest >= 5) _awardOnce(prof, 'five_streak', serverName);
+    if (sCount >= 10) _awardOnce(prof, 'ten_in_shift', serverName);
+    if (sCount >= 20) _awardOnce(prof, 'twenty_in_shift', serverName);
+    if (now.hour >= 23) _awardOnce(prof, 'night_owl', serverName);
+    _awardOnce(prof, 'first_run_today', serverName);
+    if (prof.allTimeRuns == 0 &&
+        !_profiles.containsKey('first_run_${id}_awarded')) {
+      _awardOnce(prof, 'first_run', serverName);
+    }
+  }
+
+  /// Time-of-day peak/closer badges. Increments the matching window counter
+  /// and awards the badge at its threshold.
+  void _awardPeakCloserBadges(
+      ServerProfile prof, String id, String serverName, DateTime now) {
     if (isLunchPeak(now)) {
-      _lunchPeakCount[id] = (_lunchPeakCount[id] ?? 0) + delta;
+      _lunchPeakCount[id] = (_lunchPeakCount[id] ?? 0) + 1;
       if (_lunchPeakCount[id]! >= 10) _awardOnce(prof, 'lunch_peak_10', serverName);
     }
     if (isDinnerPeak(now)) {
-      _dinnerPeakCount[id] = (_dinnerPeakCount[id] ?? 0) + delta;
+      _dinnerPeakCount[id] = (_dinnerPeakCount[id] ?? 0) + 1;
       if (_dinnerPeakCount[id]! >= 10) _awardOnce(prof, 'dinner_peak_10', serverName);
     }
     if (isLunchCloser(now)) {
-      _lunchCloserCount[id] = (_lunchCloserCount[id] ?? 0) + delta;
+      _lunchCloserCount[id] = (_lunchCloserCount[id] ?? 0) + 1;
       if (_lunchCloserCount[id]! >= 8) _awardOnce(prof, 'lunch_closer_8', serverName);
     }
     if (isDinnerCloser(now)) {
-      _dinnerCloserCount[id] = (_dinnerCloserCount[id] ?? 0) + delta;
+      _dinnerCloserCount[id] = (_dinnerCloserCount[id] ?? 0) + 1;
       if (_dinnerCloserCount[id]! >= 8) _awardOnce(prof, 'dinner_closer_8', serverName);
     }
+  }
 
-  _profiles[id] = prof;
-
-  final minuteEpoch = DateTime(now.year, now.month, now.day, now.hour, now.minute).millisecondsSinceEpoch;
-  _tapPerMinute.putIfAbsent(id, () => <int, int>{});
-  _tapPerMinute[id]![minuteEpoch] = (_tapPerMinute[id]![minuteEpoch] ?? 0) + 1;
-  _persistTapLog();
-  _persistProfiles();
-  _persistTotals();
-
-  notifyListeners();
-  return justAwarded;
+  /// Records this run in the per-minute tap histogram and persists the run.
+  void _recordTapBucketAndPersist(String id, DateTime now) {
+    final minuteEpoch =
+        DateTime(now.year, now.month, now.day, now.hour, now.minute)
+            .millisecondsSinceEpoch;
+    _tapPerMinute.putIfAbsent(id, () => <int, int>{});
+    _tapPerMinute[id]![minuteEpoch] = (_tapPerMinute[id]![minuteEpoch] ?? 0) + 1;
+    _persistTapLog();
+    _persistProfiles();
+    _persistTotals();
+    _persistCurrentShift();
   }
 
   void decrement(String id) {
@@ -1206,13 +1350,14 @@ class AppState extends ChangeNotifier {
       _teamTotalThisShift = (_teamTotalThisShift - 1).clamp(0, 1 << 31);
     }
     _currentStreaks[id] = 0;
+    _persistCurrentShift();
     notifyListeners();
   }
 
   Map<String, int> integrityBinsFor(String serverId, {bool todayOnly = false}) {
     final buckets = _tapPerMinute[serverId];
     if (buckets == null) return {'1': 0, '2': 0, '3': 0, '4+': 0};
-    final now = DateTime.now();
+    final now = clock.now();
     final ymd = _ymd(now);
     int s1 = 0, s2 = 0, s3 = 0, s4 = 0;
     buckets.forEach((minuteEpoch, count) {
@@ -1230,7 +1375,7 @@ class AppState extends ChangeNotifier {
   }
 
   void _pruneOldTapBuckets() {
-    final cutoff = DateTime.now().subtract(const Duration(days: 180)).millisecondsSinceEpoch;
+    final cutoff = clock.now().subtract(const Duration(days: 180)).millisecondsSinceEpoch;
     for (final m in _tapPerMinute.values) {
       m.removeWhere((k, v) => k < cutoff);
     }
@@ -1245,56 +1390,55 @@ class AppState extends ChangeNotifier {
   }
 
   void updateBothRosters({required List<String> lunch, required List<String> dinner}) {
+    // setTodayPlan already syncs the active floor to the new plan.
     setTodayPlan(lunch, dinner);
-    final now = DateTime.now();
-    final intended = currentIntendedShiftType(now);
-    if (intended == 'Lunch') {
-      updateActiveRoster(lunch);
-    } else {
-      updateActiveRoster(dinner);
-    }
   }
 
-  void updateActiveRoster(List<String> newRoster, {bool preserveExistingCounts = false}) {
+  /// Syncs which servers are on the floor (can tap) to [newRoster].
+  ///
+  /// Removing a server takes them OFF the floor but NEVER deletes their
+  /// accumulated runs — those still belong to this shift and are recorded when
+  /// the shift finalizes. New servers join with a fresh count of 0; a server
+  /// who is re-added keeps whatever runs they already had.
+  void updateActiveRoster(List<String> newRoster) {
     final newSet = Set<String>.from(newRoster);
-    for (final id in _workingServerIds.toList()) {
-      if (!newSet.contains(id)) {
-        if (preserveExistingCounts) {
-          // Do not clear counts for servers not in the new roster
-          _workingServerIds.remove(id);
-          continue;
-        }
-        _currentCounts.remove(id);
-        _currentStreaks.remove(id);
-        _lunchPeakCount.remove(id);
-        _dinnerPeakCount.remove(id);
-        _lunchCloserCount.remove(id);
-        _dinnerCloserCount.remove(id);
-        _workingServerIds.remove(id);
-      }
-    }
+    _workingServerIds.removeWhere((id) => !newSet.contains(id));
     for (final id in newSet) {
-      if (!_workingServerIds.contains(id)) {
-        _workingServerIds.add(id);
-        if (!preserveExistingCounts) {
-          _currentCounts[id] = 0;
-          _currentStreaks[id] = 0;
-          _lunchPeakCount[id] = 0;
-          _dinnerPeakCount[id] = 0;
-          _lunchCloserCount[id] = 0;
-          _dinnerCloserCount[id] = 0;
-        } else {
-          // If preserving, only initialize to 0 if not present
-          _currentCounts.putIfAbsent(id, () => 0);
-          _currentStreaks.putIfAbsent(id, () => 0);
-          _lunchPeakCount.putIfAbsent(id, () => 0);
-          _dinnerPeakCount.putIfAbsent(id, () => 0);
-          _lunchCloserCount.putIfAbsent(id, () => 0);
-          _dinnerCloserCount.putIfAbsent(id, () => 0);
-        }
+      if (_workingServerIds.add(id)) {
+        _currentCounts.putIfAbsent(id, () => 0);
+        _currentStreaks.putIfAbsent(id, () => 0);
+        _lunchPeakCount.putIfAbsent(id, () => 0);
+        _dinnerPeakCount.putIfAbsent(id, () => 0);
+        _lunchCloserCount.putIfAbsent(id, () => 0);
+        _dinnerCloserCount.putIfAbsent(id, () => 0);
+        _currentPizookieCounts.putIfAbsent(id, () => 0);
       }
     }
+    _persistCurrentShift();
     notifyListeners();
+  }
+
+  /// Adds [ids] to the working set (initializing their per-shift counters to 0
+  /// if absent) without disturbing any existing counts. Used during the
+  /// transition window to put both lunch and dinner crews on the floor.
+  void _ensureWorkingServers(Set<String> ids) {
+    var changed = false;
+    for (final id in ids) {
+      if (_workingServerIds.add(id)) {
+        _currentCounts.putIfAbsent(id, () => 0);
+        _currentStreaks.putIfAbsent(id, () => 0);
+        _lunchPeakCount.putIfAbsent(id, () => 0);
+        _dinnerPeakCount.putIfAbsent(id, () => 0);
+        _lunchCloserCount.putIfAbsent(id, () => 0);
+        _dinnerCloserCount.putIfAbsent(id, () => 0);
+        _currentPizookieCounts.putIfAbsent(id, () => 0);
+        changed = true;
+      }
+    }
+    if (changed) {
+      _persistCurrentShift();
+      notifyListeners();
+    }
   }
 
   void deleteShift(ShiftRecord shift) {
@@ -1341,11 +1485,11 @@ class AppState extends ChangeNotifier {
   }
 
   void updateAvatar(String serverId, String avatarPath) {
-  print('AppState.updateAvatar called for $serverId with $avatarPath');
+  logDebug('AppState.updateAvatar called for $serverId with $avatarPath');
     final profile = _profiles[serverId];
     if (profile != null) {
       profile.avatarPath = avatarPath;
-      final now = DateTime.now();
+      final now = clock.now();
       final entry = {
         'path': avatarPath,
         'timestamp': now.toIso8601String(),
@@ -1359,7 +1503,7 @@ class AppState extends ChangeNotifier {
   }
 
   void updateBanner(String serverId, String bannerPath) {
-    print('AppState.updateBanner called for $serverId with $bannerPath');
+    logDebug('AppState.updateBanner called for $serverId with $bannerPath');
     final profile = _profiles[serverId];
     if (profile != null) {
       profile.bannerPath = bannerPath;

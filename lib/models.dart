@@ -2,11 +2,13 @@ class Server {
   final String id;
   String name;
   String? teamColor;
+  bool archived;
 
   Server({
     required this.id,
     required this.name,
     this.teamColor,
+    this.archived = false,
   });
 
   // Add this factory constructor
@@ -15,6 +17,7 @@ class Server {
       id: map['id'] as String,
       name: map['name'] as String,
       teamColor: map['teamColor'] as String?,
+      archived: (map['archived'] as bool?) ?? false,
     );
   }
 
@@ -24,6 +27,7 @@ class Server {
       'id': id,
       'name': name,
       'teamColor': teamColor,
+      'archived': archived,
     };
   }
 }
