@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../widgets/juice.dart';
 
 /// Interactive preview of the "bold playful cartoon" tap-loop juice.
-/// Self-contained (local state only) so it can be tuned on a device before the
-/// real home screen is rewired. Tap the card = run, hold = Pizookie.
+///
+/// Important: there is NO speed/combo mechanic — a tap is a real food run, so
+/// tapping fast earns nothing extra. The only quick-tap moment is "Full Hands"
+/// (2+ taps within 3s = carrying multiple plates in one trip), which fires once
+/// per trip and never ramps. Big moments come from milestones and level-ups.
 class JuiceLabScreen extends StatefulWidget {
   const JuiceLabScreen({super.key});
 
@@ -12,28 +16,27 @@ class JuiceLabScreen extends StatefulWidget {
 }
 
 class _JuiceLabScreenState extends State<JuiceLabScreen> {
-  final _combo = ComboController();
   int _runs = 0;
   int _xp = 0;
   int _level = 1;
-  int _floaterId = 0;
-  final List<Widget> _floaters = [];
+  int _id = 0;
+  final List<Widget> _floaters = []; // "+10" near the card
+  final List<Widget> _moments = []; // "FULL HANDS!" / "10 RUNS!" up top
+
+  // Full Hands detection (mirrors the real app: 2+ taps within 3 seconds).
+  final List<DateTime> _recentTaps = [];
+  bool _fullHandsArmed = false;
 
   static const _xpPerLevel = 100; // demo curve
+  static const _milestones = {5, 10, 20, 30, 50, 75, 100};
 
   double get _progress => (_xp % _xpPerLevel) / _xpPerLevel;
 
-  @override
-  void dispose() {
-    _combo.dispose();
-    super.dispose();
-  }
-
   void _spawnFloater(String text, Color color) {
-    final id = _floaterId++;
+    final id = _id++;
     late final Widget w;
     w = FloatingText(
-      key: ValueKey('floater$id'),
+      key: ValueKey('f$id'),
       text: text,
       color: color,
       onDone: () => setState(() => _floaters.remove(w)),
@@ -41,13 +44,24 @@ class _JuiceLabScreenState extends State<JuiceLabScreen> {
     setState(() => _floaters.add(w));
   }
 
-  void _addXp(int amount, String label, Color color) {
+  void _spawnMoment(String text, Color color) {
+    final id = _id++;
+    late final Widget w;
+    w = MomentBurst(
+      key: ValueKey('m$id'),
+      text: text,
+      color: color,
+      onDone: () => setState(() => _moments.remove(w)),
+    );
+    setState(() => _moments.add(w));
+  }
+
+  void _grantXp(int amount) {
     final before = _level;
     setState(() {
       _xp += amount;
       _level = (_xp ~/ _xpPerLevel) + 1;
     });
-    _spawnFloater(label, color);
     if (_level > before) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) showLevelUp(context, _level);
@@ -56,14 +70,33 @@ class _JuiceLabScreenState extends State<JuiceLabScreen> {
   }
 
   void _run() {
+    final now = DateTime.now();
+    _recentTaps.add(now);
+    _recentTaps.removeWhere((t) => now.difference(t) > const Duration(seconds: 3));
+    if (_recentTaps.length == 1) _fullHandsArmed = false; // isolated tap = new trip
+
+    HapticFeedback.lightImpact();
     setState(() => _runs++);
-    _combo.hit();
-    _addXp(10, '+10', Cartoon.gold);
+    _spawnFloater('+10', Cartoon.gold);
+
+    // Full Hands: multiple plates in one trip — fires once per trip, no ramp.
+    if (_recentTaps.length >= 2 && !_fullHandsArmed) {
+      _fullHandsArmed = true;
+      _spawnMoment('FULL HANDS!  +15', Cartoon.gold);
+      _grantXp(25); // 10 base + 15 multi-plate bonus
+    } else {
+      _grantXp(10);
+    }
+
+    if (_milestones.contains(_runs)) {
+      _spawnMoment('$_runs RUNS!', Cartoon.orange);
+    }
   }
 
   void _pizookie() {
-    _combo.hit();
-    _addXp(25, '+25', Cartoon.pink);
+    HapticFeedback.mediumImpact();
+    _spawnFloater('+25', Cartoon.pink);
+    _grantXp(25);
   }
 
   @override
@@ -80,8 +113,11 @@ class _JuiceLabScreenState extends State<JuiceLabScreen> {
           padding: const EdgeInsets.all(20),
           child: Column(
             children: [
-              ComboMeter(controller: _combo),
-              const SizedBox(height: 20),
+              // Celebration moments (Full Hands / milestones) appear here.
+              SizedBox(
+                height: 64,
+                child: Stack(alignment: Alignment.center, children: _moments),
+              ),
               Expanded(
                 child: Center(
                   child: Stack(
@@ -121,7 +157,6 @@ class _JuiceLabScreenState extends State<JuiceLabScreen> {
                           ),
                         ),
                       ),
-                      // Floating +XP, anchored just above the big number.
                       Positioned(top: 80, child: Stack(children: _floaters)),
                     ],
                   ),
@@ -143,6 +178,8 @@ class _JuiceLabScreenState extends State<JuiceLabScreen> {
                         _runs = 0;
                         _xp = 0;
                         _level = 1;
+                        _recentTaps.clear();
+                        _fullHandsArmed = false;
                       });
                     }),
                   ),

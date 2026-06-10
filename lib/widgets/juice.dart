@@ -162,83 +162,58 @@ class _FloatingTextState extends State<FloatingText> with SingleTickerProviderSt
   }
 }
 
-/// Drives a streak/combo gauge. Call [hit] on each run; it decays after a pause.
-class ComboController extends ChangeNotifier {
-  int _combo = 0;
-  Timer? _decay;
-  final int maxForFull;
-  final Duration window;
-  ComboController({this.maxForFull = 10, this.window = const Duration(seconds: 3)});
+/// A big centered celebration that pops in, holds, then floats up and fades.
+/// For discrete moments only (Full Hands, milestones, level-ups) — never for
+/// tap speed.
+class MomentBurst extends StatefulWidget {
+  final String text;
+  final Color color;
+  final VoidCallback onDone;
+  const MomentBurst(
+      {required this.text, required this.color, required this.onDone, super.key});
 
-  int get combo => _combo;
-  double get heat => (_combo / maxForFull).clamp(0.0, 1.0);
-  int get multiplier => 1 + (_combo ~/ 5);
+  @override
+  State<MomentBurst> createState() => _MomentBurstState();
+}
 
-  void hit() {
-    _combo++;
-    notifyListeners();
-    _decay?.cancel();
-    _decay = Timer(window, () {
-      _combo = 0;
-      notifyListeners();
-    });
-  }
+class _MomentBurstState extends State<MomentBurst> with SingleTickerProviderStateMixin {
+  late final AnimationController _c =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 1600))
+        ..forward()
+        ..addStatusListener((s) {
+          if (s == AnimationStatus.completed) widget.onDone();
+        });
 
   @override
   void dispose() {
-    _decay?.cancel();
+    _c.dispose();
     super.dispose();
   }
-}
-
-/// A heat bar that fills and shifts orange→red as the combo climbs.
-class ComboMeter extends StatelessWidget {
-  final ComboController controller;
-  const ComboMeter({required this.controller, super.key});
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: controller,
+      animation: _c,
       builder: (context, _) {
-        final heat = controller.heat;
-        final color = Color.lerp(Cartoon.gold, Cartoon.pink, heat)!;
-        return AnimatedOpacity(
-          opacity: controller.combo > 1 ? 1 : 0.25,
-          duration: const Duration(milliseconds: 200),
-          child: Row(
-            children: [
-              Text('x${controller.multiplier}', style: Cartoon.heading(22, color: color)),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Container(
-                  height: 18,
-                  decoration: Cartoon.panel(Colors.white, radius: 12, raised: false),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: TweenAnimationBuilder<double>(
-                        tween: Tween(begin: 0, end: heat),
-                        duration: const Duration(milliseconds: 250),
-                        curve: Curves.easeOut,
-                        builder: (context, v, __) => FractionallySizedBox(
-                          widthFactor: v == 0 ? 0.001 : v,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(colors: [Cartoon.gold, color]),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
+        final t = _c.value;
+        final pop = Curves.elasticOut.transform((t / 0.25).clamp(0.0, 1.0));
+        final out = ((t - 0.7) / 0.3).clamp(0.0, 1.0);
+        return Opacity(
+          opacity: (1 - out).clamp(0.0, 1.0),
+          child: Transform.translate(
+            offset: Offset(0, -40 * out),
+            child: Transform.scale(
+              scale: 0.4 + 0.6 * pop,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+                decoration: Cartoon.panel(widget.color, radius: 20),
+                child: Text(
+                  widget.text,
+                  textAlign: TextAlign.center,
+                  style: Cartoon.heading(26, color: Colors.white),
                 ),
               ),
-              const SizedBox(width: 8),
-              Text(controller.combo > 1 ? '${controller.combo} COMBO' : 'COMBO',
-                  style: Cartoon.heading(14, color: Cartoon.ink)),
-            ],
+            ),
           ),
         );
       },
